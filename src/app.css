@@ -1,0 +1,30 @@
+@import 'tailwindcss';
+
+/* Tokens de diseño — color de acento y glow son PROVISIONALES (libres de cambiar) */
+:root {
+	--bg: #08080c;
+	--surface: #14141d;
+	--text: #e8e8f0;
+	--muted: #9aa0b4;
+	--accent: #7c5cff;
+	--glow: 124 92 255; /* rgb del glow */
+}
+
+html {
+	color-scheme: dark;
+}
+
+body {
+	background: var(--bg);
+	color: var(--text);
+	font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	-webkit-font-smoothing: antialiased;
+	overscroll-behavior: none;
+}
+
+/* Brillo radial sutil reutilizable (color libre vía --glow) */
+.glow-bg {
+	background:
+		radial-gradient(70% 55% at 50% -5%, rgb(var(--glow) / 0.22), transparent 70%),
+		var(--bg);
+}

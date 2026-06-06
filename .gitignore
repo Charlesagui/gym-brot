@@ -1,0 +1,12 @@
+node_modules/
+/build/
+/.svelte-kit/
+/package
+
+# Configuración local de Claude (no compartir)
+.claude/settings.local.json
+.DS_Store
+.env
+.env.*
+!.env.example
+vite.config.ts.timestamp-*
