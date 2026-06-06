@@ -1,8 +1,15 @@
 <script lang="ts">
 	import { liveQuery } from 'dexie';
+	import { goto } from '$app/navigation';
 	import { db } from '$lib/db';
+	import { crearDia } from '$lib/dias';
 
 	const dias = liveQuery(() => db.dias.orderBy('orden').toArray());
+
+	async function nuevoDia() {
+		const id = await crearDia();
+		goto(`/dia/${id}`);
+	}
 	const hoy = new Date().getDay();
 	const nombresDia = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 </script>
@@ -54,11 +61,11 @@
 		</div>
 
 		<button
-			class="mt-4 w-full rounded-2xl border border-dashed border-white/15 p-4 text-sm"
-			style="color: var(--muted)"
-			disabled
+			onclick={nuevoDia}
+			class="mt-4 w-full rounded-2xl border border-dashed border-white/20 p-4 text-sm font-medium"
+			style="color: var(--accent)"
 		>
-			+ Nuevo día <span class="opacity-60">(Fase 2)</span>
+			+ Nuevo día
 		</button>
 	{:else}
 		<p class="text-center text-sm" style="color: var(--muted)">Cargando…</p>

@@ -71,13 +71,14 @@ Ejercicio: id · nombre_es · grupo_muscular · gif · instrucciones_es? (opcion
 **Datos del usuario (Dexie):**
 ```
 Dia:      id · nombre · color? · diaSemana? · ejercicios[ { exerciseId, seriesObjetivo, orden } ]
-Sesion:   id · fecha · diaId · progreso[ { exerciseId, seriesHechas, completado } ]
-Registro: id · exerciseId · fecha · peso · reps · esMax(bool) · extraKg?    → PR = mejor registro (auto)
+Sesion:   id · fecha · diaId · ejercicios[ { exerciseId, sets[ { peso?, reps?, hecha, esMax? } ] } ]
+          → peso POR SERIE (permite rampa/pirámide) · se resetea por sesión
 Nota:     exerciseId · texto        (colapsada en la UI)
 Ajustes:  darkMode · unidad(kg|lb) · timer{ activo, minutos }
 ```
-> El **PR** se calcula solo desde el historial de `Registro`. **MAX** = se levantó la placa full
-> de la máquina; admite `extraKg` para el caso "MAX + peso encima".
+> El **PR** se deriva del historial de sesiones = la **serie más pesada** de cada ejercicio (auto).
+> **MAX** por serie = placa full; admite `extraKg` para "MAX + peso encima".
+> Cada serie pre-llena el peso de la anterior / última sesión, para rampear rápido en el gym.
 
 ---
 
@@ -90,8 +91,8 @@ Ajustes:  darkMode · unidad(kg|lb) · timer{ activo, minutos }
 2. **Día** — ejercicios del día con progreso de series (●○) y ✓ completado. `[+ Agregar ejercicio]`. Editable.
 3. **Ejercicio** —
    - **GIF** en loop (movimiento + músculo en rojo).
-   - **Series:** círculos ●○ (tocar ○ = hecha, tocar ● = deshacer) + botón **[+]** para sumar serie.
-   - **Peso de hoy:** `peso × reps`. **🏆 PR automático** (+🎉 al superarlo) · **🔥 MAX** (+ extra opcional).
+   - **Series con peso por serie:** una fila por serie = `peso × reps` + marcar hecha ✓ (el **[+]** suma serie). Permite **rampa/pirámide** (10→15→20→25 kg); pre-llena el peso de la serie anterior / última sesión. Simple si querés: mismo peso o solo marcar hechas.
+   - **🏆 PR automático** = tu **serie más pesada** del historial (+🎉 al superarlo) · **🔥 MAX** por serie (+ extra opcional).
    - **📈 Mini-gráfico** de progreso del peso.
    - **📝 Notas** colapsadas (tocar para abrir/editar: "asiento en 4", "agarre cerrado").
    - **⏱️ Timer** de descanso opcional (arranca al completar serie).
