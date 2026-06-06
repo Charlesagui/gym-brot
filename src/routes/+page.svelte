@@ -1,45 +1,66 @@
 <script lang="ts">
-	import { catalogo, grupos, type Grupo } from '$lib/catalog';
+	import { liveQuery } from 'dexie';
+	import { db } from '$lib/db';
 
-	// Una muestra por grupo para previsualizar la tarjeta con su glow.
-	const orden: Grupo[] = ['piernas', 'pecho', 'espalda', 'hombros', 'brazos', 'core'];
-	const muestras = orden
-		.map((g) => catalogo.find((e) => e.grupo === g))
-		.filter((e): e is (typeof catalogo)[number] => Boolean(e));
+	const dias = liveQuery(() => db.dias.orderBy('orden').toArray());
+	const hoy = new Date().getDay();
+	const nombresDia = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 </script>
 
-<main class="glow-bg min-h-dvh px-5 py-10">
-	<header class="text-center">
-		<h1 class="text-4xl font-extrabold tracking-tight">
+<main class="glow-bg min-h-dvh px-5 pb-12 pt-10">
+	<header class="mb-7 text-center">
+		<h1 class="text-3xl font-extrabold tracking-tight">
 			GYM<span style="color: var(--accent)">·</span>BROT
 		</h1>
-		<p class="mt-2 text-sm" style="color: var(--muted)">
-			{catalogo.length} ejercicios · offline ✓
-		</p>
+		<p class="mt-1 text-xs capitalize" style="color: var(--muted)">{nombresDia[hoy]}</p>
 	</header>
 
-	<section class="mx-auto mt-8 grid max-w-md grid-cols-2 gap-3">
-		{#each muestras as e (e.id)}
-			{@const g = grupos[e.grupo]}
-			<article
-				class="relative overflow-hidden rounded-2xl border border-white/10 p-3"
-				style="background: radial-gradient(130% 80% at 50% 0%, rgb({g.glow} / 0.22), transparent 62%), var(--surface)"
+	{#if $dias}
+		{@const hoyDia = $dias.find((d) => d.diaSemana === hoy)}
+		{#if hoyDia}
+			<a
+				href={`/dia/${hoyDia.id}`}
+				class="mb-6 block rounded-2xl border border-white/10 p-4"
+				style="background: radial-gradient(120% 130% at 0% 0%, rgb({hoyDia.color} / 0.30), transparent 62%), var(--surface)"
 			>
-				<img
-					src={e.gif}
-					alt={e.nombre}
-					class="aspect-square w-full rounded-xl bg-white object-contain"
-					loading="lazy"
-				/>
-				<p class="mt-2 text-sm font-semibold leading-tight">{e.nombre}</p>
-				<p class="mt-0.5 text-xs font-medium" style="color: rgb({g.glow})">
-					{g.emoji} {g.label}
+				<p class="text-[11px] font-bold uppercase tracking-[0.2em]" style="color: rgb({hoyDia.color})">
+					Hoy entrenás
 				</p>
-			</article>
-		{/each}
-	</section>
+				<p class="mt-1 text-2xl font-bold leading-tight">{hoyDia.nombre}</p>
+				<p class="mt-0.5 text-xs" style="color: var(--muted)">
+					{hoyDia.ejercicios.length} ejercicios →
+				</p>
+			</a>
+		{/if}
 
-	<p class="mt-8 text-center text-xs" style="color: var(--muted)">
-		Vista previa de tarjetas · Fase 0
-	</p>
+		<p class="mb-2 px-1 text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+			Tus días
+		</p>
+		<div class="space-y-3">
+			{#each $dias as d (d.id)}
+				<a
+					href={`/dia/${d.id}`}
+					class="flex items-center gap-3 rounded-2xl border border-white/10 p-4"
+					style="background: linear-gradient(90deg, rgb({d.color} / 0.12), transparent 55%), var(--surface)"
+				>
+					<span class="h-11 w-1.5 rounded-full" style="background: rgb({d.color})"></span>
+					<div class="flex-1">
+						<p class="font-semibold leading-tight">{d.nombre}</p>
+						<p class="text-xs" style="color: var(--muted)">{d.ejercicios.length} ejercicios</p>
+					</div>
+					<span class="text-2xl" style="color: var(--muted)">›</span>
+				</a>
+			{/each}
+		</div>
+
+		<button
+			class="mt-4 w-full rounded-2xl border border-dashed border-white/15 p-4 text-sm"
+			style="color: var(--muted)"
+			disabled
+		>
+			+ Nuevo día <span class="opacity-60">(Fase 2)</span>
+		</button>
+	{:else}
+		<p class="text-center text-sm" style="color: var(--muted)">Cargando…</p>
+	{/if}
 </main>
