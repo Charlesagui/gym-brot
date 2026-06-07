@@ -35,6 +35,10 @@
 	// cuenta regresiva de descanso
 	let restoSeg = $state(0);
 	let intId: ReturnType<typeof setInterval> | null = null;
+	type AudioContextConstructor = new () => AudioContext;
+	type AudioWindow = Window &
+		typeof globalThis & { webkitAudioContext?: AudioContextConstructor };
+	let audioCtx: AudioContext | null = null;
 
 	$effect(() => {
 		const exId = $page.params.id!;
@@ -124,7 +128,10 @@
 	function onToggle(i: number) {
 		const yaEstaba = sets[i]?.hecha;
 		toggleSet(diaId!, $page.params.id!, i);
-		if (!yaEstaba) iniciarDescanso(); // recién marcada como hecha → arranca descanso
+		if (!yaEstaba) {
+			void prepararAudio().catch(() => {});
+			iniciarDescanso(); // recién marcada como hecha → arranca descanso
+		}
 	}
 
 	async function terminarEjercicio() {
@@ -141,6 +148,7 @@
 			restoSeg -= 1;
 			if (restoSeg <= 0) {
 				saltarDescanso();
+				void sonarDescansoTerminado().catch(() => {});
 				if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
 			}
 		}, 1000);
@@ -154,6 +162,43 @@
 		const m = Math.floor(s / 60);
 		const sec = s % 60;
 		return `${m}:${String(sec).padStart(2, '0')}`;
+	}
+
+	function getAudioContext(): AudioContext | null {
+		if (typeof window === 'undefined') return null;
+		const audioWindow = window as AudioWindow;
+		const Ctx = window.AudioContext ?? audioWindow.webkitAudioContext;
+		if (!Ctx) return null;
+		audioCtx ??= new Ctx();
+		return audioCtx;
+	}
+
+	async function prepararAudio(): Promise<void> {
+		const ctx = getAudioContext();
+		if (ctx?.state === 'suspended') await ctx.resume();
+	}
+
+	function beep(ctx: AudioContext, start: number, freq: number, duracion: number): void {
+		const osc = ctx.createOscillator();
+		const gain = ctx.createGain();
+		osc.type = 'sine';
+		osc.frequency.setValueAtTime(freq, start);
+		gain.gain.setValueAtTime(0.0001, start);
+		gain.gain.exponentialRampToValueAtTime(0.16, start + 0.02);
+		gain.gain.exponentialRampToValueAtTime(0.0001, start + duracion);
+		osc.connect(gain);
+		gain.connect(ctx.destination);
+		osc.start(start);
+		osc.stop(start + duracion + 0.03);
+	}
+
+	async function sonarDescansoTerminado(): Promise<void> {
+		const ctx = getAudioContext();
+		if (!ctx) return;
+		if (ctx.state === 'suspended') await ctx.resume();
+		const now = ctx.currentTime;
+		beep(ctx, now, 880, 0.16);
+		beep(ctx, now + 0.22, 1175, 0.18);
 	}
 
 	function spark(pts: MejorSet[]): string {
