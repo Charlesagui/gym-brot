@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { onMount, onDestroy } from 'svelte';
+	import { fly } from 'svelte/transition';
 	import { db, type SetSesion, type Ajustes } from '$lib/db';
 	import { ejercicioPorId, grupos } from '$lib/catalog';
 	import {
@@ -80,6 +81,7 @@
 
 	const hechas = $derived(sets.filter((s) => s.hecha).length);
 	const completo = $derived(sets.length > 0 && hechas === sets.length);
+	const unidad = $derived(ajustes.unidad);
 
 	const pr = $derived(
 		puntos.reduce<MejorSet | null>((best, p) => (!best || p.peso > best.peso ? p : best), null)
@@ -216,7 +218,7 @@
 								onchange={(e) => setPeso(diaId, $page.params.id, i, num(e.currentTarget.value))}
 								class="w-14 rounded-lg bg-white/5 px-2 py-2 text-center font-semibold outline-none"
 							/>
-							<span class="text-sm" style="color: var(--muted)">kg ×</span>
+							<span class="text-sm" style="color: var(--muted)">{unidad} ×</span>
 							<input
 								type="number"
 								inputmode="numeric"
@@ -281,7 +283,7 @@
 						{/if}
 					</div>
 					<p class="mt-1 text-3xl font-extrabold">
-						🏆 {pr.peso}<span class="text-lg font-semibold" style="color: var(--muted)"> kg</span>
+						🏆 {pr.peso}<span class="text-lg font-semibold" style="color: var(--muted)"> {unidad}</span>
 						{#if pr.reps}<span class="text-lg font-semibold" style="color: var(--muted)">
 								× {pr.reps}</span
 							>{/if}
@@ -335,6 +337,7 @@
 
 	{#if restoSeg > 0 && g}
 		<div
+			transition:fly={{ y: 80, duration: 220 }}
 			class="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-md items-center justify-between gap-3 border-t border-white/10 px-5 py-3"
 			style="background: color-mix(in oklab, var(--surface) 94%, transparent); backdrop-filter: blur(10px)"
 		>

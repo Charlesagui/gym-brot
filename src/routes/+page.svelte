@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { liveQuery } from 'dexie';
+	import { fly } from 'svelte/transition';
 	import { goto } from '$app/navigation';
 	import { db } from '$lib/db';
 	import { crearDia } from '$lib/dias';
@@ -15,7 +16,12 @@
 </script>
 
 <main class="glow-bg min-h-dvh px-5 pb-12 pt-10">
-	<header class="mb-7 text-center">
+	<header class="relative mb-7 text-center">
+		<a
+			href="/ajustes"
+			class="absolute right-0 top-0 grid size-9 place-items-center rounded-full border border-white/10"
+			aria-label="Ajustes">⚙️</a
+		>
 		<h1 class="text-3xl font-extrabold tracking-tight">
 			GYM<span style="color: var(--accent)">·</span>BROT
 		</h1>
@@ -44,9 +50,10 @@
 			Tus días
 		</p>
 		<div class="space-y-3">
-			{#each $dias as d (d.id)}
+			{#each $dias as d, i (d.id)}
 				<a
 					href={`/dia/${d.id}`}
+					in:fly={{ y: 12, duration: 250, delay: i * 45 }}
 					class="flex items-center gap-3 rounded-2xl border border-white/10 p-4"
 					style="background: linear-gradient(90deg, rgb({d.color} / 0.12), transparent 55%), var(--surface)"
 				>
