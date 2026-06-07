@@ -5,11 +5,11 @@
 	import { catalogo, grupos, type Grupo } from '$lib/catalog';
 	import { agregarEjercicio, quitarEjercicio } from '$lib/dias';
 
-	const diaId = $derived($page.params.id);
+	const diaId = $derived($page.params.id!);
 
 	let yaEn = $state<Set<string>>(new Set());
 	$effect(() => {
-		const id = $page.params.id;
+		const id = diaId;
 		const sub = liveQuery(() => db.dias.get(id)).subscribe((d) => {
 			yaEn = new Set(d?.ejercicios.map((e) => e.exerciseId) ?? []);
 		});

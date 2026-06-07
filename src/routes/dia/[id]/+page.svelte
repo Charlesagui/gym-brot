@@ -13,10 +13,12 @@
 	let nombreEdit = $state('');
 	let sesion = $state<Sesion | undefined>(undefined);
 
+	const diaId = $derived($page.params.id!);
+
 	const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 	$effect(() => {
-		const id = $page.params.id;
+		const id = diaId;
 		cargando = true;
 		const sub = liveQuery(() => db.dias.get(id)).subscribe((d) => {
 			dia = d;
@@ -26,7 +28,7 @@
 	});
 
 	$effect(() => {
-		const id = $page.params.id;
+		const id = diaId;
 		const sub = sesionHoyObs(id).subscribe((s) => (sesion = s));
 		return () => sub.unsubscribe();
 	});
@@ -42,11 +44,11 @@
 		editando = true;
 	}
 	function guardarNombre() {
-		if (dia && nombreEdit.trim()) actualizarDia(dia.id, { nombre: nombreEdit.trim() });
+		if (dia && nombreEdit.trim()) actualizarDia(diaId, { nombre: nombreEdit.trim() });
 	}
 	async function eliminar() {
 		if (dia && confirm(`¿Borrar el día "${dia.nombre}"?`)) {
-			await borrarDia(dia.id);
+			await borrarDia(diaId);
 			goto('/');
 		}
 	}
@@ -96,7 +98,7 @@
 				{#each diasSemana as d, i (i)}
 					<button
 						onclick={() =>
-							actualizarDia(dia.id, { diaSemana: dia.diaSemana === i ? undefined : i })}
+							actualizarDia(diaId, { diaSemana: dia?.diaSemana === i ? undefined : i })}
 						class="flex-1 rounded-lg py-2 text-xs font-semibold"
 						style={dia.diaSemana === i
 							? 'background: var(--accent); color: white'
@@ -111,7 +113,7 @@
 			<div class="mb-6 flex gap-2.5">
 				{#each coloresDia as c (c.rgb)}
 					<button
-						onclick={() => actualizarDia(dia.id, { color: c.rgb })}
+						onclick={() => actualizarDia(diaId, { color: c.rgb })}
 						class="size-8 rounded-full transition"
 						style="background: rgb({c.rgb}); outline: {dia.color === c.rgb
 							? '2px solid white'
@@ -143,20 +145,20 @@
 								<p class="truncate text-sm font-semibold leading-tight">{e.nombre}</p>
 								<div class="mt-1.5 flex items-center gap-2">
 									<button
-										onclick={() => setSeries(dia.id, e.id, item.seriesObjetivo - 1)}
+										onclick={() => setSeries(diaId, e.id, item.seriesObjetivo - 1)}
 										class="grid size-6 place-items-center rounded-full bg-white/10 text-sm"
 										aria-label="Menos series">−</button
 									>
 									<span class="text-sm font-semibold tabular-nums">{item.seriesObjetivo} series</span>
 									<button
-										onclick={() => setSeries(dia.id, e.id, item.seriesObjetivo + 1)}
+										onclick={() => setSeries(diaId, e.id, item.seriesObjetivo + 1)}
 										class="grid size-6 place-items-center rounded-full bg-white/10 text-sm"
 										aria-label="Más series">+</button
 									>
 								</div>
 							</div>
 							<button
-								onclick={() => quitarEjercicio(dia.id, e.id)}
+								onclick={() => quitarEjercicio(diaId, e.id)}
 								class="grid size-8 shrink-0 place-items-center rounded-full text-sm"
 								style="background: rgba(255,80,80,.15); color: #ff6b6b"
 								aria-label="Quitar">✕</button
@@ -164,7 +166,7 @@
 						</div>
 					{:else}
 						<a
-							href={`/ejercicio/${e.id}?dia=${dia.id}`}
+							href={`/ejercicio/${e.id}?dia=${diaId}`}
 							class="flex items-center gap-3 rounded-2xl border border-white/10 p-2.5"
 							style="background: radial-gradient(150% 130% at 0% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface)"
 						>
@@ -208,7 +210,7 @@
 		</div>
 
 		<a
-			href={`/dia/${dia.id}/agregar`}
+			href={`/dia/${diaId}/agregar`}
 			class="mt-4 block rounded-2xl border border-dashed border-white/20 p-4 text-center text-sm font-medium"
 			style="color: var(--accent)">+ Agregar ejercicio</a
 		>
