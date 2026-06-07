@@ -107,10 +107,17 @@
 			.reduce<number | null>((m, p) => (m == null || p.peso > m ? p.peso : m), null)
 	);
 	const superado = $derived(mejorHoy != null && (mejorPrevio == null || mejorHoy > mejorPrevio));
+	const PASO_PESO = 5;
 
 	function num(v: string): number | undefined {
 		const n = parseFloat(v.replace(',', '.'));
 		return isNaN(n) ? undefined : n;
+	}
+
+	function ajustarPeso(i: number, delta: number) {
+		const actual = sets[i]?.peso ?? 0;
+		const siguiente = Math.max(0, actual + delta);
+		setPeso(diaId!, $page.params.id!, i, siguiente === 0 ? undefined : siguiente);
 	}
 
 	function onToggle(i: number) {
@@ -225,15 +232,24 @@
 								title="Tocá para marcar MAX (placa full)"
 								aria-label={`Serie ${i + 1}: marcar MAX`}>{s.esMax ? '🔥' : i + 1}</button
 							>
-							<input
-								type="number"
-								inputmode="decimal"
-								value={s.peso ?? ''}
-								placeholder="—"
-								onchange={(e) => setPeso(diaId, $page.params.id!, i, num(e.currentTarget.value))}
-								class="w-14 rounded-lg bg-white/5 px-2 py-2 text-center font-semibold outline-none"
-							/>
-							<span class="text-sm" style="color: var(--muted)">{unidad} ×</span>
+							<div class="grid w-[6.75rem] shrink-0 grid-cols-[1.75rem_1fr_1.75rem] items-center rounded-lg bg-white/5 p-1">
+								<button
+									onclick={() => ajustarPeso(i, -PASO_PESO)}
+									class="grid size-7 place-items-center rounded-md text-base font-bold"
+									style="background: rgba(255,255,255,.06); color: var(--muted)"
+									aria-label={`Bajar ${PASO_PESO} ${unidad} en serie ${i + 1}`}>−</button
+								>
+								<span class="min-w-0 text-center text-sm font-bold tabular-nums">
+									{s.peso ?? '—'}
+								</span>
+								<button
+									onclick={() => ajustarPeso(i, PASO_PESO)}
+									class="grid size-7 place-items-center rounded-md text-base font-bold"
+									style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
+									aria-label={`Subir ${PASO_PESO} ${unidad} en serie ${i + 1}`}>+</button
+								>
+							</div>
+							<span class="shrink-0 whitespace-nowrap text-xs" style="color: var(--muted)">{unidad} ×</span>
 							<input
 								type="number"
 								inputmode="numeric"
