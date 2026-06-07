@@ -1,6 +1,13 @@
 <script lang="ts">
 	import type { Ajustes } from '$lib/db';
-	import { ajustesObs, setUnidad, exportarJSON, importarJSON, AJUSTES_DEFAULT } from '$lib/extras';
+	import {
+		ajustesObs,
+		setUnidad,
+		exportarJSON,
+		parseBackup,
+		importarBackup,
+		AJUSTES_DEFAULT
+	} from '$lib/extras';
 
 	let ajustes = $state<Ajustes>(AJUSTES_DEFAULT);
 	let msg = $state('');
@@ -27,12 +34,23 @@
 		const file = input.files?.[0];
 		if (!file) return;
 		try {
-			await importarJSON(await file.text());
+			const data = parseBackup(await file.text());
+			const nDias = data.dias?.length ?? 0;
+			const ok = confirm(
+				`⚠️ Esto REEMPLAZA todos tus datos actuales por los del backup ` +
+					`(${nDias} ${nDias === 1 ? 'día' : 'días'}).\n\nNo se puede deshacer. ¿Continuar?`
+			);
+			if (!ok) {
+				msg = 'Importación cancelada';
+				return;
+			}
+			await importarBackup(data);
 			msg = '✅ Datos restaurados';
 		} catch {
 			msg = '❌ Archivo inválido';
+		} finally {
+			input.value = '';
 		}
-		input.value = '';
 	}
 </script>
 
