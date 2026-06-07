@@ -109,15 +109,16 @@
 	const superado = $derived(mejorHoy != null && (mejorPrevio == null || mejorHoy > mejorPrevio));
 	const PASO_PESO = 5;
 
-	function num(v: string): number | undefined {
-		const n = parseFloat(v.replace(',', '.'));
-		return isNaN(n) ? undefined : n;
-	}
-
 	function ajustarPeso(i: number, delta: number) {
 		const actual = sets[i]?.peso ?? 0;
 		const siguiente = Math.max(0, actual + delta);
 		setPeso(diaId!, $page.params.id!, i, siguiente === 0 ? undefined : siguiente);
+	}
+
+	function ajustarReps(i: number, delta: number) {
+		const actual = sets[i]?.reps ?? 0;
+		const siguiente = Math.max(0, actual + delta);
+		setReps(diaId!, $page.params.id!, i, siguiente === 0 ? undefined : siguiente);
 	}
 
 	function onToggle(i: number) {
@@ -222,7 +223,7 @@
 
 				<div class="mt-3 space-y-2">
 					{#each sets as s, i (i)}
-						<div class="flex items-center gap-2">
+						<div class="grid grid-cols-[1.75rem_1fr_2.5rem] items-center gap-2 rounded-xl bg-white/[0.025] p-2">
 							<button
 								onclick={() => toggleMax(diaId, $page.params.id!, i)}
 								class="grid size-7 shrink-0 place-items-center rounded-full text-sm font-bold"
@@ -232,32 +233,52 @@
 								title="Tocá para marcar MAX (placa full)"
 								aria-label={`Serie ${i + 1}: marcar MAX`}>{s.esMax ? '🔥' : i + 1}</button
 							>
-							<div class="grid w-[6.75rem] shrink-0 grid-cols-[1.75rem_1fr_1.75rem] items-center rounded-lg bg-white/5 p-1">
-								<button
-									onclick={() => ajustarPeso(i, -PASO_PESO)}
-									class="grid size-7 place-items-center rounded-md text-base font-bold"
-									style="background: rgba(255,255,255,.06); color: var(--muted)"
-									aria-label={`Bajar ${PASO_PESO} ${unidad} en serie ${i + 1}`}>−</button
-								>
-								<span class="min-w-0 text-center text-sm font-bold tabular-nums">
-									{s.peso ?? '—'}
-								</span>
-								<button
-									onclick={() => ajustarPeso(i, PASO_PESO)}
-									class="grid size-7 place-items-center rounded-md text-base font-bold"
-									style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
-									aria-label={`Subir ${PASO_PESO} ${unidad} en serie ${i + 1}`}>+</button
-								>
+							<div class="grid min-w-0 grid-cols-2 gap-2">
+								<div class="min-w-0">
+									<p class="mb-1 text-[10px] font-bold uppercase tracking-wider" style="color: var(--muted)">
+										Peso {unidad}
+									</p>
+									<div class="grid grid-cols-[1.5rem_1fr_1.5rem] items-center rounded-lg bg-white/5 p-1">
+										<button
+											onclick={() => ajustarPeso(i, -PASO_PESO)}
+											class="grid size-6 place-items-center rounded-md text-sm font-bold"
+											style="background: rgba(255,255,255,.06); color: var(--muted)"
+											aria-label={`Bajar ${PASO_PESO} ${unidad} en serie ${i + 1}`}>−</button
+										>
+										<span class="min-w-0 text-center text-sm font-bold tabular-nums">
+											{s.peso ?? '—'}
+										</span>
+										<button
+											onclick={() => ajustarPeso(i, PASO_PESO)}
+											class="grid size-6 place-items-center rounded-md text-sm font-bold"
+											style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
+											aria-label={`Subir ${PASO_PESO} ${unidad} en serie ${i + 1}`}>+</button
+										>
+									</div>
+								</div>
+								<div class="min-w-0">
+									<p class="mb-1 text-[10px] font-bold uppercase tracking-wider" style="color: var(--muted)">
+										Reps
+									</p>
+									<div class="grid grid-cols-[1.5rem_1fr_1.5rem] items-center rounded-lg bg-white/5 p-1">
+										<button
+											onclick={() => ajustarReps(i, -1)}
+											class="grid size-6 place-items-center rounded-md text-sm font-bold"
+											style="background: rgba(255,255,255,.06); color: var(--muted)"
+											aria-label={`Bajar reps en serie ${i + 1}`}>−</button
+										>
+										<span class="min-w-0 text-center text-sm font-bold tabular-nums">
+											{s.reps ?? '—'}
+										</span>
+										<button
+											onclick={() => ajustarReps(i, 1)}
+											class="grid size-6 place-items-center rounded-md text-sm font-bold"
+											style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
+											aria-label={`Subir reps en serie ${i + 1}`}>+</button
+										>
+									</div>
+								</div>
 							</div>
-							<span class="shrink-0 whitespace-nowrap text-xs" style="color: var(--muted)">{unidad} ×</span>
-							<input
-								type="number"
-								inputmode="numeric"
-								value={s.reps ?? ''}
-								placeholder="—"
-								onchange={(e) => setReps(diaId, $page.params.id!, i, num(e.currentTarget.value))}
-								class="w-12 rounded-lg bg-white/5 px-2 py-2 text-center font-semibold outline-none"
-							/>
 							<button
 								onclick={() => onToggle(i)}
 								class="ml-auto grid size-10 shrink-0 place-items-center rounded-full border-2 text-sm font-bold transition-colors"
