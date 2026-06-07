@@ -4,8 +4,8 @@ App de gimnasio **personal, mobile-first**. Simple y bonita, pensada para usarse
 con una mano y con mala señal en el gym. Sin depender de los nombres: te guiás por un
 **GIF animado** del ejercicio, que muestra el movimiento y marca **el músculo en rojo**.
 
-> Estado: **planeo cerrado** (sin código de app todavía). Decisiones acá; orden de
-> construcción en `ROADMAP.md`; los 30 ejercicios en `EJERCICIOS-INICIALES.md`.
+> Estado: **MVP completo** (Fases 0–6 construidas — ver historial git). Este doc queda
+> como referencia de decisiones y modelo de datos; los 30 ejercicios en `EJERCICIOS-INICIALES.md`.
 
 ---
 
@@ -113,7 +113,7 @@ Ajustes:  darkMode · unidad(kg|lb) · timer{ activo, minutos }
 
 ---
 
-## 8. Fases del MVP (detalle en `ROADMAP.md`)
+## 8. Fases del MVP (construidas — historial en git)
 
 `0` Cimientos · `1` Las 3 pantallas · `2` Días y rutinas · `3` ❤️ Contador de series ·
 `4` Peso y PR · `5` Notas y Timer · `6` Pulido y estética.
