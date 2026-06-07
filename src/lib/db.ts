@@ -59,3 +59,6 @@ db.version(1).stores({
 db.version(2).stores({
 	registros: null
 });
+
+// Atajo solo-desarrollo para inspeccionar/sembrar datos desde la consola.
+if (import.meta.env.DEV) (globalThis as Record<string, unknown>).gdb = db;
