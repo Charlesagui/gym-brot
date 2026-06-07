@@ -22,7 +22,7 @@ export interface MejorSet {
 	fecha: string;
 }
 
-/** Mejor set (mayor peso) por sesión, ordenado por fecha — para PR y gráfico. */
+/** Mejor set hecho (mayor peso) por sesión, ordenado por fecha — para PR y gráfico. */
 export function historialObs(exerciseId: string) {
 	return liveQuery(async () => {
 		const todas = await db.sesiones.orderBy('fecha').toArray();
@@ -32,6 +32,7 @@ export function historialObs(exerciseId: string) {
 			if (!e) continue;
 			let mejor: MejorSet | null = null;
 			for (const set of e.sets) {
+				if (!set.hecha) continue;
 				if (set.peso == null) continue;
 				if (!mejor || set.peso > mejor.peso) {
 					mejor = { peso: set.peso, reps: set.reps, esMax: !!set.esMax, fecha: s.fecha };
@@ -114,5 +115,17 @@ export function addSet(diaId: string, exerciseId: string) {
 	return mutar(diaId, exerciseId, (sets) => {
 		const last = sets[sets.length - 1];
 		sets.push({ peso: last?.peso, reps: last?.reps, hecha: false });
+	});
+}
+
+export function removeSet(diaId: string, exerciseId: string, i: number) {
+	return mutar(diaId, exerciseId, (sets) => {
+		if (sets.length > 1 && sets[i]) sets.splice(i, 1);
+	});
+}
+
+export function completarEjercicio(diaId: string, exerciseId: string) {
+	return mutar(diaId, exerciseId, (sets) => {
+		for (const set of sets) set.hecha = true;
 	});
 }

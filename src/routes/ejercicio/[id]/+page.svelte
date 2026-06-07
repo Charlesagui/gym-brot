@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 	import { onDestroy } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import { db, type SetSesion, type Ajustes } from '$lib/db';
@@ -13,6 +14,8 @@
 		setPeso,
 		setReps,
 		addSet,
+		removeSet,
+		completarEjercicio,
 		hoyStr,
 		type MejorSet
 	} from '$lib/sesion';
@@ -94,7 +97,7 @@
 	);
 	const mejorHoy = $derived(
 		sets.reduce<number | null>(
-			(m, s) => (s.peso != null && (m == null || s.peso > m) ? s.peso : m),
+			(m, s) => (s.hecha && s.peso != null && (m == null || s.peso > m) ? s.peso : m),
 			null
 		)
 	);
@@ -114,6 +117,12 @@
 		const yaEstaba = sets[i]?.hecha;
 		toggleSet(diaId!, $page.params.id!, i);
 		if (!yaEstaba) iniciarDescanso(); // recién marcada como hecha → arranca descanso
+	}
+
+	async function terminarEjercicio() {
+		if (!diaId) return;
+		await completarEjercicio(diaId, $page.params.id!);
+		goto(volver);
 	}
 
 	function iniciarDescanso() {
@@ -245,11 +254,19 @@
 					{/each}
 				</div>
 
-				<button
-					onclick={() => addSet(diaId, $page.params.id!)}
-					class="mt-3 w-full rounded-lg border border-dashed border-white/20 py-2 text-sm"
-					style="color: var(--muted)">+ serie</button
-				>
+				<div class="mt-3 grid grid-cols-2 gap-2">
+					<button
+						onclick={() => addSet(diaId, $page.params.id!)}
+						class="rounded-lg border border-dashed border-white/20 py-2 text-sm"
+						style="color: var(--muted)">+ serie</button
+					>
+					<button
+						onclick={() => removeSet(diaId, $page.params.id!, sets.length - 1)}
+						disabled={sets.length <= 1}
+						class="rounded-lg border border-dashed border-white/20 py-2 text-sm disabled:opacity-35"
+						style="color: #ff6b6b">− serie</button
+					>
+				</div>
 
 				<div class="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/10 pt-3">
 					<span class="mr-1 text-xs font-semibold" style="color: var(--muted)">⏱️ Descanso</span>
@@ -332,11 +349,11 @@
 				></textarea>
 			</details>
 
-			<a
-				href={volver}
-				class="mt-4 block rounded-2xl py-4 text-center font-bold"
+			<button
+				onclick={terminarEjercicio}
+				class="mt-4 block w-full rounded-2xl py-4 text-center font-bold"
 				style="background: {completo ? `rgb(${g.glow})` : 'var(--accent)'}; color: white"
-				>{completo ? '✓ ¡Completado!' : '✓ Terminar ejercicio'}</a
+				>{completo ? '✓ Volver al día' : '✓ Terminar ejercicio'}</button
 			>
 		{/if}
 	</main>
