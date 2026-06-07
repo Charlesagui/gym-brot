@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { onMount, onDestroy } from 'svelte';
+	import { onDestroy } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import { db, type SetSesion, type Ajustes } from '$lib/db';
 	import { ejercicioPorId, grupos } from '$lib/catalog';
@@ -67,12 +67,18 @@
 		return () => sub.unsubscribe();
 	});
 
-	onMount(async () => {
+	// Reacciona al cambio de [id]: SvelteKit reutiliza el componente al navegar
+	// entre ejercicios, así que esto debe ir en un $effect (no en onMount).
+	// ensureEjercicio es idempotente → re-correrla no pisa series en progreso.
+	$effect(() => {
 		const exId = $page.params.id!;
-		if (!diaId) return;
-		const dia = await db.dias.get(diaId);
-		const item = dia?.ejercicios.find((e) => e.exerciseId === exId);
-		await ensureEjercicio(diaId, exId, item?.seriesObjetivo ?? 4);
+		const dId = diaId;
+		if (!dId) return;
+		(async () => {
+			const dia = await db.dias.get(dId);
+			const item = dia?.ejercicios.find((e) => e.exerciseId === exId);
+			await ensureEjercicio(dId, exId, item?.seriesObjetivo ?? 4);
+		})();
 	});
 
 	onDestroy(() => {
