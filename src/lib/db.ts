@@ -10,23 +10,20 @@ export interface Dia {
 	ejercicios: { exerciseId: string; seriesObjetivo: number; orden: number }[];
 }
 
-/** Progreso de una sesión (se resetea por sesión). */
-export interface Sesion {
-	id: string;
-	fecha: string; // ISO
-	diaId: string;
-	progreso: { exerciseId: string; seriesHechas: number; completado: boolean }[];
+/** Una serie hecha, con su propio peso (permite rampa/pirámide). */
+export interface SetSesion {
+	peso?: number;
+	reps?: number;
+	hecha: boolean;
+	esMax?: boolean;
 }
 
-/** Registro de peso por ejercicio (de acá sale el PR automático). */
-export interface Registro {
+/** Progreso de una sesión (id = `${fecha}__${diaId}`, se resetea por día). */
+export interface Sesion {
 	id: string;
-	exerciseId: string;
-	fecha: string; // ISO
-	peso: number;
-	reps: number;
-	esMax: boolean;
-	extraKg?: number;
+	fecha: string; // YYYY-MM-DD
+	diaId: string;
+	ejercicios: { exerciseId: string; sets: SetSesion[] }[];
 }
 
 /** Nota personal por ejercicio (colapsada en la UI). */
@@ -46,7 +43,6 @@ export interface Ajustes {
 export const db = new Dexie('gym-brot') as Dexie & {
 	dias: EntityTable<Dia, 'id'>;
 	sesiones: EntityTable<Sesion, 'id'>;
-	registros: EntityTable<Registro, 'id'>;
 	notas: EntityTable<Nota, 'exerciseId'>;
 	ajustes: EntityTable<Ajustes, 'id'>;
 };
@@ -59,9 +55,7 @@ db.version(1).stores({
 	ajustes: 'id'
 });
 
-/** Mejor marca histórica (PR) de un ejercicio. */
-export async function prDe(exerciseId: string): Promise<Registro | undefined> {
-	const regs = await db.registros.where('exerciseId').equals(exerciseId).toArray();
-	if (regs.length === 0) return undefined;
-	return regs.reduce((mejor, r) => (r.peso > mejor.peso ? r : mejor));
-}
+// v2: el PR se deriva de las sesiones → la tabla `registros` ya no hace falta.
+db.version(2).stores({
+	registros: null
+});

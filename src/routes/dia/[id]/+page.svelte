@@ -2,14 +2,16 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { liveQuery } from 'dexie';
-	import { db, type Dia } from '$lib/db';
+	import { db, type Dia, type Sesion } from '$lib/db';
 	import { ejercicioPorId, grupos } from '$lib/catalog';
 	import { actualizarDia, borrarDia, quitarEjercicio, setSeries, coloresDia } from '$lib/dias';
+	import { sesionHoyObs } from '$lib/sesion';
 
 	let dia = $state<Dia | undefined>(undefined);
 	let cargando = $state(true);
 	let editando = $state(false);
 	let nombreEdit = $state('');
+	let sesion = $state<Sesion | undefined>(undefined);
 
 	const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
@@ -22,6 +24,18 @@
 		});
 		return () => sub.unsubscribe();
 	});
+
+	$effect(() => {
+		const id = $page.params.id;
+		const sub = sesionHoyObs(id).subscribe((s) => (sesion = s));
+		return () => sub.unsubscribe();
+	});
+
+	function progreso(exId: string): { hechas: number; total: number } | null {
+		const e = sesion?.ejercicios.find((x) => x.exerciseId === exId);
+		if (!e || e.sets.length === 0) return null;
+		return { hechas: e.sets.filter((s) => s.hecha).length, total: e.sets.length };
+	}
 
 	function abrirEdicion() {
 		nombreEdit = dia?.nombre ?? '';
@@ -113,6 +127,7 @@
 				{@const e = ejercicioPorId(item.exerciseId)}
 				{#if e}
 					{@const g = grupos[e.grupo]}
+					{@const p = progreso(e.id)}
 					{#if editando}
 						<div
 							class="flex items-center gap-3 rounded-2xl border border-white/10 p-2.5"
@@ -166,8 +181,16 @@
 								</p>
 							</div>
 							<div class="pr-1 text-right">
-								<p class="text-lg font-bold leading-none">{item.seriesObjetivo}</p>
-								<p class="text-[10px]" style="color: var(--muted)">series</p>
+								{#if p && p.hechas === p.total}
+									<p class="text-xl leading-none" style="color: rgb({g.glow})">✓</p>
+									<p class="text-[10px]" style="color: var(--muted)">hecho</p>
+								{:else if p}
+									<p class="text-lg font-bold leading-none">{p.hechas}/{p.total}</p>
+									<p class="text-[10px]" style="color: var(--muted)">series</p>
+								{:else}
+									<p class="text-lg font-bold leading-none">{item.seriesObjetivo}</p>
+									<p class="text-[10px]" style="color: var(--muted)">series</p>
+								{/if}
 							</div>
 						</a>
 					{/if}
