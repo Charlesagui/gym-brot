@@ -1,5 +1,5 @@
 import { liveQuery } from 'dexie';
-import { db, type Ajustes } from './db';
+import { db, type Dia, type Sesion, type Nota, type Ajustes } from './db';
 
 // --- Notas por ejercicio ---
 
@@ -37,6 +37,16 @@ export async function setUnidad(unidad: 'kg' | 'lb'): Promise<void> {
 
 // --- Backup (export / import a JSON) ---
 
+export interface Backup {
+	app?: string;
+	version?: number;
+	exportado?: string;
+	dias?: Dia[];
+	sesiones?: Sesion[];
+	notas?: Nota[];
+	ajustes?: Ajustes[];
+}
+
 export async function exportarJSON(): Promise<string> {
 	const [dias, sesiones, notas, ajustes] = await Promise.all([
 		db.dias.toArray(),
@@ -51,8 +61,17 @@ export async function exportarJSON(): Promise<string> {
 	);
 }
 
-export async function importarJSON(texto: string): Promise<void> {
-	const data = JSON.parse(texto);
+/** Parsea y valida que el texto sea un backup de gym-brot. Lanza si no lo es. */
+export function parseBackup(texto: string): Backup {
+	const data = JSON.parse(texto) as Backup;
+	if (!data || data.app !== 'gym-brot') {
+		throw new Error('No parece un backup de gym-brot');
+	}
+	return data;
+}
+
+/** Reemplaza TODOS los datos locales por los del backup (destructivo). */
+export async function importarBackup(data: Backup): Promise<void> {
 	await db.transaction('rw', db.dias, db.sesiones, db.notas, db.ajustes, async () => {
 		if (Array.isArray(data.dias)) {
 			await db.dias.clear();
