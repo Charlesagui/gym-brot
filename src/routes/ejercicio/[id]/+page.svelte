@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { onMount } from 'svelte';
-	import { db, type SetSesion } from '$lib/db';
+	import { onMount, onDestroy } from 'svelte';
+	import { db, type SetSesion, type Ajustes } from '$lib/db';
 	import { ejercicioPorId, grupos } from '$lib/catalog';
 	import {
 		sesionHoyObs,
@@ -15,6 +15,7 @@
 		hoyStr,
 		type MejorSet
 	} from '$lib/sesion';
+	import { notaObs, setNota, ajustesObs, setTimer, AJUSTES_DEFAULT } from '$lib/extras';
 
 	const ej = $derived(ejercicioPorId($page.params.id));
 	const g = $derived(ej ? grupos[ej.grupo] : undefined);
@@ -23,6 +24,13 @@
 
 	let sets = $state<SetSesion[]>([]);
 	let puntos = $state<MejorSet[]>([]);
+	let notaTexto = $state('');
+	let tieneNota = $state(false);
+	let ajustes = $state<Ajustes>(AJUSTES_DEFAULT);
+
+	// cuenta regresiva de descanso
+	let restoSeg = $state(0);
+	let intId: ReturnType<typeof setInterval> | null = null;
 
 	$effect(() => {
 		const exId = $page.params.id;
@@ -44,12 +52,30 @@
 		return () => sub.unsubscribe();
 	});
 
+	$effect(() => {
+		const exId = $page.params.id;
+		const sub = notaObs(exId).subscribe((n) => {
+			notaTexto = n?.texto ?? '';
+			tieneNota = !!n?.texto;
+		});
+		return () => sub.unsubscribe();
+	});
+
+	$effect(() => {
+		const sub = ajustesObs().subscribe((a) => (ajustes = a));
+		return () => sub.unsubscribe();
+	});
+
 	onMount(async () => {
 		const exId = $page.params.id;
 		if (!diaId) return;
 		const dia = await db.dias.get(diaId);
 		const item = dia?.ejercicios.find((e) => e.exerciseId === exId);
 		await ensureEjercicio(diaId, exId, item?.seriesObjetivo ?? 4);
+	});
+
+	onDestroy(() => {
+		if (intId) clearInterval(intId);
 	});
 
 	const hechas = $derived(sets.filter((s) => s.hecha).length);
@@ -74,6 +100,35 @@
 	function num(v: string): number | undefined {
 		const n = parseFloat(v.replace(',', '.'));
 		return isNaN(n) ? undefined : n;
+	}
+
+	function onToggle(i: number) {
+		const yaEstaba = sets[i]?.hecha;
+		toggleSet(diaId!, $page.params.id, i);
+		if (!yaEstaba) iniciarDescanso(); // recién marcada como hecha → arranca descanso
+	}
+
+	function iniciarDescanso() {
+		if (!ajustes.timer.activo) return;
+		if (intId) clearInterval(intId);
+		restoSeg = ajustes.timer.minutos * 60;
+		intId = setInterval(() => {
+			restoSeg -= 1;
+			if (restoSeg <= 0) {
+				saltarDescanso();
+				if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+			}
+		}, 1000);
+	}
+	function saltarDescanso() {
+		if (intId) clearInterval(intId);
+		intId = null;
+		restoSeg = 0;
+	}
+	function mmss(s: number): string {
+		const m = Math.floor(s / 60);
+		const sec = s % 60;
+		return `${m}:${String(sec).padStart(2, '0')}`;
 	}
 
 	function spark(pts: MejorSet[]): string {
@@ -102,7 +157,7 @@
 	</main>
 {:else}
 	<main
-		class="min-h-dvh px-5 pb-12 pt-6"
+		class="min-h-dvh px-5 pb-28 pt-6"
 		style="background: radial-gradient(85% 42% at 50% 0%, rgb({g.glow} / 0.20), transparent 72%), var(--bg)"
 	>
 		<header class="mb-4 flex items-center gap-3">
@@ -171,7 +226,7 @@
 								class="w-12 rounded-lg bg-white/5 px-2 py-2 text-center font-semibold outline-none"
 							/>
 							<button
-								onclick={() => toggleSet(diaId, $page.params.id, i)}
+								onclick={() => onToggle(i)}
 								class="ml-auto grid size-10 shrink-0 place-items-center rounded-full border-2 text-sm font-bold transition-colors"
 								style={s.hecha
 									? 'background: var(--accent); border-color: var(--accent); color: white'
@@ -187,9 +242,26 @@
 					class="mt-3 w-full rounded-lg border border-dashed border-white/20 py-2 text-sm"
 					style="color: var(--muted)">+ serie</button
 				>
-				<p class="mt-2 text-center text-[10px]" style="color: var(--muted)">
-					Tocá el N° de serie para marcar 🔥 MAX (placa full)
-				</p>
+
+				<div class="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/10 pt-3">
+					<span class="mr-1 text-xs font-semibold" style="color: var(--muted)">⏱️ Descanso</span>
+					<button
+						onclick={() => setTimer(false, ajustes.timer.minutos)}
+						class="rounded-full px-2.5 py-1 text-xs font-semibold"
+						style={!ajustes.timer.activo
+							? 'background: var(--accent); color: white'
+							: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Off</button
+					>
+					{#each [1, 2, 3, 4, 5] as m (m)}
+						<button
+							onclick={() => setTimer(true, m)}
+							class="rounded-full px-2.5 py-1 text-xs font-semibold"
+							style={ajustes.timer.activo && ajustes.timer.minutos === m
+								? 'background: var(--accent); color: white'
+								: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{m}'</button
+						>
+					{/each}
+				</div>
 			</section>
 
 			{#if pr}
@@ -237,15 +309,19 @@
 						</p>
 					{/if}
 				</section>
-			{:else}
-				<p class="mt-3 text-center text-xs" style="color: var(--muted)">
-					Cargá el peso de una serie para registrar tu PR 🏆
-				</p>
 			{/if}
 
 			<details class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
-				<summary class="cursor-pointer text-sm font-medium" style="color: var(--muted)">📝 Notas</summary>
-				<p class="mt-2 text-xs" style="color: var(--muted)">Notas de la máquina — llegan en la Fase 5.</p>
+				<summary class="cursor-pointer text-sm font-medium" style="color: var(--muted)">
+					📝 Notas {#if tieneNota}<span style="color: rgb({g.glow})">●</span>{/if}
+				</summary>
+				<textarea
+					bind:value={notaTexto}
+					onblur={() => setNota($page.params.id, notaTexto)}
+					placeholder="Ej: asiento en posición 4, agarre cerrado…"
+					rows="3"
+					class="mt-2 w-full resize-none rounded-lg bg-white/5 p-3 text-sm outline-none"
+				></textarea>
 			</details>
 
 			<a
@@ -256,4 +332,21 @@
 			>
 		{/if}
 	</main>
+
+	{#if restoSeg > 0 && g}
+		<div
+			class="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-md items-center justify-between gap-3 border-t border-white/10 px-5 py-3"
+			style="background: color-mix(in oklab, var(--surface) 94%, transparent); backdrop-filter: blur(10px)"
+		>
+			<span class="text-sm font-semibold" style="color: var(--muted)">⏱️ Descanso</span>
+			<span class="text-3xl font-extrabold tabular-nums" style="color: rgb({g.glow})"
+				>{mmss(restoSeg)}</span
+			>
+			<button
+				onclick={saltarDescanso}
+				class="rounded-full px-4 py-1.5 text-sm font-semibold"
+				style="background: rgba(255,255,255,.12)">Saltar</button
+			>
+		</div>
+	{/if}
 {/if}
