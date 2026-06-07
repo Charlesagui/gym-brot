@@ -15,6 +15,34 @@ export function sesionHoyObs(diaId: string) {
 	return liveQuery(() => db.sesiones.get(sesionId(diaId)));
 }
 
+export interface MejorSet {
+	peso: number;
+	reps?: number;
+	esMax: boolean;
+	fecha: string;
+}
+
+/** Mejor set (mayor peso) por sesión, ordenado por fecha — para PR y gráfico. */
+export function historialObs(exerciseId: string) {
+	return liveQuery(async () => {
+		const todas = await db.sesiones.orderBy('fecha').toArray();
+		const puntos: MejorSet[] = [];
+		for (const s of todas) {
+			const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
+			if (!e) continue;
+			let mejor: MejorSet | null = null;
+			for (const set of e.sets) {
+				if (set.peso == null) continue;
+				if (!mejor || set.peso > mejor.peso) {
+					mejor = { peso: set.peso, reps: set.reps, esMax: !!set.esMax, fecha: s.fecha };
+				}
+			}
+			if (mejor) puntos.push(mejor);
+		}
+		return puntos;
+	});
+}
+
 /** Sets de la última vez que se hizo este ejercicio (para pre-llenar pesos). */
 async function ultimaDe(exerciseId: string, exceptoId: string): Promise<SetSesion[] | undefined> {
 	const todas = await db.sesiones.orderBy('fecha').reverse().toArray();
@@ -65,6 +93,11 @@ async function mutar(diaId: string, exerciseId: string, fn: (sets: SetSesion[]) 
 export function toggleSet(diaId: string, exerciseId: string, i: number) {
 	return mutar(diaId, exerciseId, (sets) => {
 		if (sets[i]) sets[i].hecha = !sets[i].hecha;
+	});
+}
+export function toggleMax(diaId: string, exerciseId: string, i: number) {
+	return mutar(diaId, exerciseId, (sets) => {
+		if (sets[i]) sets[i].esMax = !sets[i].esMax;
 	});
 }
 export function setPeso(diaId: string, exerciseId: string, i: number, peso?: number) {
