@@ -18,7 +18,7 @@
 	} from '$lib/sesion';
 	import { notaObs, setNota, ajustesObs, setTimer, AJUSTES_DEFAULT } from '$lib/extras';
 
-	const ej = $derived(ejercicioPorId($page.params.id));
+	const ej = $derived(ejercicioPorId($page.params.id!));
 	const g = $derived(ej ? grupos[ej.grupo] : undefined);
 	const diaId = $derived($page.url.searchParams.get('dia'));
 	const volver = $derived(diaId ? `/dia/${diaId}` : '/');
@@ -34,7 +34,7 @@
 	let intId: ReturnType<typeof setInterval> | null = null;
 
 	$effect(() => {
-		const exId = $page.params.id;
+		const exId = $page.params.id!;
 		const dId = diaId;
 		if (!dId) {
 			sets = [];
@@ -48,13 +48,13 @@
 	});
 
 	$effect(() => {
-		const exId = $page.params.id;
+		const exId = $page.params.id!;
 		const sub = historialObs(exId).subscribe((p) => (puntos = p ?? []));
 		return () => sub.unsubscribe();
 	});
 
 	$effect(() => {
-		const exId = $page.params.id;
+		const exId = $page.params.id!;
 		const sub = notaObs(exId).subscribe((n) => {
 			notaTexto = n?.texto ?? '';
 			tieneNota = !!n?.texto;
@@ -68,7 +68,7 @@
 	});
 
 	onMount(async () => {
-		const exId = $page.params.id;
+		const exId = $page.params.id!;
 		if (!diaId) return;
 		const dia = await db.dias.get(diaId);
 		const item = dia?.ejercicios.find((e) => e.exerciseId === exId);
@@ -106,7 +106,7 @@
 
 	function onToggle(i: number) {
 		const yaEstaba = sets[i]?.hecha;
-		toggleSet(diaId!, $page.params.id, i);
+		toggleSet(diaId!, $page.params.id!, i);
 		if (!yaEstaba) iniciarDescanso(); // recién marcada como hecha → arranca descanso
 	}
 
@@ -202,7 +202,7 @@
 					{#each sets as s, i (i)}
 						<div class="flex items-center gap-2">
 							<button
-								onclick={() => toggleMax(diaId, $page.params.id, i)}
+								onclick={() => toggleMax(diaId, $page.params.id!, i)}
 								class="grid size-7 shrink-0 place-items-center rounded-full text-sm font-bold"
 								style={s.esMax
 									? 'background: rgba(255,157,60,.22); color: #ff9d3c'
@@ -215,7 +215,7 @@
 								inputmode="decimal"
 								value={s.peso ?? ''}
 								placeholder="—"
-								onchange={(e) => setPeso(diaId, $page.params.id, i, num(e.currentTarget.value))}
+								onchange={(e) => setPeso(diaId, $page.params.id!, i, num(e.currentTarget.value))}
 								class="w-14 rounded-lg bg-white/5 px-2 py-2 text-center font-semibold outline-none"
 							/>
 							<span class="text-sm" style="color: var(--muted)">{unidad} ×</span>
@@ -224,7 +224,7 @@
 								inputmode="numeric"
 								value={s.reps ?? ''}
 								placeholder="—"
-								onchange={(e) => setReps(diaId, $page.params.id, i, num(e.currentTarget.value))}
+								onchange={(e) => setReps(diaId, $page.params.id!, i, num(e.currentTarget.value))}
 								class="w-12 rounded-lg bg-white/5 px-2 py-2 text-center font-semibold outline-none"
 							/>
 							<button
@@ -240,7 +240,7 @@
 				</div>
 
 				<button
-					onclick={() => addSet(diaId, $page.params.id)}
+					onclick={() => addSet(diaId, $page.params.id!)}
 					class="mt-3 w-full rounded-lg border border-dashed border-white/20 py-2 text-sm"
 					style="color: var(--muted)">+ serie</button
 				>
@@ -319,7 +319,7 @@
 				</summary>
 				<textarea
 					bind:value={notaTexto}
-					onblur={() => setNota($page.params.id, notaTexto)}
+					onblur={() => setNota($page.params.id!, notaTexto)}
 					placeholder="Ej: asiento en posición 4, agarre cerrado…"
 					rows="3"
 					class="mt-2 w-full resize-none rounded-lg bg-white/5 p-3 text-sm outline-none"
