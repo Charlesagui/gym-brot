@@ -221,6 +221,8 @@
 	);
 	const chart = $derived(chartPoints(puntos));
 	const ultimoChart = $derived(chart[chart.length - 1]);
+	const chartMax = $derived(chart.length ? Math.max(...chart.map((p) => p.valor)) : null);
+	const chartMin = $derived(chart.length ? Math.min(...chart.map((p) => p.valor)) : null);
 	const mejorHoy = $derived(mejorSetLocal(sets, true));
 	const mejorPrevio = $derived(
 		puntos
@@ -627,6 +629,14 @@
 					<div>
 						<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
 							Series
+							{#if ej.maquinaPlacas && !mostrarHintMax}
+								<button
+									onclick={() => (mostrarHintMax = true)}
+									class="ml-1 align-middle text-[11px] font-bold normal-case"
+									style="color: var(--muted)"
+									aria-label="Qué es MAX">ⓘ</button
+								>
+							{/if}
 						</p>
 						<p class="mt-0.5 text-[11px] font-medium uppercase tracking-wider" style="color: var(--muted)">
 							Sesión actual
@@ -863,33 +873,69 @@
 						💡 {DESCRIPCION_METRICA[metrica]}
 					</p>
 					{#if chart.length}
-						<svg
-							viewBox="0 0 100 28"
-							class="mt-3 w-full"
-							preserveAspectRatio="none"
-							style="height: 46px"
-						>
-							<polyline
-								points={chartLine(chart)}
-								fill="none"
-								stroke="rgb({g.glow})"
-								stroke-width="2"
-								vector-effect="non-scaling-stroke"
-								stroke-linejoin="round"
-								stroke-linecap="round"
-							/>
-							{#each chart as p, i (`${p.x}-${p.y}`)}
-								<circle
-									cx={p.x}
-									cy={p.y}
-									r={i === chart.length - 1 ? 2.4 : 1.7}
-									fill={i === chart.length - 1 ? `rgb(${g.glow})` : 'var(--surface)'}
+						<div class="mt-3 flex items-stretch gap-2">
+							<!-- Referencia min/max: una línea casi plana puede ser igual progreso real -->
+							<div
+								class="flex shrink-0 flex-col {chartMin === chartMax
+									? 'justify-center'
+									: 'justify-between'} text-right text-[10px] font-medium tabular-nums"
+								style="color: var(--muted)"
+							>
+								<span>{chartMax != null ? formatoNumero(chartMax) : ''}</span>
+								{#if chartMin != null && chartMin !== chartMax}
+									<span>{formatoNumero(chartMin)}</span>
+								{/if}
+							</div>
+							<svg
+								viewBox="0 0 100 28"
+								class="min-w-0 flex-1"
+								preserveAspectRatio="none"
+								style="height: 46px"
+							>
+								{#if chartMin !== chartMax}
+									<line
+										x1="0"
+										x2="100"
+										y1="2"
+										y2="2"
+										stroke="rgba(255,255,255,.09)"
+										stroke-width="1"
+										stroke-dasharray="3 3"
+										vector-effect="non-scaling-stroke"
+									/>
+									<line
+										x1="0"
+										x2="100"
+										y1="26"
+										y2="26"
+										stroke="rgba(255,255,255,.09)"
+										stroke-width="1"
+										stroke-dasharray="3 3"
+										vector-effect="non-scaling-stroke"
+									/>
+								{/if}
+								<polyline
+									points={chartLine(chart)}
+									fill="none"
 									stroke="rgb({g.glow})"
-									stroke-width="1.4"
+									stroke-width="2"
 									vector-effect="non-scaling-stroke"
+									stroke-linejoin="round"
+									stroke-linecap="round"
 								/>
-							{/each}
-						</svg>
+								{#each chart as p, i (`${p.x}-${p.y}`)}
+									<circle
+										cx={p.x}
+										cy={p.y}
+										r={i === chart.length - 1 ? 2.4 : 1.7}
+										fill={i === chart.length - 1 ? `rgb(${g.glow})` : 'var(--surface)'}
+										stroke="rgb({g.glow})"
+										stroke-width="1.4"
+										vector-effect="non-scaling-stroke"
+									/>
+								{/each}
+							</svg>
+						</div>
 						<div class="mt-1 flex items-center justify-between gap-2 text-[11px]" style="color: var(--muted)">
 							<span
 								>📈 {metricaLabel} · últimas {Math.min(puntos.length, 10)}
@@ -925,13 +971,30 @@
 				></textarea>
 			</details>
 
-			<button
-				onclick={terminarEjercicio}
-				disabled={!!exito}
-				class="mt-4 block w-full rounded-2xl py-4 text-center font-bold"
-				style="background: {completo ? `rgb(${g.glow})` : 'var(--accent)'}; color: white"
-				>{exito ? 'Cerrando…' : completo ? '✓ Volver al día' : 'Terminar ejercicio'}</button
-			>
+			{#if completo && restoSeg === 0 && !avisoFinDescanso}
+				<!-- Con todo hecho, el cierre queda fijo al alcance del pulgar -->
+				<div
+					transition:fly={{ y: 40, duration: dur(200) }}
+					class="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md px-5 pb-5 pt-6"
+					style="background: linear-gradient(transparent, rgba(8,8,12,.92) 55%)"
+				>
+					<button
+						onclick={terminarEjercicio}
+						disabled={!!exito}
+						class="block w-full rounded-2xl py-4 text-center font-bold"
+						style="background: rgb({g.glow}); color: white"
+						>{exito ? 'Cerrando…' : '✓ Volver al día'}</button
+					>
+				</div>
+			{:else}
+				<button
+					onclick={terminarEjercicio}
+					disabled={!!exito}
+					class="mt-4 block w-full rounded-2xl py-4 text-center font-bold"
+					style="background: var(--accent); color: white"
+					>{exito ? 'Cerrando…' : 'Terminar ejercicio'}</button
+				>
+			{/if}
 		{/if}
 	</main>
 
