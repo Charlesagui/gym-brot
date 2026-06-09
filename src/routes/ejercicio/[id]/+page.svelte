@@ -79,6 +79,8 @@
 
 	// Descanso: la fuente de verdad son timestamps, no un contador — así el tiempo
 	// sigue siendo correcto aunque se bloquee la pantalla o la app pase a background.
+	// Se persiste en localStorage para sobrevivir la navegación entre pantallas.
+	const DESCANSO_KEY = 'gb-descanso';
 	let restoSeg = $state(0);
 	let avisoFinDescanso = $state(false);
 	let descansoInicio: number | null = null;
@@ -86,6 +88,8 @@
 	let intId: ReturnType<typeof setInterval> | null = null;
 	let avisoId: ReturnType<typeof setTimeout> | null = null;
 	let exitoId: ReturnType<typeof setTimeout> | null = null;
+	// La pantalla queda despierta durante el descanso para que el aviso llegue a tiempo.
+	let wakeLock: WakeLockSentinel | null = null;
 
 	$effect(() => {
 		const exId = $page.params.id!;
@@ -110,13 +114,38 @@
 
 	// Al volver del background o del bloqueo de pantalla, recalcular el descanso al instante.
 	$effect(() => {
-		const refrescar = () => recalcDescanso();
+		const refrescar = () => {
+			recalcDescanso();
+			// El wake lock se libera solo al pasar a background: repedirlo si sigue el descanso.
+			if (descansoHasta != null && document.visibilityState === 'visible') void pedirWakeLock();
+		};
 		document.addEventListener('visibilitychange', refrescar);
 		window.addEventListener('focus', refrescar);
 		return () => {
 			document.removeEventListener('visibilitychange', refrescar);
 			window.removeEventListener('focus', refrescar);
 		};
+	});
+
+	// Restaurar un descanso en curso al entrar: sobrevive navegar a otra pantalla.
+	$effect(() => {
+		const crudo = localStorage.getItem(DESCANSO_KEY);
+		if (!crudo) return;
+		try {
+			const d = JSON.parse(crudo) as { inicio?: number; hasta?: number };
+			if (typeof d.inicio !== 'number' || typeof d.hasta !== 'number' || d.hasta <= Date.now()) {
+				localStorage.removeItem(DESCANSO_KEY);
+				return;
+			}
+			descansoInicio = d.inicio;
+			descansoHasta = d.hasta;
+			restoSeg = Math.ceil((d.hasta - Date.now()) / 1000);
+			if (intId) clearInterval(intId);
+			intId = setInterval(recalcDescanso, 500);
+			void pedirWakeLock();
+		} catch {
+			localStorage.removeItem(DESCANSO_KEY);
+		}
 	});
 
 	$effect(() => {
@@ -170,6 +199,7 @@
 		if (intId) clearInterval(intId);
 		if (avisoId) clearTimeout(avisoId);
 		if (exitoId) clearTimeout(exitoId);
+		soltarWakeLock();
 	});
 
 	const hechas = $derived(sets.filter((s) => s.hecha).length);
@@ -398,6 +428,7 @@
 		// Si hay un descanso en curso, ajusta su fin en vez de reiniciarlo desde cero.
 		if (descansoInicio != null && descansoHasta != null) {
 			descansoHasta = descansoInicio + minutos * 60_000;
+			guardarDescanso();
 			recalcDescanso();
 		}
 	}
@@ -410,6 +441,29 @@
 		descansoHasta = descansoInicio + (minutos ?? ajustes.timer.minutos) * 60_000;
 		restoSeg = Math.ceil((descansoHasta - Date.now()) / 1000);
 		intId = setInterval(recalcDescanso, 500);
+		guardarDescanso();
+		void pedirWakeLock();
+	}
+
+	function guardarDescanso() {
+		if (descansoInicio == null || descansoHasta == null) return;
+		localStorage.setItem(
+			DESCANSO_KEY,
+			JSON.stringify({ inicio: descansoInicio, hasta: descansoHasta })
+		);
+	}
+
+	async function pedirWakeLock() {
+		try {
+			if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+		} catch {
+			// Denegado o sin soporte: el timer por timestamps sigue siendo correcto igual.
+		}
+	}
+
+	function soltarWakeLock() {
+		void wakeLock?.release().catch(() => {});
+		wakeLock = null;
 	}
 
 	function recalcDescanso() {
@@ -439,6 +493,8 @@
 		descansoInicio = null;
 		descansoHasta = null;
 		restoSeg = 0;
+		localStorage.removeItem(DESCANSO_KEY);
+		soltarWakeLock();
 	}
 
 	function ocultarAvisoFin() {
