@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { onDestroy } from 'svelte';
 	import { fly } from 'svelte/transition';
-	import { db, type SetSesion, type Ajustes } from '$lib/db';
+	import { db, type SetSesion, type Ajustes, type PrCelebrado } from '$lib/db';
 	import { ejercicioPorId, grupos } from '$lib/catalog';
 	import {
 		sesionHoyObs,
@@ -14,10 +14,12 @@
 		toggleMax,
 		setPeso,
 		setReps,
+		setExtra,
 		addSet,
 		removeSet,
-		completarEjercicio,
 		marcarPrCelebrado,
+		pesoEfectivo,
+		valorMetrica,
 		hoyStr,
 		type MejorSet
 	} from '$lib/sesion';
@@ -32,7 +34,9 @@
 	let anteriores = $state<SetSesion[]>([]);
 	let anterioresFecha = $state<string | null>(null);
 	let puntos = $state<MejorSet[]>([]);
-	let prPesoCelebrado = $state<number | null>(null);
+	let prCelebrado = $state<PrCelebrado | null>(null);
+	// Fecha fija de la sesión activa: evita perder toques si cruzás la medianoche entrenando.
+	let fechaSesion = $state(hoyStr());
 	let notaTexto = $state('');
 	let tieneNota = $state(false);
 	let ajustes = $state<Ajustes>(AJUSTES_DEFAULT);
@@ -53,7 +57,8 @@
 
 	$effect(() => {
 		const exId = $page.params.id!;
-		const sub = historialObs(exId).subscribe((p) => (puntos = p ?? []));
+		const m = ajustes.metricaPr; // recalcula el historial al cambiar de métrica
+		const sub = historialObs(exId, m).subscribe((p) => (puntos = p ?? []));
 		return () => sub.unsubscribe();
 	});
 
@@ -80,33 +85,35 @@
 			sets = [];
 			anteriores = [];
 			anterioresFecha = null;
-			prPesoCelebrado = null;
+			prCelebrado = null;
 			cargandoSeries = false;
 			return;
 		}
+		const fecha = hoyStr();
+		fechaSesion = fecha;
 		cargandoSeries = true;
 		anteriores = [];
 		anterioresFecha = null;
 		(async () => {
 			const dia = await db.dias.get(dId);
 			const item = dia?.ejercicios.find((e) => e.exerciseId === exId);
-			await ensureEjercicio(dId, exId, item?.seriesObjetivo ?? 4);
+			await ensureEjercicio(dId, exId, item?.seriesObjetivo ?? 4, fecha);
 			if (cancelado) return;
-			const prev = await ultimaSesion(dId, exId);
+			const prev = await ultimaSesion(dId, exId, fecha);
 			if (cancelado) return;
 			anteriores = prev?.sets ?? [];
 			anterioresFecha = prev?.fecha ?? null;
-			sub = sesionHoyObs(dId).subscribe((s) => {
+			sub = sesionHoyObs(dId, fecha).subscribe((s) => {
 				if (cancelado) return;
 				const e = s?.ejercicios.find((x) => x.exerciseId === exId);
 				sets = e ? e.sets : [];
-				prPesoCelebrado = e?.prPesoCelebrado ?? null;
+				prCelebrado = e?.prCelebrado ?? null;
 				cargandoSeries = false;
 			});
 		})().catch(() => {
 			if (!cancelado) {
 				sets = [];
-				prPesoCelebrado = null;
+				prCelebrado = null;
 				cargandoSeries = false;
 			}
 		});
@@ -125,21 +132,35 @@
 	const completo = $derived(sets.length > 0 && hechas === sets.length);
 	const unidad = $derived(ajustes.unidad);
 	const sonidoActivo = $derived(ajustes.sonido);
+	const metrica = $derived(ajustes.metricaPr);
+	const metricaLabel = $derived(metrica === 'e1rm' ? '1RM estimado' : 'peso máximo');
+	const otraMetrica = $derived(metrica === 'e1rm' ? 'peso' : 'e1rm');
+	const otraLabel = $derived(metrica === 'e1rm' ? 'peso máx.' : '1RM est.');
 
 	const pr = $derived(puntos.reduce<MejorSet | null>((best, p) => mejorSet(best, p), null));
+	const valorOtraPr = $derived(
+		pr && pesoEfectivo(pr) != null
+			? valorMetrica(pesoEfectivo(pr)!, pr.reps, otraMetrica)
+			: null
+	);
 	const chart = $derived(chartPoints(puntos));
 	const ultimoChart = $derived(chart[chart.length - 1]);
 	const mejorHoy = $derived(mejorSetLocal(sets, true));
 	const mejorPrevio = $derived(
 		puntos
-			.filter((p) => p.fecha !== hoyStr())
+			.filter((p) => p.fecha !== fechaSesion)
 			.reduce<number | null>((m, p) => (m == null || valorPr(p) > m ? valorPr(p) : m), null)
+	);
+	const valorCelebrado = $derived(
+		prCelebrado && pesoEfectivo(prCelebrado) != null
+			? valorMetrica(pesoEfectivo(prCelebrado)!, prCelebrado.reps, metrica)
+			: null
 	);
 	const valorMejorHoy = $derived(mejorHoy ? valorPr(mejorHoy) : null);
 	const superado = $derived(
 		valorMejorHoy != null &&
 			(mejorPrevio == null || valorMejorHoy > mejorPrevio) &&
-			(prPesoCelebrado == null || valorMejorHoy > prPesoCelebrado)
+			(valorCelebrado == null || valorMejorHoy > valorCelebrado)
 	);
 	const PASO_PESO = 5;
 
@@ -164,13 +185,15 @@
 	function mejorSetLocal(localSets: SetSesion[], soloHechas: boolean): MejorSet | null {
 		return localSets.reduce<MejorSet | null>((best, s) => {
 			if (soloHechas && !s.hecha) return best;
-			if (s.peso == null) return best;
+			const ef = pesoEfectivo(s);
+			if (ef == null) return best;
 			return mejorSet(best, {
-				peso: s.peso,
+				peso: s.peso!,
 				reps: s.reps,
 				esMax: !!s.esMax,
-				fecha: hoyStr(),
-				valor: s.peso
+				extraKg: s.extraKg,
+				fecha: fechaSesion,
+				valor: valorMetrica(ef, s.reps, metrica)
 			});
 		}, null);
 	}
@@ -180,7 +203,8 @@
 	}
 
 	function formatoSet(set: MejorSet): string {
-		return `${formatoNumero(set.peso)} ${unidad}${set.reps ? ` × ${set.reps}` : ''}${set.esMax ? ' · MAX' : ''}`;
+		const extra = set.esMax && set.extraKg ? ` +${formatoNumero(set.extraKg)}` : '';
+		return `${formatoNumero(set.peso)}${extra} ${unidad}${set.reps ? ` × ${set.reps}` : ''}${set.esMax ? ' · MAX' : ''}`;
 	}
 
 	/** Resumen de una serie de la última vez, para la columna "Anterior". */
@@ -202,7 +226,7 @@
 		const siguiente = Math.max(0, actual + delta);
 		const peso = siguiente === 0 ? undefined : siguiente;
 		if (sets[i]) sets[i].peso = peso;
-		setPeso(diaId!, $page.params.id!, i, peso);
+		setPeso(diaId!, $page.params.id!, i, peso, fechaSesion);
 	}
 
 	function ajustarReps(i: number, delta: number) {
@@ -210,12 +234,20 @@
 		const siguiente = Math.max(0, actual + delta);
 		const reps = siguiente === 0 ? undefined : siguiente;
 		if (sets[i]) sets[i].reps = reps;
-		setReps(diaId!, $page.params.id!, i, reps);
+		setReps(diaId!, $page.params.id!, i, reps, fechaSesion);
+	}
+
+	function ajustarExtra(i: number, delta: number) {
+		const actual = sets[i]?.extraKg ?? 0;
+		const siguiente = Math.max(0, actual + delta);
+		const extra = siguiente === 0 ? undefined : siguiente;
+		if (sets[i]) sets[i].extraKg = extra;
+		setExtra(diaId!, $page.params.id!, i, extra, fechaSesion);
 	}
 
 	function onToggle(i: number) {
 		const yaEstaba = sets[i]?.hecha;
-		toggleSet(diaId!, $page.params.id!, i);
+		toggleSet(diaId!, $page.params.id!, i, fechaSesion);
 		if (yaEstaba) {
 			saltarDescanso();
 			return;
@@ -226,19 +258,25 @@
 
 	async function terminarEjercicio() {
 		if (!diaId || exito) return;
-		const mejorAlTerminar = mejorSetLocal(sets, false);
-		const valorAlTerminar = mejorAlTerminar ? valorPr(mejorAlTerminar) : null;
+		// PR honesto: solo cuentan las series realmente marcadas ✓ (no fabrica nada).
+		const mejor = mejorSetLocal(sets, true);
+		const valor = mejor ? valorPr(mejor) : null;
 		const esPr =
-			valorAlTerminar != null &&
-			(mejorPrevio == null || valorAlTerminar > mejorPrevio) &&
-			(prPesoCelebrado == null || valorAlTerminar > prPesoCelebrado);
+			valor != null &&
+			(mejorPrevio == null || valor > mejorPrevio) &&
+			(valorCelebrado == null || valor > valorCelebrado);
 		saltarDescanso();
-		await completarEjercicio(diaId, $page.params.id!);
-		if (esPr && valorAlTerminar != null) {
-			await marcarPrCelebrado(diaId, $page.params.id!, valorAlTerminar);
+		if (esPr && mejor) {
+			await marcarPrCelebrado(
+				diaId,
+				$page.params.id!,
+				{ peso: mejor.peso, reps: mejor.reps, esMax: mejor.esMax, extraKg: mejor.extraKg },
+				metrica,
+				fechaSesion
+			);
 		}
 		exito = esPr ? 'pr' : 'normal';
-		prExito = esPr ? mejorAlTerminar : null;
+		prExito = esPr ? mejor : null;
 		void sonarExito(esPr).catch(() => {});
 		if ('vibrate' in navigator) navigator.vibrate(esPr ? [120, 70, 180] : 80);
 		if (exitoId) clearTimeout(exitoId);
@@ -370,7 +408,7 @@
 
 	function chartPoints(pts: MejorSet[]): ChartPoint[] {
 		const u = pts.slice(-10);
-		if (u.length < 2) return [];
+		if (u.length === 0) return [];
 		const valores = u.map(valorPr);
 		const min = Math.min(...valores);
 		const max = Math.max(...valores);
@@ -378,18 +416,17 @@
 		const W = 100;
 		const H = 28;
 		const pad = 2;
-		return u
-			.map((p, i) => {
-				const x = pad + (i / (u.length - 1)) * (W - 2 * pad);
-				const valor = valorPr(p);
-				const y = pad + (1 - (valor - min) / range) * (H - 2 * pad);
-				return {
-					x,
-					y,
-					valor,
-					label: formatoNumero(valor)
-				};
-			});
+		return u.map((p, i) => {
+			const x = u.length === 1 ? W / 2 : pad + (i / (u.length - 1)) * (W - 2 * pad);
+			const valor = valorPr(p);
+			const y = u.length === 1 ? H / 2 : pad + (1 - (valor - min) / range) * (H - 2 * pad);
+			return {
+				x,
+				y,
+				valor,
+				label: formatoNumero(valor)
+			};
+		});
 	}
 
 	function chartLine(points: ChartPoint[]): string {
@@ -415,11 +452,16 @@
 			<h1 class="flex-1 text-lg font-bold leading-tight">{ej.nombre}</h1>
 		</header>
 
-		<img
-			src={ej.gif}
-			alt={ej.nombre}
+		<video
+			src={ej.demoVideo}
 			class="mx-auto aspect-square w-full max-w-xs rounded-2xl bg-white object-contain"
-		/>
+			aria-label={ej.nombre}
+			autoplay
+			loop
+			muted
+			playsinline
+			preload="auto"
+		></video>
 		<p class="mt-2 text-center text-sm font-medium" style="color: rgb({g.glow})">
 			{g.emoji} {g.label} · {ej.musculo}
 		</p>
@@ -468,7 +510,7 @@
 							</p>
 							<div class="flex items-center rounded-full bg-white/5 p-0.5">
 								<button
-									onclick={() => removeSet(diaId, $page.params.id!, sets.length - 1)}
+									onclick={() => removeSet(diaId, $page.params.id!, sets.length - 1, fechaSesion)}
 									disabled={sets.length <= 1}
 									class="grid size-7 place-items-center rounded-full text-sm font-bold disabled:opacity-35"
 									style="color: var(--muted)"
@@ -476,7 +518,7 @@
 								>
 								<span class="min-w-6 text-center text-xs font-bold tabular-nums">{sets.length}</span>
 								<button
-									onclick={() => addSet(diaId, $page.params.id!)}
+									onclick={() => addSet(diaId, $page.params.id!, fechaSesion)}
 									class="grid size-7 place-items-center rounded-full text-sm font-bold"
 									style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
 									aria-label="Agregar serie de hoy">+</button
@@ -497,13 +539,13 @@
 							<div class="rounded-xl bg-white/[0.025] p-2">
 								<div class="grid grid-cols-[1.75rem_1fr_2.5rem] items-center gap-2">
 								<button
-									onclick={() => toggleMax(diaId, $page.params.id!, i)}
-									class="grid size-7 shrink-0 place-items-center rounded-full text-sm font-bold"
+									onclick={() => toggleMax(diaId, $page.params.id!, i, fechaSesion)}
+									class="grid size-7 shrink-0 place-items-center rounded-full border text-sm font-bold"
 									style={s.esMax
-										? 'background: rgba(255,157,60,.22); color: #ff9d3c'
-										: 'color: var(--muted)'}
+										? 'background: rgba(255,157,60,.22); color: #ff9d3c; border-color: rgba(255,157,60,.5)'
+										: 'color: var(--muted); border-color: rgba(255,255,255,.16); border-style: dashed'}
 									title="Tocá para marcar MAX (placa full)"
-									aria-label={`Serie ${i + 1}: marcar MAX`}>{s.esMax ? '🔥' : i + 1}</button
+									aria-label={`Serie ${i + 1}: ${s.esMax ? 'quitar' : 'marcar'} MAX`}>{s.esMax ? '🔥' : i + 1}</button
 								>
 								<div class="grid min-w-0 grid-cols-2 gap-2">
 									<div class="min-w-0">
@@ -560,6 +602,33 @@
 									aria-label={`Marcar serie ${i + 1}`}>✓</button
 								>
 								</div>
+								{#if s.esMax}
+									<div
+										class="mt-1.5 flex items-center justify-between gap-2 rounded-lg px-2 py-1"
+										style="background: rgba(255,157,60,.1)"
+									>
+										<span class="text-[10px] font-bold uppercase tracking-wider" style="color: #ff9d3c">
+											🔥 Encima de la placa
+										</span>
+										<div class="flex items-center gap-1.5">
+											<button
+												onclick={() => ajustarExtra(i, -PASO_PESO)}
+												class="grid size-6 place-items-center rounded-md text-sm font-bold"
+												style="background: rgba(255,255,255,.06); color: var(--muted)"
+												aria-label={`Bajar ${PASO_PESO} ${unidad} encima en serie ${i + 1}`}>−</button
+											>
+											<span class="min-w-12 text-center text-xs font-bold tabular-nums" style="color: #ff9d3c">
+												{s.extraKg ? `+${s.extraKg} ${unidad}` : '—'}
+											</span>
+											<button
+												onclick={() => ajustarExtra(i, PASO_PESO)}
+												class="grid size-6 place-items-center rounded-md text-sm font-bold"
+												style="background: rgba(255,157,60,.18); color: #ff9d3c"
+												aria-label={`Subir ${PASO_PESO} ${unidad} encima en serie ${i + 1}`}>+</button
+											>
+										</div>
+									</div>
+								{/if}
 								{#if ant || anterioresFecha}
 									<p class="mt-1.5 truncate text-[10px] font-medium" style="color: var(--muted)">
 										{#if ant}↩︎ {ant}{:else}↩︎ —{/if}
@@ -568,7 +637,9 @@
 							</div>
 						{/each}
 					</div>
-
+					<p class="mt-2 text-center text-[10px] font-medium" style="color: var(--muted)">
+						Tocá el N° de serie para marcar 🔥 MAX (placa full)
+					</p>
 				{/if}
 
 				<div class="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/10 pt-3">
@@ -599,7 +670,7 @@
 				>
 					<div class="flex items-center justify-between">
 						<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
-							PR peso máximo
+							PR {metricaLabel}
 						</p>
 						{#if superado}
 							<span
@@ -617,6 +688,11 @@
 					<p class="mt-0.5 text-xs font-medium" style="color: var(--muted)">
 						Mejor set: {formatoSet(pr)}
 					</p>
+					{#if valorOtraPr != null}
+						<p class="mt-0.5 text-[11px] font-medium" style="color: var(--muted)">
+							≈ {formatoNumero(valorOtraPr)} {unidad} en {otraLabel}
+						</p>
+					{/if}
 					{#if chart.length}
 						<svg
 							viewBox="0 0 100 28"
@@ -646,10 +722,24 @@
 							{/each}
 						</svg>
 						<div class="mt-1 flex items-center justify-between gap-2 text-[10px]" style="color: var(--muted)">
-							<span>📈 Peso máximo · últimas {Math.min(puntos.length, 10)} sesiones</span>
+							<span
+								>📈 {metricaLabel} · últimas {Math.min(puntos.length, 10)}
+								{Math.min(puntos.length, 10) === 1 ? 'sesión' : 'sesiones'}</span
+							>
 							<span>Último {ultimoChart.label} {unidad}</span>
 						</div>
 					{/if}
+				</section>
+			{:else if !cargandoSeries}
+				<section
+					class="mt-3 rounded-2xl border border-dashed border-white/15 p-4 text-center"
+					style="background: var(--surface)"
+				>
+					<p class="text-3xl">🏆</p>
+					<p class="mt-1 text-sm font-semibold">Todavía sin PR</p>
+					<p class="mt-0.5 text-xs" style="color: var(--muted)">
+						Marcá una serie con ✓ para registrar tu primer récord de {metricaLabel}.
+					</p>
 				</section>
 			{/if}
 
@@ -704,7 +794,7 @@
 						>
 					</p>
 					<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
-						Peso máximo · mejor set {formatoSet(prExito)}
+						{metricaLabel} · mejor set {formatoSet(prExito)}
 					</p>
 				{:else}
 					<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
