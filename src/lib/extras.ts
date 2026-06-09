@@ -1,5 +1,5 @@
 import { liveQuery } from 'dexie';
-import { db, type Dia, type Sesion, type Nota, type Ajustes } from './db';
+import { db, type Dia, type Sesion, type Nota, type Ajustes, type MetricaPr } from './db';
 
 // --- Notas por ejercicio ---
 
@@ -19,7 +19,8 @@ export const AJUSTES_DEFAULT: Ajustes = {
 	darkMode: true,
 	unidad: 'kg',
 	timer: { activo: false, minutos: 2 },
-	sonido: true
+	sonido: true,
+	metricaPr: 'peso'
 };
 
 function normalizarAjustes(a?: Ajustes | null): Ajustes {
@@ -27,7 +28,8 @@ function normalizarAjustes(a?: Ajustes | null): Ajustes {
 		...AJUSTES_DEFAULT,
 		...(a ?? {}),
 		timer: { ...AJUSTES_DEFAULT.timer, ...(a?.timer ?? {}) },
-		sonido: a?.sonido ?? AJUSTES_DEFAULT.sonido
+		sonido: a?.sonido ?? AJUSTES_DEFAULT.sonido,
+		metricaPr: a?.metricaPr ?? AJUSTES_DEFAULT.metricaPr
 	};
 }
 
@@ -43,6 +45,11 @@ export async function setTimer(activo: boolean, minutos: number): Promise<void> 
 export async function setSonido(sonido: boolean): Promise<void> {
 	const a = normalizarAjustes(await db.ajustes.get('app'));
 	await db.ajustes.put({ ...a, sonido });
+}
+
+export async function setMetricaPr(metricaPr: MetricaPr): Promise<void> {
+	const a = normalizarAjustes(await db.ajustes.get('app'));
+	await db.ajustes.put({ ...a, metricaPr });
 }
 
 const KG_TO_LB = 2.2046226218;
@@ -65,8 +72,25 @@ export async function setUnidad(unidad: 'kg' | 'lb'): Promise<void> {
 			let cambio = false;
 			for (const ejercicio of sesion.ejercicios) {
 				for (const set of ejercicio.sets) {
-					if (set.peso == null) continue;
-					set.peso = convertirPeso(set.peso, a.unidad, unidad);
+					if (set.peso != null) {
+						set.peso = convertirPeso(set.peso, a.unidad, unidad);
+						cambio = true;
+					}
+					if (set.extraKg != null) {
+						set.extraKg = convertirPeso(set.extraKg, a.unidad, unidad);
+						cambio = true;
+					}
+				}
+				// El umbral de PR ya celebrado se guarda en peso → convertir también.
+				if (ejercicio.prCelebrado) {
+					ejercicio.prCelebrado.peso = convertirPeso(ejercicio.prCelebrado.peso, a.unidad, unidad);
+					if (ejercicio.prCelebrado.extraKg != null) {
+						ejercicio.prCelebrado.extraKg = convertirPeso(
+							ejercicio.prCelebrado.extraKg,
+							a.unidad,
+							unidad
+						);
+					}
 					cambio = true;
 				}
 			}
@@ -149,6 +173,16 @@ function esDia(value: unknown): value is Dia {
 	);
 }
 
+function esPrCelebrado(value: unknown): boolean {
+	return (
+		esRecord(value) &&
+		esNumero(value.peso) &&
+		(value.reps === undefined || esNumero(value.reps)) &&
+		(value.esMax === undefined || esBoolean(value.esMax)) &&
+		(value.extraKg === undefined || esNumero(value.extraKg))
+	);
+}
+
 function esSesion(value: unknown): value is Sesion {
 	if (!esRecord(value)) return false;
 	const ejercicios = value.ejercicios;
@@ -162,6 +196,8 @@ function esSesion(value: unknown): value is Sesion {
 		ejercicios.every((e) => {
 			if (!esRecord(e) || !esString(e.exerciseId) || !Array.isArray(e.sets)) return false;
 			return (
+				(e.prCelebrado === undefined || esPrCelebrado(e.prCelebrado)) &&
+				// legacy: backups viejos guardaban un escalar prPesoCelebrado → se tolera y se ignora.
 				(e.prPesoCelebrado === undefined || esNumero(e.prPesoCelebrado)) &&
 				e.sets.every(
 					(set) =>
@@ -169,7 +205,8 @@ function esSesion(value: unknown): value is Sesion {
 						esBoolean(set.hecha) &&
 						(set.peso === undefined || esNumero(set.peso)) &&
 						(set.reps === undefined || esNumero(set.reps)) &&
-						(set.esMax === undefined || esBoolean(set.esMax))
+						(set.esMax === undefined || esBoolean(set.esMax)) &&
+						(set.extraKg === undefined || esNumero(set.extraKg))
 				)
 			);
 		})
@@ -189,7 +226,8 @@ function esAjustes(value: unknown): value is Ajustes {
 		esRecord(timer) &&
 		esBoolean(timer.activo) &&
 		esNumero(timer.minutos) &&
-		(value.sonido === undefined || esBoolean(value.sonido))
+		(value.sonido === undefined || esBoolean(value.sonido)) &&
+		(value.metricaPr === undefined || value.metricaPr === 'peso' || value.metricaPr === 'e1rm')
 	);
 }
 

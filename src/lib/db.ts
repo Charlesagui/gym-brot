@@ -16,12 +16,23 @@ export interface SetSesion {
 	reps?: number;
 	hecha: boolean;
 	esMax?: boolean;
+	/** Kg sumados encima de la placa full cuando es MAX (progresión más allá del tope). */
+	extraKg?: number;
+}
+
+/** Snapshot del set que ya disparó la celebración de PR en esta sesión (anti-repetición). */
+export interface PrCelebrado {
+	peso: number;
+	reps?: number;
+	esMax?: boolean;
+	extraKg?: number;
 }
 
 export interface EjercicioSesion {
 	exerciseId: string;
 	sets: SetSesion[];
-	prPesoCelebrado?: number;
+	/** Guarda el set, no un escalar, para recomputar su valor al cambiar métrica o unidad. */
+	prCelebrado?: PrCelebrado;
 }
 
 /** Progreso de una sesión (id = `${fecha}__${diaId}`, se resetea por día). */
@@ -40,6 +51,9 @@ export interface Nota {
 	texto: string;
 }
 
+/** Métrica con la que se calcula el PR: peso máximo o 1RM estimado (Epley). */
+export type MetricaPr = 'peso' | 'e1rm';
+
 /** Ajustes globales (única fila, id = 'app'). */
 export interface Ajustes {
 	id: string;
@@ -47,6 +61,7 @@ export interface Ajustes {
 	unidad: 'kg' | 'lb';
 	timer: { activo: boolean; minutos: number };
 	sonido: boolean;
+	metricaPr: MetricaPr;
 }
 
 export const db = new Dexie('gym-brot') as Dexie & {

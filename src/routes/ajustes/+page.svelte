@@ -4,6 +4,7 @@
 		ajustesObs,
 		setUnidad,
 		setSonido,
+		setMetricaPr,
 		exportarJSON,
 		parseBackup,
 		importarBackup,
@@ -80,6 +81,33 @@
 				>
 			{/each}
 		</div>
+	</section>
+
+	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+		<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+			Métrica de PR
+		</p>
+		<div class="mt-3 grid grid-cols-2 gap-2">
+			<button
+				onclick={() => setMetricaPr('peso')}
+				class="rounded-xl px-2 py-2.5 text-sm font-semibold"
+				style={ajustes.metricaPr === 'peso'
+					? 'background: var(--accent); color: white'
+					: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Peso máximo</button
+			>
+			<button
+				onclick={() => setMetricaPr('e1rm')}
+				class="rounded-xl px-2 py-2.5 text-sm font-semibold"
+				style={ajustes.metricaPr === 'e1rm'
+					? 'background: var(--accent); color: white'
+					: 'background: rgba(255,255,255,.06); color: var(--muted)'}>1RM estimado</button
+			>
+		</div>
+		<p class="mt-2 text-xs" style="color: var(--muted)">
+			{ajustes.metricaPr === 'e1rm'
+				? 'El récord considera peso y reps (Epley): 95 × 12 supera a 100 × 1. Premia la sobrecarga por repeticiones.'
+				: 'El récord es la serie de mayor peso, sin importar las reps. Simple y directo.'}
+		</p>
 	</section>
 
 	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">

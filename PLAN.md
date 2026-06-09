@@ -2,19 +2,21 @@
 
 App de gimnasio **personal, mobile-first**. Simple y bonita, pensada para usarse
 con una mano y con mala señal en el gym. Sin depender de los nombres: te guiás por un
-**GIF animado** del ejercicio, que muestra el movimiento y marca **el músculo en rojo**.
+**video MP4 liviano** del ejercicio, que muestra el movimiento y marca **el músculo en rojo**.
 
 > Estado: **MVP completo** (Fases 0–6 construidas — ver historial git). Este doc queda
-> como referencia de decisiones y modelo de datos; los 30 ejercicios en `EJERCICIOS-INICIALES.md`.
+> como referencia de decisiones y modelo de datos; el catálogo arrancó con los 30 ejercicios
+> documentados en `EJERCICIOS-INICIALES.md` y luego se amplió con más ejercicios de cable/polea.
 
 ---
 
 ## 1. Objetivo y funciones principales
 
 1. **Rutina del día** con cantidad de series, para ir descontando lo que vas haciendo.
-2. **GIF animado del ejercicio** (reconocimiento visual + cómo se hace, sin nombres).
-3. **Músculo trabajado resaltado** — ya viene marcado en rojo dentro del propio GIF.
-4. **PR por máquina** — peso × reps, **récord automático**, opción **🔥 MAX** y **mini-gráfico** de progreso.
+2. **Video MP4 del ejercicio** (reconocimiento visual + cómo se hace, sin nombres).
+3. **Músculo trabajado resaltado** — ya viene marcado en rojo dentro de la animación.
+4. **PR por máquina** — **récord automático** por **peso máximo** (o **1RM estimado** opcional, configurable),
+   contado **solo de las series marcadas hechas ✓**, con **🔥 MAX** (+ kg encima de la placa) y **mini-gráfico**.
 
 Principios: botones grandes, una sola mano, dark mode, mínimos toques, animaciones suaves, **offline**.
 
@@ -27,8 +29,8 @@ Principios: botones grandes, una sola mano, dark mode, mínimos toques, animacio
 | Framework | **SvelteKit + Svelte 5** (runes) |
 | Distribución | **PWA** instalable (base). Capacitor = upgrade futuro |
 | Plataformas | **Android + iPhone** |
-| Imágenes | ✅ **GIFs animados** (ExerciseDB vía [JahelCuadrado/ExerciseGymGifsDB](https://github.com/JahelCuadrado/ExerciseGymGifsDB)) — movimiento + músculo en rojo. 30 en `EJERCICIOS-INICIALES.md` |
-| Mapa muscular SVG | ❌ Descartado (el GIF ya marca el músculo) |
+| Imágenes | ✅ **MP4 compactados** desde GIFs de ExerciseDB vía [JahelCuadrado/ExerciseGymGifsDB](https://github.com/JahelCuadrado/ExerciseGymGifsDB) — movimiento + músculo en rojo |
+| Mapa muscular SVG | ❌ Descartado (la animación ya marca el músculo) |
 | Almacenamiento | **Dexie.js** (IndexedDB) — local, offline |
 | Unidad | **kg** por defecto, cambiable a **lb** en ajustes |
 | Estilo visual | **Oscuro minimalista** + brillos sutiles de color (color a definir — no atado a azul/índigo), acento vivo (§7) |
@@ -42,7 +44,7 @@ Principios: botones grandes, una sola mano, dark mode, mínimos toques, animacio
 - **vite-pwa/sveltekit** → service worker, instalable, cache offline.
 - **Tailwind CSS** (touch targets grandes, dark mode, glows).
 - **Dexie.js** para datos del usuario.
-- **30 GIFs empaquetados** en la app (offline real) — no depender del CDN.
+- **MP4 empaquetados** en la app (offline real) — no depender del CDN.
 - Catálogo = **JSON estático** empaquetado (read-only).
 
 ---
@@ -50,9 +52,9 @@ Principios: botones grandes, una sola mano, dark mode, mínimos toques, animacio
 ## 4. Arquitectura
 
 ```
-Catálogo (JSON estático: 30 ejercicios · nombre_es · grupo · gif)
+Catálogo (JSON estático: ejercicios · nombre_es · grupo · demoVideo)
                               │
-   GIF animado (ExerciseDB)  ──►  movimiento + músculo en rojo (todo en uno)
+   MP4 animado (ExerciseDB)  ──►  movimiento + músculo en rojo (todo en uno)
                               │
    Dexie.js (en el teléfono)  ──►  Días · sesiones · pesos/PR · notas · ajustes
                               │
@@ -65,7 +67,7 @@ Catálogo (JSON estático: 30 ejercicios · nombre_es · grupo · gif)
 
 **Catálogo (estático — ver `EJERCICIOS-INICIALES.md`):**
 ```
-Ejercicio: id · nombre_es · grupo_muscular · gif · instrucciones_es? (opcional)
+Ejercicio: id · nombre_es · grupo_muscular · demoVideo · instrucciones_es? (opcional)
 ```
 
 **Datos del usuario (Dexie):**
@@ -76,8 +78,11 @@ Sesion:   id · fecha · diaId · ejercicios[ { exerciseId, sets[ { peso?, reps?
 Nota:     exerciseId · texto        (colapsada en la UI)
 Ajustes:  darkMode · unidad(kg|lb) · timer{ activo, minutos }
 ```
-> El **PR** se deriva del historial de sesiones = la **serie más pesada** de cada ejercicio (auto).
-> **MAX** por serie = placa full; admite `extraKg` para "MAX + peso encima".
+> El **PR** se deriva del historial de sesiones, **solo de las series marcadas hechas ✓** (no se fabrica nada).
+> Métrica **configurable** (Ajustes): `peso` = serie más pesada · `e1rm` = 1RM estimado (Epley `peso·(1+reps/30)`),
+> que sí tiene en cuenta las reps. El número y el mini-gráfico siempre rotulan qué métrica usan.
+> **MAX** por serie = placa full; `extraKg` suma los kg encima de la placa al valor del PR.
+> El umbral de "PR ya celebrado" guarda el **set** (no un escalar), así se recalcula bien al cambiar métrica o unidad.
 > Cada serie pre-llena el peso de la anterior / última sesión, para rampear rápido en el gym.
 
 ---
@@ -90,9 +95,9 @@ Ajustes:  darkMode · unidad(kg|lb) · timer{ activo, minutos }
    Viene con **días de ejemplo** precargados. `[+ Nuevo día]`.
 2. **Día** — ejercicios del día con progreso de series (●○) y ✓ completado. `[+ Agregar ejercicio]`. Editable.
 3. **Ejercicio** —
-   - **GIF** en loop (movimiento + músculo en rojo).
+   - **Video** en loop (movimiento + músculo en rojo).
    - **Series con peso por serie:** una fila por serie = `peso × reps` + marcar hecha ✓ (el **[+]** suma serie). Permite **rampa/pirámide** (10→15→20→25 kg); pre-llena el peso de la serie anterior / última sesión. Simple si querés: mismo peso o solo marcar hechas.
-   - **🏆 PR automático** = tu **serie más pesada** del historial (+🎉 al superarlo) · **🔥 MAX** por serie (+ extra opcional).
+   - **🏆 PR automático** (de tus series hechas ✓) por **peso máximo** o **1RM estimado** (elegís en Ajustes; el número dice qué métrica usa) · **🔥 MAX** por serie (+ kg encima de la placa).
    - **📈 Mini-gráfico** de progreso del peso.
    - **📝 Notas** colapsadas (tocar para abrir/editar: "asiento en 4", "agarre cerrado").
    - **⏱️ Timer** de descanso opcional (arranca al completar serie).
@@ -118,16 +123,16 @@ Ajustes:  darkMode · unidad(kg|lb) · timer{ activo, minutos }
 `0` Cimientos · `1` Las 3 pantallas · `2` Días y rutinas · `3` ❤️ Contador de series ·
 `4` Peso y PR · `5` Notas y Timer · `6` Pulido y estética.
 
-**Preprocesamiento (una vez):** JSON semilla de los 30 · días de ejemplo · empaquetar los 30 GIFs.
+**Preprocesamiento:** JSON semilla · días de ejemplo · empaquetar MP4 compactados.
 
 ---
 
 ## 9. Riesgos / a verificar
 
 - **Cobertura de TU gym**: los 30 son máquinas genéricas; confirmar que coinciden. (Agregar máquinas propias = diferido, §11.)
-- **Offline real**: GIFs empaquetados en la app para andar sin señal.
+- **Offline real**: MP4 empaquetados en la app para andar sin señal.
 - **iOS**: puede borrar datos locales tras semanas sin abrir → mitigado con backup.
-- **Licencia GIFs** (ExerciseDB): uso personal OK; si se publica → licencia oficial (§11).
+- **Licencia animaciones** (ExerciseDB): uso personal OK; si se publica → licencia oficial (§11).
 
 ---
 
@@ -135,7 +140,7 @@ Ajustes:  darkMode · unidad(kg|lb) · timer{ activo, minutos }
 
 | Recurso | Uso | Licencia |
 |---|---|---|
-| [JahelCuadrado/ExerciseGymGifsDB](https://github.com/JahelCuadrado/ExerciseGymGifsDB) | **GIFs animados** | none (de ExerciseDB) |
+| [JahelCuadrado/ExerciseGymGifsDB](https://github.com/JahelCuadrado/ExerciseGymGifsDB) | **GIFs animados fuente, convertidos a MP4** | none (de ExerciseDB) |
 | [vite-pwa/sveltekit](https://github.com/vite-pwa/sveltekit) | PWA plugin | MIT |
 | [jessedelira/gym-tracker](https://github.com/jessedelira/gym-tracker) | Referencia (PWA gym) | — |
 
@@ -145,7 +150,31 @@ Ajustes:  darkMode · unidad(kg|lb) · timer{ activo, minutos }
 
 - **Multiusuario:** ya funciona local (cada persona en su celu = su propio perfil/datos). Cuentas + sync en la nube = upgrade futuro (Dexie Cloud / Supabase), sin rehacer nada.
 - **Máquinas propias** (agregar ejercicio custom con nombre/foto) — pedido pero pospuesto.
-- **Personaje animado custom** (reemplazar los GIFs como "skin"): DIY 3D / comprar / encargar / IA.
+- **Personaje animado custom** (reemplazar las animaciones como "skin"): DIY 3D / comprar / encargar / IA.
   Refs: `dscherm/gym-mouse` (MIT), `philg0ld/gemini-exercise-illustrator` (MIT). Debe ser original.
-- **Licencia GIFs**: si se publica/vende → ExerciseDB Pro o set propio.
+- **Licencia animaciones**: si se publica/vende → ExerciseDB Pro o set propio.
 - **Capacitor** (tiendas), notificaciones/recordatorios, sync entre dispositivos.
+
+---
+
+## 12. Roadmap verdad-de-datos + PR
+
+Refinamiento del PR para cumplir el manifiesto ("Datos y verdad").
+
+**✅ Hecho (fases A–C + pulido UI):**
+- **A1 · PR honesto** — el PR sale **solo de series marcadas hechas ✓**. "Terminar ejercicio" ya **no auto-completa**
+  series no tocadas (no fabrica récords ni progreso). El badge en vivo y la celebración al terminar usan el mismo criterio.
+- **A2 · Umbral robusto** — "PR ya celebrado" guarda el **set** (`{peso, reps, esMax, extraKg}`), no un escalar →
+  se recalcula bien al cambiar de métrica o de unidad.
+- **A3 · kg↔lb** — la conversión de unidad ahora también convierte `extraKg` y el umbral celebrado.
+- **A4 · Medianoche** — la sesión activa fija su fecha al entrar al ejercicio; no se pierden toques al cruzar las 00:00.
+- **B · Métrica configurable** — Ajustes → `peso máximo` | `1RM estimado (Epley)`. Todo (PR, gráfico, badge, celebración)
+  pasa por una función de valor única; rótulos dinámicos + línea con la métrica secundaria.
+- **C · MAX coherente** — `extraKg` ("encima de la placa") implementado y suma al PR; toggle MAX más descubrible.
+- **UI** — estado vacío "Todavía sin PR"; mini-gráfico con 1 sola sesión.
+
+**⏳ Pendiente (mayor esfuerzo / riesgo — pedir antes de hacer):**
+- **D3 · Corrección de dato** — long-press en un punto del gráfico para quitar/editar una serie del historial
+  (salida de emergencia ante un dato malo). Menos urgente ahora que A1–A3 cierran las fuentes de datos falsos.
+- **D4 · Vista global de récords** — pantalla que liste todos los PRs (pantalla nueva).
+- **Métrica por ejercicio** — hoy es global; permitir `peso` en unos y `1RM` en otros.
