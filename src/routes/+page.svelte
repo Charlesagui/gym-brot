@@ -26,12 +26,7 @@
 </script>
 
 <main class="glow-bg min-h-dvh px-5 pb-12 pt-10">
-	<header class="relative mb-7 text-center">
-		<a
-			href="/ajustes"
-			class="absolute right-0 top-0 grid size-9 place-items-center rounded-full border border-white/10"
-			aria-label="Ajustes">⚙️</a
-		>
+	<header class="mb-7 text-center">
 		<h1 class="text-3xl font-extrabold tracking-tight">
 			GYM<span style="color: var(--accent)">·</span>BROT
 		</h1>
