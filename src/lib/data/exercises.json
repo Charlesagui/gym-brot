@@ -10,7 +10,7 @@
 	{ "id": "press-pecho", "nombre": "Press de pecho en máquina", "grupo": "pecho", "musculo": "Pectoral", "gif": "/gifs/press-pecho.gif" },
 	{ "id": "press-inclinado", "nombre": "Press inclinado en máquina", "grupo": "pecho", "musculo": "Pectoral superior", "gif": "/gifs/press-inclinado.gif" },
 	{ "id": "aperturas-pec", "nombre": "Aperturas (pec-deck)", "grupo": "pecho", "musculo": "Pectoral", "gif": "/gifs/aperturas-pec.gif" },
-	{ "id": "cruce-poleas", "nombre": "Cruce de poleas", "grupo": "pecho", "musculo": "Pectoral", "gif": "/gifs/cruce-poleas.gif" },
+	{ "id": "cruce-poleas", "nombre": "Cruce de poleas", "grupo": "pecho", "musculo": "Pectoral", "gif": "/gifs/cruce-poleas.gif", "videoUrl": "https://www.youtube.com/watch?v=XnaMi2Gb_9Q" },
 	{ "id": "jalon-pecho", "nombre": "Jalón al pecho (polea)", "grupo": "espalda", "musculo": "Dorsales", "gif": "/gifs/jalon-pecho.gif" },
 	{ "id": "remo-sentado", "nombre": "Remo sentado bajo (polea)", "grupo": "espalda", "musculo": "Espalda media", "gif": "/gifs/remo-sentado.gif" },
 	{ "id": "remo-alto-v", "nombre": "Remo alto en polea (V)", "grupo": "espalda", "musculo": "Dorsales", "gif": "/gifs/remo-alto-v.gif" },

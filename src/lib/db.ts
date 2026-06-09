@@ -16,6 +16,8 @@ export interface SetSesion {
 	reps?: number;
 	hecha: boolean;
 	esMax?: boolean;
+	/** Serie de calentamiento: no cuenta para PR ni para "completado". */
+	esCalentamiento?: boolean;
 }
 
 export interface EjercicioSesion {

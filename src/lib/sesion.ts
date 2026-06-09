@@ -51,6 +51,7 @@ export function historialObs(exerciseId: string) {
 			let mejor: MejorSet | null = null;
 			for (const set of e.sets) {
 				if (!set.hecha) continue;
+				if (set.esCalentamiento) continue;
 				if (set.peso == null) continue;
 				mejor = mejorSet(mejor, {
 					peso: set.peso,
@@ -66,15 +67,24 @@ export function historialObs(exerciseId: string) {
 	});
 }
 
-/** Sets de la última vez que se hizo este ejercicio (para pre-llenar pesos). */
-async function ultimaDe(exerciseId: string, exceptoId: string): Promise<SetSesion[] | undefined> {
+/** Última sesión (distinta de la de hoy) en que se hizo este ejercicio. */
+export async function ultimaSesion(
+	diaId: string,
+	exerciseId: string
+): Promise<{ sets: SetSesion[]; fecha: string } | undefined> {
+	const exceptoId = sesionId(diaId);
 	const todas = await db.sesiones.orderBy('fecha').reverse().toArray();
 	for (const s of todas) {
 		if (s.id === exceptoId) continue;
 		const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
-		if (e && e.sets.length) return e.sets;
+		if (e && e.sets.length) return { sets: e.sets, fecha: s.fecha };
 	}
 	return undefined;
+}
+
+/** Sets de la última vez que se hizo este ejercicio (para pre-llenar pesos). */
+async function ultimaDe(diaId: string, exerciseId: string): Promise<SetSesion[] | undefined> {
+	return (await ultimaSesion(diaId, exerciseId))?.sets;
 }
 
 /** Inicializa los sets de un ejercicio en la sesión de hoy (atómico). */
@@ -83,14 +93,14 @@ export async function ensureEjercicio(
 	exerciseId: string,
 	nSets: number
 ): Promise<void> {
-	const id = sesionId(diaId);
 	await db.transaction('rw', db.sesiones, async () => {
 		const s = await ensureSesion(diaId);
 		if (s.ejercicios.some((e) => e.exerciseId === exerciseId)) return;
-		const prev = await ultimaDe(exerciseId, id);
+		const prev = await ultimaDe(diaId, exerciseId);
 		const sets: SetSesion[] = Array.from({ length: Math.max(1, nSets) }, (_, i) => ({
 			peso: prev?.[i]?.peso,
 			reps: prev?.[i]?.reps,
+			esCalentamiento: prev?.[i]?.esCalentamiento,
 			hecha: false
 		}));
 		s.ejercicios.push({ exerciseId, sets });
@@ -128,6 +138,11 @@ export function toggleMax(diaId: string, exerciseId: string, i: number) {
 		if (sets[i]) sets[i].esMax = !sets[i].esMax;
 	});
 }
+export function toggleCalentamiento(diaId: string, exerciseId: string, i: number) {
+	return mutar(diaId, exerciseId, (sets) => {
+		if (sets[i]) sets[i].esCalentamiento = !sets[i].esCalentamiento;
+	});
+}
 export function setPeso(diaId: string, exerciseId: string, i: number, peso?: number) {
 	return mutar(diaId, exerciseId, (sets) => {
 		if (sets[i]) sets[i].peso = peso;
@@ -155,7 +170,9 @@ export function removeSet(diaId: string, exerciseId: string, i: number) {
 
 export function completarEjercicio(diaId: string, exerciseId: string) {
 	return mutar(diaId, exerciseId, (sets) => {
-		for (const set of sets) set.hecha = true;
+		// Solo las series de trabajo; el calentamiento queda como lo dejó el usuario.
+		const trabajo = sets.filter((s) => !s.esCalentamiento);
+		for (const set of trabajo.length ? trabajo : sets) set.hecha = true;
 	});
 }
 

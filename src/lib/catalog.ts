@@ -8,6 +8,7 @@ export interface Ejercicio {
 	grupo: Grupo;
 	musculo: string;
 	gif: string;
+	videoUrl?: string;
 }
 
 /** Catálogo estático (30 ejercicios), empaquetado con la app. */
