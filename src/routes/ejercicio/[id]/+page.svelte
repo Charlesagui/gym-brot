@@ -159,10 +159,16 @@
 		void setTimer(false, ajustes.timer.minutos);
 	}
 
-	function iniciarDescanso() {
-		if (!ajustes.timer.activo) return;
+	function cambiarTimer(minutos: number) {
+		const descansoActivo = restoSeg > 0;
+		void setTimer(true, minutos);
+		if (descansoActivo) iniciarDescanso(minutos);
+	}
+
+	function iniciarDescanso(minutos?: number) {
+		if (minutos == null && !ajustes.timer.activo) return;
 		if (intId) clearInterval(intId);
-		restoSeg = ajustes.timer.minutos * 60;
+		restoSeg = (minutos ?? ajustes.timer.minutos) * 60;
 		intId = setInterval(() => {
 			restoSeg -= 1;
 			if (restoSeg <= 0) {
@@ -386,7 +392,7 @@
 					>
 					{#each [1, 2, 3, 4, 5] as m (m)}
 						<button
-							onclick={() => setTimer(true, m)}
+							onclick={() => cambiarTimer(m)}
 							class="rounded-full px-2.5 py-1 text-xs font-semibold"
 							style={ajustes.timer.activo && ajustes.timer.minutos === m
 								? 'background: var(--accent); color: white'
