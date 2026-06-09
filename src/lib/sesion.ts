@@ -15,27 +15,32 @@ export function sesionHoyObs(diaId: string) {
 	return liveQuery(() => db.sesiones.get(sesionId(diaId)));
 }
 
+async function ensureSesion(diaId: string): Promise<Sesion> {
+	const id = sesionId(diaId);
+	let s = await db.sesiones.get(id);
+	if (!s) {
+		s = { id, fecha: hoyStr(), diaId, ejercicios: [] };
+		await db.sesiones.add(s);
+	}
+	return s;
+}
+
 export interface MejorSet {
 	peso: number;
 	reps?: number;
 	esMax: boolean;
 	fecha: string;
-	estimado: number;
-}
-
-export function estimarPr(peso: number, reps?: number): number {
-	if (!reps || reps <= 1) return peso;
-	return peso * (1 + reps / 30);
+	valor: number;
 }
 
 function mejorSet(a: MejorSet | null, b: MejorSet): MejorSet {
 	if (!a) return b;
-	if (b.estimado > a.estimado) return b;
-	if (b.estimado === a.estimado && b.peso > a.peso) return b;
+	if (b.valor > a.valor) return b;
+	if (b.valor === a.valor && (b.reps ?? 0) > (a.reps ?? 0)) return b;
 	return a;
 }
 
-/** Mejor set hecho por sesión, ordenado por fecha — PR estimado para tarjeta y gráfico. */
+/** Mejor set hecho por sesión, ordenado por fecha — PR por peso máximo real. */
 export function historialObs(exerciseId: string) {
 	return liveQuery(async () => {
 		const todas = await db.sesiones.orderBy('fecha').toArray();
@@ -52,7 +57,7 @@ export function historialObs(exerciseId: string) {
 					reps: set.reps,
 					esMax: !!set.esMax,
 					fecha: s.fecha,
-					estimado: estimarPr(set.peso, set.reps)
+					valor: set.peso
 				});
 			}
 			if (mejor) puntos.push(mejor);
@@ -80,11 +85,7 @@ export async function ensureEjercicio(
 ): Promise<void> {
 	const id = sesionId(diaId);
 	await db.transaction('rw', db.sesiones, async () => {
-		let s = await db.sesiones.get(id);
-		if (!s) {
-			s = { id, fecha: hoyStr(), diaId, ejercicios: [] };
-			await db.sesiones.add(s);
-		}
+		const s = await ensureSesion(diaId);
 		if (s.ejercicios.some((e) => e.exerciseId === exerciseId)) return;
 		const prev = await ultimaDe(exerciseId, id);
 		const sets: SetSesion[] = Array.from({ length: Math.max(1, nSets) }, (_, i) => ({
@@ -98,19 +99,28 @@ export async function ensureEjercicio(
 }
 
 /** Mutación atómica de los sets de un ejercicio (serializada por Dexie → sin race). */
-async function mutar(diaId: string, exerciseId: string, fn: (sets: SetSesion[]) => void): Promise<void> {
+async function mutar(
+	diaId: string,
+	exerciseId: string,
+	fn: (sets: SetSesion[], sesion: Sesion) => void
+): Promise<void> {
 	await db.sesiones
 		.where('id')
 		.equals(sesionId(diaId))
 		.modify((s) => {
 			const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
-			if (e) fn(e.sets);
+			if (e) fn(e.sets, s);
 		});
 }
 
 export function toggleSet(diaId: string, exerciseId: string, i: number) {
-	return mutar(diaId, exerciseId, (sets) => {
-		if (sets[i]) sets[i].hecha = !sets[i].hecha;
+	return mutar(diaId, exerciseId, (sets, sesion) => {
+		if (!sets[i]) return;
+		sets[i].hecha = !sets[i].hecha;
+		if (!sets[i].hecha) {
+			sesion.diaTerminado = false;
+			sesion.diaTerminadoAt = undefined;
+		}
 	});
 }
 export function toggleMax(diaId: string, exerciseId: string, i: number) {
@@ -129,9 +139,11 @@ export function setReps(diaId: string, exerciseId: string, i: number, reps?: num
 	});
 }
 export function addSet(diaId: string, exerciseId: string) {
-	return mutar(diaId, exerciseId, (sets) => {
+	return mutar(diaId, exerciseId, (sets, sesion) => {
 		const last = sets[sets.length - 1];
 		sets.push({ peso: last?.peso, reps: last?.reps, hecha: false });
+		sesion.diaTerminado = false;
+		sesion.diaTerminadoAt = undefined;
 	});
 }
 
@@ -145,4 +157,34 @@ export function completarEjercicio(diaId: string, exerciseId: string) {
 	return mutar(diaId, exerciseId, (sets) => {
 		for (const set of sets) set.hecha = true;
 	});
+}
+
+export function marcarPrCelebrado(diaId: string, exerciseId: string, valor: number) {
+	return db.sesiones
+		.where('id')
+		.equals(sesionId(diaId))
+		.modify((s) => {
+			const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
+			if (!e) return;
+			e.prPesoCelebrado = Math.max(e.prPesoCelebrado ?? 0, valor);
+		});
+}
+
+export async function marcarDiaTerminado(diaId: string) {
+	await db.transaction('rw', db.sesiones, async () => {
+		const s = await ensureSesion(diaId);
+		s.diaTerminado = true;
+		s.diaTerminadoAt = new Date().toISOString();
+		await db.sesiones.put(s);
+	});
+}
+
+export function reabrirDia(diaId: string) {
+	return db.sesiones
+		.where('id')
+		.equals(sesionId(diaId))
+		.modify((s) => {
+			s.diaTerminado = false;
+			s.diaTerminadoAt = undefined;
+		});
 }

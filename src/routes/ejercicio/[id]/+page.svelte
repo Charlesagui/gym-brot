@@ -16,7 +16,7 @@
 		addSet,
 		removeSet,
 		completarEjercicio,
-		estimarPr,
+		marcarPrCelebrado,
 		hoyStr,
 		type MejorSet
 	} from '$lib/sesion';
@@ -29,11 +29,13 @@
 
 	let sets = $state<SetSesion[]>([]);
 	let puntos = $state<MejorSet[]>([]);
+	let prPesoCelebrado = $state<number | null>(null);
 	let notaTexto = $state('');
 	let tieneNota = $state(false);
 	let ajustes = $state<Ajustes>(AJUSTES_DEFAULT);
 	let cargandoSeries = $state(false);
 	let exito = $state<'normal' | 'pr' | null>(null);
+	let prExito = $state<MejorSet | null>(null);
 
 	// cuenta regresiva de descanso
 	let restoSeg = $state(0);
@@ -43,6 +45,8 @@
 	type AudioWindow = Window &
 		typeof globalThis & { webkitAudioContext?: AudioContextConstructor };
 	let audioCtx: AudioContext | null = null;
+	let masterGain: GainNode | null = null;
+	let masterCompressor: DynamicsCompressorNode | null = null;
 
 	$effect(() => {
 		const exId = $page.params.id!;
@@ -71,6 +75,7 @@
 		let sub: { unsubscribe: () => void } | undefined;
 		if (!dId) {
 			sets = [];
+			prPesoCelebrado = null;
 			cargandoSeries = false;
 			return;
 		}
@@ -84,11 +89,13 @@
 				if (cancelado) return;
 				const e = s?.ejercicios.find((x) => x.exerciseId === exId);
 				sets = e ? e.sets : [];
+				prPesoCelebrado = e?.prPesoCelebrado ?? null;
 				cargandoSeries = false;
 			});
 		})().catch(() => {
 			if (!cancelado) {
 				sets = [];
+				prPesoCelebrado = null;
 				cargandoSeries = false;
 			}
 		});
@@ -117,8 +124,11 @@
 			.filter((p) => p.fecha !== hoyStr())
 			.reduce<number | null>((m, p) => (m == null || valorPr(p) > m ? valorPr(p) : m), null)
 	);
+	const valorMejorHoy = $derived(mejorHoy ? valorPr(mejorHoy) : null);
 	const superado = $derived(
-		mejorHoy != null && (mejorPrevio == null || valorPr(mejorHoy) > mejorPrevio)
+		valorMejorHoy != null &&
+			(mejorPrevio == null || valorMejorHoy > mejorPrevio) &&
+			(prPesoCelebrado == null || valorMejorHoy > prPesoCelebrado)
 	);
 	const PASO_PESO = 5;
 
@@ -130,13 +140,13 @@
 	}
 
 	function valorPr(set: MejorSet): number {
-		return set.estimado ?? estimarPr(set.peso, set.reps);
+		return set.valor;
 	}
 
 	function mejorSet(a: MejorSet | null, b: MejorSet): MejorSet {
 		if (!a) return b;
 		if (valorPr(b) > valorPr(a)) return b;
-		if (valorPr(b) === valorPr(a) && b.peso > a.peso) return b;
+		if (valorPr(b) === valorPr(a) && (b.reps ?? 0) > (a.reps ?? 0)) return b;
 		return a;
 	}
 
@@ -149,13 +159,17 @@
 				reps: s.reps,
 				esMax: !!s.esMax,
 				fecha: hoyStr(),
-				estimado: estimarPr(s.peso, s.reps)
+				valor: s.peso
 			});
 		}, null);
 	}
 
 	function formatoNumero(n: number): string {
 		return Number.isInteger(n) ? String(n) : n.toFixed(1);
+	}
+
+	function formatoSet(set: MejorSet): string {
+		return `${formatoNumero(set.peso)} ${unidad}${set.reps ? ` × ${set.reps}` : ''}${set.esMax ? ' · MAX' : ''}`;
 	}
 
 	function ajustarPeso(i: number, delta: number) {
@@ -188,16 +202,22 @@
 	async function terminarEjercicio() {
 		if (!diaId || exito) return;
 		const mejorAlTerminar = mejorSetLocal(sets, false);
+		const valorAlTerminar = mejorAlTerminar ? valorPr(mejorAlTerminar) : null;
 		const esPr =
-			mejorAlTerminar != null &&
-			(mejorPrevio == null || valorPr(mejorAlTerminar) > mejorPrevio);
+			valorAlTerminar != null &&
+			(mejorPrevio == null || valorAlTerminar > mejorPrevio) &&
+			(prPesoCelebrado == null || valorAlTerminar > prPesoCelebrado);
 		saltarDescanso();
 		await completarEjercicio(diaId, $page.params.id!);
+		if (esPr && valorAlTerminar != null) {
+			await marcarPrCelebrado(diaId, $page.params.id!, valorAlTerminar);
+		}
 		exito = esPr ? 'pr' : 'normal';
+		prExito = esPr ? mejorAlTerminar : null;
 		void sonarExito(esPr).catch(() => {});
 		if ('vibrate' in navigator) navigator.vibrate(esPr ? [120, 70, 180] : 80);
 		if (exitoId) clearTimeout(exitoId);
-		exitoId = setTimeout(() => goto(volver), esPr ? 1200 : 850);
+		exitoId = setTimeout(() => goto(volver), esPr ? 2300 : 1200);
 	}
 
 	function apagarTimer() {
@@ -244,23 +264,40 @@
 		return audioCtx;
 	}
 
+	function getMaster(ctx: AudioContext): GainNode {
+		if (masterGain && masterCompressor && masterGain.context === ctx) return masterGain;
+		masterGain = ctx.createGain();
+		masterCompressor = ctx.createDynamicsCompressor();
+		masterGain.gain.setValueAtTime(0.95, ctx.currentTime);
+		masterCompressor.threshold.setValueAtTime(-22, ctx.currentTime);
+		masterCompressor.knee.setValueAtTime(20, ctx.currentTime);
+		masterCompressor.ratio.setValueAtTime(6, ctx.currentTime);
+		masterCompressor.attack.setValueAtTime(0.004, ctx.currentTime);
+		masterCompressor.release.setValueAtTime(0.18, ctx.currentTime);
+		masterGain.connect(masterCompressor);
+		masterCompressor.connect(ctx.destination);
+		return masterGain;
+	}
+
 	function beep(
 		ctx: AudioContext,
 		start: number,
 		freq: number,
 		duracion: number,
 		volumen = 0.16,
-		tipo: OscillatorType = 'sine'
+		tipo: OscillatorType = 'sine',
+		detune = 0
 	): void {
 		const osc = ctx.createOscillator();
 		const gain = ctx.createGain();
 		osc.type = tipo;
 		osc.frequency.setValueAtTime(freq, start);
+		osc.detune.setValueAtTime(detune, start);
 		gain.gain.setValueAtTime(0.0001, start);
-		gain.gain.exponentialRampToValueAtTime(volumen, start + 0.02);
+		gain.gain.exponentialRampToValueAtTime(volumen, start + 0.012);
 		gain.gain.exponentialRampToValueAtTime(0.0001, start + duracion);
 		osc.connect(gain);
-		gain.connect(ctx.destination);
+		gain.connect(getMaster(ctx));
 		osc.start(start);
 		osc.stop(start + duracion + 0.03);
 	}
@@ -271,9 +308,10 @@
 		if (!ctx) return;
 		if (ctx.state === 'suspended') await ctx.resume();
 		const now = ctx.currentTime;
-		beep(ctx, now, 659, 0.13, 0.1, 'triangle');
-		beep(ctx, now + 0.06, 880, 0.16, 0.12, 'triangle');
-		beep(ctx, now + 0.15, 1175, 0.18, 0.09, 'sine');
+		beep(ctx, now, 523, 0.09, 0.14, 'triangle');
+		beep(ctx, now + 0.04, 784, 0.13, 0.2, 'triangle', 3);
+		beep(ctx, now + 0.1, 1047, 0.17, 0.18, 'sine', -4);
+		beep(ctx, now + 0.18, 1568, 0.22, 0.12, 'sine', 2);
 	}
 
 	async function sonarExito(esPr: boolean): Promise<void> {
@@ -283,13 +321,16 @@
 		if (ctx.state === 'suspended') await ctx.resume();
 		const now = ctx.currentTime;
 		if (esPr) {
-			beep(ctx, now, 659, 0.1, 0.12);
-			beep(ctx, now + 0.11, 880, 0.12, 0.14);
-			beep(ctx, now + 0.25, 1175, 0.18, 0.16);
+			beep(ctx, now, 392, 0.14, 0.16, 'triangle');
+			beep(ctx, now + 0.08, 659, 0.17, 0.18, 'triangle', 4);
+			beep(ctx, now + 0.18, 988, 0.2, 0.2, 'sine', -3);
+			beep(ctx, now + 0.32, 1319, 0.26, 0.19, 'triangle');
+			beep(ctx, now + 0.5, 1760, 0.38, 0.14, 'sine', 5);
 			return;
 		}
-		beep(ctx, now, 523, 0.08, 0.1);
-		beep(ctx, now + 0.09, 784, 0.14, 0.13);
+		beep(ctx, now, 440, 0.12, 0.14, 'triangle');
+		beep(ctx, now + 0.1, 659, 0.18, 0.17, 'sine');
+		beep(ctx, now + 0.23, 988, 0.2, 0.11, 'sine');
 	}
 
 	async function sonarDescansoTerminado(): Promise<void> {
@@ -298,8 +339,8 @@
 		if (!ctx) return;
 		if (ctx.state === 'suspended') await ctx.resume();
 		const now = ctx.currentTime;
-		beep(ctx, now, 880, 0.16);
-		beep(ctx, now + 0.22, 1175, 0.18);
+		beep(ctx, now, 880, 0.16, 0.16, 'triangle');
+		beep(ctx, now + 0.18, 1175, 0.2, 0.17, 'sine');
 	}
 
 	function chartPoints(pts: MejorSet[]): ChartPoint[] {
@@ -508,12 +549,12 @@
 				>
 					<div class="flex items-center justify-between">
 						<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
-							PR estimado
+							PR peso máximo
 						</p>
 						{#if superado}
 							<span
 								class="rounded-full px-2 py-0.5 text-xs font-bold"
-								style="background: rgb({g.glow} / .2); color: rgb({g.glow})">🎉 ¡Nuevo récord!</span
+								style="background: rgb({g.glow} / .2); color: rgb({g.glow})">🎉 Nuevo PR</span
 							>
 						{/if}
 					</div>
@@ -524,7 +565,7 @@
 						>
 					</p>
 					<p class="mt-0.5 text-xs font-medium" style="color: var(--muted)">
-						Mejor set: {pr.peso} {unidad}{#if pr.reps} × {pr.reps}{/if}{#if pr.esMax} · MAX{/if}
+						Mejor set: {formatoSet(pr)}
 					</p>
 					{#if chart.length}
 						<svg
@@ -555,7 +596,7 @@
 							{/each}
 						</svg>
 						<div class="mt-1 flex items-center justify-between gap-2 text-[10px]" style="color: var(--muted)">
-							<span>📈 PR estimado · últimas {Math.min(puntos.length, 10)} sesiones</span>
+							<span>📈 Peso máximo · últimas {Math.min(puntos.length, 10)} sesiones</span>
 							<span>Último {ultimoChart.label} {unidad}</span>
 						</div>
 					{/if}
@@ -605,9 +646,21 @@
 				<p class="mt-5 text-2xl font-extrabold">
 					{exito === 'pr' ? '¡Nuevo PR!' : 'Ejercicio terminado'}
 				</p>
-				<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
-					{exito === 'pr' ? 'Buen set. Quedó guardado.' : 'Volviendo al día…'}
-				</p>
+				{#if exito === 'pr' && prExito}
+					<p class="mt-2 text-4xl font-extrabold tabular-nums">
+						{formatoNumero(valorPr(prExito))}<span
+							class="text-xl font-semibold"
+							style="color: var(--muted)"> {unidad}</span
+						>
+					</p>
+					<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
+						Peso máximo · mejor set {formatoSet(prExito)}
+					</p>
+				{:else}
+					<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
+						Volviendo al día…
+					</p>
+				{/if}
 			</div>
 		</div>
 	{/if}

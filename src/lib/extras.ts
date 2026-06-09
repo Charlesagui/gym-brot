@@ -156,16 +156,21 @@ function esSesion(value: unknown): value is Sesion {
 		esString(value.id) &&
 		esString(value.fecha) &&
 		esString(value.diaId) &&
+		(value.diaTerminado === undefined || esBoolean(value.diaTerminado)) &&
+		(value.diaTerminadoAt === undefined || esString(value.diaTerminadoAt)) &&
 		Array.isArray(ejercicios) &&
 		ejercicios.every((e) => {
 			if (!esRecord(e) || !esString(e.exerciseId) || !Array.isArray(e.sets)) return false;
-			return e.sets.every(
-				(set) =>
-					esRecord(set) &&
-					esBoolean(set.hecha) &&
-					(set.peso === undefined || esNumero(set.peso)) &&
-					(set.reps === undefined || esNumero(set.reps)) &&
-					(set.esMax === undefined || esBoolean(set.esMax))
+			return (
+				(e.prPesoCelebrado === undefined || esNumero(e.prPesoCelebrado)) &&
+				e.sets.every(
+					(set) =>
+						esRecord(set) &&
+						esBoolean(set.hecha) &&
+						(set.peso === undefined || esNumero(set.peso)) &&
+						(set.reps === undefined || esNumero(set.reps)) &&
+						(set.esMax === undefined || esBoolean(set.esMax))
+				)
 			);
 		})
 	);
