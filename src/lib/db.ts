@@ -62,6 +62,8 @@ export interface Ajustes {
 	timer: { activo: boolean; minutos: number };
 	sonido: boolean;
 	metricaPr: MetricaPr;
+	/** Cuánto suma/resta cada toque de −/+ al cargar peso. */
+	pasoPeso: number;
 }
 
 export const db = new Dexie('gym-brot') as Dexie & {

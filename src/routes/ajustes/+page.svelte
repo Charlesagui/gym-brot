@@ -6,6 +6,7 @@
 		setUnidad,
 		setSonido,
 		setMetricaPr,
+		setPasoPeso,
 		exportarJSON,
 		parseBackup,
 		importarBackup,
@@ -84,6 +85,29 @@
 				>
 			{/each}
 		</div>
+	</section>
+
+	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+		<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+			Paso del peso
+		</p>
+		<div class="mt-3 flex gap-2">
+			{#each [1, 2.5, 5] as paso (paso)}
+				<button
+					onclick={() => setPasoPeso(paso)}
+					class="flex-1 rounded-xl py-2.5 font-semibold tabular-nums"
+					aria-pressed={ajustes.pasoPeso === paso}
+					aria-label={`Paso de ${paso} ${ajustes.unidad}`}
+					style={ajustes.pasoPeso === paso
+						? 'background: var(--accent); color: white'
+						: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{paso}</button
+				>
+			{/each}
+		</div>
+		<p class="mt-2 text-xs" style="color: var(--muted)">
+			Cuánto suma o resta cada toque de − / + al cargar peso ({ajustes.unidad}). Para mancuernas
+			suele convenir 2.5.
+		</p>
 	</section>
 
 	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
