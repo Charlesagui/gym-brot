@@ -1,0 +1,111 @@
+/**
+ * Audio compartido de la app: un único AudioContext con master + compresor,
+ * y las melodías de cada recompensa. El chequeo de "sonido activado" queda
+ * en quien llama (acá no se conocen los ajustes).
+ */
+
+type AudioContextConstructor = new () => AudioContext;
+type AudioWindow = Window & typeof globalThis & { webkitAudioContext?: AudioContextConstructor };
+
+let audioCtx: AudioContext | null = null;
+let masterGain: GainNode | null = null;
+let masterCompressor: DynamicsCompressorNode | null = null;
+
+function getAudioContext(): AudioContext | null {
+	if (typeof window === 'undefined') return null;
+	const audioWindow = window as AudioWindow;
+	const Ctx = window.AudioContext ?? audioWindow.webkitAudioContext;
+	if (!Ctx) return null;
+	audioCtx ??= new Ctx();
+	return audioCtx;
+}
+
+function getMaster(ctx: AudioContext): GainNode {
+	if (masterGain && masterCompressor && masterGain.context === ctx) return masterGain;
+	masterGain = ctx.createGain();
+	masterCompressor = ctx.createDynamicsCompressor();
+	masterGain.gain.setValueAtTime(0.95, ctx.currentTime);
+	masterCompressor.threshold.setValueAtTime(-22, ctx.currentTime);
+	masterCompressor.knee.setValueAtTime(20, ctx.currentTime);
+	masterCompressor.ratio.setValueAtTime(6, ctx.currentTime);
+	masterCompressor.attack.setValueAtTime(0.004, ctx.currentTime);
+	masterCompressor.release.setValueAtTime(0.18, ctx.currentTime);
+	masterGain.connect(masterCompressor);
+	masterCompressor.connect(ctx.destination);
+	return masterGain;
+}
+
+function beep(
+	ctx: AudioContext,
+	start: number,
+	freq: number,
+	duracion: number,
+	volumen = 0.16,
+	tipo: OscillatorType = 'sine',
+	detune = 0
+): void {
+	const osc = ctx.createOscillator();
+	const gain = ctx.createGain();
+	osc.type = tipo;
+	osc.frequency.setValueAtTime(freq, start);
+	osc.detune.setValueAtTime(detune, start);
+	gain.gain.setValueAtTime(0.0001, start);
+	gain.gain.exponentialRampToValueAtTime(volumen, start + 0.012);
+	gain.gain.exponentialRampToValueAtTime(0.0001, start + duracion);
+	osc.connect(gain);
+	gain.connect(getMaster(ctx));
+	osc.start(start);
+	osc.stop(start + duracion + 0.03);
+}
+
+async function conContexto(tocar: (ctx: AudioContext, now: number) => void): Promise<void> {
+	const ctx = getAudioContext();
+	if (!ctx) return;
+	if (ctx.state === 'suspended') await ctx.resume();
+	tocar(ctx, ctx.currentTime);
+}
+
+/** Microfeedback al marcar una serie hecha. */
+export function sonarSetHecho(): Promise<void> {
+	return conContexto((ctx, now) => {
+		beep(ctx, now, 523, 0.09, 0.14, 'triangle');
+		beep(ctx, now + 0.04, 784, 0.13, 0.2, 'triangle', 3);
+		beep(ctx, now + 0.1, 1047, 0.17, 0.18, 'sine', -4);
+		beep(ctx, now + 0.18, 1568, 0.22, 0.12, 'sine', 2);
+	});
+}
+
+/** Cierre de ejercicio: fanfarria larga si hubo PR, corta si no. */
+export function sonarExito(esPr: boolean): Promise<void> {
+	return conContexto((ctx, now) => {
+		if (esPr) {
+			beep(ctx, now, 392, 0.14, 0.16, 'triangle');
+			beep(ctx, now + 0.08, 659, 0.17, 0.18, 'triangle', 4);
+			beep(ctx, now + 0.18, 988, 0.2, 0.2, 'sine', -3);
+			beep(ctx, now + 0.32, 1319, 0.26, 0.19, 'triangle');
+			beep(ctx, now + 0.5, 1760, 0.38, 0.14, 'sine', 5);
+			return;
+		}
+		beep(ctx, now, 440, 0.12, 0.14, 'triangle');
+		beep(ctx, now + 0.1, 659, 0.18, 0.17, 'sine');
+		beep(ctx, now + 0.23, 988, 0.2, 0.11, 'sine');
+	});
+}
+
+/** Señal breve de fin de descanso. */
+export function sonarDescansoTerminado(): Promise<void> {
+	return conContexto((ctx, now) => {
+		beep(ctx, now, 880, 0.16, 0.16, 'triangle');
+		beep(ctx, now + 0.18, 1175, 0.2, 0.17, 'sine');
+	});
+}
+
+/** La recompensa mayor: día completo. */
+export function sonarDiaTerminado(): Promise<void> {
+	return conContexto((ctx, now) => {
+		beep(ctx, now, 392, 0.14, 0.16, 'triangle');
+		beep(ctx, now + 0.09, 587, 0.16, 0.18, 'triangle');
+		beep(ctx, now + 0.2, 784, 0.22, 0.2, 'triangle');
+		beep(ctx, now + 0.36, 1175, 0.32, 0.16, 'triangle');
+	});
+}

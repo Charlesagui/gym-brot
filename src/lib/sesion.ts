@@ -24,6 +24,12 @@ export function valorMetrica(peso: number, reps: number | undefined, metrica: Me
 	return peso;
 }
 
+/** Explicación corta de cada métrica de PR — única fuente para toda la UI. */
+export const DESCRIPCION_METRICA: Record<MetricaPr, string> = {
+	e1rm: 'El 1RM estimado (1 Repetición Máxima, fórmula de Epley) calcula tu fuerza máxima teórica a partir de peso y reps: 95 × 12 supera a 100 × 1. Premia la sobrecarga por repeticiones.',
+	peso: 'El récord es la serie de mayor peso, sin importar las reps. Simple y directo.'
+};
+
 /** Fecha local en formato YYYY-MM-DD. */
 export function hoyStr(): string {
 	return new Date().toLocaleDateString('sv'); // 'sv' → YYYY-MM-DD
@@ -57,7 +63,8 @@ export interface MejorSet {
 	valor: number;
 }
 
-function mejorSet(a: MejorSet | null, b: MejorSet): MejorSet {
+/** El mejor de dos sets bajo `valor` (desempata por reps). */
+export function mejorSet(a: MejorSet | null, b: MejorSet): MejorSet {
 	if (!a) return b;
 	if (b.valor > a.valor) return b;
 	if (b.valor === a.valor && (b.reps ?? 0) > (a.reps ?? 0)) return b;

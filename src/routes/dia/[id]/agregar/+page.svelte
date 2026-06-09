@@ -40,8 +40,8 @@
 		preview = null;
 	}
 
-	// Reproduce la miniatura solo cuando entra en pantalla: con 237 ejercicios,
-	// animar todos a la vez sería pesado en mobile.
+	// Reproduce la miniatura solo cuando entra en pantalla: con cientos de ejercicios
+	// en el catálogo, animar todos a la vez sería pesado en mobile.
 	function playOnView(node: HTMLVideoElement) {
 		const io = new IntersectionObserver(
 			(entries) => {
