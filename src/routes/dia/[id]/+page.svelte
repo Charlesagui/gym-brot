@@ -147,20 +147,20 @@
 				bind:value={nombreEdit}
 				onblur={guardarNombre}
 				class="min-w-0 flex-1 rounded-lg bg-white/5 px-3 py-1.5 text-lg font-bold outline-none"
-				placeholder="Nombre del día"
+				placeholder="Nombre del día (ej: Piernas, Pecho…)"
 			/>
 			<button
 				onclick={() => (editando = false)}
 				class="shrink-0 rounded-full px-4 py-1.5 text-sm font-bold"
-				style="background: var(--accent); color: white">Listo</button
+				style="background: var(--accent); color: white">✓ Listo</button
 			>
 		{:else}
 			<h1 class="flex-1 text-xl font-bold">{dia?.nombre ?? ''}</h1>
 			{#if dia}
 				<button
 					onclick={abrirEdicion}
-					class="grid size-9 shrink-0 place-items-center rounded-full border border-white/10"
-					aria-label="Editar">✏️</button
+					class="flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-sm font-semibold"
+					aria-label="Editar">✏️ Editar</button
 				>
 			{/if}
 		{/if}
@@ -181,6 +181,8 @@
 						onclick={() =>
 							actualizarDia(diaId, { diaSemana: dia?.diaSemana === i ? undefined : i })}
 						class="flex-1 rounded-lg py-2 text-xs font-semibold"
+						aria-pressed={dia.diaSemana === i}
+						aria-label={`Entrenar los días ${d}`}
 						style={dia.diaSemana === i
 							? 'background: var(--accent); color: white'
 							: 'background: rgba(255,255,255,.05); color: var(--muted)'}>{d}</button
@@ -196,10 +198,11 @@
 					<button
 						onclick={() => actualizarDia(diaId, { color: c.rgb })}
 						class="size-8 rounded-full transition"
+						aria-pressed={dia.color === c.rgb}
+						aria-label={`Color ${c.nombre}`}
 						style="background: rgb({c.rgb}); outline: {dia.color === c.rgb
 							? '2px solid white'
 							: '2px solid transparent'}; outline-offset: 2px"
-						aria-label={c.nombre}
 					></button>
 				{/each}
 			</div>
@@ -235,7 +238,7 @@
 										aria-label="Menos series">−</button
 									>
 									<span class="text-sm font-semibold tabular-nums"
-										>{item.seriesObjetivo} objetivo</span
+										>{item.seriesObjetivo} series objetivo</span
 									>
 									<button
 										onclick={() => setSeries(diaId, e.id, item.seriesObjetivo + 1)}
@@ -342,7 +345,7 @@
 						class="mt-3 w-full rounded-2xl py-3 text-sm font-bold disabled:opacity-45"
 						style="background: {diaListo ? 'var(--accent)' : 'rgba(255,255,255,.08)'}; color: {diaListo ? 'white' : 'var(--muted)'}"
 					>
-						{diaListo ? '🏁 Terminar día' : `Faltan ${totalEjercicios - ejerciciosCompletos}`}
+						{diaListo ? '🏁 Terminar día' : `Faltan ${totalEjercicios - ejerciciosCompletos} ejercicios`}
 					</button>
 				{/if}
 			</section>

@@ -75,6 +75,8 @@
 				<button
 					onclick={() => setUnidad(u as 'kg' | 'lb')}
 					class="flex-1 rounded-xl py-2.5 font-semibold"
+					aria-pressed={ajustes.unidad === u}
+					aria-label={`Seleccionar unidad ${u}`}
 					style={ajustes.unidad === u
 						? 'background: var(--accent); color: white'
 						: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{u}</button
@@ -91,6 +93,7 @@
 			<button
 				onclick={() => setMetricaPr('peso')}
 				class="rounded-xl px-2 py-2.5 text-sm font-semibold"
+				aria-pressed={ajustes.metricaPr === 'peso'}
 				style={ajustes.metricaPr === 'peso'
 					? 'background: var(--accent); color: white'
 					: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Peso máximo</button
@@ -98,6 +101,7 @@
 			<button
 				onclick={() => setMetricaPr('e1rm')}
 				class="rounded-xl px-2 py-2.5 text-sm font-semibold"
+				aria-pressed={ajustes.metricaPr === 'e1rm'}
 				style={ajustes.metricaPr === 'e1rm'
 					? 'background: var(--accent); color: white'
 					: 'background: rgba(255,255,255,.06); color: var(--muted)'}>1RM (1 rep. máx.)</button
@@ -139,12 +143,12 @@
 		<button
 			onclick={exportar}
 			class="mt-3 w-full rounded-xl py-3 font-semibold"
-			style="background: var(--accent); color: white">⬇️ Exportar datos</button
+			style="background: var(--accent); color: white">⬇️ Guardar copia de seguridad</button
 		>
 		<label
 			class="mt-2 block w-full cursor-pointer rounded-xl border border-white/15 py-3 text-center font-semibold"
 		>
-			⬆️ Importar datos
+			⬆️ Restaurar copia de seguridad
 			<input type="file" accept="application/json" onchange={importar} class="hidden" />
 		</label>
 		{#if msg}<p class="mt-3 text-center text-sm font-medium">{msg}</p>{/if}
