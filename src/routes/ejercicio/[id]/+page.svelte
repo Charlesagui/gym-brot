@@ -51,6 +51,7 @@
 	// Video grande solo la primera visita a cada ejercicio; después arranca
 	// como miniatura en el header para dejar las series a mano sin scroll.
 	let videoGrande = $state(true);
+	let tecnicaAbierta = $state(false);
 
 	$effect(() => {
 		const key = `gb-video-visto-${$page.params.id!}`;
@@ -180,6 +181,7 @@
 	const metricaLabel = $derived(metrica === 'e1rm' ? '1RM estimado (1 Repetición Máxima)' : 'peso máximo');
 	const otraMetrica = $derived(metrica === 'e1rm' ? 'peso' : 'e1rm');
 	const otraLabel = $derived(metrica === 'e1rm' ? 'peso máx.' : '1RM est. (1 rep. máx.)');
+	const tecnicaEmbedUrl = $derived(ej?.videoUrl ? youtubeEmbedUrl(ej.videoUrl) : null);
 
 	const pr = $derived(puntos.reduce<MejorSet | null>((best, p) => mejorSet(best, p), null));
 	const valorOtraPr = $derived(
@@ -252,6 +254,34 @@
 		if (!f) return '';
 		const d = new Date(`${f}T00:00:00`);
 		return d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
+	}
+
+	function youtubeEmbedUrl(url: string): string | null {
+		try {
+			const u = new URL(url);
+			const host = u.hostname.replace(/^www\./, '').replace(/^m\./, '');
+			let id = '';
+			if (host === 'youtu.be') id = u.pathname.split('/').filter(Boolean)[0] ?? '';
+			else if (host.endsWith('youtube.com') || host === 'youtube-nocookie.com') {
+				if (u.pathname === '/watch') id = u.searchParams.get('v') ?? '';
+				else if (u.pathname.startsWith('/shorts/') || u.pathname.startsWith('/embed/')) {
+					id = u.pathname.split('/').filter(Boolean)[1] ?? '';
+				}
+			}
+			if (!id) return null;
+			return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?rel=0&modestbranding=1&playsinline=1`;
+		} catch {
+			return null;
+		}
+	}
+
+	function abrirTecnica() {
+		if (tecnicaEmbedUrl) tecnicaAbierta = true;
+		else if (ej?.videoUrl) window.open(ej.videoUrl, '_blank', 'noreferrer');
+	}
+
+	function cerrarTecnica() {
+		tecnicaAbierta = false;
 	}
 
 	/** Redondea a 1 decimal para evitar arrastre de flotantes con pasos de 2.5. */
@@ -456,6 +486,8 @@
 	}
 </script>
 
+<svelte:window onkeydown={(e) => e.key === 'Escape' && cerrarTecnica()} />
+
 {#if !ej || !g}
 	<main class="glow-bg grid min-h-dvh place-items-center">
 		<p style="color: var(--muted)">Ejercicio no encontrado.</p>
@@ -513,18 +545,17 @@
 					preload="auto"
 				></video>
 			</button>
-			{#if ej.videoUrl}
-				<div class="mt-3 flex justify-center">
-					<a
-						href={ej.videoUrl}
-						target="_blank"
-						rel="noreferrer"
-						class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold"
-						style="color: rgb({g.glow})"
-						aria-label={`Ver video de técnica para ${ej.nombre}`}>▶ Ver técnica</a
-					>
-				</div>
-			{/if}
+		{/if}
+
+		{#if ej.videoUrl}
+			<div class="mt-3 flex justify-center">
+				<button
+					onclick={abrirTecnica}
+					class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold"
+					style="color: rgb({g.glow})"
+					aria-label={`Ver video de técnica para ${ej.nombre}`}>▶ Ver técnica</button
+				>
+			</div>
 		{/if}
 
 		{#if !diaId}
@@ -847,6 +878,58 @@
 			>
 		{/if}
 	</main>
+
+	{#if tecnicaAbierta && tecnicaEmbedUrl}
+		<div
+			class="fixed inset-0 z-[70] flex flex-col justify-end sm:justify-center sm:px-5"
+			role="dialog"
+			aria-modal="true"
+			aria-label={`Técnica de ${ej.nombre}`}
+		>
+			<button
+				class="absolute inset-0"
+				style="background: rgba(8,8,12,.86); backdrop-filter: blur(8px)"
+				aria-label="Cerrar técnica"
+				onclick={cerrarTecnica}
+			></button>
+			<div
+				in:fly={{ y: 40, duration: dur(240) }}
+				class="relative mx-auto w-full max-w-2xl rounded-t-3xl border-t border-white/10 px-5 pb-8 pt-3 sm:rounded-3xl sm:border"
+				style="background: radial-gradient(140% 100% at 50% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface)"
+			>
+				<div class="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20"></div>
+				<div class="mb-3 flex items-center justify-between gap-3">
+					<div class="min-w-0">
+						<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+							Técnica
+						</p>
+						<p class="truncate text-lg font-bold leading-tight">{ej.nombre}</p>
+					</div>
+					<button
+						onclick={cerrarTecnica}
+						class="grid size-10 shrink-0 place-items-center rounded-full border border-white/10 text-xl font-bold"
+						aria-label="Cerrar técnica">×</button
+					>
+				</div>
+				<div class="overflow-hidden rounded-2xl border border-white/10 bg-black">
+					<iframe
+						src={tecnicaEmbedUrl}
+						title={`Video de técnica para ${ej.nombre}`}
+						class="aspect-video w-full"
+						allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+						allowfullscreen
+					></iframe>
+				</div>
+				<a
+					href={ej.videoUrl}
+					target="_blank"
+					rel="noreferrer"
+					class="mt-4 inline-flex w-full items-center justify-center rounded-2xl border border-white/10 px-4 py-3 text-sm font-bold"
+					style="color: rgb({g.glow})">Abrir en YouTube</a
+				>
+			</div>
+		</div>
+	{/if}
 
 	{#if exito && g}
 		<div
