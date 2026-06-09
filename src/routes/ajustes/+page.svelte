@@ -100,12 +100,12 @@
 				class="rounded-xl px-2 py-2.5 text-sm font-semibold"
 				style={ajustes.metricaPr === 'e1rm'
 					? 'background: var(--accent); color: white'
-					: 'background: rgba(255,255,255,.06); color: var(--muted)'}>1RM estimado</button
+					: 'background: rgba(255,255,255,.06); color: var(--muted)'}>1RM (1 rep. máx.)</button
 			>
 		</div>
 		<p class="mt-2 text-xs" style="color: var(--muted)">
 			{ajustes.metricaPr === 'e1rm'
-				? 'El récord considera peso y reps (Epley): 95 × 12 supera a 100 × 1. Premia la sobrecarga por repeticiones.'
+				? 'El récord estima tu 1 Repetición Máxima (1RM) usando peso y reps (Epley): 95 × 12 supera a 100 × 1. Premia la sobrecarga por repeticiones.'
 				: 'El récord es la serie de mayor peso, sin importar las reps. Simple y directo.'}
 		</p>
 	</section>
