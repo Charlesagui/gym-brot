@@ -253,7 +253,11 @@
 			return;
 		}
 		void sonarSetHecho().catch(() => {});
-		iniciarDescanso(); // recién marcada como hecha → arranca descanso
+		
+		const seCompletanTodas = sets.filter((s) => s.hecha).length === sets.length - 1;
+		if (!seCompletanTodas) {
+			iniciarDescanso(); // recién marcada como hecha → arranca descanso
+		}
 	}
 
 	async function terminarEjercicio() {
@@ -629,9 +633,9 @@
 										</div>
 									</div>
 								{/if}
-								{#if ant || anterioresFecha}
+								{#if ant}
 									<p class="mt-1.5 truncate text-[10px] font-medium" style="color: var(--muted)">
-										{#if ant}↩︎ {ant}{:else}↩︎ —{/if}
+										↩︎ {ant}
 									</p>
 								{/if}
 							</div>
