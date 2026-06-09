@@ -31,6 +31,7 @@
 	let notaTexto = $state('');
 	let tieneNota = $state(false);
 	let ajustes = $state<Ajustes>(AJUSTES_DEFAULT);
+	let cargandoSeries = $state(false);
 
 	// cuenta regresiva de descanso
 	let restoSeg = $state(0);
@@ -39,20 +40,6 @@
 	type AudioWindow = Window &
 		typeof globalThis & { webkitAudioContext?: AudioContextConstructor };
 	let audioCtx: AudioContext | null = null;
-
-	$effect(() => {
-		const exId = $page.params.id!;
-		const dId = diaId;
-		if (!dId) {
-			sets = [];
-			return;
-		}
-		const sub = sesionHoyObs(dId).subscribe((s) => {
-			const e = s?.ejercicios.find((x) => x.exerciseId === exId);
-			sets = e ? e.sets : [];
-		});
-		return () => sub.unsubscribe();
-	});
 
 	$effect(() => {
 		const exId = $page.params.id!;
@@ -74,18 +61,38 @@
 		return () => sub.unsubscribe();
 	});
 
-	// Reacciona al cambio de [id]: SvelteKit reutiliza el componente al navegar
-	// entre ejercicios, así que esto debe ir en un $effect (no en onMount).
-	// ensureEjercicio es idempotente → re-correrla no pisa series en progreso.
 	$effect(() => {
 		const exId = $page.params.id!;
 		const dId = diaId;
-		if (!dId) return;
+		let cancelado = false;
+		let sub: { unsubscribe: () => void } | undefined;
+		if (!dId) {
+			sets = [];
+			cargandoSeries = false;
+			return;
+		}
+		cargandoSeries = true;
 		(async () => {
 			const dia = await db.dias.get(dId);
 			const item = dia?.ejercicios.find((e) => e.exerciseId === exId);
 			await ensureEjercicio(dId, exId, item?.seriesObjetivo ?? 4);
-		})();
+			if (cancelado) return;
+			sub = sesionHoyObs(dId).subscribe((s) => {
+				if (cancelado) return;
+				const e = s?.ejercicios.find((x) => x.exerciseId === exId);
+				sets = e ? e.sets : [];
+				cargandoSeries = false;
+			});
+		})().catch(() => {
+			if (!cancelado) {
+				sets = [];
+				cargandoSeries = false;
+			}
+		});
+		return () => {
+			cancelado = true;
+			sub?.unsubscribe();
+		};
 	});
 
 	onDestroy(() => {
@@ -116,28 +123,40 @@
 	function ajustarPeso(i: number, delta: number) {
 		const actual = sets[i]?.peso ?? 0;
 		const siguiente = Math.max(0, actual + delta);
-		setPeso(diaId!, $page.params.id!, i, siguiente === 0 ? undefined : siguiente);
+		const peso = siguiente === 0 ? undefined : siguiente;
+		if (sets[i]) sets[i].peso = peso;
+		setPeso(diaId!, $page.params.id!, i, peso);
 	}
 
 	function ajustarReps(i: number, delta: number) {
 		const actual = sets[i]?.reps ?? 0;
 		const siguiente = Math.max(0, actual + delta);
-		setReps(diaId!, $page.params.id!, i, siguiente === 0 ? undefined : siguiente);
+		const reps = siguiente === 0 ? undefined : siguiente;
+		if (sets[i]) sets[i].reps = reps;
+		setReps(diaId!, $page.params.id!, i, reps);
 	}
 
 	function onToggle(i: number) {
 		const yaEstaba = sets[i]?.hecha;
 		toggleSet(diaId!, $page.params.id!, i);
-		if (!yaEstaba) {
-			void prepararAudio().catch(() => {});
-			iniciarDescanso(); // recién marcada como hecha → arranca descanso
+		if (yaEstaba) {
+			saltarDescanso();
+			return;
 		}
+		void prepararAudio().catch(() => {});
+		iniciarDescanso(); // recién marcada como hecha → arranca descanso
 	}
 
 	async function terminarEjercicio() {
 		if (!diaId) return;
+		saltarDescanso();
 		await completarEjercicio(diaId, $page.params.id!);
 		goto(volver);
+	}
+
+	function apagarTimer() {
+		saltarDescanso();
+		void setTimer(false, ajustes.timer.minutos);
 	}
 
 	function iniciarDescanso() {
@@ -262,98 +281,104 @@
 						Series
 					</p>
 					<p class="text-xs font-bold" style="color: {completo ? `rgb(${g.glow})` : 'var(--muted)'}">
-						{hechas}/{sets.length} hechas
+						{#if cargandoSeries}Preparando…{:else}{hechas}/{sets.length} hechas{/if}
 					</p>
 				</div>
 
-				<div class="mt-3 space-y-2">
-					{#each sets as s, i (i)}
-						<div class="grid grid-cols-[1.75rem_1fr_2.5rem] items-center gap-2 rounded-xl bg-white/[0.025] p-2">
-							<button
-								onclick={() => toggleMax(diaId, $page.params.id!, i)}
-								class="grid size-7 shrink-0 place-items-center rounded-full text-sm font-bold"
-								style={s.esMax
-									? 'background: rgba(255,157,60,.22); color: #ff9d3c'
-									: 'color: var(--muted)'}
-								title="Tocá para marcar MAX (placa full)"
-								aria-label={`Serie ${i + 1}: marcar MAX`}>{s.esMax ? '🔥' : i + 1}</button
-							>
-							<div class="grid min-w-0 grid-cols-2 gap-2">
-								<div class="min-w-0">
-									<p class="mb-1 text-[10px] font-bold uppercase tracking-wider" style="color: var(--muted)">
-										Peso {unidad}
-									</p>
-									<div class="grid grid-cols-[1.5rem_1fr_1.5rem] items-center rounded-lg bg-white/5 p-1">
-										<button
-											onclick={() => ajustarPeso(i, -PASO_PESO)}
-											class="grid size-6 place-items-center rounded-md text-sm font-bold"
-											style="background: rgba(255,255,255,.06); color: var(--muted)"
-											aria-label={`Bajar ${PASO_PESO} ${unidad} en serie ${i + 1}`}>−</button
-										>
-										<span class="min-w-0 text-center text-sm font-bold tabular-nums">
-											{s.peso ?? '—'}
-										</span>
-										<button
-											onclick={() => ajustarPeso(i, PASO_PESO)}
-											class="grid size-6 place-items-center rounded-md text-sm font-bold"
-											style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
-											aria-label={`Subir ${PASO_PESO} ${unidad} en serie ${i + 1}`}>+</button
-										>
+				{#if cargandoSeries}
+					<p class="mt-3 rounded-xl bg-white/[0.025] p-4 text-center text-sm" style="color: var(--muted)">
+						Preparando series…
+					</p>
+				{:else}
+					<div class="mt-3 space-y-2">
+						{#each sets as s, i (i)}
+							<div class="grid grid-cols-[1.75rem_1fr_2.5rem] items-center gap-2 rounded-xl bg-white/[0.025] p-2">
+								<button
+									onclick={() => toggleMax(diaId, $page.params.id!, i)}
+									class="grid size-7 shrink-0 place-items-center rounded-full text-sm font-bold"
+									style={s.esMax
+										? 'background: rgba(255,157,60,.22); color: #ff9d3c'
+										: 'color: var(--muted)'}
+									title="Tocá para marcar MAX (placa full)"
+									aria-label={`Serie ${i + 1}: marcar MAX`}>{s.esMax ? '🔥' : i + 1}</button
+								>
+								<div class="grid min-w-0 grid-cols-2 gap-2">
+									<div class="min-w-0">
+										<p class="mb-1 text-[10px] font-bold uppercase tracking-wider" style="color: var(--muted)">
+											Peso {unidad}
+										</p>
+										<div class="grid grid-cols-[1.5rem_1fr_1.5rem] items-center rounded-lg bg-white/5 p-1">
+											<button
+												onclick={() => ajustarPeso(i, -PASO_PESO)}
+												class="grid size-6 place-items-center rounded-md text-sm font-bold"
+												style="background: rgba(255,255,255,.06); color: var(--muted)"
+												aria-label={`Bajar ${PASO_PESO} ${unidad} en serie ${i + 1}`}>−</button
+											>
+											<span class="min-w-0 text-center text-sm font-bold tabular-nums">
+												{s.peso ?? '—'}
+											</span>
+											<button
+												onclick={() => ajustarPeso(i, PASO_PESO)}
+												class="grid size-6 place-items-center rounded-md text-sm font-bold"
+												style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
+												aria-label={`Subir ${PASO_PESO} ${unidad} en serie ${i + 1}`}>+</button
+											>
+										</div>
+									</div>
+									<div class="min-w-0">
+										<p class="mb-1 text-[10px] font-bold uppercase tracking-wider" style="color: var(--muted)">
+											Reps
+										</p>
+										<div class="grid grid-cols-[1.5rem_1fr_1.5rem] items-center rounded-lg bg-white/5 p-1">
+											<button
+												onclick={() => ajustarReps(i, -1)}
+												class="grid size-6 place-items-center rounded-md text-sm font-bold"
+												style="background: rgba(255,255,255,.06); color: var(--muted)"
+												aria-label={`Bajar reps en serie ${i + 1}`}>−</button
+											>
+											<span class="min-w-0 text-center text-sm font-bold tabular-nums">
+												{s.reps ?? '—'}
+											</span>
+											<button
+												onclick={() => ajustarReps(i, 1)}
+												class="grid size-6 place-items-center rounded-md text-sm font-bold"
+												style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
+												aria-label={`Subir reps en serie ${i + 1}`}>+</button
+											>
+										</div>
 									</div>
 								</div>
-								<div class="min-w-0">
-									<p class="mb-1 text-[10px] font-bold uppercase tracking-wider" style="color: var(--muted)">
-										Reps
-									</p>
-									<div class="grid grid-cols-[1.5rem_1fr_1.5rem] items-center rounded-lg bg-white/5 p-1">
-										<button
-											onclick={() => ajustarReps(i, -1)}
-											class="grid size-6 place-items-center rounded-md text-sm font-bold"
-											style="background: rgba(255,255,255,.06); color: var(--muted)"
-											aria-label={`Bajar reps en serie ${i + 1}`}>−</button
-										>
-										<span class="min-w-0 text-center text-sm font-bold tabular-nums">
-											{s.reps ?? '—'}
-										</span>
-										<button
-											onclick={() => ajustarReps(i, 1)}
-											class="grid size-6 place-items-center rounded-md text-sm font-bold"
-											style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
-											aria-label={`Subir reps en serie ${i + 1}`}>+</button
-										>
-									</div>
-								</div>
+								<button
+									onclick={() => onToggle(i)}
+									class="ml-auto grid size-10 shrink-0 place-items-center rounded-full border-2 text-sm font-bold transition-colors"
+									style={s.hecha
+										? 'background: var(--accent); border-color: var(--accent); color: white'
+										: 'border-color: rgba(255,255,255,.22); color: transparent'}
+									aria-label={`Marcar serie ${i + 1}`}>✓</button
+								>
 							</div>
-							<button
-								onclick={() => onToggle(i)}
-								class="ml-auto grid size-10 shrink-0 place-items-center rounded-full border-2 text-sm font-bold transition-colors"
-								style={s.hecha
-									? 'background: var(--accent); border-color: var(--accent); color: white'
-									: 'border-color: rgba(255,255,255,.22); color: transparent'}
-								aria-label={`Marcar serie ${i + 1}`}>✓</button
-							>
-						</div>
-					{/each}
-				</div>
+						{/each}
+					</div>
 
-				<div class="mt-3 grid grid-cols-2 gap-2">
-					<button
-						onclick={() => addSet(diaId, $page.params.id!)}
-						class="rounded-lg border border-dashed border-white/20 py-2 text-sm"
-						style="color: var(--muted)">+ serie</button
-					>
-					<button
-						onclick={() => removeSet(diaId, $page.params.id!, sets.length - 1)}
-						disabled={sets.length <= 1}
-						class="rounded-lg border border-dashed border-white/20 py-2 text-sm disabled:opacity-35"
-						style="color: #ff6b6b">− serie</button
-					>
-				</div>
+					<div class="mt-3 grid grid-cols-2 gap-2">
+						<button
+							onclick={() => addSet(diaId, $page.params.id!)}
+							class="rounded-lg border border-dashed border-white/20 py-2 text-sm"
+							style="color: var(--muted)">+ serie</button
+						>
+						<button
+							onclick={() => removeSet(diaId, $page.params.id!, sets.length - 1)}
+							disabled={sets.length <= 1}
+							class="rounded-lg border border-dashed border-white/20 py-2 text-sm disabled:opacity-35"
+							style="color: #ff6b6b">− serie</button
+						>
+					</div>
+				{/if}
 
 				<div class="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/10 pt-3">
 					<span class="mr-1 text-xs font-semibold" style="color: var(--muted)">⏱️ Descanso</span>
 					<button
-						onclick={() => setTimer(false, ajustes.timer.minutos)}
+						onclick={apagarTimer}
 						class="rounded-full px-2.5 py-1 text-xs font-semibold"
 						style={!ajustes.timer.activo
 							? 'background: var(--accent); color: white'
