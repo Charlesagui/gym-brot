@@ -20,7 +20,8 @@ export const AJUSTES_DEFAULT: Ajustes = {
 	unidad: 'kg',
 	timer: { activo: false, minutos: 2 },
 	sonido: true,
-	metricaPr: 'peso'
+	metricaPr: 'peso',
+	pasoPeso: 5
 };
 
 function normalizarAjustes(a?: Ajustes | null): Ajustes {
@@ -29,7 +30,8 @@ function normalizarAjustes(a?: Ajustes | null): Ajustes {
 		...(a ?? {}),
 		timer: { ...AJUSTES_DEFAULT.timer, ...(a?.timer ?? {}) },
 		sonido: a?.sonido ?? AJUSTES_DEFAULT.sonido,
-		metricaPr: a?.metricaPr ?? AJUSTES_DEFAULT.metricaPr
+		metricaPr: a?.metricaPr ?? AJUSTES_DEFAULT.metricaPr,
+		pasoPeso: a?.pasoPeso ?? AJUSTES_DEFAULT.pasoPeso
 	};
 }
 
@@ -50,6 +52,11 @@ export async function setSonido(sonido: boolean): Promise<void> {
 export async function setMetricaPr(metricaPr: MetricaPr): Promise<void> {
 	const a = normalizarAjustes(await db.ajustes.get('app'));
 	await db.ajustes.put({ ...a, metricaPr });
+}
+
+export async function setPasoPeso(pasoPeso: number): Promise<void> {
+	const a = normalizarAjustes(await db.ajustes.get('app'));
+	await db.ajustes.put({ ...a, pasoPeso });
 }
 
 const KG_TO_LB = 2.2046226218;
@@ -227,7 +234,8 @@ function esAjustes(value: unknown): value is Ajustes {
 		esBoolean(timer.activo) &&
 		esNumero(timer.minutos) &&
 		(value.sonido === undefined || esBoolean(value.sonido)) &&
-		(value.metricaPr === undefined || value.metricaPr === 'peso' || value.metricaPr === 'e1rm')
+		(value.metricaPr === undefined || value.metricaPr === 'peso' || value.metricaPr === 'e1rm') &&
+		(value.pasoPeso === undefined || esNumero(value.pasoPeso))
 	);
 }
 

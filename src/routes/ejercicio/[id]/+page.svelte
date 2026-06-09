@@ -27,6 +27,7 @@
 	} from '$lib/sesion';
 	import { notaObs, setNota, ajustesObs, setTimer, AJUSTES_DEFAULT } from '$lib/extras';
 	import { sonarSetHecho, sonarExito, sonarDescansoTerminado } from '$lib/audio';
+	import { pulsar } from '$lib/pulsar';
 
 	const ej = $derived(ejercicioPorId($page.params.id!));
 	const g = $derived(ej ? grupos[ej.grupo] : undefined);
@@ -176,7 +177,7 @@
 			(mejorPrevio == null || valorMejorHoy > mejorPrevio) &&
 			(valorCelebrado == null || valorMejorHoy > valorCelebrado)
 	);
-	const PASO_PESO = 5;
+	const pasoPeso = $derived(ajustes.pasoPeso ?? AJUSTES_DEFAULT.pasoPeso);
 
 	interface ChartPoint {
 		x: number;
@@ -224,9 +225,14 @@
 		return d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
 	}
 
+	/** Redondea a 1 decimal para evitar arrastre de flotantes con pasos de 2.5. */
+	function redondear(n: number): number {
+		return Math.round(n * 10) / 10;
+	}
+
 	function ajustarPeso(i: number, delta: number) {
 		const actual = sets[i]?.peso ?? 0;
-		const siguiente = Math.max(0, actual + delta);
+		const siguiente = redondear(Math.max(0, actual + delta));
 		const peso = siguiente === 0 ? undefined : siguiente;
 		if (sets[i]) sets[i].peso = peso;
 		setPeso(diaId!, $page.params.id!, i, peso, fechaSesion);
@@ -242,10 +248,26 @@
 
 	function ajustarExtra(i: number, delta: number) {
 		const actual = sets[i]?.extraKg ?? 0;
-		const siguiente = Math.max(0, actual + delta);
+		const siguiente = redondear(Math.max(0, actual + delta));
 		const extra = siguiente === 0 ? undefined : siguiente;
 		if (sets[i]) sets[i].extraKg = extra;
 		setExtra(diaId!, $page.params.id!, i, extra, fechaSesion);
+	}
+
+	function escribirPeso(i: number, el: HTMLInputElement) {
+		const n = Number.parseFloat(el.value.replace(',', '.'));
+		const peso = Number.isFinite(n) && n > 0 ? redondear(n) : undefined;
+		if (sets[i]) sets[i].peso = peso;
+		setPeso(diaId!, $page.params.id!, i, peso, fechaSesion);
+		el.value = peso != null ? formatoNumero(peso) : '';
+	}
+
+	function escribirReps(i: number, el: HTMLInputElement) {
+		const n = Number.parseInt(el.value, 10);
+		const reps = Number.isFinite(n) && n > 0 ? n : undefined;
+		if (sets[i]) sets[i].reps = reps;
+		setReps(diaId!, $page.params.id!, i, reps, fechaSesion);
+		el.value = reps != null ? String(reps) : '';
 	}
 
 	function onToggle(i: number) {
@@ -458,26 +480,26 @@
 					{#if cargandoSeries}
 						<p class="text-xs font-bold" style="color: var(--muted)">Preparando…</p>
 					{:else}
-						<div class="flex items-center gap-2">
-							<p class="text-xs font-bold" style="color: {completo ? `rgb(${g.glow})` : 'var(--muted)'}">
-								{hechas}/{sets.length}
-							</p>
-							<div class="flex items-center rounded-full bg-white/5 p-0.5">
-								<button
-									onclick={() => removeSet(diaId, $page.params.id!, sets.length - 1, fechaSesion)}
-									disabled={sets.length <= 1}
-									class="grid size-7 place-items-center rounded-full text-sm font-bold disabled:opacity-35"
-									style="color: var(--muted)"
-									aria-label="Quitar serie de hoy">−</button
-								>
-								<span class="min-w-6 text-center text-xs font-bold tabular-nums">{sets.length}</span>
-								<button
-									onclick={() => addSet(diaId, $page.params.id!, fechaSesion)}
-									class="grid size-7 place-items-center rounded-full text-sm font-bold"
-									style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
-									aria-label="Agregar serie de hoy">+</button
-								>
-							</div>
+						<!-- Un solo control: hechas/total adentro del stepper de series de hoy -->
+						<div class="flex items-center rounded-full bg-white/5 p-0.5">
+							<button
+								onclick={() => removeSet(diaId, $page.params.id!, sets.length - 1, fechaSesion)}
+								disabled={sets.length <= 1}
+								class="grid size-8 touch-manipulation place-items-center rounded-full text-sm font-bold disabled:opacity-35"
+								style="color: var(--muted)"
+								aria-label="Quitar serie de hoy">−</button
+							>
+							<span
+								class="min-w-11 text-center text-sm font-bold tabular-nums"
+								style="color: {completo ? `rgb(${g.glow})` : 'var(--text)'}"
+								aria-label={`${hechas} de ${sets.length} series hechas`}>{hechas}/{sets.length}</span
+							>
+							<button
+								onclick={() => addSet(diaId, $page.params.id!, fechaSesion)}
+								class="grid size-8 touch-manipulation place-items-center rounded-full text-sm font-bold"
+								style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
+								aria-label="Agregar serie de hoy">+</button
+							>
 						</div>
 					{/if}
 				</div>
@@ -490,103 +512,117 @@
 					<div class="mt-3 space-y-2">
 						{#each sets as s, i (i)}
 							{@const ant = formatoAnterior(anteriores[i])}
-							<div class="rounded-xl bg-white/[0.025] p-2">
-								<div class="grid grid-cols-[1.75rem_1fr_2.5rem] items-center gap-2">
-								<button
-									onclick={() => toggleMax(diaId, $page.params.id!, i, fechaSesion)}
-									class="grid size-7 shrink-0 place-items-center rounded-full border text-sm font-bold"
-									style={s.esMax
-										? 'background: rgba(255,157,60,.22); color: #ff9d3c; border-color: rgba(255,157,60,.5)'
-										: 'color: var(--muted); border-color: rgba(255,255,255,.16); border-style: dashed'}
-									title="Tocá para marcar MAX (placa full)"
-									aria-label={`Serie ${i + 1}: ${s.esMax ? 'quitar' : 'marcar'} MAX`}>{s.esMax ? '🔥' : i + 1}</button
-								>
-								<div class="grid min-w-0 grid-cols-2 gap-2">
+							<div class="rounded-xl bg-white/[0.025] p-2.5">
+								<div class="flex items-center gap-2">
+									<button
+										onclick={() => toggleMax(diaId, $page.params.id!, i, fechaSesion)}
+										class="grid size-8 shrink-0 place-items-center rounded-full border text-sm font-bold"
+										style={s.esMax
+											? 'background: rgba(255,157,60,.22); color: #ff9d3c; border-color: rgba(255,157,60,.5)'
+											: 'color: var(--muted); border-color: rgba(255,255,255,.16); border-style: dashed'}
+										title="Tocá para marcar MAX (placa full)"
+										aria-label={`Serie ${i + 1}: ${s.esMax ? 'quitar' : 'marcar'} MAX`}>{s.esMax ? '🔥' : i + 1}</button
+									>
+									<p class="min-w-0 flex-1 truncate text-[11px] font-medium" style="color: var(--muted)">
+										{ant ? `Ant: ${ant}` : ''}
+									</p>
+									<button
+										onclick={() => onToggle(i)}
+										class="grid size-11 shrink-0 touch-manipulation place-items-center rounded-full border-2 text-base font-bold transition-colors"
+										style={s.hecha
+											? 'background: var(--accent); border-color: var(--accent); color: white'
+											: 'border-color: rgba(255,255,255,.22); color: transparent'}
+										aria-label={`Marcar serie ${i + 1}`}>✓</button
+									>
+								</div>
+								<div class="mt-2 grid grid-cols-2 gap-2">
 									<div class="min-w-0">
-										<p class="mb-1 text-[10px] font-bold uppercase tracking-wider" style="color: var(--muted)">
+										<p class="mb-1 text-[11px] font-bold uppercase tracking-wider" style="color: var(--muted)">
 											Peso ({unidad})
 										</p>
-										<div class="grid grid-cols-[1.5rem_1fr_1.5rem] items-center rounded-lg bg-white/5 p-1">
+										<div class="flex items-center rounded-lg bg-white/5 p-1">
 											<button
-												onclick={() => ajustarPeso(i, -PASO_PESO)}
-												class="grid size-6 place-items-center rounded-md text-sm font-bold"
+												use:pulsar={() => ajustarPeso(i, -pasoPeso)}
+												class="grid size-10 shrink-0 touch-manipulation select-none place-items-center rounded-md text-lg font-bold"
 												style="background: rgba(255,255,255,.06); color: var(--muted)"
-												aria-label={`Bajar ${PASO_PESO} ${unidad} en serie ${i + 1}`}>−</button
+												aria-label={`Bajar ${pasoPeso} ${unidad} en serie ${i + 1}`}>−</button
 											>
-											<span class="min-w-0 text-center text-sm font-bold tabular-nums">
-												{s.peso != null ? formatoNumero(s.peso) : '—'}
-											</span>
+											<input
+												type="text"
+												inputmode="decimal"
+												value={s.peso != null ? formatoNumero(s.peso) : ''}
+												placeholder="—"
+												onfocus={(e) => e.currentTarget.select()}
+												onchange={(e) => escribirPeso(i, e.currentTarget)}
+												onkeydown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+												class="w-full min-w-0 bg-transparent text-center text-base font-bold tabular-nums outline-none"
+												aria-label={`Peso de la serie ${i + 1} en ${unidad}`}
+											/>
 											<button
-												onclick={() => ajustarPeso(i, PASO_PESO)}
-												class="grid size-6 place-items-center rounded-md text-sm font-bold"
+												use:pulsar={() => ajustarPeso(i, pasoPeso)}
+												class="grid size-10 shrink-0 touch-manipulation select-none place-items-center rounded-md text-lg font-bold"
 												style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
-												aria-label={`Subir ${PASO_PESO} ${unidad} en serie ${i + 1}`}>+</button
+												aria-label={`Subir ${pasoPeso} ${unidad} en serie ${i + 1}`}>+</button
 											>
 										</div>
 									</div>
 									<div class="min-w-0">
-										<p class="mb-1 text-[10px] font-bold uppercase tracking-wider" style="color: var(--muted)">
+										<p class="mb-1 text-[11px] font-bold uppercase tracking-wider" style="color: var(--muted)">
 											Reps
 										</p>
-										<div class="grid grid-cols-[1.5rem_1fr_1.5rem] items-center rounded-lg bg-white/5 p-1">
+										<div class="flex items-center rounded-lg bg-white/5 p-1">
 											<button
-												onclick={() => ajustarReps(i, -1)}
-												class="grid size-6 place-items-center rounded-md text-sm font-bold"
+												use:pulsar={() => ajustarReps(i, -1)}
+												class="grid size-10 shrink-0 touch-manipulation select-none place-items-center rounded-md text-lg font-bold"
 												style="background: rgba(255,255,255,.06); color: var(--muted)"
 												aria-label={`Bajar reps en serie ${i + 1}`}>−</button
 											>
-											<span class="min-w-0 text-center text-sm font-bold tabular-nums">
-												{s.reps ?? '—'}
-											</span>
+											<input
+												type="text"
+												inputmode="numeric"
+												value={s.reps != null ? String(s.reps) : ''}
+												placeholder="—"
+												onfocus={(e) => e.currentTarget.select()}
+												onchange={(e) => escribirReps(i, e.currentTarget)}
+												onkeydown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+												class="w-full min-w-0 bg-transparent text-center text-base font-bold tabular-nums outline-none"
+												aria-label={`Reps de la serie ${i + 1}`}
+											/>
 											<button
-												onclick={() => ajustarReps(i, 1)}
-												class="grid size-6 place-items-center rounded-md text-sm font-bold"
+												use:pulsar={() => ajustarReps(i, 1)}
+												class="grid size-10 shrink-0 touch-manipulation select-none place-items-center rounded-md text-lg font-bold"
 												style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
 												aria-label={`Subir reps en serie ${i + 1}`}>+</button
 											>
 										</div>
 									</div>
 								</div>
-								<button
-									onclick={() => onToggle(i)}
-									class="ml-auto grid size-10 shrink-0 place-items-center rounded-full border-2 text-sm font-bold transition-colors"
-									style={s.hecha
-										? 'background: var(--accent); border-color: var(--accent); color: white'
-										: 'border-color: rgba(255,255,255,.22); color: transparent'}
-									aria-label={`Marcar serie ${i + 1}`}>✓</button
-								>
-								</div>
 								{#if s.esMax}
 									<div
-										class="mt-1.5 flex items-center justify-between gap-2 rounded-lg px-2 py-1"
+										class="mt-2 flex items-center justify-between gap-2 rounded-lg px-2 py-1"
 										style="background: rgba(255,157,60,.1)"
 									>
-										<span class="text-[10px] font-bold uppercase tracking-wider" style="color: #ff9d3c">
+										<span class="text-[11px] font-bold uppercase tracking-wider" style="color: #ff9d3c">
 											🔥 Encima de la placa
 										</span>
 										<div class="flex items-center gap-1.5">
 											<button
-												onclick={() => ajustarExtra(i, -PASO_PESO)}
-												class="grid size-6 place-items-center rounded-md text-sm font-bold"
+												use:pulsar={() => ajustarExtra(i, -pasoPeso)}
+												class="grid size-8 touch-manipulation select-none place-items-center rounded-md text-sm font-bold"
 												style="background: rgba(255,255,255,.06); color: var(--muted)"
-												aria-label={`Bajar ${PASO_PESO} ${unidad} encima en serie ${i + 1}`}>−</button
+												aria-label={`Bajar ${pasoPeso} ${unidad} encima en serie ${i + 1}`}>−</button
 											>
 											<span class="min-w-12 text-center text-xs font-bold tabular-nums" style="color: #ff9d3c">
 												{s.extraKg ? `+${formatoNumero(s.extraKg)} ${unidad}` : '—'}
 											</span>
 											<button
-												onclick={() => ajustarExtra(i, PASO_PESO)}
-												class="grid size-6 place-items-center rounded-md text-sm font-bold"
+												use:pulsar={() => ajustarExtra(i, pasoPeso)}
+												class="grid size-8 touch-manipulation select-none place-items-center rounded-md text-sm font-bold"
 												style="background: rgba(255,157,60,.18); color: #ff9d3c"
-												aria-label={`Subir ${PASO_PESO} ${unidad} encima en serie ${i + 1}`}>+</button
+												aria-label={`Subir ${pasoPeso} ${unidad} encima en serie ${i + 1}`}>+</button
 											>
 										</div>
 									</div>
-								{/if}
-								{#if ant}
-									<p class="mt-1.5 truncate text-[10px] font-medium" style="color: var(--muted)">
-										Última vez: {ant}
-									</p>
 								{/if}
 							</div>
 						{/each}
