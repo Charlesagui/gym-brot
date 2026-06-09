@@ -1,17 +1,27 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { onDestroy } from 'svelte';
+	import { fly } from 'svelte/transition';
 	import { liveQuery } from 'dexie';
-	import { db, type Dia, type Sesion } from '$lib/db';
+	import { db, type Ajustes, type Dia, type Sesion } from '$lib/db';
 	import { ejercicioPorId, grupos } from '$lib/catalog';
 	import { actualizarDia, borrarDia, quitarEjercicio, setSeries, coloresDia } from '$lib/dias';
-	import { sesionHoyObs } from '$lib/sesion';
+	import { marcarDiaTerminado, reabrirDia, sesionHoyObs } from '$lib/sesion';
+	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
 
 	let dia = $state<Dia | undefined>(undefined);
 	let cargando = $state(true);
 	let editando = $state(false);
 	let nombreEdit = $state('');
 	let sesion = $state<Sesion | undefined>(undefined);
+	let ajustes = $state<Ajustes>(AJUSTES_DEFAULT);
+	let premioDia = $state(false);
+	let premioId: ReturnType<typeof setTimeout> | null = null;
+	type AudioContextConstructor = new () => AudioContext;
+	type AudioWindow = Window &
+		typeof globalThis & { webkitAudioContext?: AudioContextConstructor };
+	let audioCtx: AudioContext | null = null;
 
 	const diaId = $derived($page.params.id!);
 
@@ -33,6 +43,26 @@
 		return () => sub.unsubscribe();
 	});
 
+	$effect(() => {
+		const sub = ajustesObs().subscribe((a) => (ajustes = a));
+		return () => sub.unsubscribe();
+	});
+
+	onDestroy(() => {
+		if (premioId) clearTimeout(premioId);
+	});
+
+	const ejerciciosCompletos = $derived(
+		dia?.ejercicios.filter((item) => {
+			const p = progreso(item.exerciseId);
+			return !!p && p.total > 0 && p.hechas === p.total;
+		}).length ?? 0
+	);
+	const totalEjercicios = $derived(dia?.ejercicios.length ?? 0);
+	const diaListo = $derived(totalEjercicios > 0 && ejerciciosCompletos === totalEjercicios);
+	const diaTerminado = $derived(!!sesion?.diaTerminado);
+	const sonidoActivo = $derived(ajustes.sonido);
+
 	function progreso(exId: string): { hechas: number; total: number } | null {
 		const e = sesion?.ejercicios.find((x) => x.exerciseId === exId);
 		if (!e || e.sets.length === 0) return null;
@@ -51,6 +81,57 @@
 			await borrarDia(diaId);
 			goto('/');
 		}
+	}
+
+	async function terminarDia() {
+		if (!diaListo || diaTerminado) return;
+		await marcarDiaTerminado(diaId);
+		premioDia = true;
+		void sonarDiaTerminado().catch(() => {});
+		if ('vibrate' in navigator) navigator.vibrate([120, 70, 120, 70, 220]);
+		if (premioId) clearTimeout(premioId);
+		premioId = setTimeout(() => (premioDia = false), 2400);
+	}
+
+	async function reabrir() {
+		premioDia = false;
+		if (premioId) clearTimeout(premioId);
+		await reabrirDia(diaId);
+	}
+
+	function getAudioContext(): AudioContext | null {
+		if (typeof window === 'undefined') return null;
+		const audioWindow = window as AudioWindow;
+		const Ctx = window.AudioContext ?? audioWindow.webkitAudioContext;
+		if (!Ctx) return null;
+		audioCtx ??= new Ctx();
+		return audioCtx;
+	}
+
+	function beep(ctx: AudioContext, start: number, freq: number, duracion: number, volumen: number) {
+		const osc = ctx.createOscillator();
+		const gain = ctx.createGain();
+		osc.type = 'triangle';
+		osc.frequency.setValueAtTime(freq, start);
+		gain.gain.setValueAtTime(0.0001, start);
+		gain.gain.exponentialRampToValueAtTime(volumen, start + 0.012);
+		gain.gain.exponentialRampToValueAtTime(0.0001, start + duracion);
+		osc.connect(gain);
+		gain.connect(ctx.destination);
+		osc.start(start);
+		osc.stop(start + duracion + 0.04);
+	}
+
+	async function sonarDiaTerminado() {
+		if (!sonidoActivo) return;
+		const ctx = getAudioContext();
+		if (!ctx) return;
+		if (ctx.state === 'suspended') await ctx.resume();
+		const now = ctx.currentTime;
+		beep(ctx, now, 392, 0.14, 0.16);
+		beep(ctx, now + 0.09, 587, 0.16, 0.18);
+		beep(ctx, now + 0.2, 784, 0.22, 0.2);
+		beep(ctx, now + 0.36, 1175, 0.32, 0.16);
 	}
 </script>
 
@@ -211,6 +292,54 @@
 			{/if}
 		</div>
 
+		{#if !editando && totalEjercicios > 0}
+			<section class="mt-4 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+				<div class="flex items-center justify-between gap-3">
+					<div>
+						<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+							Estado del día
+						</p>
+						<p class="mt-1 text-sm font-bold">
+							{ejerciciosCompletos}/{totalEjercicios} ejercicios
+						</p>
+					</div>
+					{#if diaTerminado}
+						<span
+							class="rounded-full px-2.5 py-1 text-xs font-bold"
+							style="background: rgba(74,222,128,.16); color: #4ade80">Terminado</span
+						>
+					{:else if diaListo}
+						<span
+							class="rounded-full px-2.5 py-1 text-xs font-bold"
+							style="background: rgba(255,255,255,.08); color: var(--muted)">Listo</span
+						>
+					{:else}
+						<span
+							class="rounded-full px-2.5 py-1 text-xs font-bold"
+							style="background: rgba(255,255,255,.08); color: var(--muted)">En curso</span
+						>
+					{/if}
+				</div>
+
+				{#if diaTerminado}
+					<button
+						onclick={reabrir}
+						class="mt-3 w-full rounded-2xl border border-white/10 py-3 text-sm font-bold"
+						style="color: var(--muted)">Reabrir día</button
+					>
+				{:else}
+					<button
+						onclick={terminarDia}
+						disabled={!diaListo}
+						class="mt-3 w-full rounded-2xl py-3 text-sm font-bold disabled:opacity-45"
+						style="background: {diaListo ? 'var(--accent)' : 'rgba(255,255,255,.08)'}; color: {diaListo ? 'white' : 'var(--muted)'}"
+					>
+						{diaListo ? '🏁 Terminar día' : `Faltan ${totalEjercicios - ejerciciosCompletos}`}
+					</button>
+				{/if}
+			</section>
+		{/if}
+
 		<a
 			href={`/dia/${diaId}/agregar`}
 			class="mt-4 block rounded-2xl border border-dashed border-white/20 p-4 text-center text-sm font-medium"
@@ -226,3 +355,23 @@
 		{/if}
 	{/if}
 </main>
+
+{#if premioDia}
+	<div
+		class="fixed inset-0 z-[60] grid place-items-center px-8"
+		style="background: radial-gradient(72% 50% at 50% 42%, rgb(74 222 128 / .22), transparent 72%), rgba(8,8,12,.84); backdrop-filter: blur(8px)"
+	>
+		<div transition:fly={{ y: 18, duration: 260 }} class="text-center" aria-live="polite">
+			<div
+				class="mx-auto grid size-24 place-items-center rounded-full border border-white/15 text-5xl font-extrabold"
+				style="background: rgba(74,222,128,.18); color: #4ade80; box-shadow: 0 0 55px rgba(74,222,128,.24)"
+			>
+				🏁
+			</div>
+			<p class="mt-5 text-2xl font-extrabold">Día terminado</p>
+			<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
+				{ejerciciosCompletos}/{totalEjercicios} ejercicios completos
+			</p>
+		</div>
+	</div>
+{/if}

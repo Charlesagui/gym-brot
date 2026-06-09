@@ -18,12 +18,20 @@ export interface SetSesion {
 	esMax?: boolean;
 }
 
+export interface EjercicioSesion {
+	exerciseId: string;
+	sets: SetSesion[];
+	prPesoCelebrado?: number;
+}
+
 /** Progreso de una sesión (id = `${fecha}__${diaId}`, se resetea por día). */
 export interface Sesion {
 	id: string;
 	fecha: string; // YYYY-MM-DD
 	diaId: string;
-	ejercicios: { exerciseId: string; sets: SetSesion[] }[];
+	ejercicios: EjercicioSesion[];
+	diaTerminado?: boolean;
+	diaTerminadoAt?: string;
 }
 
 /** Nota personal por ejercicio (colapsada en la UI). */
