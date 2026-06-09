@@ -9,6 +9,7 @@
 	import { actualizarDia, borrarDia, quitarEjercicio, setSeries, coloresDia } from '$lib/dias';
 	import { marcarDiaTerminado, reabrirDia, sesionHoyObs } from '$lib/sesion';
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
+	import { sonarDiaTerminado } from '$lib/audio';
 
 	let dia = $state<Dia | undefined>(undefined);
 	let cargando = $state(true);
@@ -18,10 +19,6 @@
 	let ajustes = $state<Ajustes>(AJUSTES_DEFAULT);
 	let premioDia = $state(false);
 	let premioId: ReturnType<typeof setTimeout> | null = null;
-	type AudioContextConstructor = new () => AudioContext;
-	type AudioWindow = Window &
-		typeof globalThis & { webkitAudioContext?: AudioContextConstructor };
-	let audioCtx: AudioContext | null = null;
 
 	const diaId = $derived($page.params.id!);
 
@@ -87,7 +84,7 @@
 		if (!diaListo || diaTerminado) return;
 		await marcarDiaTerminado(diaId);
 		premioDia = true;
-		void sonarDiaTerminado().catch(() => {});
+		if (sonidoActivo) void sonarDiaTerminado().catch(() => {});
 		if ('vibrate' in navigator) navigator.vibrate([120, 70, 120, 70, 220]);
 		if (premioId) clearTimeout(premioId);
 		premioId = setTimeout(() => (premioDia = false), 2400);
@@ -99,40 +96,6 @@
 		await reabrirDia(diaId);
 	}
 
-	function getAudioContext(): AudioContext | null {
-		if (typeof window === 'undefined') return null;
-		const audioWindow = window as AudioWindow;
-		const Ctx = window.AudioContext ?? audioWindow.webkitAudioContext;
-		if (!Ctx) return null;
-		audioCtx ??= new Ctx();
-		return audioCtx;
-	}
-
-	function beep(ctx: AudioContext, start: number, freq: number, duracion: number, volumen: number) {
-		const osc = ctx.createOscillator();
-		const gain = ctx.createGain();
-		osc.type = 'triangle';
-		osc.frequency.setValueAtTime(freq, start);
-		gain.gain.setValueAtTime(0.0001, start);
-		gain.gain.exponentialRampToValueAtTime(volumen, start + 0.012);
-		gain.gain.exponentialRampToValueAtTime(0.0001, start + duracion);
-		osc.connect(gain);
-		gain.connect(ctx.destination);
-		osc.start(start);
-		osc.stop(start + duracion + 0.04);
-	}
-
-	async function sonarDiaTerminado() {
-		if (!sonidoActivo) return;
-		const ctx = getAudioContext();
-		if (!ctx) return;
-		if (ctx.state === 'suspended') await ctx.resume();
-		const now = ctx.currentTime;
-		beep(ctx, now, 392, 0.14, 0.16);
-		beep(ctx, now + 0.09, 587, 0.16, 0.18);
-		beep(ctx, now + 0.2, 784, 0.22, 0.2);
-		beep(ctx, now + 0.36, 1175, 0.32, 0.16);
-	}
 </script>
 
 <main class="glow-bg min-h-dvh px-5 pb-12 pt-6">

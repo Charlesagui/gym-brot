@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Ajustes } from '$lib/db';
+	import { DESCRIPCION_METRICA } from '$lib/sesion';
 	import {
 		ajustesObs,
 		setUnidad,
@@ -108,9 +109,7 @@
 			>
 		</div>
 		<p class="mt-2 text-xs" style="color: var(--muted)">
-			{ajustes.metricaPr === 'e1rm'
-				? 'El récord estima tu 1 Repetición Máxima (1RM) usando peso y reps (Epley): 95 × 12 supera a 100 × 1. Premia la sobrecarga por repeticiones.'
-				: 'El récord es la serie de mayor peso, sin importar las reps. Simple y directo.'}
+			{DESCRIPCION_METRICA[ajustes.metricaPr]}
 		</p>
 	</section>
 
