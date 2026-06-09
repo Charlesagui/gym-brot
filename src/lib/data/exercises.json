@@ -1,32 +1,3194 @@
 [
-	{ "id": "prensa-pierna-45", "nombre": "Prensa de pierna 45°", "grupo": "piernas", "musculo": "Cuádriceps + glúteos", "gif": "/gifs/prensa-pierna-45.gif", "videoUrl": "" },
-	{ "id": "extension-cuadriceps", "nombre": "Extensión de cuádriceps", "grupo": "piernas", "musculo": "Cuádriceps", "gif": "/gifs/extension-cuadriceps.gif", "videoUrl": "" },
-	{ "id": "curl-femoral", "nombre": "Curl femoral sentado", "grupo": "piernas", "musculo": "Isquiotibiales", "gif": "/gifs/curl-femoral.gif", "videoUrl": "" },
-	{ "id": "abductores", "nombre": "Abductores (apertura)", "grupo": "piernas", "musculo": "Glúteo medio", "gif": "/gifs/abductores.gif", "videoUrl": "" },
-	{ "id": "aductores", "nombre": "Aductores (cierre)", "grupo": "piernas", "musculo": "Aductores", "gif": "/gifs/aductores.gif", "videoUrl": "" },
-	{ "id": "patada-gluteo", "nombre": "Patada de glúteo en polea", "grupo": "piernas", "musculo": "Glúteos", "gif": "/gifs/patada-gluteo.gif", "videoUrl": "" },
-	{ "id": "gemelos-sentado", "nombre": "Elevación de gemelos sentado", "grupo": "piernas", "musculo": "Gemelos", "gif": "/gifs/gemelos-sentado.gif", "videoUrl": "" },
-	{ "id": "prensa-gemelos", "nombre": "Prensa de gemelos", "grupo": "piernas", "musculo": "Gemelos", "gif": "/gifs/prensa-gemelos.gif", "videoUrl": "" },
-	{ "id": "press-pecho", "nombre": "Press de pecho en máquina", "grupo": "pecho", "musculo": "Pectoral", "gif": "/gifs/press-pecho.gif", "videoUrl": "" },
-	{ "id": "press-inclinado", "nombre": "Press inclinado en máquina", "grupo": "pecho", "musculo": "Pectoral superior", "gif": "/gifs/press-inclinado.gif", "videoUrl": "" },
-	{ "id": "aperturas-pec", "nombre": "Aperturas (pec-deck)", "grupo": "pecho", "musculo": "Pectoral", "gif": "/gifs/aperturas-pec.gif", "videoUrl": "" },
-	{ "id": "cruce-poleas", "nombre": "Cruce de poleas", "grupo": "pecho", "musculo": "Pectoral", "gif": "/gifs/cruce-poleas.gif", "videoUrl": "https://www.youtube.com/watch?v=XnaMi2Gb_9Q" },
-	{ "id": "jalon-pecho", "nombre": "Jalón al pecho (polea)", "grupo": "espalda", "musculo": "Dorsales", "gif": "/gifs/jalon-pecho.gif", "videoUrl": "" },
-	{ "id": "remo-sentado", "nombre": "Remo sentado bajo (polea)", "grupo": "espalda", "musculo": "Espalda media", "gif": "/gifs/remo-sentado.gif", "videoUrl": "" },
-	{ "id": "remo-alto-v", "nombre": "Remo alto en polea (V)", "grupo": "espalda", "musculo": "Dorsales", "gif": "/gifs/remo-alto-v.gif", "videoUrl": "" },
-	{ "id": "jalon-brazos-rectos", "nombre": "Jalón con brazos rectos", "grupo": "espalda", "musculo": "Dorsales", "gif": "/gifs/jalon-brazos-rectos.gif", "videoUrl": "" },
-	{ "id": "press-hombro", "nombre": "Press de hombro en máquina", "grupo": "hombros", "musculo": "Deltoides", "gif": "/gifs/press-hombro.gif", "videoUrl": "" },
-	{ "id": "elevaciones-laterales", "nombre": "Elevaciones laterales en polea", "grupo": "hombros", "musculo": "Deltoide lateral", "gif": "/gifs/elevaciones-laterales.gif", "videoUrl": "" },
-	{ "id": "deltoide-posterior", "nombre": "Deltoide posterior (pájaros)", "grupo": "hombros", "musculo": "Deltoide posterior", "gif": "/gifs/deltoide-posterior.gif", "videoUrl": "" },
-	{ "id": "face-pull", "nombre": "Face pull en polea", "grupo": "hombros", "musculo": "Deltoide posterior", "gif": "/gifs/face-pull.gif", "videoUrl": "" },
-	{ "id": "curl-biceps", "nombre": "Curl de bíceps en polea", "grupo": "brazos", "musculo": "Bíceps", "gif": "/gifs/curl-biceps.gif", "videoUrl": "" },
-	{ "id": "curl-martillo", "nombre": "Curl martillo con soga", "grupo": "brazos", "musculo": "Bíceps", "gif": "/gifs/curl-martillo.gif", "videoUrl": "" },
-	{ "id": "curl-concentrado", "nombre": "Curl concentrado en polea", "grupo": "brazos", "musculo": "Bíceps", "gif": "/gifs/curl-concentrado.gif", "videoUrl": "" },
-	{ "id": "triceps-soga", "nombre": "Empuje de tríceps con soga", "grupo": "brazos", "musculo": "Tríceps", "gif": "/gifs/triceps-soga.gif", "videoUrl": "" },
-	{ "id": "triceps-sobre-cabeza", "nombre": "Extensión de tríceps sobre la cabeza", "grupo": "brazos", "musculo": "Tríceps", "gif": "/gifs/triceps-sobre-cabeza.gif", "videoUrl": "" },
-	{ "id": "triceps-inverso", "nombre": "Empuje de tríceps agarre inverso", "grupo": "brazos", "musculo": "Tríceps", "gif": "/gifs/triceps-inverso.gif", "videoUrl": "" },
-	{ "id": "crunch-arrodillado", "nombre": "Crunch en polea (arrodillado)", "grupo": "core", "musculo": "Abdomen", "gif": "/gifs/crunch-arrodillado.gif", "videoUrl": "" },
-	{ "id": "crunch-sentado", "nombre": "Crunch sentado en polea", "grupo": "core", "musculo": "Abdomen", "gif": "/gifs/crunch-sentado.gif", "videoUrl": "" },
-	{ "id": "rodillas-colgado", "nombre": "Elevación de rodillas colgado", "grupo": "core", "musculo": "Abdomen bajo", "gif": "/gifs/rodillas-colgado.gif", "videoUrl": "" },
-	{ "id": "crunch-inverso", "nombre": "Crunch inverso en polea", "grupo": "core", "musculo": "Abdomen bajo", "gif": "/gifs/crunch-inverso.gif", "videoUrl": "" }
+	{
+		"id": "prensa-pierna-45",
+		"nombre": "Prensa de pierna 45°",
+		"grupo": "piernas",
+		"musculo": "Cuádriceps + glúteos",
+		"demoVideo": "/videos/prensa-pierna-45.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "extension-cuadriceps",
+		"nombre": "Extensión de cuádriceps",
+		"grupo": "piernas",
+		"musculo": "Cuádriceps",
+		"demoVideo": "/videos/extension-cuadriceps.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "curl-femoral",
+		"nombre": "Curl femoral sentado",
+		"grupo": "piernas",
+		"musculo": "Isquiotibiales",
+		"demoVideo": "/videos/curl-femoral.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "abductores",
+		"nombre": "Abductores (apertura)",
+		"grupo": "piernas",
+		"musculo": "Glúteo medio",
+		"demoVideo": "/videos/abductores.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "aductores",
+		"nombre": "Aductores (cierre)",
+		"grupo": "piernas",
+		"musculo": "Aductores",
+		"demoVideo": "/videos/aductores.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "patada-gluteo",
+		"nombre": "Patada de glúteo en polea",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/patada-gluteo.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "gemelos-sentado",
+		"nombre": "Elevación de gemelos sentado",
+		"grupo": "piernas",
+		"musculo": "Gemelos",
+		"demoVideo": "/videos/gemelos-sentado.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "prensa-gemelos",
+		"nombre": "Prensa de gemelos",
+		"grupo": "piernas",
+		"musculo": "Gemelos",
+		"demoVideo": "/videos/prensa-gemelos.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "press-pecho",
+		"nombre": "Press de pecho en máquina",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/press-pecho.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "press-inclinado",
+		"nombre": "Press inclinado en máquina",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior",
+		"demoVideo": "/videos/press-inclinado.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "aperturas-pec",
+		"nombre": "Aperturas (pec-deck)",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/aperturas-pec.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cruce-poleas",
+		"nombre": "Cruce de poleas",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/cruce-poleas.mp4",
+		"videoUrl": "https://www.youtube.com/watch?v=XnaMi2Gb_9Q"
+	},
+	{
+		"id": "jalon-pecho",
+		"nombre": "Jalón al pecho (polea)",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/jalon-pecho.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "remo-sentado",
+		"nombre": "Remo sentado bajo (polea)",
+		"grupo": "espalda",
+		"musculo": "Espalda media",
+		"demoVideo": "/videos/remo-sentado.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "remo-alto-v",
+		"nombre": "Remo alto en polea (V)",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/remo-alto-v.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "jalon-brazos-rectos",
+		"nombre": "Jalón con brazos rectos",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/jalon-brazos-rectos.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "press-hombro",
+		"nombre": "Press de hombro en máquina",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/press-hombro.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "elevaciones-laterales",
+		"nombre": "Elevaciones laterales en polea",
+		"grupo": "hombros",
+		"musculo": "Deltoide lateral",
+		"demoVideo": "/videos/elevaciones-laterales.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "deltoide-posterior",
+		"nombre": "Deltoide posterior (pájaros)",
+		"grupo": "hombros",
+		"musculo": "Deltoide posterior",
+		"demoVideo": "/videos/deltoide-posterior.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "face-pull",
+		"nombre": "Face pull en polea",
+		"grupo": "hombros",
+		"musculo": "Deltoide posterior",
+		"demoVideo": "/videos/face-pull.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "curl-biceps",
+		"nombre": "Curl de bíceps en polea",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/curl-biceps.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "curl-martillo",
+		"nombre": "Curl martillo con soga",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/curl-martillo.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "curl-concentrado",
+		"nombre": "Curl concentrado en polea",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/curl-concentrado.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "triceps-soga",
+		"nombre": "Empuje de tríceps con soga",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/triceps-soga.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "triceps-sobre-cabeza",
+		"nombre": "Extensión de tríceps sobre la cabeza",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/triceps-sobre-cabeza.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "triceps-inverso",
+		"nombre": "Empuje de tríceps agarre inverso",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/triceps-inverso.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "crunch-arrodillado",
+		"nombre": "Crunch en polea (arrodillado)",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/crunch-arrodillado.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "crunch-sentado",
+		"nombre": "Crunch sentado en polea",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/crunch-sentado.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "rodillas-colgado",
+		"nombre": "Elevación de rodillas colgado",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/rodillas-colgado.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "crunch-inverso",
+		"nombre": "Crunch inverso en polea",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/crunch-inverso.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-one-arm-decline-chest-fly",
+		"nombre": "Apertura de pecho declinado en polea, a una mano",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/cable-one-arm-decline-chest-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-decline-fly",
+		"nombre": "Apertura declinado en polea",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/cable-decline-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-low-fly",
+		"nombre": "Apertura en polea",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/cable-low-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-standing-fly",
+		"nombre": "Apertura en polea, de pie",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/cable-standing-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-middle-fly",
+		"nombre": "Apertura en polea, media",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/cable-middle-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-lying-fly",
+		"nombre": "Apertura en polea, tumbado",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/cable-lying-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-incline-fly",
+		"nombre": "Apertura inclinado en polea",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/cable-incline-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-standing-up-straight-crossovers",
+		"nombre": "Cruce de poleas de pie",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/cable-standing-up-straight-crossovers.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-one-arm-lateral-bent-over",
+		"nombre": "Apertura inclinada a una mano en polea",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/cable-one-arm-lateral-bent-over.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-bench-press",
+		"nombre": "Press de banca en polea",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/cable-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-seated-chest-press",
+		"nombre": "Press de pecho en polea, sentado",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/cable-seated-chest-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-decline-press",
+		"nombre": "Press declinado en polea",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/cable-decline-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-decline-one-arm-press",
+		"nombre": "Press declinado en polea, a una mano",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/cable-decline-one-arm-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-incline-bench-press",
+		"nombre": "Press en polea, en banco inclinado",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/cable-incline-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-one-arm-incline-press",
+		"nombre": "Press inclinado en polea, a una mano",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/cable-one-arm-incline-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-upper-chest-crossovers",
+		"nombre": "Cruce de poleas para pecho superior",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/cable-upper-chest-crossovers.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-pushdown-straight-arm-v-2",
+		"nombre": "Jalón con brazos rectos en polea (variante)",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/cable-pushdown-straight-arm-v-2.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-incline-pushdown",
+		"nombre": "Jalón inclinado en polea",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/cable-incline-pushdown.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-pulldown",
+		"nombre": "Jalón al pecho en polea",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/cable-pulldown.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-lateral-pulldown-with-v-bar",
+		"nombre": "Jalón al pecho en polea con barra en V, lateral",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/cable-lateral-pulldown-with-v-bar.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-one-arm-pulldown",
+		"nombre": "Jalón al pecho en polea, a una mano",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/cable-one-arm-pulldown.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-underhand-pulldown",
+		"nombre": "Jalón al pecho en polea, agarre supino",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/cable-underhand-pulldown.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-bar-lateral-pulldown",
+		"nombre": "Jalón al pecho en polea, barra lateral",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/cable-bar-lateral-pulldown.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-wide-grip-rear-pulldown-behind-neck",
+		"nombre": "Jalón al pecho en polea, con agarre ancho, posterior tras la nuca",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/cable-wide-grip-rear-pulldown-behind-neck.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-straight-arm-pulldown-with-rope",
+		"nombre": "Jalón al pecho en polea, con brazo recto con cuerda",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/cable-straight-arm-pulldown-with-rope.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-lateral-pulldown-with-rope-attachment",
+		"nombre": "Jalón al pecho en polea, con cuerda, lateral",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/cable-lateral-pulldown-with-rope-attachment.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-cross-over-lateral-pulldown",
+		"nombre": "Jalón al pecho en polea, cruzado, lateral",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/cable-cross-over-lateral-pulldown.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-rear-pulldown",
+		"nombre": "Jalón al pecho en polea, posterior",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/cable-rear-pulldown.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-pulldown-pro-lat-bar",
+		"nombre": "Jalón al pecho en polea, pro dorsal barra",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/cable-pulldown-pro-lat-bar.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-lying-extension-pullover-with-rope-attachment",
+		"nombre": "Pullover en polea, tumbado, con cuerda",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/cable-lying-extension-pullover-with-rope-attachment.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-squat-row-with-rope-attachment",
+		"nombre": "Sentadilla en polea, con cuerda",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/cable-squat-row-with-rope-attachment.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-twisting-pull",
+		"nombre": "Tirón con giro en polea",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/cable-twisting-pull.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-shrug",
+		"nombre": "Encogimiento en polea",
+		"grupo": "espalda",
+		"musculo": "Trapecios",
+		"demoVideo": "/videos/cable-shrug.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-high-row-kneeling",
+		"nombre": "Remo alto en polea, de rodillas",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/cable-high-row-kneeling.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-one-arm-straight-back-high-row-kneeling",
+		"nombre": "Remo alto en polea, de rodillas, a una mano con espalda recta",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/cable-one-arm-straight-back-high-row-kneeling.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-reverse-grip-straight-back-seated-high-row",
+		"nombre": "Remo alto en polea, sentado, con agarre invertido, con espalda recta",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/cable-reverse-grip-straight-back-seated-high-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-standing-twist-row-v-bar",
+		"nombre": "Remo con giro en polea con barra en V, de pie",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/cable-standing-twist-row-v-bar.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-palm-rotational-row",
+		"nombre": "Remo con rotación de palma en polea",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/cable-palm-rotational-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-decline-seated-wide-grip-row",
+		"nombre": "Remo declinado en polea, sentado, con agarre ancho",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/cable-decline-seated-wide-grip-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-standing-row-v-bar",
+		"nombre": "Remo en polea con barra en V, de pie",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/cable-standing-row-v-bar.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-rope-extension-incline-bench-row",
+		"nombre": "Remo en polea con cuerda, en banco inclinado",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/cable-rope-extension-incline-bench-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-incline-bench-row",
+		"nombre": "Remo en polea, en banco inclinado",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/cable-incline-bench-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-seated-one-arm-alternate-row",
+		"nombre": "Remo en polea, sentado, a una mano alternado",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/cable-seated-one-arm-alternate-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-seated-wide-grip-row",
+		"nombre": "Remo en polea, sentado, con agarre ancho",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/cable-seated-wide-grip-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-floor-seated-wide-grip-row",
+		"nombre": "Remo en polea, sentado, con agarre ancho, suelo",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/cable-floor-seated-wide-grip-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-upper-row",
+		"nombre": "Remo en polea, superior",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/cable-upper-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-one-arm-bent-over-row",
+		"nombre": "Remo inclinado en polea, a una mano",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/cable-one-arm-bent-over-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-seated-row",
+		"nombre": "Remo sentado en polea",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/cable-seated-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-rope-seated-row",
+		"nombre": "Remo sentado en polea con cuerda",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/cable-rope-seated-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-rope-elevated-seated-row",
+		"nombre": "Remo sentado en polea con cuerda elevado",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/cable-rope-elevated-seated-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-rope-crossover-seated-row",
+		"nombre": "Remo sentado en polea con cuerda, crossover",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/cable-rope-crossover-seated-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-straight-back-seated-row",
+		"nombre": "Remo sentado en polea, con espalda recta",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/cable-straight-back-seated-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-standing-cross-over-high-reverse-fly",
+		"nombre": "Apertura inversa en polea, de pie, cruzado alto",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/cable-standing-cross-over-high-reverse-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-supine-reverse-fly",
+		"nombre": "Apertura inversa tumbado boca arriba en polea",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/cable-supine-reverse-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-front-shoulder-raise",
+		"nombre": "Elevación de hombros en polea, frontal",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/cable-front-shoulder-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-forward-raise",
+		"nombre": "Elevación en polea, hacia adelante",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/cable-forward-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-front-raise",
+		"nombre": "Elevación frontal en polea",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/cable-front-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-one-arm-lateral-raise",
+		"nombre": "Elevación lateral en polea, a una mano",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/cable-one-arm-lateral-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-seated-rear-lateral-raise",
+		"nombre": "Elevación posterior de deltoides en polea, sentado",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/cable-seated-rear-lateral-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-cross-over-revers-fly",
+		"nombre": "Apertura inversa cruzada en polea",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/cable-cross-over-revers-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-standing-shoulder-external-rotation",
+		"nombre": "Rotación externa de hombro en polea",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/cable-standing-shoulder-external-rotation.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-seated-shoulder-internal-rotation",
+		"nombre": "Rotación interna de hombro en polea, sentado",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/cable-seated-shoulder-internal-rotation.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-shoulder-press",
+		"nombre": "Press de hombros en polea",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/cable-shoulder-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-alternate-shoulder-press",
+		"nombre": "Press de hombros en polea, alternado",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/cable-alternate-shoulder-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-upright-row",
+		"nombre": "Remo al mentón en polea",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/cable-upright-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-rear-delt-row-stirrups",
+		"nombre": "Remo de deltoides posterior en polea con estribos",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/cable-rear-delt-row-stirrups.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-standing-rear-delt-row-with-rope",
+		"nombre": "Remo de deltoides posterior en polea, de pie, con cuerda",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/cable-standing-rear-delt-row-with-rope.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-kneeling-rear-delt-row-with-rope-male",
+		"nombre": "Remo de deltoides posterior en polea, de rodillas, con cuerda",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/cable-kneeling-rear-delt-row-with-rope-male.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-seated-one-arm-concentration-curl",
+		"nombre": "Curl concentrado en polea, sentado, a una mano",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-seated-one-arm-concentration-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-lying-bicep-curl",
+		"nombre": "Curl de bíceps en polea, tumbado",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-lying-bicep-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-drag-curl",
+		"nombre": "Curl drag en polea",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-drag-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-two-arm-curl-on-incline-bench",
+		"nombre": "Curl en polea, a dos manos en banco inclinado",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-two-arm-curl-on-incline-bench.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-one-arm-curl",
+		"nombre": "Curl en polea, a una mano",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-one-arm-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-close-grip-curl",
+		"nombre": "Curl en polea, con agarre cerrado",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-close-grip-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-standing-inner-curl",
+		"nombre": "Curl interno en polea, de pie",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-standing-inner-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-squatting-curl",
+		"nombre": "Curl en polea, en cuclillas",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-squatting-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-seated-curl",
+		"nombre": "Curl en polea, sentado",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-seated-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-lying-close-grip-curl",
+		"nombre": "Curl en polea, tumbado, con agarre cerrado",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-lying-close-grip-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-reverse-curl",
+		"nombre": "Curl invertido en polea",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-reverse-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-reverse-one-arm-curl",
+		"nombre": "Curl invertido en polea, a una mano",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-reverse-one-arm-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-preacher-curl",
+		"nombre": "Curl predicador en polea",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-preacher-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-one-arm-preacher-curl",
+		"nombre": "Curl predicador en polea, a una mano",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-one-arm-preacher-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-reverse-preacher-curl",
+		"nombre": "Curl predicador invertido en polea",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-reverse-preacher-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-one-arm-reverse-preacher-curl",
+		"nombre": "Curl predicador invertido en polea, a una mano",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-one-arm-reverse-preacher-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-rope-hammer-preacher-curl",
+		"nombre": "Curl predicador martillo en polea con cuerda",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-rope-hammer-preacher-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-rope-one-arm-hammer-preacher-curl",
+		"nombre": "Curl predicador martillo en polea con cuerda, a una mano",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-rope-one-arm-hammer-preacher-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-overhead-curl",
+		"nombre": "Curl sobre la cabeza en polea",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-overhead-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-seated-overhead-curl",
+		"nombre": "Curl sobre la cabeza en polea, sentado",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-seated-overhead-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-pulldown-bicep-curl",
+		"nombre": "Curl de bíceps desde jalón en polea",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-pulldown-bicep-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-standing-pulldown-with-rope",
+		"nombre": "Curl con cuerda en polea alta",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/cable-standing-pulldown-with-rope.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-wrist-curl",
+		"nombre": "Curl de muñeca en polea",
+		"grupo": "brazos",
+		"musculo": "Antebrazos",
+		"demoVideo": "/videos/cable-wrist-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-standing-back-wrist-curl",
+		"nombre": "Curl de muñeca en polea, de pie, espalda",
+		"grupo": "brazos",
+		"musculo": "Antebrazos",
+		"demoVideo": "/videos/cable-standing-back-wrist-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-reverse-wrist-curl",
+		"nombre": "Curl de muñeca invertido en polea",
+		"grupo": "brazos",
+		"musculo": "Antebrazos",
+		"demoVideo": "/videos/cable-reverse-wrist-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-rear-drive",
+		"nombre": "Extensión posterior de tríceps en polea",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/cable-rear-drive.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-pushdown",
+		"nombre": "Empuje en polea",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/cable-pushdown.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-triceps-pushdown-v-bar",
+		"nombre": "Empuje en polea con barra en V, tríceps",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/cable-triceps-pushdown-v-bar.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-one-arm-tricep-pushdown",
+		"nombre": "Empuje en polea, a una mano, tríceps",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/cable-one-arm-tricep-pushdown.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-concentration-extension-on-knee",
+		"nombre": "Extensión concentrado en polea, rodilla",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/cable-concentration-extension-on-knee.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-rope-lying-on-floor-tricep-extension",
+		"nombre": "Extensión de tríceps en polea con cuerda, tumbado, en el suelo",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/cable-rope-lying-on-floor-tricep-extension.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-alternate-triceps-extension",
+		"nombre": "Extensión de tríceps en polea, alternado",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/cable-alternate-triceps-extension.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-standing-one-arm-triceps-extension",
+		"nombre": "Extensión de tríceps en polea, de pie, a una mano",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/cable-standing-one-arm-triceps-extension.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-kneeling-triceps-extension",
+		"nombre": "Extensión de tríceps en polea, de rodillas",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/cable-kneeling-triceps-extension.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-lying-triceps-extension-v-2",
+		"nombre": "Extensión de tríceps en polea, tumbado",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/cable-lying-triceps-extension-v-2.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-incline-triceps-extension",
+		"nombre": "Extensión de tríceps inclinado en polea",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/cable-incline-triceps-extension.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-rope-incline-tricep-extension",
+		"nombre": "Extensión de tríceps inclinado en polea con cuerda",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/cable-rope-incline-tricep-extension.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-overhead-triceps-extension-rope-attachment",
+		"nombre": "Extensión de tríceps sobre la cabeza en polea con cuerda",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/cable-overhead-triceps-extension-rope-attachment.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-rope-high-pulley-overhead-tricep-extension",
+		"nombre": "Extensión de tríceps sobre la cabeza en polea con cuerda, alto",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/cable-rope-high-pulley-overhead-tricep-extension.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-standing-reverse-grip-one-arm-overhead-tricep-extension",
+		"nombre": "Extensión de tríceps sobre la cabeza en polea, de pie, con agarre invertido, a una mano",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/cable-standing-reverse-grip-one-arm-overhead-tricep-extension.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-kickback",
+		"nombre": "Patada de tríceps en polea",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/cable-kickback.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-two-arm-tricep-kickback",
+		"nombre": "Patada de tríceps en polea, a dos manos",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/cable-two-arm-tricep-kickback.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-hip-adduction",
+		"nombre": "Aducción de cadera en polea",
+		"grupo": "piernas",
+		"musculo": "Aductores",
+		"demoVideo": "/videos/cable-hip-adduction.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-standing-calf-raise",
+		"nombre": "Elevación de talones en polea, de pie",
+		"grupo": "piernas",
+		"musculo": "Gemelos",
+		"demoVideo": "/videos/cable-standing-calf-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-standing-one-leg-calf-raise",
+		"nombre": "Elevación de talones en polea, de pie, a una pierna",
+		"grupo": "piernas",
+		"musculo": "Gemelos",
+		"demoVideo": "/videos/cable-standing-one-leg-calf-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-deadlift",
+		"nombre": "Peso muerto en polea",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/cable-deadlift.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-pull-through-with-rope",
+		"nombre": "Pull through en polea, con cuerda",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/cable-pull-through-with-rope.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "inverse-leg-curl-on-pull-up-cable-machine",
+		"nombre": "Curl femoral nórdico en máquina de dominadas con polea",
+		"grupo": "piernas",
+		"musculo": "Isquiotibiales",
+		"demoVideo": "/videos/inverse-leg-curl-on-pull-up-cable-machine.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-assisted-inverse-leg-curl",
+		"nombre": "Curl femoral nórdico en polea, asistido",
+		"grupo": "piernas",
+		"musculo": "Isquiotibiales",
+		"demoVideo": "/videos/cable-assisted-inverse-leg-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-standing-crunch",
+		"nombre": "Crunch en polea, de pie",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/cable-standing-crunch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-standing-crunch-with-rope-attachment",
+		"nombre": "Crunch en polea, de pie, con cuerda",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/cable-standing-crunch-with-rope-attachment.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-side-crunch",
+		"nombre": "Crunch en polea, lateral",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/cable-side-crunch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-standing-lift",
+		"nombre": "Elevación en polea de pie",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/cable-standing-lift.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-twist",
+		"nombre": "Giro en polea",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/cable-twist.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-seated-twist",
+		"nombre": "Giro en polea, sentado",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/cable-seated-twist.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-side-bend",
+		"nombre": "Inclinación lateral en polea",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/cable-side-bend.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-lying-lifting-on-hip",
+		"nombre": "Hip thrust con barra",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/barbell-lying-lifting-on-hip.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "resistance-band-hip-thrusts-on-knees-female",
+		"nombre": "Hip thrust con banda, de rodillas",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/resistance-band-hip-thrusts-on-knees-female.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-glute-bridge-two-legs-on-bench-male",
+		"nombre": "Puente de glúteos con barra en banco",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/barbell-glute-bridge-two-legs-on-bench-male.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-glute-bridge",
+		"nombre": "Puente de glúteos con barra",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/barbell-glute-bridge.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "glute-bridge-two-legs-on-bench-male",
+		"nombre": "Puente de glúteos en banco",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/glute-bridge-two-legs-on-bench-male.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "low-glute-bridge-on-floor",
+		"nombre": "Puente de glúteos en el suelo",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/low-glute-bridge-on-floor.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "single-leg-bridge-with-outstretched-leg",
+		"nombre": "Puente de glúteos a una pierna",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/single-leg-bridge-with-outstretched-leg.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "glute-bridge-march",
+		"nombre": "Puente de glúteos con marcha",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/glute-bridge-march.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-deadlift",
+		"nombre": "Peso muerto con barra",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/barbell-deadlift.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "trap-bar-deadlift",
+		"nombre": "Peso muerto con barra hexagonal",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/trap-bar-deadlift.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-romanian-deadlift",
+		"nombre": "Peso muerto rumano con barra",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/barbell-romanian-deadlift.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-sumo-deadlift",
+		"nombre": "Peso muerto sumo con barra",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/barbell-sumo-deadlift.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-straight-leg-deadlift",
+		"nombre": "Peso muerto piernas rectas con barra",
+		"grupo": "piernas",
+		"musculo": "Isquiotibiales",
+		"demoVideo": "/videos/barbell-straight-leg-deadlift.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-deadlift",
+		"nombre": "Peso muerto con mancuernas",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/dumbbell-deadlift.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-romanian-deadlift",
+		"nombre": "Peso muerto rumano con mancuernas",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/dumbbell-romanian-deadlift.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-stiff-leg-deadlift",
+		"nombre": "Peso muerto piernas rígidas con mancuernas",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/dumbbell-stiff-leg-deadlift.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-single-leg-deadlift",
+		"nombre": "Peso muerto a una pierna con mancuerna",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/dumbbell-single-leg-deadlift.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-good-morning",
+		"nombre": "Good morning con barra",
+		"grupo": "piernas",
+		"musculo": "Isquiotibiales",
+		"demoVideo": "/videos/barbell-good-morning.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-stiff-leg-good-morning",
+		"nombre": "Good morning piernas rígidas con barra",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/barbell-stiff-leg-good-morning.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-seated-good-morning",
+		"nombre": "Good morning sentado con barra",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/barbell-seated-good-morning.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-full-squat",
+		"nombre": "Sentadilla completa con barra",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/barbell-full-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-high-bar-squat",
+		"nombre": "Sentadilla high bar",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/barbell-high-bar-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-low-bar-squat",
+		"nombre": "Sentadilla low bar",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/barbell-low-bar-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-front-squat",
+		"nombre": "Sentadilla frontal con barra",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/barbell-front-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-hack-squat",
+		"nombre": "Hack squat con barra",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/barbell-hack-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-wide-squat",
+		"nombre": "Sentadilla amplia con barra",
+		"grupo": "piernas",
+		"musculo": "Cuádriceps",
+		"demoVideo": "/videos/barbell-wide-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-squat",
+		"nombre": "Sentadilla con mancuernas",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/dumbbell-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-goblet-squat",
+		"nombre": "Sentadilla goblet con mancuerna",
+		"grupo": "piernas",
+		"musculo": "Cuádriceps",
+		"demoVideo": "/videos/dumbbell-goblet-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kettlebell-goblet-squat",
+		"nombre": "Sentadilla goblet con kettlebell",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/kettlebell-goblet-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "sissy-squat",
+		"nombre": "Sissy squat",
+		"grupo": "piernas",
+		"musculo": "Cuádriceps",
+		"demoVideo": "/videos/sissy-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "weighted-sissy-squat",
+		"nombre": "Sissy squat con peso",
+		"grupo": "piernas",
+		"musculo": "Cuádriceps",
+		"demoVideo": "/videos/weighted-sissy-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "sled-hack-squat",
+		"nombre": "Hack squat en máquina",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/sled-hack-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-hack-squat",
+		"nombre": "Hack squat en Smith",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/smith-hack-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-squat",
+		"nombre": "Sentadilla en Smith",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/smith-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-sumo-squat",
+		"nombre": "Sentadilla sumo en Smith",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/smith-sumo-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-full-squat",
+		"nombre": "Sentadilla completa en Smith",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/smith-full-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-leg-press",
+		"nombre": "Prensa de piernas en Smith",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/smith-leg-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-horizontal-one-leg-press",
+		"nombre": "Prensa horizontal a una pierna",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/lever-horizontal-one-leg-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-alternate-leg-press",
+		"nombre": "Prensa de piernas alternada",
+		"grupo": "piernas",
+		"musculo": "Cuádriceps",
+		"demoVideo": "/videos/lever-alternate-leg-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "sled-45-degrees-one-leg-press",
+		"nombre": "Prensa 45° a una pierna",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/sled-45-degrees-one-leg-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "sled-lying-squat",
+		"nombre": "Sentadilla tumbado en trineo",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/sled-lying-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "split-squats",
+		"nombre": "Split squat",
+		"grupo": "piernas",
+		"musculo": "Cuádriceps",
+		"demoVideo": "/videos/split-squats.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-single-leg-split-squat",
+		"nombre": "Sentadilla búlgara con mancuernas",
+		"grupo": "piernas",
+		"musculo": "Cuádriceps",
+		"demoVideo": "/videos/dumbbell-single-leg-split-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-single-leg-split-squat",
+		"nombre": "Sentadilla búlgara en Smith",
+		"grupo": "piernas",
+		"musculo": "Cuádriceps",
+		"demoVideo": "/videos/smith-single-leg-split-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-single-leg-split-squat",
+		"nombre": "Sentadilla búlgara con barra",
+		"grupo": "piernas",
+		"musculo": "Cuádriceps",
+		"demoVideo": "/videos/barbell-single-leg-split-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-split-squat-v-2",
+		"nombre": "Split squat con barra",
+		"grupo": "piernas",
+		"musculo": "Cuádriceps",
+		"demoVideo": "/videos/barbell-split-squat-v-2.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "band-single-leg-split-squat",
+		"nombre": "Split squat con banda",
+		"grupo": "piernas",
+		"musculo": "Cuádriceps",
+		"demoVideo": "/videos/band-single-leg-split-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-step-up-split-squat",
+		"nombre": "Split squat con step y mancuernas",
+		"grupo": "piernas",
+		"musculo": "Cuádriceps",
+		"demoVideo": "/videos/dumbbell-step-up-split-squat.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-step-up-lunge",
+		"nombre": "Estocada con step y mancuernas",
+		"grupo": "piernas",
+		"musculo": "Cuádriceps",
+		"demoVideo": "/videos/dumbbell-step-up-lunge.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "forward-lunge-male",
+		"nombre": "Estocada hacia adelante",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/forward-lunge-male.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "walking-lunge",
+		"nombre": "Estocadas caminando",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/walking-lunge.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-lunge",
+		"nombre": "Estocada con mancuernas",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/dumbbell-lunge.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-rear-lunge",
+		"nombre": "Estocada posterior con mancuernas",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/dumbbell-rear-lunge.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-lunge",
+		"nombre": "Estocada con barra",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/barbell-lunge.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-rear-lunge-v-2",
+		"nombre": "Estocada posterior con barra",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/barbell-rear-lunge-v-2.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-lateral-lunge",
+		"nombre": "Estocada lateral con barra",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/barbell-lateral-lunge.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-sprint-lunge",
+		"nombre": "Estocada en Smith",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/smith-sprint-lunge.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-contralateral-forward-lunge",
+		"nombre": "Estocada contralateral con mancuerna",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/dumbbell-contralateral-forward-lunge.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-step-up",
+		"nombre": "Step-up con mancuernas",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/dumbbell-step-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-step-up",
+		"nombre": "Step-up con barra",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/barbell-step-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "band-step-up",
+		"nombre": "Step-up con banda",
+		"grupo": "piernas",
+		"musculo": "Glúteos",
+		"demoVideo": "/videos/band-step-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-lying-leg-curl",
+		"nombre": "Curl femoral tumbado en máquina",
+		"grupo": "piernas",
+		"musculo": "Isquiotibiales",
+		"demoVideo": "/videos/lever-lying-leg-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-kneeling-leg-curl",
+		"nombre": "Curl femoral de rodillas en máquina",
+		"grupo": "piernas",
+		"musculo": "Isquiotibiales",
+		"demoVideo": "/videos/lever-kneeling-leg-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-lying-two-one-leg-curl",
+		"nombre": "Curl femoral tumbado una/dos piernas",
+		"grupo": "piernas",
+		"musculo": "Isquiotibiales",
+		"demoVideo": "/videos/lever-lying-two-one-leg-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "standing-single-leg-curl",
+		"nombre": "Curl femoral de pie a una pierna",
+		"grupo": "piernas",
+		"musculo": "Isquiotibiales",
+		"demoVideo": "/videos/standing-single-leg-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "glute-ham-raise",
+		"nombre": "Glute ham raise",
+		"grupo": "piernas",
+		"musculo": "Isquiotibiales",
+		"demoVideo": "/videos/glute-ham-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "inverse-leg-curl-bench-support",
+		"nombre": "Curl nórdico asistido con banco",
+		"grupo": "piernas",
+		"musculo": "Isquiotibiales",
+		"demoVideo": "/videos/inverse-leg-curl-bench-support.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-standing-calf-raise",
+		"nombre": "Elevación de gemelos de pie en máquina",
+		"grupo": "piernas",
+		"musculo": "Gemelos",
+		"demoVideo": "/videos/lever-standing-calf-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "hack-calf-raise",
+		"nombre": "Elevación de gemelos en hack",
+		"grupo": "piernas",
+		"musculo": "Gemelos",
+		"demoVideo": "/videos/hack-calf-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "hack-one-leg-calf-raise",
+		"nombre": "Elevación de gemelos en hack a una pierna",
+		"grupo": "piernas",
+		"musculo": "Gemelos",
+		"demoVideo": "/videos/hack-one-leg-calf-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-donkey-calf-raise",
+		"nombre": "Elevación de gemelos burro en máquina",
+		"grupo": "piernas",
+		"musculo": "Gemelos",
+		"demoVideo": "/videos/lever-donkey-calf-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-standing-calf-raise",
+		"nombre": "Elevación de gemelos de pie con mancuernas",
+		"grupo": "piernas",
+		"musculo": "Gemelos",
+		"demoVideo": "/videos/dumbbell-standing-calf-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-seated-calf-raise",
+		"nombre": "Elevación de gemelos sentado con mancuerna",
+		"grupo": "piernas",
+		"musculo": "Gemelos",
+		"demoVideo": "/videos/dumbbell-seated-calf-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-single-leg-calf-raise",
+		"nombre": "Elevación de gemelos a una pierna con mancuerna",
+		"grupo": "piernas",
+		"musculo": "Gemelos",
+		"demoVideo": "/videos/dumbbell-single-leg-calf-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "bodyweight-standing-calf-raise",
+		"nombre": "Elevación de gemelos de pie",
+		"grupo": "piernas",
+		"musculo": "Gemelos",
+		"demoVideo": "/videos/bodyweight-standing-calf-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "donkey-calf-raise",
+		"nombre": "Elevación de gemelos burro",
+		"grupo": "piernas",
+		"musculo": "Gemelos",
+		"demoVideo": "/videos/donkey-calf-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "sled-45-calf-press",
+		"nombre": "Prensa de gemelos 45°",
+		"grupo": "piernas",
+		"musculo": "Gemelos",
+		"demoVideo": "/videos/sled-45-calf-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "sled-calf-press-on-leg-press",
+		"nombre": "Prensa de gemelos en prensa",
+		"grupo": "piernas",
+		"musculo": "Gemelos",
+		"demoVideo": "/videos/sled-calf-press-on-leg-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "sled-one-leg-calf-press-on-leg-press",
+		"nombre": "Prensa de gemelos a una pierna",
+		"grupo": "piernas",
+		"musculo": "Gemelos",
+		"demoVideo": "/videos/sled-one-leg-calf-press-on-leg-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-standing-leg-calf-raise",
+		"nombre": "Elevación de gemelos de pie en Smith",
+		"grupo": "piernas",
+		"musculo": "Gemelos",
+		"demoVideo": "/videos/smith-standing-leg-calf-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "resistance-band-seated-hip-abduction",
+		"nombre": "Abducción de cadera con banda",
+		"grupo": "piernas",
+		"musculo": "Abductores",
+		"demoVideo": "/videos/resistance-band-seated-hip-abduction.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "side-hip-abduction",
+		"nombre": "Abducción lateral de cadera",
+		"grupo": "piernas",
+		"musculo": "Abductores",
+		"demoVideo": "/videos/side-hip-abduction.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "side-lying-hip-adduction-male",
+		"nombre": "Aducción de cadera tumbado de lado",
+		"grupo": "piernas",
+		"musculo": "Aductores",
+		"demoVideo": "/videos/side-lying-hip-adduction-male.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-decline-chest-press",
+		"nombre": "Press declinado de pecho en máquina",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/lever-decline-chest-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-incline-chest-press",
+		"nombre": "Press inclinado de pecho en máquina",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/lever-incline-chest-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-standing-chest-press",
+		"nombre": "Press de pecho de pie en máquina",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/lever-standing-chest-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-bench-press",
+		"nombre": "Press de banca en Smith",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/smith-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-incline-bench-press",
+		"nombre": "Press inclinado en Smith",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/smith-incline-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-decline-bench-press",
+		"nombre": "Press declinado en Smith",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/smith-decline-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-wide-grip-bench-press",
+		"nombre": "Press de banca agarre ancho en Smith",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/smith-wide-grip-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-assisted-chin-up",
+		"nombre": "Dominada supina asistida en máquina",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/lever-assisted-chin-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-front-pulldown",
+		"nombre": "Jalón frontal en máquina",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/lever-front-pulldown.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-one-arm-lateral-wide-pulldown",
+		"nombre": "Jalón unilateral ancho en máquina",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/lever-one-arm-lateral-wide-pulldown.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-pullover",
+		"nombre": "Pullover en máquina",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/lever-pullover.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-reverse-grip-lateral-pulldown",
+		"nombre": "Jalón agarre supino en máquina",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/lever-reverse-grip-lateral-pulldown.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-alternating-narrow-grip-seated-row",
+		"nombre": "Remo sentado alternado agarre estrecho",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/lever-alternating-narrow-grip-seated-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-bent-over-row-with-v-bar",
+		"nombre": "Remo inclinado en máquina con barra V",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/lever-bent-over-row-with-v-bar.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-bent-over-row",
+		"nombre": "Remo inclinado en máquina",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/lever-bent-over-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-high-row",
+		"nombre": "Remo alto en máquina",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/lever-high-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-narrow-grip-seated-row",
+		"nombre": "Remo sentado agarre estrecho en máquina",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/lever-narrow-grip-seated-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-one-arm-bent-over-row",
+		"nombre": "Remo inclinado unilateral en máquina",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/lever-one-arm-bent-over-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-one-arm-lateral-high-row",
+		"nombre": "Remo alto unilateral en máquina",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/lever-one-arm-lateral-high-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-reverse-grip-vertical-row",
+		"nombre": "Remo vertical agarre supino en máquina",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/lever-reverse-grip-vertical-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-reverse-t-bar-row",
+		"nombre": "Remo T invertido en máquina",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/lever-reverse-t-bar-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-seated-row",
+		"nombre": "Remo sentado en máquina",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/lever-seated-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-t-bar-row",
+		"nombre": "Remo T en máquina",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/lever-t-bar-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-unilateral-row",
+		"nombre": "Remo unilateral en máquina",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/lever-unilateral-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-bent-over-row",
+		"nombre": "Remo inclinado en Smith",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/smith-bent-over-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-narrow-row",
+		"nombre": "Remo agarre estrecho en Smith",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/smith-narrow-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-one-arm-row",
+		"nombre": "Remo unilateral en Smith",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/smith-one-arm-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-reverse-grip-bent-over-row",
+		"nombre": "Remo inclinado agarre supino en Smith",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/smith-reverse-grip-bent-over-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-lateral-raise",
+		"nombre": "Elevación lateral en máquina",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/lever-lateral-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-military-press",
+		"nombre": "Press militar en máquina",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/lever-military-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-one-arm-shoulder-press",
+		"nombre": "Press de hombro unilateral en máquina",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/lever-one-arm-shoulder-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-seated-reverse-fly-parallel-grip",
+		"nombre": "Apertura inversa agarre paralelo en máquina",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/lever-seated-reverse-fly-parallel-grip.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-shoulder-press",
+		"nombre": "Press de hombros en máquina",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/lever-shoulder-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-rear-delt-row",
+		"nombre": "Remo deltoide posterior en Smith",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/smith-rear-delt-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-seated-shoulder-press",
+		"nombre": "Press de hombros sentado en Smith",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/smith-seated-shoulder-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-standing-military-press",
+		"nombre": "Press militar de pie en Smith",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/smith-standing-military-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-upright-row",
+		"nombre": "Remo al mentón en Smith",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/smith-upright-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-shrug",
+		"nombre": "Encogimiento en máquina",
+		"grupo": "espalda",
+		"musculo": "Trapecios",
+		"demoVideo": "/videos/lever-shrug.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-back-shrug",
+		"nombre": "Encogimiento trasero en Smith",
+		"grupo": "espalda",
+		"musculo": "Trapecios",
+		"demoVideo": "/videos/smith-back-shrug.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-shrug",
+		"nombre": "Encogimiento en Smith",
+		"grupo": "espalda",
+		"musculo": "Trapecios",
+		"demoVideo": "/videos/smith-shrug.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-bicep-curl",
+		"nombre": "Curl de bíceps en máquina",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/lever-bicep-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-hammer-grip-preacher-curl",
+		"nombre": "Curl predicador martillo en máquina",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/lever-hammer-grip-preacher-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-preacher-curl-v-2",
+		"nombre": "Curl predicador en máquina",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/lever-preacher-curl-v-2.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-reverse-grip-preacher-curl",
+		"nombre": "Curl predicador agarre invertido en máquina",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/lever-reverse-grip-preacher-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-machine-bicep-curl",
+		"nombre": "Curl de bíceps en Smith",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/smith-machine-bicep-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-overhand-triceps-dip",
+		"nombre": "Fondos de tríceps en máquina",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/lever-overhand-triceps-dip.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-seated-dip",
+		"nombre": "Fondos sentado en máquina",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/lever-seated-dip.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-triceps-extension",
+		"nombre": "Extensión de tríceps en máquina",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/lever-triceps-extension.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-close-grip-bench-press",
+		"nombre": "Press cerrado en Smith",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/smith-close-grip-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-machine-incline-tricep-extension",
+		"nombre": "Extensión de tríceps inclinado en Smith",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/smith-machine-incline-tricep-extension.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-bench-press",
+		"nombre": "Press de banca con barra",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/barbell-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-incline-bench-press",
+		"nombre": "Press inclinado con barra",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/barbell-incline-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-decline-bench-press",
+		"nombre": "Press declinado con barra",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/barbell-decline-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-wide-bench-press",
+		"nombre": "Press de banca agarre ancho con barra",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/barbell-wide-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-bench-press",
+		"nombre": "Press de banca con mancuernas",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/dumbbell-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-incline-bench-press",
+		"nombre": "Press inclinado con mancuernas",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/dumbbell-incline-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-decline-bench-press",
+		"nombre": "Press declinado con mancuernas",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/dumbbell-decline-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-lying-hammer-press",
+		"nombre": "Press martillo con mancuernas",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/dumbbell-lying-hammer-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-incline-hammer-press",
+		"nombre": "Press inclinado martillo con mancuernas",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/dumbbell-incline-hammer-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-fly",
+		"nombre": "Aperturas con mancuernas",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/dumbbell-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-incline-fly",
+		"nombre": "Aperturas inclinadas con mancuernas",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/dumbbell-incline-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-decline-fly",
+		"nombre": "Aperturas declinadas con mancuernas",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/dumbbell-decline-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-pullover",
+		"nombre": "Pullover con mancuerna",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/dumbbell-pullover.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-straight-arm-pullover",
+		"nombre": "Pullover brazos rectos con mancuerna",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/dumbbell-straight-arm-pullover.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kettlebell-one-arm-floor-press",
+		"nombre": "Floor press a una mano con kettlebell",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/kettlebell-one-arm-floor-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kettlebell-alternating-press-on-floor",
+		"nombre": "Floor press alternado con kettlebell",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/kettlebell-alternating-press-on-floor.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-bent-over-row",
+		"nombre": "Remo inclinado con barra",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/barbell-bent-over-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-pendlay-row",
+		"nombre": "Remo Pendlay con barra",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/barbell-pendlay-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-reverse-grip-bent-over-row",
+		"nombre": "Remo inclinado agarre supino con barra",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/barbell-reverse-grip-bent-over-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-incline-row",
+		"nombre": "Remo inclinado con barra en banco",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/barbell-incline-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-bent-over-row",
+		"nombre": "Remo inclinado con mancuernas",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/dumbbell-bent-over-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-one-arm-bent-over-row",
+		"nombre": "Remo a una mano con mancuerna",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/dumbbell-one-arm-bent-over-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-incline-row",
+		"nombre": "Remo inclinado con mancuernas en banco",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/dumbbell-incline-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-palm-rotational-bent-over-row",
+		"nombre": "Remo inclinado rotacional con mancuerna",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/dumbbell-palm-rotational-bent-over-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kettlebell-one-arm-row",
+		"nombre": "Remo a una mano con kettlebell",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/kettlebell-one-arm-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kettlebell-two-arm-row",
+		"nombre": "Remo a dos manos con kettlebell",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/kettlebell-two-arm-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kettlebell-alternating-row",
+		"nombre": "Remo alternado con kettlebell",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/kettlebell-alternating-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kettlebell-alternating-renegade-row",
+		"nombre": "Remo renegado alternado con kettlebell",
+		"grupo": "espalda",
+		"musculo": "Espalda alta",
+		"demoVideo": "/videos/kettlebell-alternating-renegade-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-pullover",
+		"nombre": "Pullover con barra",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/barbell-pullover.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-bent-arm-pullover",
+		"nombre": "Pullover brazos flexionados con barra",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/barbell-bent-arm-pullover.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-decline-wide-grip-pullover",
+		"nombre": "Pullover declinado agarre ancho con barra",
+		"grupo": "espalda",
+		"musculo": "Dorsales",
+		"demoVideo": "/videos/barbell-decline-wide-grip-pullover.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-seated-overhead-press",
+		"nombre": "Press militar sentado con barra",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/barbell-seated-overhead-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-standing-wide-military-press",
+		"nombre": "Press militar de pie con barra",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/barbell-standing-wide-military-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-front-raise",
+		"nombre": "Elevación frontal con barra",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/barbell-front-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-upright-row",
+		"nombre": "Remo al mentón con barra",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/barbell-upright-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-wide-grip-upright-row",
+		"nombre": "Remo al mentón agarre ancho con barra",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/barbell-wide-grip-upright-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-rear-delt-row",
+		"nombre": "Remo deltoide posterior con barra",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/barbell-rear-delt-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-arnold-press",
+		"nombre": "Press Arnold con mancuernas",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/dumbbell-arnold-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-seated-shoulder-press",
+		"nombre": "Press de hombros sentado con mancuernas",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/dumbbell-seated-shoulder-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-standing-overhead-press",
+		"nombre": "Press sobre cabeza con mancuernas",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/dumbbell-standing-overhead-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-standing-alternate-overhead-press",
+		"nombre": "Press alternado sobre cabeza con mancuernas",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/dumbbell-standing-alternate-overhead-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-one-arm-shoulder-press",
+		"nombre": "Press de hombro a una mano con mancuerna",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/dumbbell-one-arm-shoulder-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-push-press",
+		"nombre": "Push press con mancuernas",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/dumbbell-push-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-lateral-raise",
+		"nombre": "Elevaciones laterales con mancuernas",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/dumbbell-lateral-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-one-arm-lateral-raise",
+		"nombre": "Elevación lateral a una mano con mancuerna",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/dumbbell-one-arm-lateral-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-seated-lateral-raise",
+		"nombre": "Elevaciones laterales sentado con mancuernas",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/dumbbell-seated-lateral-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-front-raise",
+		"nombre": "Elevaciones frontales con mancuernas",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/dumbbell-front-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-rear-delt-raise",
+		"nombre": "Elevación posterior de deltoides con mancuernas",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/dumbbell-rear-delt-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-rear-fly",
+		"nombre": "Aperturas posteriores con mancuernas",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/dumbbell-rear-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-reverse-fly",
+		"nombre": "Aperturas inversas con mancuernas",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/dumbbell-reverse-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-incline-rear-lateral-raise",
+		"nombre": "Elevación posterior inclinada con mancuernas",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/dumbbell-incline-rear-lateral-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-upright-row",
+		"nombre": "Remo al mentón con mancuernas",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/dumbbell-upright-row.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kettlebell-alternating-press",
+		"nombre": "Press alternado con kettlebell",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/kettlebell-alternating-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kettlebell-one-arm-push-press",
+		"nombre": "Push press a una mano con kettlebell",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/kettlebell-one-arm-push-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kettlebell-two-arm-military-press",
+		"nombre": "Press militar con dos kettlebells",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/kettlebell-two-arm-military-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kettlebell-seated-press",
+		"nombre": "Press sentado con kettlebell",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/kettlebell-seated-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "landmine-lateral-raise",
+		"nombre": "Elevación lateral en landmine",
+		"grupo": "hombros",
+		"musculo": "Deltoides",
+		"demoVideo": "/videos/landmine-lateral-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-curl",
+		"nombre": "Curl con barra",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/barbell-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-drag-curl",
+		"nombre": "Curl drag con barra",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/barbell-drag-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-preacher-curl",
+		"nombre": "Curl predicador con barra",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/barbell-preacher-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-reverse-curl",
+		"nombre": "Curl invertido con barra",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/barbell-reverse-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-standing-wide-grip-biceps-curl",
+		"nombre": "Curl agarre ancho con barra",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/barbell-standing-wide-grip-biceps-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-standing-close-grip-curl",
+		"nombre": "Curl agarre cerrado con barra",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/barbell-standing-close-grip-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-biceps-curl",
+		"nombre": "Curl de bíceps con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/dumbbell-biceps-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-alternate-biceps-curl",
+		"nombre": "Curl alternado con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/dumbbell-alternate-biceps-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-standing-biceps-curl",
+		"nombre": "Curl de pie con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/dumbbell-standing-biceps-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-hammer-curl",
+		"nombre": "Curl martillo con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/dumbbell-hammer-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-cross-body-hammer-curl",
+		"nombre": "Curl martillo cruzado con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/dumbbell-cross-body-hammer-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-incline-curl",
+		"nombre": "Curl inclinado con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/dumbbell-incline-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-incline-hammer-curl",
+		"nombre": "Curl martillo inclinado con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/dumbbell-incline-hammer-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-concentration-curl",
+		"nombre": "Curl concentrado con mancuerna",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/dumbbell-concentration-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-preacher-curl",
+		"nombre": "Curl predicador con mancuerna",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/dumbbell-preacher-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-seated-bicep-curl",
+		"nombre": "Curl sentado con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/dumbbell-seated-bicep-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-seated-hammer-curl",
+		"nombre": "Curl martillo sentado con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/dumbbell-seated-hammer-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-one-arm-standing-curl",
+		"nombre": "Curl de pie a una mano con mancuerna",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/dumbbell-one-arm-standing-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-one-arm-standing-hammer-curl",
+		"nombre": "Curl martillo a una mano con mancuerna",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/dumbbell-one-arm-standing-hammer-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-revers-grip-biceps-curl",
+		"nombre": "Curl invertido con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/dumbbell-revers-grip-biceps-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-zottman-curl",
+		"nombre": "Curl Zottman con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/dumbbell-zottman-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-high-curl",
+		"nombre": "Curl alto con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/dumbbell-high-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-prone-incline-curl",
+		"nombre": "Curl inclinado boca abajo con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/dumbbell-prone-incline-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "olympic-barbell-hammer-curl",
+		"nombre": "Curl martillo con barra olímpica",
+		"grupo": "brazos",
+		"musculo": "Bíceps",
+		"demoVideo": "/videos/olympic-barbell-hammer-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-close-grip-bench-press",
+		"nombre": "Press cerrado con barra",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/barbell-close-grip-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-lying-triceps-extension-skull-crusher",
+		"nombre": "Skull crusher con barra",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/barbell-lying-triceps-extension-skull-crusher.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-lying-triceps-extension",
+		"nombre": "Extensión de tríceps tumbado con barra",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/barbell-lying-triceps-extension.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-seated-overhead-triceps-extension",
+		"nombre": "Extensión de tríceps sentado con barra",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/barbell-seated-overhead-triceps-extension.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-standing-overhead-triceps-extension",
+		"nombre": "Extensión de tríceps de pie con barra",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/barbell-standing-overhead-triceps-extension.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-jm-bench-press",
+		"nombre": "JM press con barra",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/barbell-jm-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-close-grip-press",
+		"nombre": "Press cerrado con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/dumbbell-close-grip-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-neutral-grip-bench-press",
+		"nombre": "Press agarre neutro con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/dumbbell-neutral-grip-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-kickback",
+		"nombre": "Patada de tríceps con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/dumbbell-kickback.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-one-arm-kickback",
+		"nombre": "Patada de tríceps a una mano con mancuerna",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/dumbbell-one-arm-kickback.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-lying-triceps-extension",
+		"nombre": "Extensión de tríceps tumbado con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/dumbbell-lying-triceps-extension.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-seated-triceps-extension",
+		"nombre": "Extensión de tríceps sentado con mancuerna",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/dumbbell-seated-triceps-extension.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbells-seated-triceps-extension",
+		"nombre": "Extensión de tríceps sentado con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/dumbbells-seated-triceps-extension.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-standing-triceps-extension",
+		"nombre": "Extensión de tríceps de pie con mancuerna",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/dumbbell-standing-triceps-extension.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-incline-triceps-extension",
+		"nombre": "Extensión de tríceps inclinado con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/dumbbell-incline-triceps-extension.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-tate-press",
+		"nombre": "Tate press con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/dumbbell-tate-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-one-arm-triceps-extension-on-bench",
+		"nombre": "Extensión de tríceps a una mano en banco",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/dumbbell-one-arm-triceps-extension-on-bench.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-standing-kickback",
+		"nombre": "Patada de tríceps de pie con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/dumbbell-standing-kickback.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "olympic-barbell-triceps-extension",
+		"nombre": "Extensión de tríceps con barra olímpica",
+		"grupo": "brazos",
+		"musculo": "Tríceps",
+		"demoVideo": "/videos/olympic-barbell-triceps-extension.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-shrug",
+		"nombre": "Encogimiento con barra",
+		"grupo": "espalda",
+		"musculo": "Trapecios",
+		"demoVideo": "/videos/barbell-shrug.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-shrug",
+		"nombre": "Encogimiento con mancuernas",
+		"grupo": "espalda",
+		"musculo": "Trapecios",
+		"demoVideo": "/videos/dumbbell-shrug.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-incline-shrug",
+		"nombre": "Encogimiento inclinado con mancuernas",
+		"grupo": "espalda",
+		"musculo": "Trapecios",
+		"demoVideo": "/videos/dumbbell-incline-shrug.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kettlebell-sumo-high-pull",
+		"nombre": "Tirón alto sumo con kettlebell",
+		"grupo": "espalda",
+		"musculo": "Trapecios",
+		"demoVideo": "/videos/kettlebell-sumo-high-pull.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-wrist-curl",
+		"nombre": "Curl de muñeca con barra",
+		"grupo": "brazos",
+		"musculo": "Antebrazos",
+		"demoVideo": "/videos/barbell-wrist-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-reverse-wrist-curl",
+		"nombre": "Curl de muñeca invertido con barra",
+		"grupo": "brazos",
+		"musculo": "Antebrazos",
+		"demoVideo": "/videos/barbell-reverse-wrist-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-palms-up-wrist-curl-over-a-bench",
+		"nombre": "Curl de muñeca palmas arriba con barra",
+		"grupo": "brazos",
+		"musculo": "Antebrazos",
+		"demoVideo": "/videos/barbell-palms-up-wrist-curl-over-a-bench.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-palms-down-wrist-curl-over-a-bench",
+		"nombre": "Curl de muñeca palmas abajo con barra",
+		"grupo": "brazos",
+		"musculo": "Antebrazos",
+		"demoVideo": "/videos/barbell-palms-down-wrist-curl-over-a-bench.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-one-arm-wrist-curl",
+		"nombre": "Curl de muñeca a una mano con mancuerna",
+		"grupo": "brazos",
+		"musculo": "Antebrazos",
+		"demoVideo": "/videos/dumbbell-one-arm-wrist-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-reverse-wrist-curl",
+		"nombre": "Curl de muñeca invertido con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Antebrazos",
+		"demoVideo": "/videos/dumbbell-reverse-wrist-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-seated-palms-up-wrist-curl",
+		"nombre": "Curl de muñeca sentado con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Antebrazos",
+		"demoVideo": "/videos/dumbbell-seated-palms-up-wrist-curl.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-finger-curls",
+		"nombre": "Curl de dedos con mancuernas",
+		"grupo": "brazos",
+		"musculo": "Antebrazos",
+		"demoVideo": "/videos/dumbbell-finger-curls.mp4",
+		"videoUrl": ""
+	}
 ]

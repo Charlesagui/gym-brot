@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { fly } from 'svelte/transition';
 	import { liveQuery } from 'dexie';
 	import { db } from '$lib/db';
-	import { catalogo, grupos, type Grupo } from '$lib/catalog';
+	import { catalogo, grupos, type Grupo, type Ejercicio } from '$lib/catalog';
 	import { agregarEjercicio, quitarEjercicio } from '$lib/dias';
 
 	const diaId = $derived($page.params.id!);
@@ -32,7 +33,31 @@
 		if (yaEn.has(id)) quitarEjercicio(diaId, id);
 		else agregarEjercicio(diaId, id);
 	}
+
+	let preview = $state<Ejercicio | null>(null);
+
+	function cerrarPreview() {
+		preview = null;
+	}
+
+	// Reproduce la miniatura solo cuando entra en pantalla: con 237 ejercicios,
+	// animar todos a la vez sería pesado en mobile.
+	function playOnView(node: HTMLVideoElement) {
+		const io = new IntersectionObserver(
+			(entries) => {
+				for (const entry of entries) {
+					if (entry.isIntersecting) void node.play().catch(() => {});
+					else node.pause();
+				}
+			},
+			{ threshold: 0.15 }
+		);
+		io.observe(node);
+		return { destroy: () => io.disconnect() };
+	}
 </script>
+
+<svelte:window onkeydown={(e) => e.key === 'Escape' && cerrarPreview()} />
 
 <main class="glow-bg min-h-dvh px-5 pb-12 pt-6">
 	<header class="mb-4 flex items-center gap-3">
@@ -74,28 +99,41 @@
 		{#each filtrados as e (e.id)}
 			{@const g = grupos[e.grupo]}
 			{@const added = yaEn.has(e.id)}
-			<button
-				onclick={() => toggle(e.id)}
-				class="flex w-full items-center gap-3 rounded-2xl border p-2.5 text-left transition"
+			<div
+				class="flex w-full items-center gap-2 rounded-2xl border p-2.5 transition"
 				style="border-color: {added ? `rgb(${g.glow} / .6)` : 'rgba(255,255,255,.1)'}; background: var(--surface)"
 			>
-				<img
-					src={e.gif}
-					alt={e.nombre}
-					class="size-14 shrink-0 rounded-xl bg-white object-contain"
-					loading="lazy"
-				/>
-				<div class="min-w-0 flex-1">
-					<p class="truncate text-sm font-semibold leading-tight">{e.nombre}</p>
-					<p class="mt-0.5 text-xs font-medium" style="color: rgb({g.glow})">{g.emoji} {g.label}</p>
-				</div>
-				<span
-					class="grid size-8 shrink-0 place-items-center rounded-full text-lg font-bold"
+				<button
+					onclick={() => (preview = e)}
+					class="flex min-w-0 flex-1 items-center gap-3 text-left"
+					aria-label={`Ver ${e.nombre} en grande`}
+				>
+					<video
+						src={e.demoVideo}
+						use:playOnView
+						class="size-14 shrink-0 rounded-xl bg-white object-contain"
+						aria-label={e.nombre}
+						loop
+						muted
+						playsinline
+						preload="metadata"
+					></video>
+					<div class="min-w-0 flex-1">
+						<p class="truncate text-sm font-semibold leading-tight">{e.nombre}</p>
+						<p class="mt-0.5 truncate text-xs font-medium" style="color: rgb({g.glow})">
+							{g.emoji} {g.label} · {e.musculo}
+						</p>
+					</div>
+				</button>
+				<button
+					onclick={() => toggle(e.id)}
+					class="grid size-9 shrink-0 place-items-center rounded-full text-lg font-bold transition"
 					style={added
 						? `background: rgb(${g.glow}); color: #000`
-						: 'background: rgba(255,255,255,.1); color: white'}>{added ? '✓' : '+'}</span
+						: 'background: rgba(255,255,255,.1); color: white'}
+					aria-label={added ? `Quitar ${e.nombre}` : `Agregar ${e.nombre}`}>{added ? '✓' : '+'}</button
 				>
-			</button>
+			</div>
 		{/each}
 
 		{#if filtrados.length === 0}
@@ -103,3 +141,55 @@
 		{/if}
 	</div>
 </main>
+
+{#if preview}
+	{@const p = preview}
+	{@const g = grupos[p.grupo]}
+	{@const added = yaEn.has(p.id)}
+	<div
+		class="fixed inset-0 z-[60] flex flex-col justify-end"
+		role="dialog"
+		aria-modal="true"
+		aria-label={`Vista previa de ${p.nombre}`}
+	>
+		<button
+			class="absolute inset-0"
+			style="background: rgba(8,8,12,.82); backdrop-filter: blur(6px)"
+			aria-label="Cerrar vista previa"
+			onclick={cerrarPreview}
+		></button>
+		<div
+			in:fly={{ y: 40, duration: 240 }}
+			class="relative rounded-t-3xl border-t border-white/10 px-5 pb-8 pt-3"
+			style="background: radial-gradient(140% 100% at 50% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface)"
+		>
+			<div class="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20"></div>
+			<video
+				src={p.demoVideo}
+				class="mx-auto aspect-square w-full max-w-xs rounded-2xl bg-white object-contain"
+				aria-label={p.nombre}
+				autoplay
+				loop
+				muted
+				playsinline
+				preload="auto"
+			></video>
+			<p class="mt-3 text-center text-lg font-bold leading-tight">{p.nombre}</p>
+			<p class="mt-1 text-center text-sm font-medium" style="color: rgb({g.glow})">
+				{g.emoji} {g.label} · {p.musculo}
+			</p>
+			<button
+				onclick={() => {
+					toggle(p.id);
+					cerrarPreview();
+				}}
+				class="mt-5 w-full rounded-2xl py-3.5 text-base font-bold transition"
+				style={added
+					? 'background: rgba(255,255,255,.08); color: var(--muted)'
+					: `background: rgb(${g.glow}); color: #000`}
+			>
+				{added ? '✓ Quitar del día' : '+ Agregar al día'}
+			</button>
+		</div>
+	</div>
+{/if}

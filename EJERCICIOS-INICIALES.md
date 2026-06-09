@@ -2,6 +2,7 @@
 
 Catálogo semilla para arrancar la app. Ejercicios de **máquina/polea** (fáciles de usar sin
 saber nombres), cubriendo todo el cuerpo. Cada GIF muestra **el movimiento + el músculo en rojo**.
+La app usa versiones **MP4 compactadas** generadas desde estos GIFs fuente.
 
 - **Fuente:** [JahelCuadrado/ExerciseGymGifsDB](https://github.com/JahelCuadrado/ExerciseGymGifsDB) (GIFs de ExerciseDB)
 - **CDN:** `https://cdn.jsdelivr.net/gh/JahelCuadrado/ExerciseGymGifsDB@main/<ruta>`

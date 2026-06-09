@@ -1,7 +1,7 @@
 # Gym-brot 🏋️
 
 App de gimnasio **personal, mobile-first**: tus días de entrenamiento, contador de series,
-peso × reps con **PR automático** y mini-gráfico, **GIF animado** de cada ejercicio (con el
+peso × reps con **PR automático** y mini-gráfico, **video MP4 liviano** de cada ejercicio (con el
 músculo en rojo), notas y timer de descanso. **100% offline** (PWA instalable), sin backend.
 
 ## Stack
@@ -49,5 +49,5 @@ propio perfil.
 
 ## Licencia
 
-Código **propietario — todos los derechos reservados** (ver [`LICENSE`](LICENSE)). Los GIFs
-son de ExerciseDB (uso personal). No publicar como open source sin revisar estas licencias.
+Código **propietario — todos los derechos reservados** (ver [`LICENSE`](LICENSE)). Las animaciones
+provienen de GIFs de ExerciseDB convertidos a MP4 (uso personal). No publicar como open source sin revisar estas licencias.
