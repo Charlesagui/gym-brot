@@ -133,9 +133,9 @@
 	const unidad = $derived(ajustes.unidad);
 	const sonidoActivo = $derived(ajustes.sonido);
 	const metrica = $derived(ajustes.metricaPr);
-	const metricaLabel = $derived(metrica === 'e1rm' ? '1RM estimado' : 'peso máximo');
+	const metricaLabel = $derived(metrica === 'e1rm' ? '1RM estimado (1 Repetición Máxima)' : 'peso máximo');
 	const otraMetrica = $derived(metrica === 'e1rm' ? 'peso' : 'e1rm');
-	const otraLabel = $derived(metrica === 'e1rm' ? 'peso máx.' : '1RM est.');
+	const otraLabel = $derived(metrica === 'e1rm' ? 'peso máx.' : '1RM est. (1 rep. máx.)');
 
 	const pr = $derived(puntos.reduce<MejorSet | null>((best, p) => mejorSet(best, p), null));
 	const valorOtraPr = $derived(

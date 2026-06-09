@@ -3190,5 +3190,1045 @@
 		"musculo": "Antebrazos",
 		"demoVideo": "/videos/dumbbell-finger-curls.mp4",
 		"videoUrl": ""
+	},
+	{
+		"id": "3-4-sit-up",
+		"nombre": "Abdominal 3/4",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/3-4-sit-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "45-side-bend",
+		"nombre": "Inclinación lateral 45°",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/45-side-bend.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "air-bike",
+		"nombre": "Bicicleta abdominal",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/air-bike.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "alternate-heel-touchers",
+		"nombre": "Toques de talón alternados",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/alternate-heel-touchers.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "arms-overhead-full-sit-up-male",
+		"nombre": "Sit-up completo con brazos arriba",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/arms-overhead-full-sit-up-male.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "assisted-sit-up",
+		"nombre": "Sit-up asistido",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/assisted-sit-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "bodyweight-incline-side-plank",
+		"nombre": "Plancha lateral inclinada",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/bodyweight-incline-side-plank.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "bottoms-up",
+		"nombre": "Elevación de cadera invertida",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/bottoms-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "bridge-mountain-climber-cross-body",
+		"nombre": "Escalador cruzado en puente",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/bridge-mountain-climber-cross-body.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "butt-ups",
+		"nombre": "Elevación de cadera en plancha",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/butt-ups.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "captains-chair-straight-leg-raise",
+		"nombre": "Elevación de piernas en silla romana",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/captains-chair-straight-leg-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cocoons",
+		"nombre": "Cocoon crunch",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/cocoons.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cross-body-crunch",
+		"nombre": "Crunch cruzado",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/cross-body-crunch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "crunch-floor",
+		"nombre": "Crunch en el suelo",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/crunch-floor.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "crunch-hands-overhead",
+		"nombre": "Crunch con manos arriba",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/crunch-hands-overhead.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "crunch-on-stability-ball-arms-straight",
+		"nombre": "Crunch en fitball con brazos rectos",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/crunch-on-stability-ball-arms-straight.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "crunch-on-stability-ball",
+		"nombre": "Crunch en fitball",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/crunch-on-stability-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "curl-up",
+		"nombre": "Curl-up abdominal",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/curl-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dead-bug",
+		"nombre": "Dead bug",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/dead-bug.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "decline-crunch",
+		"nombre": "Crunch declinado",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/decline-crunch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "decline-sit-up",
+		"nombre": "Sit-up declinado",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/decline-sit-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "elbow-to-knee",
+		"nombre": "Codo a rodilla",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/elbow-to-knee.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "flexion-leg-sit-up-bent-knee",
+		"nombre": "Sit-up con piernas flexionadas",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/flexion-leg-sit-up-bent-knee.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "flexion-leg-sit-up-straight-arm",
+		"nombre": "Sit-up con brazos rectos",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/flexion-leg-sit-up-straight-arm.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "frog-crunch",
+		"nombre": "Crunch rana",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/frog-crunch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "front-plank-with-twist",
+		"nombre": "Plancha frontal con giro",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/front-plank-with-twist.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "half-sit-up-male",
+		"nombre": "Medio sit-up",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/half-sit-up-male.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "hanging-leg-hip-raise",
+		"nombre": "Elevación de cadera colgado",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/hanging-leg-hip-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "hanging-leg-raise",
+		"nombre": "Elevación de piernas colgado",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/hanging-leg-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "hanging-oblique-knee-raise",
+		"nombre": "Elevación de rodillas oblicua colgado",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/hanging-oblique-knee-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "hanging-pike",
+		"nombre": "Pike colgado",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/hanging-pike.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "hanging-straight-leg-hip-raise",
+		"nombre": "Elevación de cadera colgado con piernas rectas",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/hanging-straight-leg-hip-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "hanging-straight-leg-raise",
+		"nombre": "Elevación de piernas rectas colgado",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/hanging-straight-leg-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "hip-raise-bent-knee",
+		"nombre": "Elevación de cadera con rodillas flexionadas",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/hip-raise-bent-knee.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "inchworm",
+		"nombre": "Caminata de manos",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/inchworm.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "incline-leg-hip-raise-leg-straight",
+		"nombre": "Elevación de cadera inclinada con piernas rectas",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/incline-leg-hip-raise-leg-straight.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "incline-twisting-sit-up",
+		"nombre": "Sit-up inclinado con giro",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/incline-twisting-sit-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "jackknife-sit-up",
+		"nombre": "Sit-up navaja",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/jackknife-sit-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "janda-sit-up",
+		"nombre": "Janda sit-up",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/janda-sit-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "knee-touch-crunch",
+		"nombre": "Crunch tocando rodillas",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/knee-touch-crunch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kneeling-plank-tap-shoulder-male",
+		"nombre": "Plancha de rodillas con toque de hombro",
+		"grupo": "core",
+		"musculo": "Core + hombros",
+		"demoVideo": "/videos/kneeling-plank-tap-shoulder-male.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "l-sit-on-floor",
+		"nombre": "L-sit en el suelo",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/l-sit-on-floor.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "leg-pull-in-flat-bench",
+		"nombre": "Encogimiento de piernas en banco plano",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/leg-pull-in-flat-bench.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lunge-with-twist",
+		"nombre": "Zancada con giro",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/lunge-with-twist.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lying-elbow-to-knee",
+		"nombre": "Codo a rodilla tumbado",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/lying-elbow-to-knee.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lying-leg-hip-raise",
+		"nombre": "Elevación de cadera tumbado",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/lying-leg-hip-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lying-leg-raise-flat-bench",
+		"nombre": "Elevación de piernas en banco plano",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/lying-leg-raise-flat-bench.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "negative-crunch",
+		"nombre": "Crunch negativo",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/negative-crunch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "oblique-crunch-v-2",
+		"nombre": "Crunch oblicuo",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/oblique-crunch-v-2.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "oblique-crunches-floor",
+		"nombre": "Crunch oblicuo en el suelo",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/oblique-crunches-floor.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "pelvic-tilt",
+		"nombre": "Inclinación pélvica",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/pelvic-tilt.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "power-point-plank",
+		"nombre": "Plancha con alcance alternado",
+		"grupo": "core",
+		"musculo": "Core + hombros",
+		"demoVideo": "/videos/power-point-plank.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "prone-twist-on-stability-ball",
+		"nombre": "Giro prono en fitball",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/prone-twist-on-stability-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "pull-in-on-stability-ball",
+		"nombre": "Pull-in en fitball",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/pull-in-on-stability-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "push-up-to-side-plank",
+		"nombre": "Flexión a plancha lateral",
+		"grupo": "core",
+		"musculo": "Core + hombros",
+		"demoVideo": "/videos/push-up-to-side-plank.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "reverse-crunch",
+		"nombre": "Crunch inverso",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/reverse-crunch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "reverse-plank-with-leg-lift",
+		"nombre": "Plancha inversa con elevación de pierna",
+		"grupo": "core",
+		"musculo": "Core + glúteos",
+		"demoVideo": "/videos/reverse-plank-with-leg-lift.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "roller-body-saw",
+		"nombre": "Sierra abdominal con rueda",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/roller-body-saw.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "roller-reverse-crunch",
+		"nombre": "Crunch inverso con rueda",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/roller-reverse-crunch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "russian-twist",
+		"nombre": "Russian twist",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/russian-twist.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "seated-leg-raise",
+		"nombre": "Elevación de piernas sentado",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/seated-leg-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "shoulder-tap",
+		"nombre": "Toque de hombros en plancha",
+		"grupo": "core",
+		"musculo": "Core + hombros",
+		"demoVideo": "/videos/shoulder-tap.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "side-bridge-v-2",
+		"nombre": "Puente lateral",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/side-bridge-v-2.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "side-to-side-toe-touch-male",
+		"nombre": "Toque de puntas lado a lado",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/side-to-side-toe-touch-male.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "sit-up-v-2",
+		"nombre": "Sit-up",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/sit-up-v-2.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "sit-up-with-arms-on-chest",
+		"nombre": "Sit-up con brazos en el pecho",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/sit-up-with-arms-on-chest.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "spine-twist",
+		"nombre": "Giro de columna",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/spine-twist.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "stability-ball-crunch-full-range-hands-behind-head",
+		"nombre": "Crunch en fitball en rango completo",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/stability-ball-crunch-full-range-hands-behind-head.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "suspended-abdominal-fallout",
+		"nombre": "Fallout abdominal suspendido",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/suspended-abdominal-fallout.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "suspended-reverse-crunch",
+		"nombre": "Crunch inverso suspendido",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/suspended-reverse-crunch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "tuck-crunch",
+		"nombre": "Tuck crunch",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/tuck-crunch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "twisted-leg-raise",
+		"nombre": "Elevación de piernas con giro",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/twisted-leg-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "v-sit-on-floor",
+		"nombre": "V-sit en el suelo",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/v-sit-on-floor.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "vertical-leg-raise-on-parallel-bars",
+		"nombre": "Elevación vertical de piernas en paralelas",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/vertical-leg-raise-on-parallel-bars.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "weighted-crunch",
+		"nombre": "Crunch con peso",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/weighted-crunch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "weighted-decline-sit-up",
+		"nombre": "Sit-up declinado con peso",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/weighted-decline-sit-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "weighted-front-plank",
+		"nombre": "Plancha frontal con peso",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/weighted-front-plank.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "weighted-hanging-leg-hip-raise",
+		"nombre": "Elevación de cadera colgado con peso",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/weighted-hanging-leg-hip-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "weighted-russian-twist",
+		"nombre": "Russian twist con peso",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/weighted-russian-twist.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "wheel-rollerout",
+		"nombre": "Rueda abdominal",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/wheel-rollerout.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "band-alternating-v-up",
+		"nombre": "V-up alternado con banda",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/band-alternating-v-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "band-assisted-wheel-rollerout",
+		"nombre": "Rueda abdominal asistida con banda",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/band-assisted-wheel-rollerout.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "band-bicycle-crunch",
+		"nombre": "Bicicleta abdominal con banda",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/band-bicycle-crunch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "band-horizontal-pallof-press",
+		"nombre": "Press Pallof horizontal con banda",
+		"grupo": "core",
+		"musculo": "Core antirotación",
+		"demoVideo": "/videos/band-horizontal-pallof-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "band-jack-knife-sit-up",
+		"nombre": "Sit-up navaja con banda",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/band-jack-knife-sit-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "band-kneeling-twisting-crunch",
+		"nombre": "Crunch arrodillado con banda y giro",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/band-kneeling-twisting-crunch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "band-lying-straight-leg-raise",
+		"nombre": "Elevación de pierna recta tumbado con banda",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/band-lying-straight-leg-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "band-push-sit-up",
+		"nombre": "Sit-up con empuje con banda",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/band-push-sit-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "band-seated-twist",
+		"nombre": "Giro sentado con banda",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/band-seated-twist.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "band-standing-crunch",
+		"nombre": "Crunch de pie con banda",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/band-standing-crunch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "band-standing-twisting-crunch",
+		"nombre": "Crunch de pie con banda y giro",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/band-standing-twisting-crunch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "band-v-up",
+		"nombre": "V-up con banda",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/band-v-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "band-vertical-pallof-press",
+		"nombre": "Press Pallof vertical con banda",
+		"grupo": "core",
+		"musculo": "Core antirotación",
+		"demoVideo": "/videos/band-vertical-pallof-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-press-sit-up",
+		"nombre": "Sit-up con press de barra",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/barbell-press-sit-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-rollerout-from-bench",
+		"nombre": "Rollout con barra desde banco",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/barbell-rollerout-from-bench.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-rollerout",
+		"nombre": "Rollout con barra",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/barbell-rollerout.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-seated-twist",
+		"nombre": "Giro sentado con barra",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/barbell-seated-twist.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-side-bent-v-2",
+		"nombre": "Inclinación lateral con barra",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/barbell-side-bent-v-2.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-sitted-alternate-leg-raise",
+		"nombre": "Elevación alternada de piernas sentado con barra",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/barbell-sitted-alternate-leg-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-standing-ab-rollerout",
+		"nombre": "Rollout de pie con barra",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/barbell-standing-ab-rollerout.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-standing-twist",
+		"nombre": "Giro de pie con barra",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/barbell-standing-twist.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "landmine-180",
+		"nombre": "Landmine 180",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/landmine-180.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-side-bend",
+		"nombre": "Inclinación lateral con mancuerna",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/dumbbell-side-bend.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "front-lever",
+		"nombre": "Front lever",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/front-lever.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-kneeling-twist",
+		"nombre": "Giro de rodillas en máquina",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/lever-kneeling-twist.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-seated-crunch-chest-pad",
+		"nombre": "Crunch en máquina con apoyo de pecho",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/lever-seated-crunch-chest-pad.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-seated-crunch-v-2",
+		"nombre": "Crunch sentado en máquina variante",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/lever-seated-crunch-v-2.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-seated-crunch",
+		"nombre": "Crunch sentado en máquina",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/lever-seated-crunch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "lever-seated-leg-raise-crunch",
+		"nombre": "Elevación de piernas y crunch en máquina",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/lever-seated-leg-raise-crunch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kettlebell-advanced-windmill",
+		"nombre": "Windmill avanzado con kettlebell",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/kettlebell-advanced-windmill.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kettlebell-bent-press",
+		"nombre": "Bent press con kettlebell",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/kettlebell-bent-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kettlebell-double-windmill",
+		"nombre": "Windmill doble con kettlebell",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/kettlebell-double-windmill.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kettlebell-figure-8",
+		"nombre": "Figure 8 con kettlebell",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/kettlebell-figure-8.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kettlebell-windmill",
+		"nombre": "Windmill con kettlebell",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/kettlebell-windmill.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "sledge-hammer",
+		"nombre": "Golpe con martillo",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/sledge-hammer.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-hip-raise",
+		"nombre": "Elevación de cadera en Smith",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/smith-hip-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "assisted-hanging-knee-raise",
+		"nombre": "Elevación de rodillas colgado asistida",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/assisted-hanging-knee-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "assisted-motion-russian-twist",
+		"nombre": "Russian twist asistido",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/assisted-motion-russian-twist.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "crab-twist-toe-touch",
+		"nombre": "Toque de punta con giro en crab",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/crab-twist-toe-touch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "groin-crunch",
+		"nombre": "Crunch de ingle",
+		"grupo": "core",
+		"musculo": "Abdomen bajo",
+		"demoVideo": "/videos/groin-crunch.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "hanging-straight-twisting-leg-hip-raise",
+		"nombre": "Elevación de cadera colgado con giro",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/hanging-straight-twisting-leg-hip-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "prisoner-half-sit-up-male",
+		"nombre": "Medio sit-up prisoner",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/prisoner-half-sit-up-male.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "quarter-sit-up",
+		"nombre": "Cuarto sit-up",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/quarter-sit-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "seated-side-crunch-wall",
+		"nombre": "Crunch lateral sentado contra pared",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/seated-side-crunch-wall.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "side-hip-on-parallel-bars",
+		"nombre": "Elevación lateral de cadera en paralelas",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/side-hip-on-parallel-bars.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "standing-wheel-rollerout",
+		"nombre": "Rueda abdominal de pie",
+		"grupo": "core",
+		"musculo": "Core",
+		"demoVideo": "/videos/standing-wheel-rollerout.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "weighted-overhead-crunch-on-stability-ball",
+		"nombre": "Crunch con peso sobre fitball",
+		"grupo": "core",
+		"musculo": "Abdomen",
+		"demoVideo": "/videos/weighted-overhead-crunch-on-stability-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "weighted-russian-twist-legs-up",
+		"nombre": "Russian twist con peso y piernas elevadas",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/weighted-russian-twist-legs-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "weighted-seated-twist-on-stability-ball",
+		"nombre": "Giro sentado con peso en fitball",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/weighted-seated-twist-on-stability-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "weighted-side-bend-on-stability-ball",
+		"nombre": "Inclinación lateral con peso en fitball",
+		"grupo": "core",
+		"musculo": "Oblicuos",
+		"demoVideo": "/videos/weighted-side-bend-on-stability-ball.mp4",
+		"videoUrl": ""
 	}
 ]
