@@ -242,13 +242,13 @@
 							<div class="pr-1 text-right">
 								{#if p && p.hechas === p.total}
 									<p class="text-xl leading-none" style="color: rgb({g.glow})">✓</p>
-									<p class="text-[10px]" style="color: var(--muted)">hecho</p>
+									<p class="text-[11px]" style="color: var(--muted)">hecho</p>
 								{:else if p}
 									<p class="text-lg font-bold leading-none">{p.hechas}/{p.total}</p>
-									<p class="text-[10px]" style="color: var(--muted)">series</p>
+									<p class="text-[11px]" style="color: var(--muted)">series</p>
 								{:else}
 									<p class="text-lg font-bold leading-none">{item.seriesObjetivo}</p>
-									<p class="text-[10px]" style="color: var(--muted)">series</p>
+									<p class="text-[11px]" style="color: var(--muted)">series</p>
 								{/if}
 							</div>
 						</a>
