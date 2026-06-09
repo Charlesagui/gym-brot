@@ -9,6 +9,8 @@ export interface Ejercicio {
 	musculo: string;
 	demoVideo: string;
 	videoUrl?: string;
+	/** Máquina con pila de placas: habilita marcar MAX (tope de pila + kg extra encima). */
+	maquinaPlacas?: boolean;
 }
 
 /** Catálogo estático de ejercicios, empaquetado con la app. */
