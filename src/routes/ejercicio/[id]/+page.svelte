@@ -501,7 +501,7 @@
 						</p>
 						{#if anterioresFecha}
 							<p class="mt-0.5 text-[10px] font-medium" style="color: var(--muted)">
-								↩︎ vs última vez · {fechaCorta(anterioresFecha)}
+								Última vez · {fechaCorta(anterioresFecha)}
 							</p>
 						{/if}
 					</div>
@@ -554,7 +554,7 @@
 								<div class="grid min-w-0 grid-cols-2 gap-2">
 									<div class="min-w-0">
 										<p class="mb-1 text-[10px] font-bold uppercase tracking-wider" style="color: var(--muted)">
-											Peso {unidad}
+											Peso ({unidad})
 										</p>
 										<div class="grid grid-cols-[1.5rem_1fr_1.5rem] items-center rounded-lg bg-white/5 p-1">
 											<button
@@ -635,14 +635,14 @@
 								{/if}
 								{#if ant}
 									<p class="mt-1.5 truncate text-[10px] font-medium" style="color: var(--muted)">
-										↩︎ {ant}
+										Última vez: {ant}
 									</p>
 								{/if}
 							</div>
 						{/each}
 					</div>
-					<p class="mt-2 text-center text-[10px] font-medium" style="color: var(--muted)">
-						Tocá el N° de serie para marcar 🔥 MAX (placa full)
+					<p class="mt-2 text-center text-[10px] font-medium leading-relaxed" style="color: var(--muted)">
+						Tocá el N° de serie para marcar 🔥 MAX cuando uses toda la placa de la máquina. Te permitirá registrar Kg extra encima de la pila de placas.
 					</p>
 				{/if}
 
@@ -697,6 +697,11 @@
 							≈ {formatoNumero(valorOtraPr)} {unidad} en {otraLabel}
 						</p>
 					{/if}
+					<p class="mt-2.5 text-[10px] leading-relaxed border-t border-white/5 pt-2" style="color: var(--muted)">
+						{metrica === 'e1rm'
+							? '💡 El 1RM estimado (fórmula de Epley) calcula la fuerza máxima teórica basada en peso y repeticiones. Premia la intensidad por reps.'
+							: '💡 Tu récord de peso máximo es simplemente la serie más pesada realizada, sin importar las repeticiones.'}
+					</p>
 					{#if chart.length}
 						<svg
 							viewBox="0 0 100 28"
