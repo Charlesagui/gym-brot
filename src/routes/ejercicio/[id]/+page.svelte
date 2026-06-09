@@ -57,6 +57,24 @@
 		localStorage.setItem(key, '1');
 	});
 
+	// Hint de MAX: solo en máquinas de placas, las primeras 3 visitas o hasta "Entendido".
+	let mostrarHintMax = $state(false);
+
+	$effect(() => {
+		if (!ej?.maquinaPlacas || localStorage.getItem('gb-hint-max-ok')) {
+			mostrarHintMax = false;
+			return;
+		}
+		const vistas = Number(localStorage.getItem('gb-hint-max-vistas') ?? '0');
+		mostrarHintMax = vistas < 3;
+		localStorage.setItem('gb-hint-max-vistas', String(vistas + 1));
+	});
+
+	function entendidoHintMax() {
+		localStorage.setItem('gb-hint-max-ok', '1');
+		mostrarHintMax = false;
+	}
+
 	// Descanso: la fuente de verdad son timestamps, no un contador — así el tiempo
 	// sigue siendo correcto aunque se bloquee la pantalla o la app pase a background.
 	let restoSeg = $state(0);
@@ -550,15 +568,21 @@
 							{@const ant = formatoAnterior(anteriores[i])}
 							<div class="rounded-xl bg-white/[0.025] p-2.5">
 								<div class="flex items-center gap-2">
-									<button
-										onclick={() => toggleMax(diaId, $page.params.id!, i, fechaSesion)}
-										class="grid size-8 shrink-0 place-items-center rounded-full border text-sm font-bold"
-										style={s.esMax
-											? 'background: rgba(255,157,60,.22); color: #ff9d3c; border-color: rgba(255,157,60,.5)'
-											: 'color: var(--muted); border-color: rgba(255,255,255,.16); border-style: dashed'}
-										title="Tocá para marcar MAX (placa full)"
-										aria-label={`Serie ${i + 1}: ${s.esMax ? 'quitar' : 'marcar'} MAX`}>{s.esMax ? '🔥' : i + 1}</button
+									<span
+										class="grid size-8 shrink-0 place-items-center rounded-full border border-white/10 text-sm font-bold"
+										style="color: var(--muted)">{i + 1}</span
 									>
+									{#if ej.maquinaPlacas}
+										<button
+											onclick={() => toggleMax(diaId, $page.params.id!, i, fechaSesion)}
+											class="flex h-8 shrink-0 touch-manipulation items-center rounded-full border px-2.5 text-[11px] font-bold"
+											style={s.esMax
+												? 'background: rgba(255,157,60,.22); color: #ff9d3c; border-color: rgba(255,157,60,.5)'
+												: 'color: var(--muted); border-color: rgba(255,255,255,.16); border-style: dashed'}
+											aria-pressed={s.esMax}
+											aria-label={`Serie ${i + 1}: tope de la pila de placas`}>🔥 MAX</button
+										>
+									{/if}
 									<p class="min-w-0 flex-1 truncate text-[11px] font-medium" style="color: var(--muted)">
 										{ant ? `Ant: ${ant}` : ''}
 									</p>
@@ -639,7 +663,7 @@
 										style="background: rgba(255,157,60,.1)"
 									>
 										<span class="text-[11px] font-bold uppercase tracking-wider" style="color: #ff9d3c">
-											🔥 Encima de la placa
+											🔥 Encima de la pila
 										</span>
 										<div class="flex items-center gap-1.5">
 											<button
@@ -663,9 +687,19 @@
 							</div>
 						{/each}
 					</div>
-					<p class="mt-2 text-center text-[10px] font-medium leading-relaxed" style="color: var(--muted)">
-						Tocá el N° de serie para marcar 🔥 MAX cuando uses toda la placa de la máquina. Te permitirá registrar Kg extra encima de la pila de placas.
-					</p>
+					{#if mostrarHintMax}
+						<div class="mt-2 flex items-start gap-2 rounded-xl p-2.5" style="background: rgba(255,157,60,.08)">
+							<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
+								💡 ¿Llegaste al tope de la pila de placas? Marcá <b style="color: #ff9d3c">MAX</b> en esa
+								serie y anotá los kg extra que pongas encima.
+							</p>
+							<button
+								onclick={entendidoHintMax}
+								class="shrink-0 text-xs font-bold"
+								style="color: #ff9d3c">Entendido</button
+							>
+						</div>
+					{/if}
 				{/if}
 
 				<div class="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/10 pt-3">
