@@ -10,6 +10,7 @@
 	import { marcarDiaTerminado, reabrirDia, sesionHoyObs } from '$lib/sesion';
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
 	import { sonarDiaTerminado } from '$lib/audio';
+	import { dur } from '$lib/motion';
 
 	let dia = $state<Dia | undefined>(undefined);
 	let cargando = $state(true);
@@ -85,7 +86,8 @@
 		await marcarDiaTerminado(diaId);
 		premioDia = true;
 		if (sonidoActivo) void sonarDiaTerminado().catch(() => {});
-		if ('vibrate' in navigator) navigator.vibrate([120, 70, 120, 70, 220]);
+		if ((ajustes.vibracion ?? true) && 'vibrate' in navigator)
+			navigator.vibrate([120, 70, 120, 70, 220]);
 		if (premioId) clearTimeout(premioId);
 		premioId = setTimeout(() => (premioDia = false), 2400);
 	}
@@ -335,7 +337,7 @@
 		class="fixed inset-0 z-[60] grid place-items-center px-8"
 		style="background: radial-gradient(72% 50% at 50% 42%, rgb(74 222 128 / .22), transparent 72%), rgba(8,8,12,.84); backdrop-filter: blur(8px)"
 	>
-		<div transition:fly={{ y: 18, duration: 260 }} class="text-center" aria-live="polite">
+		<div transition:fly={{ y: 18, duration: dur(260) }} class="text-center" aria-live="polite">
 			<div
 				class="mx-auto grid size-24 place-items-center rounded-full border border-white/15 text-5xl font-extrabold"
 				style="background: rgba(74,222,128,.18); color: #4ade80; box-shadow: 0 0 55px rgba(74,222,128,.24)"

@@ -61,6 +61,7 @@ export interface Ajustes {
 	unidad: 'kg' | 'lb';
 	timer: { activo: boolean; minutos: number };
 	sonido: boolean;
+	vibracion: boolean;
 	metricaPr: MetricaPr;
 	/** Cuánto suma/resta cada toque de −/+ al cargar peso. */
 	pasoPeso: number;
