@@ -20,9 +20,22 @@ export interface MejorSet {
 	reps?: number;
 	esMax: boolean;
 	fecha: string;
+	estimado: number;
 }
 
-/** Mejor set hecho (mayor peso) por sesión, ordenado por fecha — para PR y gráfico. */
+export function estimarPr(peso: number, reps?: number): number {
+	if (!reps || reps <= 1) return peso;
+	return peso * (1 + reps / 30);
+}
+
+function mejorSet(a: MejorSet | null, b: MejorSet): MejorSet {
+	if (!a) return b;
+	if (b.estimado > a.estimado) return b;
+	if (b.estimado === a.estimado && b.peso > a.peso) return b;
+	return a;
+}
+
+/** Mejor set hecho por sesión, ordenado por fecha — PR estimado para tarjeta y gráfico. */
 export function historialObs(exerciseId: string) {
 	return liveQuery(async () => {
 		const todas = await db.sesiones.orderBy('fecha').toArray();
@@ -34,9 +47,13 @@ export function historialObs(exerciseId: string) {
 			for (const set of e.sets) {
 				if (!set.hecha) continue;
 				if (set.peso == null) continue;
-				if (!mejor || set.peso > mejor.peso) {
-					mejor = { peso: set.peso, reps: set.reps, esMax: !!set.esMax, fecha: s.fecha };
-				}
+				mejor = mejorSet(mejor, {
+					peso: set.peso,
+					reps: set.reps,
+					esMax: !!set.esMax,
+					fecha: s.fecha,
+					estimado: estimarPr(set.peso, set.reps)
+				});
 			}
 			if (mejor) puntos.push(mejor);
 		}
