@@ -28,6 +28,7 @@
 	import { notaObs, setNota, ajustesObs, setTimer, AJUSTES_DEFAULT } from '$lib/extras';
 	import { sonarSetHecho, sonarExito, sonarDescansoTerminado } from '$lib/audio';
 	import { pulsar } from '$lib/pulsar';
+	import { dur } from '$lib/motion';
 
 	const ej = $derived(ejercicioPorId($page.params.id!));
 	const g = $derived(ej ? grupos[ej.grupo] : undefined);
@@ -45,7 +46,7 @@
 	let tieneNota = $state(false);
 	let ajustes = $state<Ajustes>(AJUSTES_DEFAULT);
 	let cargandoSeries = $state(false);
-	let exito = $state<'normal' | 'pr' | null>(null);
+	let exito = $state<'normal' | 'pr' | 'parcial' | null>(null);
 	let prExito = $state<MejorSet | null>(null);
 	// Video grande solo la primera visita a cada ejercicio; después arranca
 	// como miniatura en el header para dejar las series a mano sin scroll.
@@ -174,6 +175,7 @@
 	const completo = $derived(sets.length > 0 && hechas === sets.length);
 	const unidad = $derived(ajustes.unidad);
 	const sonidoActivo = $derived(ajustes.sonido);
+	const vibracionActiva = $derived(ajustes.vibracion ?? true);
 	const metrica = $derived(ajustes.metricaPr);
 	const metricaLabel = $derived(metrica === 'e1rm' ? '1RM estimado (1 Repetición Máxima)' : 'peso máximo');
 	const otraMetrica = $derived(metrica === 'e1rm' ? 'peso' : 'e1rm');
@@ -289,6 +291,15 @@
 		el.value = peso != null ? formatoNumero(peso) : '';
 	}
 
+	function quitarSerie() {
+		if (!diaId || sets.length <= 1) return;
+		const ultima = sets[sets.length - 1];
+		// No borrar un registro real con un mistap: la serie hecha pide confirmación.
+		if (ultima?.hecha && !confirm(`La serie ${sets.length} ya está marcada como hecha. ¿Quitarla igual?`))
+			return;
+		removeSet(diaId, $page.params.id!, sets.length - 1, fechaSesion);
+	}
+
 	function escribirReps(i: number, el: HTMLInputElement) {
 		const n = Number.parseInt(el.value, 10);
 		const reps = Number.isFinite(n) && n > 0 ? n : undefined;
@@ -314,6 +325,12 @@
 
 	async function terminarEjercicio() {
 		if (!diaId || exito) return;
+		saltarDescanso();
+		// Sin series hechas no hay nada que celebrar: salida directa y en silencio.
+		if (hechas === 0) {
+			goto(volver);
+			return;
+		}
 		// PR honesto: solo cuentan las series realmente marcadas ✓ (no fabrica nada).
 		const mejor = mejorSetLocal(sets, true);
 		const valor = mejor ? mejor.valor : null;
@@ -321,7 +338,6 @@
 			valor != null &&
 			(mejorPrevio == null || valor > mejorPrevio) &&
 			(valorCelebrado == null || valor > valorCelebrado);
-		saltarDescanso();
 		if (esPr && mejor) {
 			await marcarPrCelebrado(
 				diaId,
@@ -331,12 +347,15 @@
 				fechaSesion
 			);
 		}
-		exito = esPr ? 'pr' : 'normal';
+		// La fanfarria es para el ejercicio completo (o PR); cierre parcial = sobrio.
+		exito = esPr ? 'pr' : completo ? 'normal' : 'parcial';
 		prExito = esPr ? mejor : null;
-		if (sonidoActivo) void sonarExito(esPr).catch(() => {});
-		if ('vibrate' in navigator) navigator.vibrate(esPr ? [120, 70, 180] : 80);
+		if (exito !== 'parcial') {
+			if (sonidoActivo) void sonarExito(esPr).catch(() => {});
+			if (vibracionActiva && 'vibrate' in navigator) navigator.vibrate(esPr ? [120, 70, 180] : 80);
+		}
 		if (exitoId) clearTimeout(exitoId);
-		exitoId = setTimeout(() => goto(volver), esPr ? 2300 : 1200);
+		exitoId = setTimeout(() => goto(volver), esPr ? 2300 : exito === 'parcial' ? 900 : 1200);
 	}
 
 	function apagarTimer() {
@@ -377,7 +396,7 @@
 		limpiarDescanso();
 		if (recienVencido && visible) {
 			if (sonidoActivo) void sonarDescansoTerminado().catch(() => {});
-			if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+			if (vibracionActiva && 'vibrate' in navigator) navigator.vibrate([200, 100, 200]);
 		}
 		avisoFinDescanso = true;
 		if (avisoId) clearTimeout(avisoId);
@@ -537,7 +556,7 @@
 						<!-- Un solo control: hechas/total adentro del stepper de series de hoy -->
 						<div class="flex items-center rounded-full bg-white/5 p-0.5">
 							<button
-								onclick={() => removeSet(diaId, $page.params.id!, sets.length - 1, fechaSesion)}
+								onclick={quitarSerie}
 								disabled={sets.length <= 1}
 								class="grid size-8 touch-manipulation place-items-center rounded-full text-sm font-bold disabled:opacity-35"
 								style="color: var(--muted)"
@@ -824,7 +843,7 @@
 				disabled={!!exito}
 				class="mt-4 block w-full rounded-2xl py-4 text-center font-bold"
 				style="background: {completo ? `rgb(${g.glow})` : 'var(--accent)'}; color: white"
-				>{exito ? 'Cerrando…' : completo ? '✓ Volver al día' : '✓ Terminar ejercicio'}</button
+				>{exito ? 'Cerrando…' : completo ? '✓ Volver al día' : 'Terminar ejercicio'}</button
 			>
 		{/if}
 	</main>
@@ -832,22 +851,34 @@
 	{#if exito && g}
 		<div
 			class="fixed inset-0 z-[60] grid place-items-center px-8"
-			style="background: radial-gradient(70% 50% at 50% 42%, rgb({g.glow} / .26), transparent 72%), rgba(8,8,12,.82); backdrop-filter: blur(8px)"
+			style="background: {exito === 'parcial'
+				? 'rgba(8,8,12,.82)'
+				: `radial-gradient(70% 50% at 50% 42%, rgb(${g.glow} / .26), transparent 72%), rgba(8,8,12,.82)`}; backdrop-filter: blur(8px)"
 		>
 			<div
-				transition:fly={{ y: 18, duration: 260 }}
+				transition:fly={{ y: 18, duration: dur(260) }}
 				class="text-center"
 				aria-live="polite"
-				aria-label={exito === 'pr' ? 'Nuevo PR' : 'Ejercicio terminado'}
+				aria-label={exito === 'pr'
+					? 'Nuevo PR'
+					: exito === 'parcial'
+						? 'Series guardadas'
+						: 'Ejercicio terminado'}
 			>
 				<div
 					class="mx-auto grid size-24 place-items-center rounded-full border border-white/15 text-5xl font-extrabold"
-					style="background: rgb({g.glow} / .22); color: rgb({g.glow}); box-shadow: 0 0 55px rgb({g.glow} / .25)"
+					style={exito === 'parcial'
+						? 'background: rgba(255,255,255,.08); color: var(--muted)'
+						: `background: rgb(${g.glow} / .22); color: rgb(${g.glow}); box-shadow: 0 0 55px rgb(${g.glow} / .25)`}
 				>
 					{exito === 'pr' ? '🏆' : '✓'}
 				</div>
 				<p class="mt-5 text-2xl font-extrabold">
-					{exito === 'pr' ? '¡Nuevo PR!' : 'Ejercicio terminado'}
+					{exito === 'pr'
+						? '¡Nuevo PR!'
+						: exito === 'parcial'
+							? 'Series guardadas'
+							: 'Ejercicio terminado'}
 				</p>
 				{#if exito === 'pr' && prExito}
 					<p class="mt-2 text-4xl font-extrabold tabular-nums">
@@ -858,6 +889,10 @@
 					</p>
 					<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
 						{metricaLabel} · mejor set {formatoSet(prExito)}
+					</p>
+				{:else if exito === 'parcial'}
+					<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
+						{hechas}/{sets.length} series · volviendo al día…
 					</p>
 				{:else}
 					<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
@@ -870,7 +905,7 @@
 
 	{#if (restoSeg > 0 || avisoFinDescanso) && g}
 		<div
-			transition:fly={{ y: 80, duration: 220 }}
+			transition:fly={{ y: 80, duration: dur(220) }}
 			class="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-md items-center justify-between gap-3 border-t border-white/10 px-5 py-3"
 			style="background: color-mix(in oklab, var(--surface) 94%, transparent); backdrop-filter: blur(10px)"
 		>

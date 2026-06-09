@@ -5,6 +5,7 @@
 	import { onMount } from 'svelte';
 	import { db } from '$lib/db';
 	import { crearDia } from '$lib/dias';
+	import { dur } from '$lib/motion';
 
 	const dias = liveQuery(() => db.dias.orderBy('orden').toArray());
 
@@ -89,7 +90,7 @@
 			{#each $dias as d, i (d.id)}
 				<a
 					href={`/dia/${d.id}`}
-					in:fly={{ y: 12, duration: 250, delay: i * 45 }}
+					in:fly={{ y: 12, duration: dur(250), delay: dur(i * 45) }}
 					class="flex items-center gap-3 rounded-2xl border border-white/10 p-4"
 					style="background: linear-gradient(90deg, rgb({d.color} / 0.12), transparent 55%), var(--surface)"
 				>

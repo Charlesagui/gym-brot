@@ -20,6 +20,7 @@ export const AJUSTES_DEFAULT: Ajustes = {
 	unidad: 'kg',
 	timer: { activo: false, minutos: 2 },
 	sonido: true,
+	vibracion: true,
 	metricaPr: 'peso',
 	pasoPeso: 5
 };
@@ -30,6 +31,7 @@ function normalizarAjustes(a?: Ajustes | null): Ajustes {
 		...(a ?? {}),
 		timer: { ...AJUSTES_DEFAULT.timer, ...(a?.timer ?? {}) },
 		sonido: a?.sonido ?? AJUSTES_DEFAULT.sonido,
+		vibracion: a?.vibracion ?? AJUSTES_DEFAULT.vibracion,
 		metricaPr: a?.metricaPr ?? AJUSTES_DEFAULT.metricaPr,
 		pasoPeso: a?.pasoPeso ?? AJUSTES_DEFAULT.pasoPeso
 	};
@@ -47,6 +49,11 @@ export async function setTimer(activo: boolean, minutos: number): Promise<void> 
 export async function setSonido(sonido: boolean): Promise<void> {
 	const a = normalizarAjustes(await db.ajustes.get('app'));
 	await db.ajustes.put({ ...a, sonido });
+}
+
+export async function setVibracion(vibracion: boolean): Promise<void> {
+	const a = normalizarAjustes(await db.ajustes.get('app'));
+	await db.ajustes.put({ ...a, vibracion });
 }
 
 export async function setMetricaPr(metricaPr: MetricaPr): Promise<void> {
@@ -234,6 +241,7 @@ function esAjustes(value: unknown): value is Ajustes {
 		esBoolean(timer.activo) &&
 		esNumero(timer.minutos) &&
 		(value.sonido === undefined || esBoolean(value.sonido)) &&
+		(value.vibracion === undefined || esBoolean(value.vibracion)) &&
 		(value.metricaPr === undefined || value.metricaPr === 'peso' || value.metricaPr === 'e1rm') &&
 		(value.pasoPeso === undefined || esNumero(value.pasoPeso))
 	);

@@ -5,6 +5,7 @@
 	import { db } from '$lib/db';
 	import { catalogo, grupos, type Grupo, type Ejercicio } from '$lib/catalog';
 	import { agregarEjercicio, quitarEjercicio } from '$lib/dias';
+	import { dur } from '$lib/motion';
 
 	const diaId = $derived($page.params.id!);
 
@@ -159,7 +160,7 @@
 			onclick={cerrarPreview}
 		></button>
 		<div
-			in:fly={{ y: 40, duration: 240 }}
+			in:fly={{ y: 40, duration: dur(240) }}
 			class="relative rounded-t-3xl border-t border-white/10 px-5 pb-8 pt-3"
 			style="background: radial-gradient(140% 100% at 50% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface)"
 		>
