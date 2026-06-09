@@ -7,11 +7,11 @@ export interface Ejercicio {
 	nombre: string;
 	grupo: Grupo;
 	musculo: string;
-	gif: string;
+	demoVideo: string;
 	videoUrl?: string;
 }
 
-/** Catálogo estático (30 ejercicios), empaquetado con la app. */
+/** Catálogo estático de ejercicios, empaquetado con la app. */
 export const catalogo: Ejercicio[] = exercises as Ejercicio[];
 
 export function ejercicioPorId(id: string): Ejercicio | undefined {

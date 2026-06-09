@@ -32,7 +32,7 @@ export default defineConfig({
 				]
 			},
 			workbox: {
-				globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2,gif}'],
+				globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2,mp4}'],
 				maximumFileSizeToCacheInBytes: 5 * 1024 * 1024
 			},
 			devOptions: { enabled: false }

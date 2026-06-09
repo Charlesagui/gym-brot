@@ -216,12 +216,16 @@
 							class="flex items-center gap-3 rounded-2xl border border-white/10 p-2.5"
 							style="background: radial-gradient(150% 130% at 0% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface)"
 						>
-							<img
-								src={e.gif}
-								alt={e.nombre}
+							<video
+								src={e.demoVideo}
 								class="size-14 shrink-0 rounded-xl bg-white object-contain"
-								loading="lazy"
-							/>
+								aria-label={e.nombre}
+								autoplay
+								loop
+								muted
+								playsinline
+								preload="metadata"
+							></video>
 							<div class="min-w-0 flex-1">
 								<p class="truncate text-sm font-semibold leading-tight">{e.nombre}</p>
 								<div class="mt-1.5 flex items-center gap-2">
@@ -253,12 +257,16 @@
 							class="flex items-center gap-3 rounded-2xl border border-white/10 p-2.5"
 							style="background: radial-gradient(150% 130% at 0% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface)"
 						>
-							<img
-								src={e.gif}
-								alt={e.nombre}
+							<video
+								src={e.demoVideo}
 								class="size-16 shrink-0 rounded-xl bg-white object-contain"
-								loading="lazy"
-							/>
+								aria-label={e.nombre}
+								autoplay
+								loop
+								muted
+								playsinline
+								preload="metadata"
+							></video>
 							<div class="min-w-0 flex-1">
 								<p class="truncate text-sm font-semibold leading-tight">{e.nombre}</p>
 								<p class="mt-0.5 text-xs font-medium" style="color: rgb({g.glow})">
