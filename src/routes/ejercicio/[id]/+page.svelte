@@ -12,7 +12,6 @@
 		ultimaSesion,
 		toggleSet,
 		toggleMax,
-		toggleCalentamiento,
 		setPeso,
 		setReps,
 		addSet,
@@ -122,11 +121,8 @@
 		if (exitoId) clearTimeout(exitoId);
 	});
 
-	// El calentamiento no cuenta para "hechas/total" ni para completar el ejercicio.
-	const setsTrabajo = $derived(sets.filter((s) => !s.esCalentamiento));
-	const setsContables = $derived(setsTrabajo.length ? setsTrabajo : sets);
-	const hechas = $derived(setsContables.filter((s) => s.hecha).length);
-	const completo = $derived(setsContables.length > 0 && hechas === setsContables.length);
+	const hechas = $derived(sets.filter((s) => s.hecha).length);
+	const completo = $derived(sets.length > 0 && hechas === sets.length);
 	const unidad = $derived(ajustes.unidad);
 	const sonidoActivo = $derived(ajustes.sonido);
 
@@ -167,7 +163,6 @@
 
 	function mejorSetLocal(localSets: SetSesion[], soloHechas: boolean): MejorSet | null {
 		return localSets.reduce<MejorSet | null>((best, s) => {
-			if (s.esCalentamiento) return best;
 			if (soloHechas && !s.hecha) return best;
 			if (s.peso == null) return best;
 			return mejorSet(best, {
@@ -193,7 +188,7 @@
 		if (!set || (set.peso == null && set.reps == null)) return null;
 		const peso = set.peso != null ? `${formatoNumero(set.peso)} ${unidad}` : '—';
 		const reps = set.reps != null ? ` × ${set.reps}` : '';
-		return `${peso}${reps}${set.esCalentamiento ? ' · cal' : ''}`;
+		return `${peso}${reps}`;
 	}
 
 	function fechaCorta(f: string | null): string {
@@ -469,7 +464,7 @@
 					{:else}
 						<div class="flex items-center gap-2">
 							<p class="text-xs font-bold" style="color: {completo ? `rgb(${g.glow})` : 'var(--muted)'}">
-								{hechas}/{setsContables.length}
+								{hechas}/{sets.length}
 							</p>
 							<div class="flex items-center rounded-full bg-white/5 p-0.5">
 								<button
@@ -499,10 +494,7 @@
 					<div class="mt-3 space-y-2">
 						{#each sets as s, i (i)}
 							{@const ant = formatoAnterior(anteriores[i])}
-							<div
-								class="rounded-xl bg-white/[0.025] p-2"
-								style={s.esCalentamiento ? 'opacity: .72' : ''}
-							>
+							<div class="rounded-xl bg-white/[0.025] p-2">
 								<div class="grid grid-cols-[1.75rem_1fr_2.5rem] items-center gap-2">
 								<button
 									onclick={() => toggleMax(diaId, $page.params.id!, i)}
@@ -568,20 +560,11 @@
 									aria-label={`Marcar serie ${i + 1}`}>✓</button
 								>
 								</div>
-								<div class="mt-1.5 flex items-center justify-between gap-2">
-									<span class="min-w-0 truncate text-[10px] font-medium" style="color: var(--muted)">
-										{#if ant}↩︎ {ant}{:else if anterioresFecha}↩︎ —{/if}
-									</span>
-									<button
-										onclick={() => toggleCalentamiento(diaId, $page.params.id!, i)}
-										class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
-										style={s.esCalentamiento
-											? 'background: rgba(56,189,248,.2); color: #38bdf8'
-											: 'background: rgba(255,255,255,.06); color: var(--muted)'}
-										aria-pressed={s.esCalentamiento}
-										aria-label={`Serie ${i + 1}: marcar como calentamiento`}>🔅 Calent.</button
-									>
-								</div>
+								{#if ant || anterioresFecha}
+									<p class="mt-1.5 truncate text-[10px] font-medium" style="color: var(--muted)">
+										{#if ant}↩︎ {ant}{:else}↩︎ —{/if}
+									</p>
+								{/if}
 							</div>
 						{/each}
 					</div>
