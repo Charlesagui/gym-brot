@@ -38,6 +38,7 @@ export interface Ajustes {
 	darkMode: boolean;
 	unidad: 'kg' | 'lb';
 	timer: { activo: boolean; minutos: number };
+	sonido: boolean;
 }
 
 export const db = new Dexie('gym-brot') as Dexie & {

@@ -106,6 +106,7 @@
 	const hechas = $derived(sets.filter((s) => s.hecha).length);
 	const completo = $derived(sets.length > 0 && hechas === sets.length);
 	const unidad = $derived(ajustes.unidad);
+	const sonidoActivo = $derived(ajustes.sonido);
 
 	const pr = $derived(puntos.reduce<MejorSet | null>((best, p) => mejorSet(best, p), null));
 	const chart = $derived(chartPoints(puntos));
@@ -180,7 +181,7 @@
 			saltarDescanso();
 			return;
 		}
-		void prepararAudio().catch(() => {});
+		void sonarSetHecho().catch(() => {});
 		iniciarDescanso(); // recién marcada como hecha → arranca descanso
 	}
 
@@ -193,6 +194,7 @@
 		saltarDescanso();
 		await completarEjercicio(diaId, $page.params.id!);
 		exito = esPr ? 'pr' : 'normal';
+		void sonarExito(esPr).catch(() => {});
 		if ('vibrate' in navigator) navigator.vibrate(esPr ? [120, 70, 180] : 80);
 		if (exitoId) clearTimeout(exitoId);
 		exitoId = setTimeout(() => goto(volver), esPr ? 1200 : 850);
@@ -242,18 +244,20 @@
 		return audioCtx;
 	}
 
-	async function prepararAudio(): Promise<void> {
-		const ctx = getAudioContext();
-		if (ctx?.state === 'suspended') await ctx.resume();
-	}
-
-	function beep(ctx: AudioContext, start: number, freq: number, duracion: number): void {
+	function beep(
+		ctx: AudioContext,
+		start: number,
+		freq: number,
+		duracion: number,
+		volumen = 0.16,
+		tipo: OscillatorType = 'sine'
+	): void {
 		const osc = ctx.createOscillator();
 		const gain = ctx.createGain();
-		osc.type = 'sine';
+		osc.type = tipo;
 		osc.frequency.setValueAtTime(freq, start);
 		gain.gain.setValueAtTime(0.0001, start);
-		gain.gain.exponentialRampToValueAtTime(0.16, start + 0.02);
+		gain.gain.exponentialRampToValueAtTime(volumen, start + 0.02);
 		gain.gain.exponentialRampToValueAtTime(0.0001, start + duracion);
 		osc.connect(gain);
 		gain.connect(ctx.destination);
@@ -261,7 +265,35 @@
 		osc.stop(start + duracion + 0.03);
 	}
 
+	async function sonarSetHecho(): Promise<void> {
+		if (!sonidoActivo) return;
+		const ctx = getAudioContext();
+		if (!ctx) return;
+		if (ctx.state === 'suspended') await ctx.resume();
+		const now = ctx.currentTime;
+		beep(ctx, now, 659, 0.13, 0.1, 'triangle');
+		beep(ctx, now + 0.06, 880, 0.16, 0.12, 'triangle');
+		beep(ctx, now + 0.15, 1175, 0.18, 0.09, 'sine');
+	}
+
+	async function sonarExito(esPr: boolean): Promise<void> {
+		if (!sonidoActivo) return;
+		const ctx = getAudioContext();
+		if (!ctx) return;
+		if (ctx.state === 'suspended') await ctx.resume();
+		const now = ctx.currentTime;
+		if (esPr) {
+			beep(ctx, now, 659, 0.1, 0.12);
+			beep(ctx, now + 0.11, 880, 0.12, 0.14);
+			beep(ctx, now + 0.25, 1175, 0.18, 0.16);
+			return;
+		}
+		beep(ctx, now, 523, 0.08, 0.1);
+		beep(ctx, now + 0.09, 784, 0.14, 0.13);
+	}
+
 	async function sonarDescansoTerminado(): Promise<void> {
+		if (!sonidoActivo) return;
 		const ctx = getAudioContext();
 		if (!ctx) return;
 		if (ctx.state === 'suspended') await ctx.resume();

@@ -3,6 +3,7 @@
 	import {
 		ajustesObs,
 		setUnidad,
+		setSonido,
 		exportarJSON,
 		parseBackup,
 		importarBackup,
@@ -78,6 +79,26 @@
 						: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{u}</button
 				>
 			{/each}
+		</div>
+	</section>
+
+	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+		<div class="flex items-center justify-between gap-4">
+			<div>
+				<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+					Sonido
+				</p>
+				<p class="mt-1 text-xs" style="color: var(--muted)">Sets, PR y descansos</p>
+			</div>
+			<button
+				onclick={() => setSonido(!ajustes.sonido)}
+				aria-pressed={ajustes.sonido}
+				class="min-w-16 rounded-full px-4 py-2 text-sm font-bold"
+				style={ajustes.sonido
+					? 'background: var(--accent); color: white'
+					: 'background: rgba(255,255,255,.06); color: var(--muted)'}
+				>{ajustes.sonido ? 'On' : 'Off'}</button
+			>
 		</div>
 	</section>
 

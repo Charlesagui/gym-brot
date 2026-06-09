@@ -18,16 +18,31 @@ export const AJUSTES_DEFAULT: Ajustes = {
 	id: 'app',
 	darkMode: true,
 	unidad: 'kg',
-	timer: { activo: false, minutos: 2 }
+	timer: { activo: false, minutos: 2 },
+	sonido: true
 };
 
+function normalizarAjustes(a?: Ajustes | null): Ajustes {
+	return {
+		...AJUSTES_DEFAULT,
+		...(a ?? {}),
+		timer: { ...AJUSTES_DEFAULT.timer, ...(a?.timer ?? {}) },
+		sonido: a?.sonido ?? AJUSTES_DEFAULT.sonido
+	};
+}
+
 export function ajustesObs() {
-	return liveQuery(async () => (await db.ajustes.get('app')) ?? AJUSTES_DEFAULT);
+	return liveQuery(async () => normalizarAjustes(await db.ajustes.get('app')));
 }
 
 export async function setTimer(activo: boolean, minutos: number): Promise<void> {
-	const a = (await db.ajustes.get('app')) ?? AJUSTES_DEFAULT;
+	const a = normalizarAjustes(await db.ajustes.get('app'));
 	await db.ajustes.put({ ...a, timer: { activo, minutos } });
+}
+
+export async function setSonido(sonido: boolean): Promise<void> {
+	const a = normalizarAjustes(await db.ajustes.get('app'));
+	await db.ajustes.put({ ...a, sonido });
 }
 
 const KG_TO_LB = 2.2046226218;
@@ -39,7 +54,7 @@ function convertirPeso(peso: number, desde: Ajustes['unidad'], hacia: Ajustes['u
 }
 
 export async function setUnidad(unidad: 'kg' | 'lb'): Promise<void> {
-	const a = (await db.ajustes.get('app')) ?? AJUSTES_DEFAULT;
+	const a = normalizarAjustes(await db.ajustes.get('app'));
 	if (a.unidad === unidad) {
 		await db.ajustes.put({ ...a, unidad });
 		return;
@@ -81,7 +96,15 @@ export async function exportarJSON(): Promise<string> {
 		db.ajustes.toArray()
 	]);
 	return JSON.stringify(
-		{ app: 'gym-brot', version: 1, exportado: new Date().toISOString(), dias, sesiones, notas, ajustes },
+		{
+			app: 'gym-brot',
+			version: 1,
+			exportado: new Date().toISOString(),
+			dias,
+			sesiones,
+			notas,
+			ajustes: ajustes.map(normalizarAjustes)
+		},
 		null,
 		2
 	);
@@ -160,7 +183,8 @@ function esAjustes(value: unknown): value is Ajustes {
 		(value.unidad === 'kg' || value.unidad === 'lb') &&
 		esRecord(timer) &&
 		esBoolean(timer.activo) &&
-		esNumero(timer.minutos)
+		esNumero(timer.minutos) &&
+		(value.sonido === undefined || esBoolean(value.sonido))
 	);
 }
 
@@ -201,6 +225,6 @@ export async function importarBackup(data: Backup): Promise<void> {
 		if (data.dias?.length) await db.dias.bulkPut(data.dias);
 		if (data.sesiones?.length) await db.sesiones.bulkPut(data.sesiones);
 		if (data.notas?.length) await db.notas.bulkPut(data.notas);
-		if (data.ajustes?.length) await db.ajustes.bulkPut(data.ajustes);
+		if (data.ajustes?.length) await db.ajustes.bulkPut(data.ajustes.map(normalizarAjustes));
 	});
 }
