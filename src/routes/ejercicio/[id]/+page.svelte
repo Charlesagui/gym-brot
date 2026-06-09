@@ -47,6 +47,15 @@
 	let cargandoSeries = $state(false);
 	let exito = $state<'normal' | 'pr' | null>(null);
 	let prExito = $state<MejorSet | null>(null);
+	// Video grande solo la primera visita a cada ejercicio; después arranca
+	// como miniatura en el header para dejar las series a mano sin scroll.
+	let videoGrande = $state(true);
+
+	$effect(() => {
+		const key = `gb-video-visto-${$page.params.id!}`;
+		videoGrande = !localStorage.getItem(key);
+		localStorage.setItem(key, '1');
+	});
 
 	// Descanso: la fuente de verdad son timestamps, no un contador — así el tiempo
 	// sigue siendo correcto aunque se bloquee la pantalla o la app pase a background.
@@ -425,33 +434,60 @@
 				class="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
 				aria-label="Volver">←</a
 			>
-			<h1 class="flex-1 text-lg font-bold leading-tight">{ej.nombre}</h1>
+			{#if !videoGrande}
+				<button
+					onclick={() => (videoGrande = true)}
+					class="shrink-0 overflow-hidden rounded-xl"
+					aria-label="Ver demostración en grande"
+				>
+					<video
+						src={ej.demoVideo}
+						class="size-12 bg-white object-contain"
+						autoplay
+						loop
+						muted
+						playsinline
+						preload="metadata"
+					></video>
+				</button>
+			{/if}
+			<div class="min-w-0 flex-1">
+				<h1 class="text-lg font-bold leading-tight">{ej.nombre}</h1>
+				<p class="mt-0.5 text-xs font-medium" style="color: rgb({g.glow})">
+					{g.emoji} {g.label} · {ej.musculo}
+				</p>
+			</div>
 		</header>
 
-		<video
-			src={ej.demoVideo}
-			class="mx-auto aspect-square w-full max-w-xs rounded-2xl bg-white object-contain"
-			aria-label={ej.nombre}
-			autoplay
-			loop
-			muted
-			playsinline
-			preload="auto"
-		></video>
-		<p class="mt-2 text-center text-sm font-medium" style="color: rgb({g.glow})">
-			{g.emoji} {g.label} · {ej.musculo}
-		</p>
-		{#if ej.videoUrl}
-			<div class="mt-3 flex justify-center">
-				<a
-					href={ej.videoUrl}
-					target="_blank"
-					rel="noreferrer"
-					class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold"
-					style="color: rgb({g.glow})"
-					aria-label={`Ver video de técnica para ${ej.nombre}`}>▶ Ver técnica</a
-				>
-			</div>
+		{#if videoGrande}
+			<button
+				onclick={() => (videoGrande = false)}
+				class="block w-full"
+				aria-label="Achicar demostración"
+			>
+				<video
+					src={ej.demoVideo}
+					class="mx-auto aspect-square w-full max-w-xs rounded-2xl bg-white object-contain"
+					aria-label={ej.nombre}
+					autoplay
+					loop
+					muted
+					playsinline
+					preload="auto"
+				></video>
+			</button>
+			{#if ej.videoUrl}
+				<div class="mt-3 flex justify-center">
+					<a
+						href={ej.videoUrl}
+						target="_blank"
+						rel="noreferrer"
+						class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold"
+						style="color: rgb({g.glow})"
+						aria-label={`Ver video de técnica para ${ej.nombre}`}>▶ Ver técnica</a
+					>
+				</div>
+			{/if}
 		{/if}
 
 		{#if !diaId}
@@ -468,11 +504,11 @@
 						<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
 							Series
 						</p>
-						<p class="mt-0.5 text-[10px] font-medium uppercase tracking-wider" style="color: var(--muted)">
+						<p class="mt-0.5 text-[11px] font-medium uppercase tracking-wider" style="color: var(--muted)">
 							Sesión actual
 						</p>
 						{#if anterioresFecha}
-							<p class="mt-0.5 text-[10px] font-medium" style="color: var(--muted)">
+							<p class="mt-0.5 text-[11px] font-medium" style="color: var(--muted)">
 								Última vez · {fechaCorta(anterioresFecha)}
 							</p>
 						{/if}
@@ -683,7 +719,7 @@
 							≈ {formatoNumero(valorOtraPr)} {unidad} en {otraLabel}
 						</p>
 					{/if}
-					<p class="mt-2.5 text-[10px] leading-relaxed border-t border-white/5 pt-2" style="color: var(--muted)">
+					<p class="mt-2.5 text-[11px] leading-relaxed border-t border-white/5 pt-2" style="color: var(--muted)">
 						💡 {DESCRIPCION_METRICA[metrica]}
 					</p>
 					{#if chart.length}
@@ -714,7 +750,7 @@
 								/>
 							{/each}
 						</svg>
-						<div class="mt-1 flex items-center justify-between gap-2 text-[10px]" style="color: var(--muted)">
+						<div class="mt-1 flex items-center justify-between gap-2 text-[11px]" style="color: var(--muted)">
 							<span
 								>📈 {metricaLabel} · últimas {Math.min(puntos.length, 10)}
 								{Math.min(puntos.length, 10) === 1 ? 'sesión' : 'sesiones'}</span
