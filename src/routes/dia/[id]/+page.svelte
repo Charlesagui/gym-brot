@@ -66,10 +66,7 @@
 	function progreso(exId: string): { hechas: number; total: number } | null {
 		const e = sesion?.ejercicios.find((x) => x.exerciseId === exId);
 		if (!e || e.sets.length === 0) return null;
-		// El calentamiento no cuenta para el progreso/completado del ejercicio.
-		const trabajo = e.sets.filter((s) => !s.esCalentamiento);
-		const base = trabajo.length ? trabajo : e.sets;
-		return { hechas: base.filter((s) => s.hecha).length, total: base.length };
+		return { hechas: e.sets.filter((s) => s.hecha).length, total: e.sets.length };
 	}
 
 	function abrirEdicion() {

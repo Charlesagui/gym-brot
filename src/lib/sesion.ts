@@ -51,7 +51,6 @@ export function historialObs(exerciseId: string) {
 			let mejor: MejorSet | null = null;
 			for (const set of e.sets) {
 				if (!set.hecha) continue;
-				if (set.esCalentamiento) continue;
 				if (set.peso == null) continue;
 				mejor = mejorSet(mejor, {
 					peso: set.peso,
@@ -100,7 +99,6 @@ export async function ensureEjercicio(
 		const sets: SetSesion[] = Array.from({ length: Math.max(1, nSets) }, (_, i) => ({
 			peso: prev?.[i]?.peso,
 			reps: prev?.[i]?.reps,
-			esCalentamiento: prev?.[i]?.esCalentamiento,
 			hecha: false
 		}));
 		s.ejercicios.push({ exerciseId, sets });
@@ -138,11 +136,6 @@ export function toggleMax(diaId: string, exerciseId: string, i: number) {
 		if (sets[i]) sets[i].esMax = !sets[i].esMax;
 	});
 }
-export function toggleCalentamiento(diaId: string, exerciseId: string, i: number) {
-	return mutar(diaId, exerciseId, (sets) => {
-		if (sets[i]) sets[i].esCalentamiento = !sets[i].esCalentamiento;
-	});
-}
 export function setPeso(diaId: string, exerciseId: string, i: number, peso?: number) {
 	return mutar(diaId, exerciseId, (sets) => {
 		if (sets[i]) sets[i].peso = peso;
@@ -170,9 +163,7 @@ export function removeSet(diaId: string, exerciseId: string, i: number) {
 
 export function completarEjercicio(diaId: string, exerciseId: string) {
 	return mutar(diaId, exerciseId, (sets) => {
-		// Solo las series de trabajo; el calentamiento queda como lo dejó el usuario.
-		const trabajo = sets.filter((s) => !s.esCalentamiento);
-		for (const set of trabajo.length ? trabajo : sets) set.hecha = true;
+		for (const set of sets) set.hecha = true;
 	});
 }
 
