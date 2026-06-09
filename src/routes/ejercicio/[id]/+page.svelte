@@ -9,8 +9,10 @@
 		sesionHoyObs,
 		historialObs,
 		ensureEjercicio,
+		ultimaSesion,
 		toggleSet,
 		toggleMax,
+		toggleCalentamiento,
 		setPeso,
 		setReps,
 		addSet,
@@ -28,6 +30,8 @@
 	const volver = $derived(diaId ? `/dia/${diaId}` : '/');
 
 	let sets = $state<SetSesion[]>([]);
+	let anteriores = $state<SetSesion[]>([]);
+	let anterioresFecha = $state<string | null>(null);
 	let puntos = $state<MejorSet[]>([]);
 	let prPesoCelebrado = $state<number | null>(null);
 	let notaTexto = $state('');
@@ -75,16 +79,24 @@
 		let sub: { unsubscribe: () => void } | undefined;
 		if (!dId) {
 			sets = [];
+			anteriores = [];
+			anterioresFecha = null;
 			prPesoCelebrado = null;
 			cargandoSeries = false;
 			return;
 		}
 		cargandoSeries = true;
+		anteriores = [];
+		anterioresFecha = null;
 		(async () => {
 			const dia = await db.dias.get(dId);
 			const item = dia?.ejercicios.find((e) => e.exerciseId === exId);
 			await ensureEjercicio(dId, exId, item?.seriesObjetivo ?? 4);
 			if (cancelado) return;
+			const prev = await ultimaSesion(dId, exId);
+			if (cancelado) return;
+			anteriores = prev?.sets ?? [];
+			anterioresFecha = prev?.fecha ?? null;
 			sub = sesionHoyObs(dId).subscribe((s) => {
 				if (cancelado) return;
 				const e = s?.ejercicios.find((x) => x.exerciseId === exId);
@@ -110,8 +122,11 @@
 		if (exitoId) clearTimeout(exitoId);
 	});
 
-	const hechas = $derived(sets.filter((s) => s.hecha).length);
-	const completo = $derived(sets.length > 0 && hechas === sets.length);
+	// El calentamiento no cuenta para "hechas/total" ni para completar el ejercicio.
+	const setsTrabajo = $derived(sets.filter((s) => !s.esCalentamiento));
+	const setsContables = $derived(setsTrabajo.length ? setsTrabajo : sets);
+	const hechas = $derived(setsContables.filter((s) => s.hecha).length);
+	const completo = $derived(setsContables.length > 0 && hechas === setsContables.length);
 	const unidad = $derived(ajustes.unidad);
 	const sonidoActivo = $derived(ajustes.sonido);
 
@@ -152,6 +167,7 @@
 
 	function mejorSetLocal(localSets: SetSesion[], soloHechas: boolean): MejorSet | null {
 		return localSets.reduce<MejorSet | null>((best, s) => {
+			if (s.esCalentamiento) return best;
 			if (soloHechas && !s.hecha) return best;
 			if (s.peso == null) return best;
 			return mejorSet(best, {
@@ -170,6 +186,20 @@
 
 	function formatoSet(set: MejorSet): string {
 		return `${formatoNumero(set.peso)} ${unidad}${set.reps ? ` × ${set.reps}` : ''}${set.esMax ? ' · MAX' : ''}`;
+	}
+
+	/** Resumen de una serie de la última vez, para la columna "Anterior". */
+	function formatoAnterior(set: SetSesion | undefined): string | null {
+		if (!set || (set.peso == null && set.reps == null)) return null;
+		const peso = set.peso != null ? `${formatoNumero(set.peso)} ${unidad}` : '—';
+		const reps = set.reps != null ? ` × ${set.reps}` : '';
+		return `${peso}${reps}${set.esCalentamiento ? ' · cal' : ''}`;
+	}
+
+	function fechaCorta(f: string | null): string {
+		if (!f) return '';
+		const d = new Date(`${f}T00:00:00`);
+		return d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
 	}
 
 	function ajustarPeso(i: number, delta: number) {
@@ -398,6 +428,18 @@
 		<p class="mt-2 text-center text-sm font-medium" style="color: rgb({g.glow})">
 			{g.emoji} {g.label} · {ej.musculo}
 		</p>
+		{#if ej.videoUrl}
+			<div class="mt-3 flex justify-center">
+				<a
+					href={ej.videoUrl}
+					target="_blank"
+					rel="noreferrer"
+					class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold"
+					style="color: rgb({g.glow})"
+					aria-label={`Ver video de técnica para ${ej.nombre}`}>▶ Ver técnica</a
+				>
+			</div>
+		{/if}
 
 		{#if !diaId}
 			<p
@@ -416,13 +458,18 @@
 						<p class="mt-0.5 text-[10px] font-medium uppercase tracking-wider" style="color: var(--muted)">
 							Sesión actual
 						</p>
+						{#if anterioresFecha}
+							<p class="mt-0.5 text-[10px] font-medium" style="color: var(--muted)">
+								↩︎ vs última vez · {fechaCorta(anterioresFecha)}
+							</p>
+						{/if}
 					</div>
 					{#if cargandoSeries}
 						<p class="text-xs font-bold" style="color: var(--muted)">Preparando…</p>
 					{:else}
 						<div class="flex items-center gap-2">
 							<p class="text-xs font-bold" style="color: {completo ? `rgb(${g.glow})` : 'var(--muted)'}">
-								{hechas}/{sets.length}
+								{hechas}/{setsContables.length}
 							</p>
 							<div class="flex items-center rounded-full bg-white/5 p-0.5">
 								<button
@@ -451,7 +498,12 @@
 				{:else}
 					<div class="mt-3 space-y-2">
 						{#each sets as s, i (i)}
-							<div class="grid grid-cols-[1.75rem_1fr_2.5rem] items-center gap-2 rounded-xl bg-white/[0.025] p-2">
+							{@const ant = formatoAnterior(anteriores[i])}
+							<div
+								class="rounded-xl bg-white/[0.025] p-2"
+								style={s.esCalentamiento ? 'opacity: .72' : ''}
+							>
+								<div class="grid grid-cols-[1.75rem_1fr_2.5rem] items-center gap-2">
 								<button
 									onclick={() => toggleMax(diaId, $page.params.id!, i)}
 									class="grid size-7 shrink-0 place-items-center rounded-full text-sm font-bold"
@@ -515,6 +567,21 @@
 										: 'border-color: rgba(255,255,255,.22); color: transparent'}
 									aria-label={`Marcar serie ${i + 1}`}>✓</button
 								>
+								</div>
+								<div class="mt-1.5 flex items-center justify-between gap-2">
+									<span class="min-w-0 truncate text-[10px] font-medium" style="color: var(--muted)">
+										{#if ant}↩︎ {ant}{:else if anterioresFecha}↩︎ —{/if}
+									</span>
+									<button
+										onclick={() => toggleCalentamiento(diaId, $page.params.id!, i)}
+										class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
+										style={s.esCalentamiento
+											? 'background: rgba(56,189,248,.2); color: #38bdf8'
+											: 'background: rgba(255,255,255,.06); color: var(--muted)'}
+										aria-pressed={s.esCalentamiento}
+										aria-label={`Serie ${i + 1}: marcar como calentamiento`}>🔅 Calent.</button
+									>
+								</div>
 							</div>
 						{/each}
 					</div>

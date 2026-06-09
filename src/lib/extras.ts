@@ -169,7 +169,8 @@ function esSesion(value: unknown): value is Sesion {
 						esBoolean(set.hecha) &&
 						(set.peso === undefined || esNumero(set.peso)) &&
 						(set.reps === undefined || esNumero(set.reps)) &&
-						(set.esMax === undefined || esBoolean(set.esMax))
+						(set.esMax === undefined || esBoolean(set.esMax)) &&
+						(set.esCalentamiento === undefined || esBoolean(set.esCalentamiento))
 				)
 			);
 		})
