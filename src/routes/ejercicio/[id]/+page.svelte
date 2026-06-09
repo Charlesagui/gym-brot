@@ -16,6 +16,7 @@
 		addSet,
 		removeSet,
 		completarEjercicio,
+		estimarPr,
 		hoyStr,
 		type MejorSet
 	} from '$lib/sesion';
@@ -32,10 +33,12 @@
 	let tieneNota = $state(false);
 	let ajustes = $state<Ajustes>(AJUSTES_DEFAULT);
 	let cargandoSeries = $state(false);
+	let exito = $state<'normal' | 'pr' | null>(null);
 
 	// cuenta regresiva de descanso
 	let restoSeg = $state(0);
 	let intId: ReturnType<typeof setInterval> | null = null;
+	let exitoId: ReturnType<typeof setTimeout> | null = null;
 	type AudioContextConstructor = new () => AudioContext;
 	type AudioWindow = Window &
 		typeof globalThis & { webkitAudioContext?: AudioContextConstructor };
@@ -97,28 +100,62 @@
 
 	onDestroy(() => {
 		if (intId) clearInterval(intId);
+		if (exitoId) clearTimeout(exitoId);
 	});
 
 	const hechas = $derived(sets.filter((s) => s.hecha).length);
 	const completo = $derived(sets.length > 0 && hechas === sets.length);
 	const unidad = $derived(ajustes.unidad);
 
-	const pr = $derived(
-		puntos.reduce<MejorSet | null>((best, p) => (!best || p.peso > best.peso ? p : best), null)
-	);
-	const mejorHoy = $derived(
-		sets.reduce<number | null>(
-			(m, s) => (s.hecha && s.peso != null && (m == null || s.peso > m) ? s.peso : m),
-			null
-		)
-	);
+	const pr = $derived(puntos.reduce<MejorSet | null>((best, p) => mejorSet(best, p), null));
+	const chart = $derived(chartPoints(puntos));
+	const ultimoChart = $derived(chart[chart.length - 1]);
+	const mejorHoy = $derived(mejorSetLocal(sets, true));
 	const mejorPrevio = $derived(
 		puntos
 			.filter((p) => p.fecha !== hoyStr())
-			.reduce<number | null>((m, p) => (m == null || p.peso > m ? p.peso : m), null)
+			.reduce<number | null>((m, p) => (m == null || valorPr(p) > m ? valorPr(p) : m), null)
 	);
-	const superado = $derived(mejorHoy != null && (mejorPrevio == null || mejorHoy > mejorPrevio));
+	const superado = $derived(
+		mejorHoy != null && (mejorPrevio == null || valorPr(mejorHoy) > mejorPrevio)
+	);
 	const PASO_PESO = 5;
+
+	interface ChartPoint {
+		x: number;
+		y: number;
+		valor: number;
+		label: string;
+	}
+
+	function valorPr(set: MejorSet): number {
+		return set.estimado ?? estimarPr(set.peso, set.reps);
+	}
+
+	function mejorSet(a: MejorSet | null, b: MejorSet): MejorSet {
+		if (!a) return b;
+		if (valorPr(b) > valorPr(a)) return b;
+		if (valorPr(b) === valorPr(a) && b.peso > a.peso) return b;
+		return a;
+	}
+
+	function mejorSetLocal(localSets: SetSesion[], soloHechas: boolean): MejorSet | null {
+		return localSets.reduce<MejorSet | null>((best, s) => {
+			if (soloHechas && !s.hecha) return best;
+			if (s.peso == null) return best;
+			return mejorSet(best, {
+				peso: s.peso,
+				reps: s.reps,
+				esMax: !!s.esMax,
+				fecha: hoyStr(),
+				estimado: estimarPr(s.peso, s.reps)
+			});
+		}, null);
+	}
+
+	function formatoNumero(n: number): string {
+		return Number.isInteger(n) ? String(n) : n.toFixed(1);
+	}
 
 	function ajustarPeso(i: number, delta: number) {
 		const actual = sets[i]?.peso ?? 0;
@@ -148,10 +185,17 @@
 	}
 
 	async function terminarEjercicio() {
-		if (!diaId) return;
+		if (!diaId || exito) return;
+		const mejorAlTerminar = mejorSetLocal(sets, false);
+		const esPr =
+			mejorAlTerminar != null &&
+			(mejorPrevio == null || valorPr(mejorAlTerminar) > mejorPrevio);
 		saltarDescanso();
 		await completarEjercicio(diaId, $page.params.id!);
-		goto(volver);
+		exito = esPr ? 'pr' : 'normal';
+		if ('vibrate' in navigator) navigator.vibrate(esPr ? [120, 70, 180] : 80);
+		if (exitoId) clearTimeout(exitoId);
+		exitoId = setTimeout(() => goto(volver), esPr ? 1200 : 850);
 	}
 
 	function apagarTimer() {
@@ -226,12 +270,12 @@
 		beep(ctx, now + 0.22, 1175, 0.18);
 	}
 
-	function spark(pts: MejorSet[]): string {
+	function chartPoints(pts: MejorSet[]): ChartPoint[] {
 		const u = pts.slice(-10);
-		if (u.length < 2) return '';
-		const ps = u.map((p) => p.peso);
-		const min = Math.min(...ps);
-		const max = Math.max(...ps);
+		if (u.length < 2) return [];
+		const valores = u.map(valorPr);
+		const min = Math.min(...valores);
+		const max = Math.max(...valores);
 		const range = max - min || 1;
 		const W = 100;
 		const H = 28;
@@ -239,10 +283,19 @@
 		return u
 			.map((p, i) => {
 				const x = pad + (i / (u.length - 1)) * (W - 2 * pad);
-				const y = pad + (1 - (p.peso - min) / range) * (H - 2 * pad);
-				return `${x.toFixed(1)},${y.toFixed(1)}`;
-			})
-			.join(' ');
+				const valor = valorPr(p);
+				const y = pad + (1 - (valor - min) / range) * (H - 2 * pad);
+				return {
+					x,
+					y,
+					valor,
+					label: formatoNumero(valor)
+				};
+			});
+	}
+
+	function chartLine(points: ChartPoint[]): string {
+		return points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
 	}
 </script>
 
@@ -282,13 +335,40 @@
 			</p>
 		{:else}
 			<section class="mt-6 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
-				<div class="flex items-center justify-between">
-					<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
-						Series
-					</p>
-					<p class="text-xs font-bold" style="color: {completo ? `rgb(${g.glow})` : 'var(--muted)'}">
-						{#if cargandoSeries}Preparando…{:else}{hechas}/{sets.length} hechas{/if}
-					</p>
+				<div class="flex items-start justify-between gap-3">
+					<div>
+						<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+							Series
+						</p>
+						<p class="mt-0.5 text-[10px] font-medium uppercase tracking-wider" style="color: var(--muted)">
+							Sesión actual
+						</p>
+					</div>
+					{#if cargandoSeries}
+						<p class="text-xs font-bold" style="color: var(--muted)">Preparando…</p>
+					{:else}
+						<div class="flex items-center gap-2">
+							<p class="text-xs font-bold" style="color: {completo ? `rgb(${g.glow})` : 'var(--muted)'}">
+								{hechas}/{sets.length}
+							</p>
+							<div class="flex items-center rounded-full bg-white/5 p-0.5">
+								<button
+									onclick={() => removeSet(diaId, $page.params.id!, sets.length - 1)}
+									disabled={sets.length <= 1}
+									class="grid size-7 place-items-center rounded-full text-sm font-bold disabled:opacity-35"
+									style="color: var(--muted)"
+									aria-label="Quitar serie de hoy">−</button
+								>
+								<span class="min-w-6 text-center text-xs font-bold tabular-nums">{sets.length}</span>
+								<button
+									onclick={() => addSet(diaId, $page.params.id!)}
+									class="grid size-7 place-items-center rounded-full text-sm font-bold"
+									style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
+									aria-label="Agregar serie de hoy">+</button
+								>
+							</div>
+						</div>
+					{/if}
 				</div>
 
 				{#if cargandoSeries}
@@ -366,19 +446,6 @@
 						{/each}
 					</div>
 
-					<div class="mt-3 grid grid-cols-2 gap-2">
-						<button
-							onclick={() => addSet(diaId, $page.params.id!)}
-							class="rounded-lg border border-dashed border-white/20 py-2 text-sm"
-							style="color: var(--muted)">+ serie</button
-						>
-						<button
-							onclick={() => removeSet(diaId, $page.params.id!, sets.length - 1)}
-							disabled={sets.length <= 1}
-							class="rounded-lg border border-dashed border-white/20 py-2 text-sm disabled:opacity-35"
-							style="color: #ff6b6b">− serie</button
-						>
-					</div>
 				{/if}
 
 				<div class="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/10 pt-3">
@@ -409,7 +476,7 @@
 				>
 					<div class="flex items-center justify-between">
 						<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
-							Récord (PR)
+							PR estimado
 						</p>
 						{#if superado}
 							<span
@@ -419,13 +486,15 @@
 						{/if}
 					</div>
 					<p class="mt-1 text-3xl font-extrabold">
-						🏆 {pr.peso}<span class="text-lg font-semibold" style="color: var(--muted)"> {unidad}</span>
-						{#if pr.reps}<span class="text-lg font-semibold" style="color: var(--muted)">
-								× {pr.reps}</span
-							>{/if}
-						{#if pr.esMax}🔥{/if}
+						🏆 {formatoNumero(valorPr(pr))}<span
+							class="text-lg font-semibold"
+							style="color: var(--muted)"> {unidad}</span
+						>
 					</p>
-					{#if spark(puntos)}
+					<p class="mt-0.5 text-xs font-medium" style="color: var(--muted)">
+						Mejor set: {pr.peso} {unidad}{#if pr.reps} × {pr.reps}{/if}{#if pr.esMax} · MAX{/if}
+					</p>
+					{#if chart.length}
 						<svg
 							viewBox="0 0 100 28"
 							class="mt-3 w-full"
@@ -433,7 +502,7 @@
 							style="height: 46px"
 						>
 							<polyline
-								points={spark(puntos)}
+								points={chartLine(chart)}
 								fill="none"
 								stroke="rgb({g.glow})"
 								stroke-width="2"
@@ -441,10 +510,22 @@
 								stroke-linejoin="round"
 								stroke-linecap="round"
 							/>
+							{#each chart as p, i (`${p.x}-${p.y}`)}
+								<circle
+									cx={p.x}
+									cy={p.y}
+									r={i === chart.length - 1 ? 2.4 : 1.7}
+									fill={i === chart.length - 1 ? `rgb(${g.glow})` : 'var(--surface)'}
+									stroke="rgb({g.glow})"
+									stroke-width="1.4"
+									vector-effect="non-scaling-stroke"
+								/>
+							{/each}
 						</svg>
-						<p class="mt-1 text-[10px]" style="color: var(--muted)">
-							📈 Progreso · últimas {Math.min(puntos.length, 10)} sesiones
-						</p>
+						<div class="mt-1 flex items-center justify-between gap-2 text-[10px]" style="color: var(--muted)">
+							<span>📈 PR estimado · últimas {Math.min(puntos.length, 10)} sesiones</span>
+							<span>Último {ultimoChart.label} {unidad}</span>
+						</div>
 					{/if}
 				</section>
 			{/if}
@@ -464,12 +545,40 @@
 
 			<button
 				onclick={terminarEjercicio}
+				disabled={!!exito}
 				class="mt-4 block w-full rounded-2xl py-4 text-center font-bold"
 				style="background: {completo ? `rgb(${g.glow})` : 'var(--accent)'}; color: white"
-				>{completo ? '✓ Volver al día' : '✓ Terminar ejercicio'}</button
+				>{exito ? 'Cerrando…' : completo ? '✓ Volver al día' : '✓ Terminar ejercicio'}</button
 			>
 		{/if}
 	</main>
+
+	{#if exito && g}
+		<div
+			class="fixed inset-0 z-[60] grid place-items-center px-8"
+			style="background: radial-gradient(70% 50% at 50% 42%, rgb({g.glow} / .26), transparent 72%), rgba(8,8,12,.82); backdrop-filter: blur(8px)"
+		>
+			<div
+				transition:fly={{ y: 18, duration: 260 }}
+				class="text-center"
+				aria-live="polite"
+				aria-label={exito === 'pr' ? 'Nuevo PR' : 'Ejercicio terminado'}
+			>
+				<div
+					class="mx-auto grid size-24 place-items-center rounded-full border border-white/15 text-5xl font-extrabold"
+					style="background: rgb({g.glow} / .22); color: rgb({g.glow}); box-shadow: 0 0 55px rgb({g.glow} / .25)"
+				>
+					{exito === 'pr' ? '🏆' : '✓'}
+				</div>
+				<p class="mt-5 text-2xl font-extrabold">
+					{exito === 'pr' ? '¡Nuevo PR!' : 'Ejercicio terminado'}
+				</p>
+				<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
+					{exito === 'pr' ? 'Buen set. Quedó guardado.' : 'Volviendo al día…'}
+				</p>
+			</div>
+		</div>
+	{/if}
 
 	{#if restoSeg > 0 && g}
 		<div

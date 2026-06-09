@@ -149,7 +149,9 @@
 										class="grid size-6 place-items-center rounded-full bg-white/10 text-sm"
 										aria-label="Menos series">−</button
 									>
-									<span class="text-sm font-semibold tabular-nums">{item.seriesObjetivo} series</span>
+									<span class="text-sm font-semibold tabular-nums"
+										>{item.seriesObjetivo} objetivo</span
+									>
 									<button
 										onclick={() => setSeries(diaId, e.id, item.seriesObjetivo + 1)}
 										class="grid size-6 place-items-center rounded-full bg-white/10 text-sm"
