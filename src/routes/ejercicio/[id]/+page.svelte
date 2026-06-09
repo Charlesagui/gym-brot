@@ -20,10 +20,13 @@
 		marcarPrCelebrado,
 		pesoEfectivo,
 		valorMetrica,
+		mejorSet,
+		DESCRIPCION_METRICA,
 		hoyStr,
 		type MejorSet
 	} from '$lib/sesion';
 	import { notaObs, setNota, ajustesObs, setTimer, AJUSTES_DEFAULT } from '$lib/extras';
+	import { sonarSetHecho, sonarExito, sonarDescansoTerminado } from '$lib/audio';
 
 	const ej = $derived(ejercicioPorId($page.params.id!));
 	const g = $derived(ej ? grupos[ej.grupo] : undefined);
@@ -44,16 +47,15 @@
 	let exito = $state<'normal' | 'pr' | null>(null);
 	let prExito = $state<MejorSet | null>(null);
 
-	// cuenta regresiva de descanso
+	// Descanso: la fuente de verdad son timestamps, no un contador — así el tiempo
+	// sigue siendo correcto aunque se bloquee la pantalla o la app pase a background.
 	let restoSeg = $state(0);
+	let avisoFinDescanso = $state(false);
+	let descansoInicio: number | null = null;
+	let descansoHasta: number | null = null;
 	let intId: ReturnType<typeof setInterval> | null = null;
+	let avisoId: ReturnType<typeof setTimeout> | null = null;
 	let exitoId: ReturnType<typeof setTimeout> | null = null;
-	type AudioContextConstructor = new () => AudioContext;
-	type AudioWindow = Window &
-		typeof globalThis & { webkitAudioContext?: AudioContextConstructor };
-	let audioCtx: AudioContext | null = null;
-	let masterGain: GainNode | null = null;
-	let masterCompressor: DynamicsCompressorNode | null = null;
 
 	$effect(() => {
 		const exId = $page.params.id!;
@@ -74,6 +76,17 @@
 	$effect(() => {
 		const sub = ajustesObs().subscribe((a) => (ajustes = a));
 		return () => sub.unsubscribe();
+	});
+
+	// Al volver del background o del bloqueo de pantalla, recalcular el descanso al instante.
+	$effect(() => {
+		const refrescar = () => recalcDescanso();
+		document.addEventListener('visibilitychange', refrescar);
+		window.addEventListener('focus', refrescar);
+		return () => {
+			document.removeEventListener('visibilitychange', refrescar);
+			window.removeEventListener('focus', refrescar);
+		};
 	});
 
 	$effect(() => {
@@ -125,6 +138,7 @@
 
 	onDestroy(() => {
 		if (intId) clearInterval(intId);
+		if (avisoId) clearTimeout(avisoId);
 		if (exitoId) clearTimeout(exitoId);
 	});
 
@@ -149,14 +163,14 @@
 	const mejorPrevio = $derived(
 		puntos
 			.filter((p) => p.fecha !== fechaSesion)
-			.reduce<number | null>((m, p) => (m == null || valorPr(p) > m ? valorPr(p) : m), null)
+			.reduce<number | null>((m, p) => (m == null || p.valor > m ? p.valor : m), null)
 	);
 	const valorCelebrado = $derived(
 		prCelebrado && pesoEfectivo(prCelebrado) != null
 			? valorMetrica(pesoEfectivo(prCelebrado)!, prCelebrado.reps, metrica)
 			: null
 	);
-	const valorMejorHoy = $derived(mejorHoy ? valorPr(mejorHoy) : null);
+	const valorMejorHoy = $derived(mejorHoy ? mejorHoy.valor : null);
 	const superado = $derived(
 		valorMejorHoy != null &&
 			(mejorPrevio == null || valorMejorHoy > mejorPrevio) &&
@@ -169,17 +183,6 @@
 		y: number;
 		valor: number;
 		label: string;
-	}
-
-	function valorPr(set: MejorSet): number {
-		return set.valor;
-	}
-
-	function mejorSet(a: MejorSet | null, b: MejorSet): MejorSet {
-		if (!a) return b;
-		if (valorPr(b) > valorPr(a)) return b;
-		if (valorPr(b) === valorPr(a) && (b.reps ?? 0) > (a.reps ?? 0)) return b;
-		return a;
 	}
 
 	function mejorSetLocal(localSets: SetSesion[], soloHechas: boolean): MejorSet | null {
@@ -252,8 +255,8 @@
 			saltarDescanso();
 			return;
 		}
-		void sonarSetHecho().catch(() => {});
-		
+		if (sonidoActivo) void sonarSetHecho().catch(() => {});
+
 		const seCompletanTodas = sets.filter((s) => s.hecha).length === sets.length - 1;
 		if (!seCompletanTodas) {
 			iniciarDescanso(); // recién marcada como hecha → arranca descanso
@@ -264,7 +267,7 @@
 		if (!diaId || exito) return;
 		// PR honesto: solo cuentan las series realmente marcadas ✓ (no fabrica nada).
 		const mejor = mejorSetLocal(sets, true);
-		const valor = mejor ? valorPr(mejor) : null;
+		const valor = mejor ? mejor.valor : null;
 		const esPr =
 			valor != null &&
 			(mejorPrevio == null || valor > mejorPrevio) &&
@@ -281,7 +284,7 @@
 		}
 		exito = esPr ? 'pr' : 'normal';
 		prExito = esPr ? mejor : null;
-		void sonarExito(esPr).catch(() => {});
+		if (sonidoActivo) void sonarExito(esPr).catch(() => {});
 		if ('vibrate' in navigator) navigator.vibrate(esPr ? [120, 70, 180] : 80);
 		if (exitoId) clearTimeout(exitoId);
 		exitoId = setTimeout(() => goto(volver), esPr ? 2300 : 1200);
@@ -293,28 +296,63 @@
 	}
 
 	function cambiarTimer(minutos: number) {
-		const descansoActivo = restoSeg > 0;
 		void setTimer(true, minutos);
-		if (descansoActivo) iniciarDescanso(minutos);
+		// Si hay un descanso en curso, ajusta su fin en vez de reiniciarlo desde cero.
+		if (descansoInicio != null && descansoHasta != null) {
+			descansoHasta = descansoInicio + minutos * 60_000;
+			recalcDescanso();
+		}
 	}
 
 	function iniciarDescanso(minutos?: number) {
 		if (minutos == null && !ajustes.timer.activo) return;
 		if (intId) clearInterval(intId);
-		restoSeg = (minutos ?? ajustes.timer.minutos) * 60;
-		intId = setInterval(() => {
-			restoSeg -= 1;
-			if (restoSeg <= 0) {
-				saltarDescanso();
-				void sonarDescansoTerminado().catch(() => {});
-				if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
-			}
-		}, 1000);
+		ocultarAvisoFin();
+		descansoInicio = Date.now();
+		descansoHasta = descansoInicio + (minutos ?? ajustes.timer.minutos) * 60_000;
+		restoSeg = Math.ceil((descansoHasta - Date.now()) / 1000);
+		intId = setInterval(recalcDescanso, 500);
 	}
-	function saltarDescanso() {
+
+	function recalcDescanso() {
+		if (descansoHasta == null) return;
+		const resto = Math.ceil((descansoHasta - Date.now()) / 1000);
+		if (resto > 0) {
+			restoSeg = resto;
+			return;
+		}
+		// Venció: sonar/vibrar solo si acaba de pasar con la app a la vista — al volver
+		// de un bloqueo largo no tiene sentido avisar tarde; queda la señal visual breve.
+		const recienVencido = Date.now() - descansoHasta < 3000;
+		const visible = document.visibilityState === 'visible';
+		limpiarDescanso();
+		if (recienVencido && visible) {
+			if (sonidoActivo) void sonarDescansoTerminado().catch(() => {});
+			if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+		}
+		avisoFinDescanso = true;
+		if (avisoId) clearTimeout(avisoId);
+		avisoId = setTimeout(() => (avisoFinDescanso = false), 2500);
+	}
+
+	function limpiarDescanso() {
 		if (intId) clearInterval(intId);
 		intId = null;
+		descansoInicio = null;
+		descansoHasta = null;
 		restoSeg = 0;
+	}
+
+	function ocultarAvisoFin() {
+		avisoFinDescanso = false;
+		if (avisoId) clearTimeout(avisoId);
+		avisoId = null;
+	}
+
+	/** Corta el descanso sin señal alguna (Saltar, destildar una serie, terminar ejercicio). */
+	function saltarDescanso() {
+		limpiarDescanso();
+		ocultarAvisoFin();
 	}
 	function mmss(s: number): string {
 		const m = Math.floor(s / 60);
@@ -322,98 +360,10 @@
 		return `${m}:${String(sec).padStart(2, '0')}`;
 	}
 
-	function getAudioContext(): AudioContext | null {
-		if (typeof window === 'undefined') return null;
-		const audioWindow = window as AudioWindow;
-		const Ctx = window.AudioContext ?? audioWindow.webkitAudioContext;
-		if (!Ctx) return null;
-		audioCtx ??= new Ctx();
-		return audioCtx;
-	}
-
-	function getMaster(ctx: AudioContext): GainNode {
-		if (masterGain && masterCompressor && masterGain.context === ctx) return masterGain;
-		masterGain = ctx.createGain();
-		masterCompressor = ctx.createDynamicsCompressor();
-		masterGain.gain.setValueAtTime(0.95, ctx.currentTime);
-		masterCompressor.threshold.setValueAtTime(-22, ctx.currentTime);
-		masterCompressor.knee.setValueAtTime(20, ctx.currentTime);
-		masterCompressor.ratio.setValueAtTime(6, ctx.currentTime);
-		masterCompressor.attack.setValueAtTime(0.004, ctx.currentTime);
-		masterCompressor.release.setValueAtTime(0.18, ctx.currentTime);
-		masterGain.connect(masterCompressor);
-		masterCompressor.connect(ctx.destination);
-		return masterGain;
-	}
-
-	function beep(
-		ctx: AudioContext,
-		start: number,
-		freq: number,
-		duracion: number,
-		volumen = 0.16,
-		tipo: OscillatorType = 'sine',
-		detune = 0
-	): void {
-		const osc = ctx.createOscillator();
-		const gain = ctx.createGain();
-		osc.type = tipo;
-		osc.frequency.setValueAtTime(freq, start);
-		osc.detune.setValueAtTime(detune, start);
-		gain.gain.setValueAtTime(0.0001, start);
-		gain.gain.exponentialRampToValueAtTime(volumen, start + 0.012);
-		gain.gain.exponentialRampToValueAtTime(0.0001, start + duracion);
-		osc.connect(gain);
-		gain.connect(getMaster(ctx));
-		osc.start(start);
-		osc.stop(start + duracion + 0.03);
-	}
-
-	async function sonarSetHecho(): Promise<void> {
-		if (!sonidoActivo) return;
-		const ctx = getAudioContext();
-		if (!ctx) return;
-		if (ctx.state === 'suspended') await ctx.resume();
-		const now = ctx.currentTime;
-		beep(ctx, now, 523, 0.09, 0.14, 'triangle');
-		beep(ctx, now + 0.04, 784, 0.13, 0.2, 'triangle', 3);
-		beep(ctx, now + 0.1, 1047, 0.17, 0.18, 'sine', -4);
-		beep(ctx, now + 0.18, 1568, 0.22, 0.12, 'sine', 2);
-	}
-
-	async function sonarExito(esPr: boolean): Promise<void> {
-		if (!sonidoActivo) return;
-		const ctx = getAudioContext();
-		if (!ctx) return;
-		if (ctx.state === 'suspended') await ctx.resume();
-		const now = ctx.currentTime;
-		if (esPr) {
-			beep(ctx, now, 392, 0.14, 0.16, 'triangle');
-			beep(ctx, now + 0.08, 659, 0.17, 0.18, 'triangle', 4);
-			beep(ctx, now + 0.18, 988, 0.2, 0.2, 'sine', -3);
-			beep(ctx, now + 0.32, 1319, 0.26, 0.19, 'triangle');
-			beep(ctx, now + 0.5, 1760, 0.38, 0.14, 'sine', 5);
-			return;
-		}
-		beep(ctx, now, 440, 0.12, 0.14, 'triangle');
-		beep(ctx, now + 0.1, 659, 0.18, 0.17, 'sine');
-		beep(ctx, now + 0.23, 988, 0.2, 0.11, 'sine');
-	}
-
-	async function sonarDescansoTerminado(): Promise<void> {
-		if (!sonidoActivo) return;
-		const ctx = getAudioContext();
-		if (!ctx) return;
-		if (ctx.state === 'suspended') await ctx.resume();
-		const now = ctx.currentTime;
-		beep(ctx, now, 880, 0.16, 0.16, 'triangle');
-		beep(ctx, now + 0.18, 1175, 0.2, 0.17, 'sine');
-	}
-
 	function chartPoints(pts: MejorSet[]): ChartPoint[] {
 		const u = pts.slice(-10);
 		if (u.length === 0) return [];
-		const valores = u.map(valorPr);
+		const valores = u.map((p) => p.valor);
 		const min = Math.min(...valores);
 		const max = Math.max(...valores);
 		const range = max - min || 1;
@@ -422,7 +372,7 @@
 		const pad = 2;
 		return u.map((p, i) => {
 			const x = u.length === 1 ? W / 2 : pad + (i / (u.length - 1)) * (W - 2 * pad);
-			const valor = valorPr(p);
+			const valor = p.valor;
 			const y = u.length === 1 ? H / 2 : pad + (1 - (valor - min) / range) * (H - 2 * pad);
 			return {
 				x,
@@ -564,7 +514,7 @@
 												aria-label={`Bajar ${PASO_PESO} ${unidad} en serie ${i + 1}`}>−</button
 											>
 											<span class="min-w-0 text-center text-sm font-bold tabular-nums">
-												{s.peso ?? '—'}
+												{s.peso != null ? formatoNumero(s.peso) : '—'}
 											</span>
 											<button
 												onclick={() => ajustarPeso(i, PASO_PESO)}
@@ -622,7 +572,7 @@
 												aria-label={`Bajar ${PASO_PESO} ${unidad} encima en serie ${i + 1}`}>−</button
 											>
 											<span class="min-w-12 text-center text-xs font-bold tabular-nums" style="color: #ff9d3c">
-												{s.extraKg ? `+${s.extraKg} ${unidad}` : '—'}
+												{s.extraKg ? `+${formatoNumero(s.extraKg)} ${unidad}` : '—'}
 											</span>
 											<button
 												onclick={() => ajustarExtra(i, PASO_PESO)}
@@ -684,7 +634,7 @@
 						{/if}
 					</div>
 					<p class="mt-1 text-3xl font-extrabold">
-						🏆 {formatoNumero(valorPr(pr))}<span
+						🏆 {formatoNumero(pr.valor)}<span
 							class="text-lg font-semibold"
 							style="color: var(--muted)"> {unidad}</span
 						>
@@ -698,9 +648,7 @@
 						</p>
 					{/if}
 					<p class="mt-2.5 text-[10px] leading-relaxed border-t border-white/5 pt-2" style="color: var(--muted)">
-						{metrica === 'e1rm'
-							? '💡 El 1RM estimado (fórmula de Epley) calcula la fuerza máxima teórica basada en peso y repeticiones. Premia la intensidad por reps.'
-							: '💡 Tu récord de peso máximo es simplemente la serie más pesada realizada, sin importar las repeticiones.'}
+						💡 {DESCRIPCION_METRICA[metrica]}
 					</p>
 					{#if chart.length}
 						<svg
@@ -797,7 +745,7 @@
 				</p>
 				{#if exito === 'pr' && prExito}
 					<p class="mt-2 text-4xl font-extrabold tabular-nums">
-						{formatoNumero(valorPr(prExito))}<span
+						{formatoNumero(prExito.valor)}<span
 							class="text-xl font-semibold"
 							style="color: var(--muted)"> {unidad}</span
 						>
@@ -814,21 +762,29 @@
 		</div>
 	{/if}
 
-	{#if restoSeg > 0 && g}
+	{#if (restoSeg > 0 || avisoFinDescanso) && g}
 		<div
 			transition:fly={{ y: 80, duration: 220 }}
 			class="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-md items-center justify-between gap-3 border-t border-white/10 px-5 py-3"
 			style="background: color-mix(in oklab, var(--surface) 94%, transparent); backdrop-filter: blur(10px)"
 		>
-			<span class="text-sm font-semibold" style="color: var(--muted)">⏱️ Descanso</span>
-			<span class="text-3xl font-extrabold tabular-nums" style="color: rgb({g.glow})"
-				>{mmss(restoSeg)}</span
-			>
-			<button
-				onclick={saltarDescanso}
-				class="rounded-full px-4 py-1.5 text-sm font-semibold"
-				style="background: rgba(255,255,255,.12)">Saltar</button
-			>
+			{#if restoSeg > 0}
+				<span class="text-sm font-semibold" style="color: var(--muted)">⏱️ Descanso</span>
+				<span class="text-3xl font-extrabold tabular-nums" style="color: rgb({g.glow})"
+					>{mmss(restoSeg)}</span
+				>
+				<button
+					onclick={saltarDescanso}
+					class="rounded-full px-4 py-1.5 text-sm font-semibold"
+					style="background: rgba(255,255,255,.12)">Saltar</button
+				>
+			{:else}
+				<span
+					class="mx-auto py-1.5 text-xl font-extrabold"
+					style="color: rgb({g.glow})"
+					aria-live="polite">✓ Descanso terminado</span
+				>
+			{/if}
 		</div>
 	{/if}
 {/if}
