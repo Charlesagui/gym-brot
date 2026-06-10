@@ -25,10 +25,12 @@
 		reanudarEjercicio
 	} from '$lib/sesion';
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
+	import { resumenDiaSesion } from '$lib/historial';
 	import { sonarDiaTerminado } from '$lib/audio';
 	import { reproducirEnVista } from '$lib/video';
 	import { dur } from '$lib/motion';
 	import { fromLiveQuery } from '$lib/live';
+	import { formatoNumero } from '$lib/formato';
 
 	let dia = $state<Dia | undefined>(undefined);
 	let cargando = $state(true);
@@ -103,6 +105,7 @@
 	const diaListo = $derived(totalEjercicios > 0 && ejerciciosResueltos === totalEjercicios);
 	const diaTerminado = $derived(!!sesion?.diaTerminado);
 	const sonidoActivo = $derived(ajustes.sonido);
+	const resumenDia = $derived(resumenDiaSesion(sesion));
 
 	function abrirEdicion() {
 		nombreEdit = dia?.nombre ?? '';
@@ -485,6 +488,35 @@
 			<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
 				{ejerciciosCompletos}/{totalEjercicios} ejercicios completos
 			</p>
+			<div class="mt-4 grid grid-cols-2 gap-2 text-left">
+				<div class="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+					<p class="text-lg font-extrabold tabular-nums">
+						{formatoNumero(resumenDia.volumen)} <span class="text-sm" style="color: var(--muted)">{ajustes.unidad}</span>
+					</p>
+					<p class="text-[11px] font-semibold" style="color: var(--muted)">volumen total</p>
+				</div>
+				<div class="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+					<p class="text-lg font-extrabold tabular-nums">{resumenDia.prs.length}</p>
+					<p class="text-[11px] font-semibold" style="color: var(--muted)">PRs del día</p>
+				</div>
+			</div>
+			{#if resumenDia.prs.length > 0}
+				<div class="mt-3 space-y-1.5 text-left">
+					{#each resumenDia.prs.slice(0, 3) as pr (pr.exerciseId)}
+						<p
+							class="truncate rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-bold"
+							style="color: rgb(var(--max))"
+						>
+							🏆 {pr.nombre}
+						</p>
+					{/each}
+					{#if resumenDia.prs.length > 3}
+						<p class="text-center text-xs font-semibold" style="color: var(--muted)">
+							+{resumenDia.prs.length - 3} PR{resumenDia.prs.length - 3 === 1 ? '' : 's'} más
+						</p>
+					{/if}
+				</div>
+			{/if}
 		</div>
 	</div>
 {/if}

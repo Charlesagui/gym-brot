@@ -10,6 +10,7 @@
 	import { fromLiveQuery } from '$lib/live';
 
 	const diaId = $derived($page.params.id!);
+	const cierrePorArrastrePx = 76;
 
 	const diaActual = $derived(fromLiveQuery(liveQuery(() => db.dias.get(diaId)), undefined));
 	const yaEn = $derived(new Set($diaActual?.ejercicios.map((e) => e.exerciseId) ?? []));
@@ -41,9 +42,56 @@
 	}
 
 	let preview = $state<Ejercicio | null>(null);
+	let inicioY = 0;
+	let pointerActivo: number | null = null;
+	let arrastrando = $state(false);
+	let arrastreY = $state(0);
 
 	function cerrarPreview() {
 		preview = null;
+		arrastrando = false;
+		pointerActivo = null;
+		arrastreY = 0;
+	}
+
+	function iniciarArrastre(e: PointerEvent) {
+		if (e.pointerType === 'mouse' && e.button !== 0) return;
+		pointerActivo = e.pointerId;
+		inicioY = e.clientY;
+		arrastreY = 0;
+		arrastrando = true;
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+		if (e.cancelable) e.preventDefault();
+	}
+
+	function moverArrastre(e: PointerEvent) {
+		if (!arrastrando || pointerActivo !== e.pointerId) return;
+		arrastreY = e.clientY - inicioY;
+		if (e.cancelable) e.preventDefault();
+	}
+
+	function terminarArrastre(e: PointerEvent) {
+		if (!arrastrando || pointerActivo !== e.pointerId) return;
+		const debeCerrar = Math.abs(arrastreY) >= cierrePorArrastrePx;
+		arrastrando = false;
+		pointerActivo = null;
+		try {
+			(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+		} catch {
+			// El navegador puede liberar la captura antes si cambia el foco.
+		}
+		if (debeCerrar) {
+			cerrarPreview();
+		} else {
+			arrastreY = 0;
+		}
+	}
+
+	function cancelarArrastre(e: PointerEvent) {
+		if (pointerActivo !== e.pointerId) return;
+		arrastrando = false;
+		pointerActivo = null;
+		arrastreY = 0;
 	}
 </script>
 
@@ -136,7 +184,8 @@
 	{@const g = grupos[p.grupo]}
 	{@const added = yaEn.has(p.id)}
 	<div
-		class="fixed inset-0 z-[60] flex flex-col justify-end"
+		class="fixed inset-0 z-[60] flex items-center justify-center px-4"
+		style="padding-top: calc(1.5rem + env(safe-area-inset-top)); padding-bottom: calc(1.5rem + env(safe-area-inset-bottom))"
 		role="dialog"
 		aria-modal="true"
 		aria-label={`Vista previa de ${p.nombre}`}
@@ -145,40 +194,66 @@
 			class="absolute inset-0"
 			style="background: rgb(var(--scrim) / .82); backdrop-filter: blur(6px)"
 			aria-label="Cerrar vista previa"
+			tabindex="-1"
 			onclick={cerrarPreview}
 		></button>
 		<div
 			in:fly={{ y: 40, duration: dur(240) }}
-			class="relative rounded-t-3xl border-t border-white/10 px-5 pb-8 pt-3"
-			style="background: radial-gradient(140% 100% at 50% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface)"
+			class="relative mx-auto w-full max-w-sm"
 		>
-			<div class="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20"></div>
-			<video
-				src={p.demoVideo}
-				class="mx-auto aspect-square w-full max-w-xs rounded-2xl bg-white object-contain"
-				aria-label={p.nombre}
-				autoplay
-				loop
-				muted
-				playsinline
-				preload="auto"
-			></video>
-			<p class="mt-3 text-center text-lg font-bold leading-tight">{p.nombre}</p>
-			<p class="mt-1 text-center text-sm font-medium" style="color: rgb({g.glow})">
-				{g.emoji} {g.label} · {p.musculo}
-			</p>
-			<button
-				onclick={() => {
-					toggle(p.id);
-					cerrarPreview();
-				}}
-				class="mt-5 w-full rounded-2xl py-3.5 text-base font-bold transition"
-				style={added
-					? 'background: rgba(255,255,255,.08); color: var(--muted)'
-					: `background: rgb(${g.glow}); color: #000`}
+			<div
+				class="relative w-full overflow-y-auto overscroll-contain rounded-3xl border border-white/10 px-5 pt-3 shadow-2xl"
+				style="background: radial-gradient(140% 100% at 50% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface); max-height: calc(100dvh - 3rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); transform: translate3d(0, {arrastreY}px, 0); transition: {arrastrando ? 'none' : 'transform 160ms ease-out'}"
 			>
-				{added ? '✓ Quitar del día' : '+ Agregar al día'}
-			</button>
+				<div
+					class="-mx-2 mb-2 flex h-8 touch-none select-none items-center justify-center"
+					aria-hidden="true"
+					onpointerdown={iniciarArrastre}
+					onpointermove={moverArrastre}
+					onpointerup={terminarArrastre}
+					onpointercancel={cancelarArrastre}
+				>
+					<div class="h-1 w-10 rounded-full bg-white/25"></div>
+				</div>
+				<div class="mb-3 flex items-start justify-between gap-3">
+					<div class="min-w-0 flex-1">
+						<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+							Vista previa
+						</p>
+						<p class="truncate text-lg font-bold leading-tight">{p.nombre}</p>
+					</div>
+					<button
+						onclick={cerrarPreview}
+						class="grid size-10 shrink-0 place-items-center rounded-full border border-white/10 text-xl font-bold"
+						aria-label="Cerrar vista previa">×</button
+					>
+				</div>
+				<video
+					src={p.demoVideo}
+					class="mx-auto aspect-square w-full max-w-xs rounded-2xl bg-white object-contain"
+					aria-label={p.nombre}
+					autoplay
+					loop
+					muted
+					playsinline
+					preload="auto"
+				></video>
+				<p class="mt-3 text-center text-sm font-medium" style="color: rgb({g.glow})">
+					{g.emoji} {g.label} · {p.musculo}
+				</p>
+				<button
+					onclick={() => {
+						toggle(p.id);
+						cerrarPreview();
+					}}
+					class="mt-5 w-full rounded-2xl py-3.5 text-base font-bold transition"
+					style={added
+						? 'background: rgba(255,255,255,.08); color: var(--muted)'
+						: `background: rgb(${g.glow}); color: #000`}
+				>
+					{added ? '✓ Quitar del día' : '+ Agregar al día'}
+				</button>
+			</div>
 		</div>
 	</div>
 {/if}

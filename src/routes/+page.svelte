@@ -1,16 +1,51 @@
 <script lang="ts">
 	import { liveQuery } from 'dexie';
 	import { fly } from 'svelte/transition';
+	import { flip } from 'svelte/animate';
+	import { dndzone, type DndEvent } from 'svelte-dnd-action';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { db, type Dia, type Sesion } from '$lib/db';
-	import { crearDia } from '$lib/dias';
+	import { crearDia, reordenarDias } from '$lib/dias';
 	import { hoyStr } from '$lib/sesion';
 	import { dur } from '$lib/motion';
+	import { mantener } from '$lib/mantener';
 
 	const dias = liveQuery(() => db.dias.orderBy('orden').toArray());
 	// Sesiones de hoy, para reflejar el progreso del día en la portada.
 	const sesionesHoy = liveQuery(() => db.sesiones.where('fecha').equals(hoyStr()).toArray());
+
+	// Modo reordenar días: se entra con long-press; las cards se arrastran (svelte-dnd-action).
+	interface ItemDia {
+		id: string;
+		nombre: string;
+		color: string;
+		sub: string;
+	}
+	let reordenando = $state(false);
+	let ordenItems = $state<ItemDia[]>([]);
+	const flipMs = dur(180);
+
+	function entrarReordenar() {
+		const lista = $dias;
+		if (!lista || lista.length < 2) return; // con un solo día no hay nada que ordenar
+		ordenItems = lista.map((d) => ({
+			id: d.id,
+			nombre: d.nombre,
+			color: d.color ?? '124 92 255',
+			sub: `${agendaDia(d)} · ${d.ejercicios.length} ejercicios`
+		}));
+		reordenando = true;
+	}
+
+	function alConsiderar(e: CustomEvent<DndEvent<ItemDia>>) {
+		ordenItems = e.detail.items;
+	}
+
+	function alSoltar(e: CustomEvent<DndEvent<ItemDia>>) {
+		ordenItems = e.detail.items;
+		void reordenarDias(ordenItems.map((it) => it.id));
+	}
 
 	interface ProgresoDia {
 		completos: number;
@@ -46,6 +81,11 @@
 	}
 	const hoy = new Date().getDay();
 	const nombresDia = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+	const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+	function agendaDia(dia: Dia): string {
+		return dia.diaSemana == null ? 'Sin día asignado' : diasSemana[dia.diaSemana]!;
+	}
 
 	let mostrarWelcome = $state(false);
 	onMount(() => {
@@ -86,7 +126,38 @@
 	{/if}
 
 	{#if $dias}
-		{@const hoyDia = $dias.find((d) => d.diaSemana === hoy)}
+		{#if reordenando}
+			<p class="mb-3 text-center text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+				Arrastrá para ordenar
+			</p>
+			<section
+				use:dndzone={{ items: ordenItems, flipDurationMs: flipMs, dropTargetStyle: {} }}
+				onconsider={alConsiderar}
+				onfinalize={alSoltar}
+				class="space-y-3"
+			>
+				{#each ordenItems as it (it.id)}
+					<div
+						animate:flip={{ duration: flipMs }}
+						class="flex touch-none items-center gap-3 rounded-2xl border border-white/10 p-4"
+						style="background: linear-gradient(90deg, rgb({it.color} / 0.12), transparent 55%), var(--surface)"
+					>
+						<span class="shrink-0 text-lg leading-none" style="color: var(--muted)" aria-hidden="true">⠿</span>
+						<span class="h-11 w-1.5 shrink-0 rounded-full" style="background: rgb({it.color})"></span>
+						<div class="min-w-0 flex-1">
+							<p class="truncate font-semibold leading-tight">{it.nombre}</p>
+							<p class="truncate text-xs" style="color: var(--muted)">{it.sub}</p>
+						</div>
+					</div>
+				{/each}
+			</section>
+			<button
+				onclick={() => (reordenando = false)}
+				class="mt-5 w-full rounded-2xl py-3 text-sm font-bold"
+				style="background: var(--accent); color: white">✓ Listo</button
+			>
+		{:else}
+			{@const hoyDia = $dias.find((d) => d.diaSemana === hoy)}
 		{#if hoyDia}
 			{@const prog = progresoDia(hoyDia, $sesionesHoy)}
 			<a
@@ -112,7 +183,7 @@
 					</p>
 				{:else}
 					<p class="mt-0.5 text-xs" style="color: var(--muted)">
-						{hoyDia.ejercicios.length} ejercicios →
+						{agendaDia(hoyDia)} · {hoyDia.ejercicios.length} ejercicios →
 					</p>
 				{/if}
 			</a>
@@ -137,6 +208,7 @@
 				{@const prog = progresoDia(d, $sesionesHoy)}
 				<a
 					href={`/dia/${d.id}`}
+					use:mantener={entrarReordenar}
 					in:fly={{ y: 12, duration: dur(250), delay: dur(i * 45) }}
 					class="flex items-center gap-3 rounded-2xl border border-white/10 p-4"
 					style="background: linear-gradient(90deg, rgb({d.color} / 0.12), transparent 55%), var(--surface)"
@@ -144,7 +216,9 @@
 					<span class="h-11 w-1.5 rounded-full" style="background: rgb({d.color})"></span>
 					<div class="flex-1">
 						<p class="font-semibold leading-tight">{d.nombre}</p>
-						<p class="text-xs" style="color: var(--muted)">{d.ejercicios.length} ejercicios</p>
+						<p class="text-xs" style="color: var(--muted)">
+							{agendaDia(d)} · {d.ejercicios.length} ejercicios
+						</p>
 					</div>
 					{#if prog?.terminado}
 						<span
@@ -169,6 +243,7 @@
 		>
 			+ Nuevo día
 		</button>
+		{/if}
 	{:else}
 		<p class="text-center text-sm" style="color: var(--muted)">Cargando…</p>
 	{/if}
