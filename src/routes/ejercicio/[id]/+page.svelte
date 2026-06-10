@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import { db, type SetSesion, type PrCelebrado } from '$lib/db';
 	import { ejercicioPorId, grupos } from '$lib/catalog';
@@ -60,6 +60,7 @@
 	// miniatura en el header tocándolo, pero al cambiar de ejercicio vuelve a grande.
 	let videoGrande = $state(true);
 	let tecnicaAbierta = $state(false);
+	let tecnicaHistoryActiva = false;
 
 	$effect(() => {
 		$page.params.id; // dep: reinicia "grande" al cambiar de ejercicio
@@ -148,6 +149,17 @@
 		};
 	});
 
+	onMount(() => {
+		function cerrarTecnicaConBack() {
+			if (!tecnicaAbierta || !tecnicaHistoryActiva) return;
+			tecnicaHistoryActiva = false;
+			tecnicaAbierta = false;
+		}
+
+		window.addEventListener('popstate', cerrarTecnicaConBack);
+		return () => window.removeEventListener('popstate', cerrarTecnicaConBack);
+	});
+
 	onDestroy(() => {
 		if (exitoId) clearTimeout(exitoId);
 		if (prFlashId) clearTimeout(prFlashId);
@@ -223,12 +235,24 @@
 	}
 
 	function abrirTecnica() {
-		if (tecnicaEmbedUrl) tecnicaAbierta = true;
-		else if (ej?.videoUrl) window.open(ej.videoUrl, '_blank', 'noreferrer');
+		if (tecnicaEmbedUrl) {
+			tecnicaAbierta = true;
+			if (!tecnicaHistoryActiva) {
+				const estadoActual =
+					history.state && typeof history.state === 'object' ? history.state : {};
+				history.pushState({ ...estadoActual, gbTecnica: true }, '', window.location.href);
+				tecnicaHistoryActiva = true;
+			}
+		} else if (ej?.videoUrl) window.open(ej.videoUrl, '_blank', 'noreferrer');
 	}
 
 	function cerrarTecnica() {
+		if (!tecnicaAbierta) return;
 		tecnicaAbierta = false;
+		if (tecnicaHistoryActiva) {
+			tecnicaHistoryActiva = false;
+			history.back();
+		}
 	}
 
 	/** Redondea a 1 decimal para evitar arrastre de flotantes con pasos de 2.5. */
