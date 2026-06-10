@@ -102,13 +102,13 @@
 
 	function moverArrastre(e: PointerEvent) {
 		if (!arrastrando || pointerActivo !== e.pointerId) return;
-		arrastreY = Math.max(0, e.clientY - inicioY);
+		arrastreY = e.clientY - inicioY;
 		if (e.cancelable) e.preventDefault();
 	}
 
 	function terminarArrastre(e: PointerEvent) {
 		if (!arrastrando || pointerActivo !== e.pointerId) return;
-		const debeCerrar = arrastreY >= cierrePorArrastrePx;
+		const debeCerrar = Math.abs(arrastreY) >= cierrePorArrastrePx;
 		arrastrando = false;
 		pointerActivo = null;
 		try {
