@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { onDestroy } from 'svelte';
 	import { fly } from 'svelte/transition';
-	import { db, type SetSesion, type Ajustes, type PrCelebrado } from '$lib/db';
+	import { db, type SetSesion, type PrCelebrado } from '$lib/db';
 	import { ejercicioPorId, grupos } from '$lib/catalog';
 	import {
 		sesionHoyObs,
@@ -28,8 +28,13 @@
 	import { notaObs, setNota, ajustesObs, setTimer, AJUSTES_DEFAULT } from '$lib/extras';
 	import { sonarSetHecho, sonarExito } from '$lib/audio';
 	import { descanso } from '$lib/descanso.svelte';
-	import { pulsar } from '$lib/pulsar';
 	import { dur } from '$lib/motion';
+	import { fromLiveQuery } from '$lib/live';
+	import { formatoNumero, formatoSet, fechaCorta } from '$lib/formato';
+	import SetRow from '$lib/components/SetRow.svelte';
+	import MiniChart from '$lib/components/MiniChart.svelte';
+	import CelebracionOverlay from '$lib/components/CelebracionOverlay.svelte';
+	import TecnicaModal from '$lib/components/TecnicaModal.svelte';
 
 	const ej = $derived(ejercicioPorId($page.params.id!));
 	const g = $derived(ej ? grupos[ej.grupo] : undefined);
@@ -39,13 +44,11 @@
 	let sets = $state<SetSesion[]>([]);
 	let anteriores = $state<SetSesion[]>([]);
 	let anterioresFecha = $state<string | null>(null);
-	let puntos = $state<MejorSet[]>([]);
 	let prCelebrado = $state<PrCelebrado | null>(null);
 	// Fecha fija de la sesión activa: evita perder toques si cruzás la medianoche entrenando.
 	let fechaSesion = $state(hoyStr());
 	let notaTexto = $state('');
 	let tieneNota = $state(false);
-	let ajustes = $state<Ajustes>(AJUSTES_DEFAULT);
 	let cargandoSeries = $state(false);
 	let exito = $state<'normal' | 'pr' | 'parcial' | null>(null);
 	let prExito = $state<MejorSet | null>(null);
@@ -85,25 +88,18 @@
 	// El descanso ahora es un store global (sobrevive navegar entre pantallas).
 	let exitoId: ReturnType<typeof setTimeout> | null = null;
 
+	// Ajustes, historial (PR) y nota como stores legibles con `$` (ver $lib/live).
+	const ajustesStore = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
+	const ajustes = $derived($ajustesStore);
+	// El historial se recalcula al cambiar de ejercicio o de métrica; el `$` re-suscribe solo.
+	const historial = $derived(
+		fromLiveQuery(historialObs($page.params.id!, ajustes.metricaPr), [] as MejorSet[])
+	);
+	const puntos = $derived($historial);
+	const notaStore = $derived(fromLiveQuery(notaObs($page.params.id!), undefined));
 	$effect(() => {
-		const exId = $page.params.id!;
-		const m = ajustes.metricaPr; // recalcula el historial al cambiar de métrica
-		const sub = historialObs(exId, m).subscribe((p) => (puntos = p ?? []));
-		return () => sub.unsubscribe();
-	});
-
-	$effect(() => {
-		const exId = $page.params.id!;
-		const sub = notaObs(exId).subscribe((n) => {
-			notaTexto = n?.texto ?? '';
-			tieneNota = !!n?.texto;
-		});
-		return () => sub.unsubscribe();
-	});
-
-	$effect(() => {
-		const sub = ajustesObs().subscribe((a) => (ajustes = a));
-		return () => sub.unsubscribe();
+		notaTexto = $notaStore?.texto ?? '';
+		tieneNota = !!$notaStore?.texto;
 	});
 
 	$effect(() => {
@@ -171,14 +167,8 @@
 
 	const pr = $derived(puntos.reduce<MejorSet | null>((best, p) => mejorSet(best, p), null));
 	const valorOtraPr = $derived(
-		pr && pesoEfectivo(pr) != null
-			? valorMetrica(pesoEfectivo(pr)!, pr.reps, otraMetrica)
-			: null
+		pr && pesoEfectivo(pr) != null ? valorMetrica(pesoEfectivo(pr)!, pr.reps, otraMetrica) : null
 	);
-	const chart = $derived(chartPoints(puntos));
-	const ultimoChart = $derived(chart[chart.length - 1]);
-	const chartMax = $derived(chart.length ? Math.max(...chart.map((p) => p.valor)) : null);
-	const chartMin = $derived(chart.length ? Math.min(...chart.map((p) => p.valor)) : null);
 	const mejorHoy = $derived(mejorSetLocal(sets, true));
 	const mejorPrevio = $derived(
 		puntos
@@ -198,13 +188,6 @@
 	);
 	const pasoPeso = $derived(ajustes.pasoPeso ?? AJUSTES_DEFAULT.pasoPeso);
 
-	interface ChartPoint {
-		x: number;
-		y: number;
-		valor: number;
-		label: string;
-	}
-
 	function mejorSetLocal(localSets: SetSesion[], soloHechas: boolean): MejorSet | null {
 		return localSets.reduce<MejorSet | null>((best, s) => {
 			if (soloHechas && !s.hecha) return best;
@@ -219,29 +202,6 @@
 				valor: valorMetrica(ef, s.reps, metrica)
 			});
 		}, null);
-	}
-
-	function formatoNumero(n: number): string {
-		return Number.isInteger(n) ? String(n) : n.toFixed(1);
-	}
-
-	function formatoSet(set: MejorSet): string {
-		const extra = set.esMax && set.extraKg ? ` +${formatoNumero(set.extraKg)}` : '';
-		return `${formatoNumero(set.peso)}${extra} ${unidad}${set.reps ? ` × ${set.reps}` : ''}${set.esMax ? ' · MAX' : ''}`;
-	}
-
-	/** Resumen de una serie de la última vez, para la columna "Anterior". */
-	function formatoAnterior(set: SetSesion | undefined): string | null {
-		if (!set || (set.peso == null && set.reps == null)) return null;
-		const peso = set.peso != null ? `${formatoNumero(set.peso)} ${unidad}` : '—';
-		const reps = set.reps != null ? ` × ${set.reps}` : '';
-		return `${peso}${reps}`;
-	}
-
-	function fechaCorta(f: string | null): string {
-		if (!f) return '';
-		const d = new Date(`${f}T00:00:00`);
-		return d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
 	}
 
 	function youtubeEmbedUrl(url: string): string | null {
@@ -427,36 +387,7 @@
 		// Si hay un descanso en curso, ajusta su fin en vez de reiniciarlo desde cero.
 		descanso.ajustarFin(minutos);
 	}
-
-	function chartPoints(pts: MejorSet[]): ChartPoint[] {
-		const u = pts.slice(-10);
-		if (u.length === 0) return [];
-		const valores = u.map((p) => p.valor);
-		const min = Math.min(...valores);
-		const max = Math.max(...valores);
-		const range = max - min || 1;
-		const W = 100;
-		const H = 28;
-		const pad = 2;
-		return u.map((p, i) => {
-			const x = u.length === 1 ? W / 2 : pad + (i / (u.length - 1)) * (W - 2 * pad);
-			const valor = p.valor;
-			const y = u.length === 1 ? H / 2 : pad + (1 - (valor - min) / range) * (H - 2 * pad);
-			return {
-				x,
-				y,
-				valor,
-				label: formatoNumero(valor)
-			};
-		});
-	}
-
-	function chartLine(points: ChartPoint[]): string {
-		return points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-	}
 </script>
-
-<svelte:window onkeydown={(e) => e.key === 'Escape' && cerrarTecnica()} />
 
 {#if !ej || !g}
 	<main class="glow-bg grid min-h-dvh place-items-center">
@@ -593,138 +524,34 @@
 				{:else}
 					<div class="mt-3 space-y-2">
 						{#each sets as s, i (i)}
-							{@const ant = formatoAnterior(anteriores[i])}
-							<div class="rounded-xl bg-white/[0.025] p-2.5">
-								<div class="flex items-center gap-2">
-									<span
-										class="grid size-8 shrink-0 place-items-center rounded-full border border-white/10 text-sm font-bold"
-										style="color: var(--muted)">{i + 1}</span
-									>
-									{#if ej.maquinaPlacas}
-										<button
-											onclick={() => toggleMax(diaId, $page.params.id!, i, fechaSesion)}
-											class="flex h-8 shrink-0 touch-manipulation items-center rounded-full border px-2.5 text-[11px] font-bold"
-											style={s.esMax
-												? 'background: rgba(255,157,60,.22); color: #ff9d3c; border-color: rgba(255,157,60,.5)'
-												: 'color: var(--muted); border-color: rgba(255,255,255,.16); border-style: dashed'}
-											aria-pressed={s.esMax}
-											aria-label={`Serie ${i + 1}: tope de la pila de placas`}>🔥 MAX</button
-										>
-									{/if}
-									<p class="min-w-0 flex-1 truncate text-[11px] font-medium" style="color: var(--muted)">
-										{ant ? `Ant: ${ant}` : ''}
-									</p>
-									<button
-										onclick={() => onToggle(i)}
-										class="grid size-11 shrink-0 touch-manipulation place-items-center rounded-full border-2 text-base font-bold transition-colors"
-										style={s.hecha
-											? 'background: var(--accent); border-color: var(--accent); color: white'
-											: 'border-color: rgba(255,255,255,.22); color: transparent'}
-										aria-label={`Marcar serie ${i + 1}`}>✓</button
-									>
-								</div>
-								<div class="mt-2 grid grid-cols-2 gap-2">
-									<div class="min-w-0">
-										<p class="mb-1 text-[11px] font-bold uppercase tracking-wider" style="color: var(--muted)">
-											Peso ({unidad})
-										</p>
-										<div class="flex items-center rounded-lg bg-white/5 p-1">
-											<button
-												use:pulsar={() => ajustarPeso(i, -pasoPeso)}
-												class="grid size-10 shrink-0 touch-manipulation select-none place-items-center rounded-md text-lg font-bold"
-												style="background: rgba(255,255,255,.06); color: var(--muted)"
-												aria-label={`Bajar ${pasoPeso} ${unidad} en serie ${i + 1}`}>−</button
-											>
-											<input
-												type="text"
-												inputmode="decimal"
-												value={s.peso != null ? formatoNumero(s.peso) : ''}
-												placeholder="—"
-												onfocus={(e) => e.currentTarget.select()}
-												onchange={(e) => escribirPeso(i, e.currentTarget)}
-												onkeydown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-												class="w-full min-w-0 bg-transparent text-center text-base font-bold tabular-nums outline-none"
-												aria-label={`Peso de la serie ${i + 1} en ${unidad}`}
-											/>
-											<button
-												use:pulsar={() => ajustarPeso(i, pasoPeso)}
-												class="grid size-10 shrink-0 touch-manipulation select-none place-items-center rounded-md text-lg font-bold"
-												style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
-												aria-label={`Subir ${pasoPeso} ${unidad} en serie ${i + 1}`}>+</button
-											>
-										</div>
-									</div>
-									<div class="min-w-0">
-										<p class="mb-1 text-[11px] font-bold uppercase tracking-wider" style="color: var(--muted)">
-											Reps
-										</p>
-										<div class="flex items-center rounded-lg bg-white/5 p-1">
-											<button
-												use:pulsar={() => ajustarReps(i, -1)}
-												class="grid size-10 shrink-0 touch-manipulation select-none place-items-center rounded-md text-lg font-bold"
-												style="background: rgba(255,255,255,.06); color: var(--muted)"
-												aria-label={`Bajar reps en serie ${i + 1}`}>−</button
-											>
-											<input
-												type="text"
-												inputmode="numeric"
-												value={s.reps != null ? String(s.reps) : ''}
-												placeholder="—"
-												onfocus={(e) => e.currentTarget.select()}
-												onchange={(e) => escribirReps(i, e.currentTarget)}
-												onkeydown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-												class="w-full min-w-0 bg-transparent text-center text-base font-bold tabular-nums outline-none"
-												aria-label={`Reps de la serie ${i + 1}`}
-											/>
-											<button
-												use:pulsar={() => ajustarReps(i, 1)}
-												class="grid size-10 shrink-0 touch-manipulation select-none place-items-center rounded-md text-lg font-bold"
-												style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
-												aria-label={`Subir reps en serie ${i + 1}`}>+</button
-											>
-										</div>
-									</div>
-								</div>
-								{#if s.esMax}
-									<div
-										class="mt-2 flex items-center justify-between gap-2 rounded-lg px-2 py-1"
-										style="background: rgba(255,157,60,.1)"
-									>
-										<span class="text-[11px] font-bold uppercase tracking-wider" style="color: #ff9d3c">
-											🔥 Encima de la pila
-										</span>
-										<div class="flex items-center gap-1.5">
-											<button
-												use:pulsar={() => ajustarExtra(i, -pasoPeso)}
-												class="grid size-8 touch-manipulation select-none place-items-center rounded-md text-sm font-bold"
-												style="background: rgba(255,255,255,.06); color: var(--muted)"
-												aria-label={`Bajar ${pasoPeso} ${unidad} encima en serie ${i + 1}`}>−</button
-											>
-											<span class="min-w-12 text-center text-xs font-bold tabular-nums" style="color: #ff9d3c">
-												{s.extraKg ? `+${formatoNumero(s.extraKg)} ${unidad}` : '—'}
-											</span>
-											<button
-												use:pulsar={() => ajustarExtra(i, pasoPeso)}
-												class="grid size-8 touch-manipulation select-none place-items-center rounded-md text-sm font-bold"
-												style="background: rgba(255,157,60,.18); color: #ff9d3c"
-												aria-label={`Subir ${pasoPeso} ${unidad} encima en serie ${i + 1}`}>+</button
-											>
-										</div>
-									</div>
-								{/if}
-							</div>
+							<SetRow
+								set={s}
+								index={i}
+								anterior={anteriores[i]}
+								maquinaPlacas={!!ej.maquinaPlacas}
+								glow={g.glow}
+								{unidad}
+								{pasoPeso}
+								onToggle={() => onToggle(i)}
+								onToggleMax={() => toggleMax(diaId, $page.params.id!, i, fechaSesion)}
+								onAjustarPeso={(d) => ajustarPeso(i, d)}
+								onEscribirPeso={(el) => escribirPeso(i, el)}
+								onAjustarReps={(d) => ajustarReps(i, d)}
+								onEscribirReps={(el) => escribirReps(i, el)}
+								onAjustarExtra={(d) => ajustarExtra(i, d)}
+							/>
 						{/each}
 					</div>
 					{#if mostrarHintMax}
-						<div class="mt-2 flex items-start gap-2 rounded-xl p-2.5" style="background: rgba(255,157,60,.08)">
+						<div class="mt-2 flex items-start gap-2 rounded-xl p-2.5" style="background: rgb(var(--max) / .08)">
 							<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
-								💡 ¿Llegaste al tope de la pila de placas? Marcá <b style="color: #ff9d3c">MAX</b> en esa
+								💡 ¿Llegaste al tope de la pila de placas? Marcá <b style="color: rgb(var(--max))">MAX</b> en esa
 								serie y anotá los kg extra que pongas encima.
 							</p>
 							<button
 								onclick={entendidoHintMax}
 								class="shrink-0 text-xs font-bold"
-								style="color: #ff9d3c">Entendido</button
+								style="color: rgb(var(--max))">Entendido</button
 							>
 						</div>
 					{/if}
@@ -752,10 +579,7 @@
 			</section>
 
 			{#if pr}
-				<section
-					class="mt-3 rounded-2xl border border-white/10 p-4"
-					style="background: var(--surface)"
-				>
+				<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
 					<div class="flex items-center justify-between">
 						<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
 							PR {metricaLabel}
@@ -774,7 +598,7 @@
 						>
 					</p>
 					<p class="mt-0.5 text-xs font-medium" style="color: var(--muted)">
-						Mejor set: {formatoSet(pr)}
+						Mejor set: {formatoSet(pr, unidad)}
 					</p>
 					{#if valorOtraPr != null}
 						<p class="mt-0.5 text-[11px] font-medium" style="color: var(--muted)">
@@ -784,78 +608,7 @@
 					<p class="mt-2.5 text-[11px] leading-relaxed border-t border-white/5 pt-2" style="color: var(--muted)">
 						💡 {DESCRIPCION_METRICA[metrica]}
 					</p>
-					{#if chart.length}
-						<div class="mt-3 flex items-stretch gap-2">
-							<!-- Referencia min/max: una línea casi plana puede ser igual progreso real -->
-							<div
-								class="flex shrink-0 flex-col {chartMin === chartMax
-									? 'justify-center'
-									: 'justify-between'} text-right text-[10px] font-medium tabular-nums"
-								style="color: var(--muted)"
-							>
-								<span>{chartMax != null ? formatoNumero(chartMax) : ''}</span>
-								{#if chartMin != null && chartMin !== chartMax}
-									<span>{formatoNumero(chartMin)}</span>
-								{/if}
-							</div>
-							<svg
-								viewBox="0 0 100 28"
-								class="min-w-0 flex-1"
-								preserveAspectRatio="none"
-								style="height: 46px"
-							>
-								{#if chartMin !== chartMax}
-									<line
-										x1="0"
-										x2="100"
-										y1="2"
-										y2="2"
-										stroke="rgba(255,255,255,.09)"
-										stroke-width="1"
-										stroke-dasharray="3 3"
-										vector-effect="non-scaling-stroke"
-									/>
-									<line
-										x1="0"
-										x2="100"
-										y1="26"
-										y2="26"
-										stroke="rgba(255,255,255,.09)"
-										stroke-width="1"
-										stroke-dasharray="3 3"
-										vector-effect="non-scaling-stroke"
-									/>
-								{/if}
-								<polyline
-									points={chartLine(chart)}
-									fill="none"
-									stroke="rgb({g.glow})"
-									stroke-width="2"
-									vector-effect="non-scaling-stroke"
-									stroke-linejoin="round"
-									stroke-linecap="round"
-								/>
-								{#each chart as p, i (`${p.x}-${p.y}`)}
-									<circle
-										cx={p.x}
-										cy={p.y}
-										r={i === chart.length - 1 ? 2.4 : 1.7}
-										fill={i === chart.length - 1 ? `rgb(${g.glow})` : 'var(--surface)'}
-										stroke="rgb({g.glow})"
-										stroke-width="1.4"
-										vector-effect="non-scaling-stroke"
-									/>
-								{/each}
-							</svg>
-						</div>
-						<div class="mt-1 flex items-center justify-between gap-2 text-[11px]" style="color: var(--muted)">
-							<span
-								>📈 {metricaLabel} · últimas {Math.min(puntos.length, 10)}
-								{Math.min(puntos.length, 10) === 1 ? 'sesión' : 'sesiones'}</span
-							>
-							<span>Último {ultimoChart.label} {unidad}</span>
-						</div>
-					{/if}
+					<MiniChart {puntos} glow={g.glow} {metricaLabel} {unidad} />
 				</section>
 			{:else if !cargandoSeries}
 				<section
@@ -888,7 +641,7 @@
 				<div
 					transition:fly={{ y: 40, duration: dur(200) }}
 					class="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md px-5 pt-6"
-					style="padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgba(8,8,12,.92) 55%)"
+					style="padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgb(var(--scrim) / .92) 55%)"
 				>
 					<button
 						onclick={terminarEjercicio}
@@ -911,110 +664,25 @@
 	</main>
 
 	{#if tecnicaAbierta && tecnicaEmbedUrl}
-		<div
-			class="fixed inset-0 z-[70] flex flex-col justify-end sm:justify-center sm:px-5"
-			role="dialog"
-			aria-modal="true"
-			aria-label={`Técnica de ${ej.nombre}`}
-		>
-			<button
-				class="absolute inset-0"
-				style="background: rgba(8,8,12,.86); backdrop-filter: blur(8px)"
-				aria-label="Cerrar técnica"
-				onclick={cerrarTecnica}
-			></button>
-			<div
-				in:fly={{ y: 40, duration: dur(240) }}
-				class="relative mx-auto w-full max-w-2xl rounded-t-3xl border-t border-white/10 px-5 pb-8 pt-3 sm:rounded-3xl sm:border"
-				style="background: radial-gradient(140% 100% at 50% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface)"
-			>
-				<div class="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20"></div>
-				<div class="mb-3 flex items-center justify-between gap-3">
-					<div class="min-w-0">
-						<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
-							Técnica
-						</p>
-						<p class="truncate text-lg font-bold leading-tight">{ej.nombre}</p>
-					</div>
-					<button
-						onclick={cerrarTecnica}
-						class="grid size-10 shrink-0 place-items-center rounded-full border border-white/10 text-xl font-bold"
-						aria-label="Cerrar técnica">×</button
-					>
-				</div>
-				<div class="overflow-hidden rounded-2xl border border-white/10 bg-black">
-					<iframe
-						src={tecnicaEmbedUrl}
-						title={`Video de técnica para ${ej.nombre}`}
-						class="aspect-video w-full"
-						allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-						allowfullscreen
-					></iframe>
-				</div>
-				<a
-					href={ej.videoUrl}
-					target="_blank"
-					rel="noreferrer"
-					class="mt-4 inline-flex w-full items-center justify-center rounded-2xl border border-white/10 px-4 py-3 text-sm font-bold"
-					style="color: rgb({g.glow})">Abrir en YouTube</a
-				>
-			</div>
-		</div>
+		<TecnicaModal
+			embedUrl={tecnicaEmbedUrl}
+			videoUrl={ej.videoUrl}
+			nombre={ej.nombre}
+			glow={g.glow}
+			onClose={cerrarTecnica}
+		/>
 	{/if}
 
 	{#if exito && g}
-		<div
-			class="fixed inset-0 z-[60] grid place-items-center px-8"
-			style="background: {exito === 'parcial'
-				? 'rgba(8,8,12,.82)'
-				: `radial-gradient(70% 50% at 50% 42%, rgb(${g.glow} / .26), transparent 72%), rgba(8,8,12,.82)`}; backdrop-filter: blur(8px)"
-		>
-			<div
-				transition:fly={{ y: 18, duration: dur(260) }}
-				class="text-center"
-				aria-live="polite"
-				aria-label={exito === 'pr'
-					? 'Nuevo PR'
-					: exito === 'parcial'
-						? 'Series guardadas'
-						: 'Ejercicio terminado'}
-			>
-				<div
-					class="mx-auto grid size-24 place-items-center rounded-full border border-white/15 text-5xl font-extrabold"
-					style={exito === 'parcial'
-						? 'background: rgba(255,255,255,.08); color: var(--muted)'
-						: `background: rgb(${g.glow} / .22); color: rgb(${g.glow}); box-shadow: 0 0 55px rgb(${g.glow} / .25)`}
-				>
-					{exito === 'pr' ? '🏆' : '✓'}
-				</div>
-				<p class="mt-5 text-2xl font-extrabold">
-					{exito === 'pr'
-						? '¡Nuevo PR!'
-						: exito === 'parcial'
-							? 'Series guardadas'
-							: 'Ejercicio terminado'}
-				</p>
-				{#if exito === 'pr' && prExito}
-					<p class="mt-2 text-4xl font-extrabold tabular-nums">
-						{formatoNumero(prExito.valor)}<span
-							class="text-xl font-semibold"
-							style="color: var(--muted)"> {unidad}</span
-						>
-					</p>
-					<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
-						{metricaLabel} · mejor set {formatoSet(prExito)}
-					</p>
-				{:else if exito === 'parcial'}
-					<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
-						{hechas}/{sets.length} series · volviendo al día…
-					</p>
-				{:else}
-					<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
-						Volviendo al día…
-					</p>
-				{/if}
-			</div>
-		</div>
+		<CelebracionOverlay
+			{exito}
+			{prExito}
+			glow={g.glow}
+			{unidad}
+			{metricaLabel}
+			{hechas}
+			total={sets.length}
+		/>
 	{/if}
 
 	{#if prFlash && g}
@@ -1042,7 +710,7 @@
 					>
 				</p>
 				<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
-					{metricaLabel} · {formatoSet(prFlash)}
+					{metricaLabel} · {formatoSet(prFlash, unidad)}
 				</p>
 			</div>
 		</div>

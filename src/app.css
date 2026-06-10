@@ -8,6 +8,9 @@
 	--muted: #9aa0b4;
 	--accent: #7c5cff;
 	--glow: 124 92 255; /* rgb del glow */
+	--max: 255 157 60; /* naranja MAX (tope de la pila de placas) */
+	--exito: 74 222 128; /* verde de día/ejercicio terminado */
+	--scrim: 8 8 12; /* velo de overlays (= --bg, como rgb para opacidad variable) */
 }
 
 html {

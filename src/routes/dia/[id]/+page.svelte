@@ -12,13 +12,12 @@
 	import { sonarDiaTerminado } from '$lib/audio';
 	import { reproducirEnVista } from '$lib/video';
 	import { dur } from '$lib/motion';
+	import { fromLiveQuery } from '$lib/live';
 
 	let dia = $state<Dia | undefined>(undefined);
 	let cargando = $state(true);
 	let editando = $state(false);
 	let nombreEdit = $state('');
-	let sesion = $state<Sesion | undefined>(undefined);
-	let ajustes = $state<Ajustes>(AJUSTES_DEFAULT);
 	let premioDia = $state(false);
 	let premioId: ReturnType<typeof setTimeout> | null = null;
 
@@ -26,6 +25,7 @@
 
 	const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
+	// El día gestiona su propio flag de carga; la sesión y los ajustes son stores legibles con `$`.
 	$effect(() => {
 		const id = diaId;
 		cargando = true;
@@ -36,16 +36,10 @@
 		return () => sub.unsubscribe();
 	});
 
-	$effect(() => {
-		const id = diaId;
-		const sub = sesionHoyObs(id).subscribe((s) => (sesion = s));
-		return () => sub.unsubscribe();
-	});
-
-	$effect(() => {
-		const sub = ajustesObs().subscribe((a) => (ajustes = a));
-		return () => sub.unsubscribe();
-	});
+	const sesionStore = $derived(fromLiveQuery(sesionHoyObs(diaId), undefined));
+	const sesion = $derived<Sesion | undefined>($sesionStore);
+	const ajustesStore = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
+	const ajustes = $derived<Ajustes>($ajustesStore);
 
 	onDestroy(() => {
 		if (premioId) clearTimeout(premioId);
@@ -281,7 +275,7 @@
 					{#if diaTerminado}
 						<span
 							class="rounded-full px-2.5 py-1 text-xs font-bold"
-							style="background: rgba(74,222,128,.16); color: #4ade80">Terminado</span
+							style="background: rgb(var(--exito) / .16); color: rgb(var(--exito))">Terminado</span
 						>
 					{:else if diaListo}
 						<span
@@ -334,12 +328,12 @@
 {#if premioDia}
 	<div
 		class="fixed inset-0 z-[60] grid place-items-center px-8"
-		style="background: radial-gradient(72% 50% at 50% 42%, rgb(74 222 128 / .22), transparent 72%), rgba(8,8,12,.84); backdrop-filter: blur(8px)"
+		style="background: radial-gradient(72% 50% at 50% 42%, rgb(var(--exito) / .22), transparent 72%), rgb(var(--scrim) / .84); backdrop-filter: blur(8px)"
 	>
 		<div transition:fly={{ y: 18, duration: dur(260) }} class="text-center" aria-live="polite">
 			<div
 				class="mx-auto grid size-24 place-items-center rounded-full border border-white/15 text-5xl font-extrabold"
-				style="background: rgba(74,222,128,.18); color: #4ade80; box-shadow: 0 0 55px rgba(74,222,128,.24)"
+				style="background: rgb(var(--exito) / .18); color: rgb(var(--exito)); box-shadow: 0 0 55px rgb(var(--exito) / .24)"
 			>
 				🏁
 			</div>

@@ -36,7 +36,9 @@ export async function agregarEjercicio(diaId: string, exerciseId: string): Promi
 	const dia = await db.dias.get(diaId);
 	if (!dia) return;
 	if (dia.ejercicios.some((e) => e.exerciseId === exerciseId)) return;
-	dia.ejercicios.push({ exerciseId, seriesObjetivo: 3, orden: dia.ejercicios.length });
+	// orden = max(orden)+1, no length: tras quitar+agregar, length puede duplicar un orden vigente.
+	const orden = dia.ejercicios.reduce((m, e) => Math.max(m, e.orden), -1) + 1;
+	dia.ejercicios.push({ exerciseId, seriesObjetivo: 3, orden });
 	await db.dias.put(dia);
 }
 

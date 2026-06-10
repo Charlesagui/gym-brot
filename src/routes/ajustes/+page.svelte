@@ -13,14 +13,11 @@
 		importarBackup,
 		AJUSTES_DEFAULT
 	} from '$lib/extras';
+	import { fromLiveQuery } from '$lib/live';
 
-	let ajustes = $state<Ajustes>(AJUSTES_DEFAULT);
+	const ajustesStore = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
+	const ajustes = $derived<Ajustes>($ajustesStore);
 	let msg = $state('');
-
-	$effect(() => {
-		const sub = ajustesObs().subscribe((a) => (ajustes = a));
-		return () => sub.unsubscribe();
-	});
 
 	async function exportar() {
 		const json = await exportarJSON();

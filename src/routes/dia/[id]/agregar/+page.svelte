@@ -7,17 +7,12 @@
 	import { agregarEjercicio, quitarEjercicio } from '$lib/dias';
 	import { reproducirEnVista } from '$lib/video';
 	import { dur } from '$lib/motion';
+	import { fromLiveQuery } from '$lib/live';
 
 	const diaId = $derived($page.params.id!);
 
-	let yaEn = $state<Set<string>>(new Set());
-	$effect(() => {
-		const id = diaId;
-		const sub = liveQuery(() => db.dias.get(id)).subscribe((d) => {
-			yaEn = new Set(d?.ejercicios.map((e) => e.exerciseId) ?? []);
-		});
-		return () => sub.unsubscribe();
-	});
+	const diaActual = $derived(fromLiveQuery(liveQuery(() => db.dias.get(diaId)), undefined));
+	const yaEn = $derived(new Set($diaActual?.ejercicios.map((e) => e.exerciseId) ?? []));
 
 	let q = $state('');
 	let filtro = $state<Grupo | 'todos'>('todos');
@@ -148,7 +143,7 @@
 	>
 		<button
 			class="absolute inset-0"
-			style="background: rgba(8,8,12,.82); backdrop-filter: blur(6px)"
+			style="background: rgb(var(--scrim) / .82); backdrop-filter: blur(6px)"
 			aria-label="Cerrar vista previa"
 			onclick={cerrarPreview}
 		></button>

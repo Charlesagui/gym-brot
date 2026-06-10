@@ -95,7 +95,7 @@
 					{#if prog?.terminado}
 						<span
 							class="rounded-full px-2.5 py-0.5 text-[11px] font-bold"
-							style="background: rgba(74,222,128,.16); color: #4ade80">✓ Terminado</span
+							style="background: rgb(var(--exito) / .16); color: rgb(var(--exito))">✓ Terminado</span
 						>
 					{/if}
 				</div>
@@ -143,7 +143,7 @@
 					{#if prog?.terminado}
 						<span
 							class="rounded-full px-2.5 py-1 text-[11px] font-bold"
-							style="background: rgba(74,222,128,.16); color: #4ade80">✓ Hoy</span
+							style="background: rgb(var(--exito) / .16); color: rgb(var(--exito))">✓ Hoy</span
 						>
 					{:else if prog}
 						<span class="text-xs font-bold tabular-nums" style="color: rgb({d.color})"

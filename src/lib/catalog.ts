@@ -16,8 +16,11 @@ export interface Ejercicio {
 /** Catálogo estático de ejercicios, empaquetado con la app. */
 export const catalogo: Ejercicio[] = exercises as Ejercicio[];
 
+/** Índice id → ejercicio: lookup O(1) (se llama en loops de render sobre 629 ítems). */
+const porId = new Map(catalogo.map((e) => [e.id, e]));
+
 export function ejercicioPorId(id: string): Ejercicio | undefined {
-	return catalogo.find((e) => e.id === id);
+	return porId.get(id);
 }
 
 /** Color/identidad de cada grupo muscular (glow = rgb sin coma, para usar en rgb(... / a)). */
