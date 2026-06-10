@@ -63,7 +63,7 @@
 	<header class="mb-6 flex items-center gap-3">
 		<a
 			href="/"
-			class="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
+			class="grid size-10 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
 			aria-label="Volver">←</a
 		>
 		<h1 class="text-xl font-bold">Ajustes</h1>

@@ -5,6 +5,7 @@
 	import { db } from '$lib/db';
 	import { catalogo, grupos, type Grupo, type Ejercicio } from '$lib/catalog';
 	import { agregarEjercicio, quitarEjercicio } from '$lib/dias';
+	import { reproducirEnVista } from '$lib/video';
 	import { dur } from '$lib/motion';
 
 	const diaId = $derived($page.params.id!);
@@ -22,13 +23,22 @@
 	let filtro = $state<Grupo | 'todos'>('todos');
 	const gruposList: Grupo[] = ['piernas', 'pecho', 'espalda', 'hombros', 'brazos', 'core'];
 
-	const filtrados = $derived(
-		catalogo.filter(
+	// Quita acentos y pasa a minúsculas: en el teclado del gym se escribe sin tildes.
+	function normalizar(s: string): string {
+		return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+	}
+
+	const filtrados = $derived.by(() => {
+		const term = normalizar(q.trim());
+		return catalogo.filter(
 			(e) =>
 				(filtro === 'todos' || e.grupo === filtro) &&
-				e.nombre.toLowerCase().includes(q.toLowerCase())
-		)
-	);
+				// También busca por músculo: la premisa es guiarse sin depender del nombre.
+				(term === '' ||
+					normalizar(e.nombre).includes(term) ||
+					normalizar(e.musculo).includes(term))
+		);
+	});
 
 	function toggle(id: string) {
 		if (yaEn.has(id)) quitarEjercicio(diaId, id);
@@ -40,22 +50,6 @@
 	function cerrarPreview() {
 		preview = null;
 	}
-
-	// Reproduce la miniatura solo cuando entra en pantalla: con cientos de ejercicios
-	// en el catálogo, animar todos a la vez sería pesado en mobile.
-	function playOnView(node: HTMLVideoElement) {
-		const io = new IntersectionObserver(
-			(entries) => {
-				for (const entry of entries) {
-					if (entry.isIntersecting) void node.play().catch(() => {});
-					else node.pause();
-				}
-			},
-			{ threshold: 0.15 }
-		);
-		io.observe(node);
-		return { destroy: () => io.disconnect() };
-	}
 </script>
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && cerrarPreview()} />
@@ -64,7 +58,7 @@
 	<header class="mb-4 flex items-center gap-3">
 		<a
 			href={`/dia/${diaId}`}
-			class="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
+			class="grid size-10 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
 			aria-label="Volver">←</a
 		>
 		<h1 class="flex-1 text-xl font-bold">Agregar ejercicio</h1>
@@ -110,14 +104,13 @@
 					aria-label={`Ver ${e.nombre} en grande`}
 				>
 					<video
-						src={e.demoVideo}
-						use:playOnView
+						use:reproducirEnVista={e.demoVideo}
 						class="size-14 shrink-0 rounded-xl bg-white object-contain"
 						aria-label={e.nombre}
 						loop
 						muted
 						playsinline
-						preload="metadata"
+						preload="none"
 					></video>
 					<div class="min-w-0 flex-1">
 						<p class="truncate text-sm font-semibold leading-tight">{e.nombre}</p>

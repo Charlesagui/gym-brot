@@ -10,6 +10,7 @@
 	import { marcarDiaTerminado, reabrirDia, sesionHoyObs } from '$lib/sesion';
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
 	import { sonarDiaTerminado } from '$lib/audio';
+	import { reproducirEnVista } from '$lib/video';
 	import { dur } from '$lib/motion';
 
 	let dia = $state<Dia | undefined>(undefined);
@@ -104,7 +105,7 @@
 	<header class="mb-5 flex items-center gap-3">
 		<a
 			href="/"
-			class="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
+			class="grid size-10 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
 			aria-label="Volver">←</a
 		>
 		{#if editando}
@@ -185,14 +186,13 @@
 							style="background: radial-gradient(150% 130% at 0% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface)"
 						>
 							<video
-								src={e.demoVideo}
+								use:reproducirEnVista={e.demoVideo}
 								class="size-14 shrink-0 rounded-xl bg-white object-contain"
 								aria-label={e.nombre}
-								autoplay
 								loop
 								muted
 								playsinline
-								preload="metadata"
+								preload="none"
 							></video>
 							<div class="min-w-0 flex-1">
 								<p class="truncate text-sm font-semibold leading-tight">{e.nombre}</p>
@@ -226,14 +226,13 @@
 							style="background: radial-gradient(150% 130% at 0% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface)"
 						>
 							<video
-								src={e.demoVideo}
+								use:reproducirEnVista={e.demoVideo}
 								class="size-16 shrink-0 rounded-xl bg-white object-contain"
 								aria-label={e.nombre}
-								autoplay
 								loop
 								muted
 								playsinline
-								preload="metadata"
+								preload="none"
 							></video>
 							<div class="min-w-0 flex-1">
 								<p class="truncate text-sm font-semibold leading-tight">{e.nombre}</p>
