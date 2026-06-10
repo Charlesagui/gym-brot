@@ -13,7 +13,7 @@
 		"grupo": "piernas",
 		"musculo": "Cuádriceps",
 		"demoVideo": "/videos/extension-cuadriceps.mp4",
-		"videoUrl": "",
+		"videoUrl": "https://www.youtube.com/watch?v=swZQC689o9U",
 		"maquinaPlacas": true
 	},
 	{
@@ -22,7 +22,7 @@
 		"grupo": "piernas",
 		"musculo": "Isquiotibiales",
 		"demoVideo": "/videos/curl-femoral.mp4",
-		"videoUrl": "",
+		"videoUrl": "https://www.youtube.com/watch?v=-jeW_ToaRB8",
 		"maquinaPlacas": true
 	},
 	{
@@ -31,7 +31,7 @@
 		"grupo": "piernas",
 		"musculo": "Glúteo medio",
 		"demoVideo": "/videos/abductores.mp4",
-		"videoUrl": "",
+		"videoUrl": "https://www.youtube.com/watch?v=OjI5OpV6IWA",
 		"maquinaPlacas": true
 	},
 	{
@@ -40,7 +40,7 @@
 		"grupo": "piernas",
 		"musculo": "Aductores",
 		"demoVideo": "/videos/aductores.mp4",
-		"videoUrl": "",
+		"videoUrl": "https://www.youtube.com/watch?v=9EuO_mMQ3i8",
 		"maquinaPlacas": true
 	},
 	{
@@ -58,7 +58,7 @@
 		"grupo": "piernas",
 		"musculo": "Gemelos",
 		"demoVideo": "/videos/gemelos-sentado.mp4",
-		"videoUrl": ""
+		"videoUrl": "https://www.youtube.com/watch?v=ezRhm9Oo5p4"
 	},
 	{
 		"id": "prensa-gemelos",
@@ -83,7 +83,7 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral superior",
 		"demoVideo": "/videos/press-inclinado.mp4",
-		"videoUrl": "",
+		"videoUrl": "https://www.youtube.com/watch?v=Q7k-Ught65Q",
 		"maquinaPlacas": true
 	},
 	{
@@ -92,7 +92,7 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/aperturas-pec.mp4",
-		"videoUrl": "",
+		"videoUrl": "https://www.youtube.com/watch?v=Om6ABTzZrQY",
 		"maquinaPlacas": true
 	},
 	{
@@ -205,7 +205,7 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/triceps-soga.mp4",
-		"videoUrl": "",
+		"videoUrl": "https://www.youtube.com/watch?v=uZg6VtRhwQY",
 		"maquinaPlacas": true
 	},
 	{
@@ -327,7 +327,7 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/cable-standing-up-straight-crossovers.mp4",
-		"videoUrl": "",
+		"videoUrl": "https://www.youtube.com/watch?v=WNtBIde3Qks",
 		"maquinaPlacas": true
 	},
 	{
@@ -1644,7 +1644,7 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/smith-squat.mp4",
-		"videoUrl": ""
+		"videoUrl": "https://www.youtube.com/watch?v=iCOBGhyK4sQ"
 	},
 	{
 		"id": "smith-sumo-squat",
@@ -1718,7 +1718,7 @@
 		"grupo": "piernas",
 		"musculo": "Cuádriceps",
 		"demoVideo": "/videos/dumbbell-single-leg-split-squat.mp4",
-		"videoUrl": ""
+		"videoUrl": "https://www.youtube.com/watch?v=Xfa3Ql_NwmE"
 	},
 	{
 		"id": "smith-single-leg-split-squat",
@@ -2484,7 +2484,7 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/barbell-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "https://www.youtube.com/watch?v=jlFl7WJ1TzI"
 	},
 	{
 		"id": "barbell-incline-bench-press",
@@ -2516,7 +2516,7 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/dumbbell-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "https://www.youtube.com/watch?v=jWnGhz1f5D4"
 	},
 	{
 		"id": "dumbbell-incline-bench-press",
