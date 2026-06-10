@@ -87,7 +87,7 @@ export function resumenDiaSesion(sesion: Sesion | undefined): ResumenDiaSesion {
 			const ej = ejercicioPorId(ejercicio.exerciseId);
 			prs.push({
 				exerciseId: ejercicio.exerciseId,
-				nombre: ej?.nombre ?? 'Ejercicio',
+				nombre: ej?.nombre ?? 'Ejercicio archivado',
 				peso: ejercicio.prCelebrado.peso,
 				reps: ejercicio.prCelebrado.reps,
 				esMax: !!ejercicio.prCelebrado.esMax,
