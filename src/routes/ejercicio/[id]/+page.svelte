@@ -31,6 +31,7 @@
 	import { dur } from '$lib/motion';
 	import { fromLiveQuery } from '$lib/live';
 	import { formatoNumero, formatoSet, fechaCorta } from '$lib/formato';
+	import { youtubeEmbedUrl } from '$lib/youtube';
 	import SetRow from '$lib/components/SetRow.svelte';
 	import MiniChart from '$lib/components/MiniChart.svelte';
 	import CelebracionOverlay from '$lib/components/CelebracionOverlay.svelte';
@@ -217,25 +218,6 @@
 				valor: valorMetrica(ef, s.reps, metrica)
 			});
 		}, null);
-	}
-
-	function youtubeEmbedUrl(url: string): string | null {
-		try {
-			const u = new URL(url);
-			const host = u.hostname.replace(/^www\./, '').replace(/^m\./, '');
-			let id = '';
-			if (host === 'youtu.be') id = u.pathname.split('/').filter(Boolean)[0] ?? '';
-			else if (host.endsWith('youtube.com') || host === 'youtube-nocookie.com') {
-				if (u.pathname === '/watch') id = u.searchParams.get('v') ?? '';
-				else if (u.pathname.startsWith('/shorts/') || u.pathname.startsWith('/embed/')) {
-					id = u.pathname.split('/').filter(Boolean)[1] ?? '';
-				}
-			}
-			if (!id) return null;
-			return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?rel=0&modestbranding=1&playsinline=1`;
-		} catch {
-			return null;
-		}
 	}
 
 	function abrirTecnica() {
