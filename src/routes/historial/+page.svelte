@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
-	import { formatoNumero, fechaCorta } from '$lib/formato';
+	import { formatoNumero, formatoSet, fechaCorta } from '$lib/formato';
 	import {
 		crearHistorialResumen,
 		resumenHistorialObs,
 		type HistorialResumen
 	} from '$lib/historial';
+	import { ejercicioPorId } from '$lib/catalog';
 	import { fromLiveQuery } from '$lib/live';
+	import { recordsGlobalesObs, type RecordEjercicio } from '$lib/sesion';
 
 	const VACIO: HistorialResumen = crearHistorialResumen([], []);
 
@@ -14,6 +16,11 @@
 	const ajustes = $derived($ajustesStore);
 	const historialStore = fromLiveQuery(resumenHistorialObs(), VACIO);
 	const historial = $derived($historialStore);
+	const recordsStore = $derived(
+		fromLiveQuery(recordsGlobalesObs(ajustes.metricaPr), [] as RecordEjercicio[])
+	);
+	const records = $derived($recordsStore);
+	const metricaLabel = $derived(ajustes.metricaPr === 'e1rm' ? '1RM estimado' : 'peso máximo');
 
 	const diasEntrenados = $derived(new Set(historial.dias.map((d) => d.fecha)));
 	const calendario = $derived(
@@ -118,6 +125,44 @@
 			{#if semanas.length === 0}
 				<p class="py-3 text-center text-sm" style="color: var(--muted)">
 					Todavía no hay semanas entrenadas.
+				</p>
+			{/if}
+		</div>
+	</section>
+
+	<section class="mb-4">
+		<div class="mb-2 flex items-center justify-between gap-3 px-1">
+			<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
+				Récords vigentes
+			</p>
+			<p class="text-xs font-semibold" style="color: var(--muted)">{metricaLabel}</p>
+		</div>
+		<div class="space-y-2">
+			{#each records.slice(0, 12) as record (record.exerciseId)}
+				{@const ejercicio = ejercicioPorId(record.exerciseId)}
+				<article class="rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+					<div class="flex items-start justify-between gap-3">
+						<div class="min-w-0">
+							<p class="truncate text-sm font-bold">{ejercicio?.nombre ?? 'Ejercicio archivado'}</p>
+							<p class="mt-0.5 text-xs" style="color: var(--muted)">
+								{fechaCorta(record.fecha)} · {formatoSet(record, ajustes.unidad)}
+							</p>
+						</div>
+						<p
+							class="shrink-0 text-right text-sm font-extrabold tabular-nums"
+							style="color: rgb(var(--max))"
+						>
+							{formatoNumero(record.valor)}
+						</p>
+					</div>
+				</article>
+			{/each}
+			{#if records.length === 0}
+				<p
+					class="rounded-2xl border border-dashed border-white/15 p-5 text-center text-sm"
+					style="color: var(--muted)"
+				>
+					Tus récords aparecen cuando marques series hechas.
 				</p>
 			{/if}
 		</div>

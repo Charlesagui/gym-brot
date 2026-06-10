@@ -3,7 +3,7 @@
  * presionado tras una demora corta sin moverse demasiado. Sirve para entrar al modo
  * reordenar desde la lista del día sin chocar con el tap (navegar) ni el scroll.
  */
-export function mantener(node: HTMLElement, fn: () => void) {
+export function mantener(node: HTMLElement | SVGElement, fn: () => void) {
 	let actual = fn;
 	let timer: ReturnType<typeof setTimeout> | null = null;
 	let inicioX = 0;
@@ -16,7 +16,8 @@ export function mantener(node: HTMLElement, fn: () => void) {
 		timer = null;
 	}
 
-	function alApretar(e: PointerEvent) {
+	function alApretar(evento: Event) {
+		const e = evento as PointerEvent;
 		if (e.pointerType === 'mouse' && e.button !== 0) return;
 		inicioX = e.clientX;
 		inicioY = e.clientY;
@@ -27,7 +28,8 @@ export function mantener(node: HTMLElement, fn: () => void) {
 		}, DEMORA);
 	}
 
-	function alMover(e: PointerEvent) {
+	function alMover(evento: Event) {
+		const e = evento as PointerEvent;
 		if (!timer) return;
 		if (Math.abs(e.clientX - inicioX) > TOLERANCIA || Math.abs(e.clientY - inicioY) > TOLERANCIA) {
 			cancelar();

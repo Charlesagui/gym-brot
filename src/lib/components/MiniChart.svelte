@@ -2,17 +2,20 @@
 	import type { MejorSet } from '$lib/sesion';
 	import type { Ajustes } from '$lib/db';
 	import { formatoNumero } from '$lib/formato';
+	import { mantener } from '$lib/mantener';
 
 	let {
 		puntos,
 		glow,
 		metricaLabel,
-		unidad
+		unidad,
+		onEditarPunto
 	}: {
 		puntos: MejorSet[];
 		glow: string;
 		metricaLabel: string;
 		unidad: Ajustes['unidad'];
+		onEditarPunto?: (punto: MejorSet) => void;
 	} = $props();
 
 	interface ChartPoint {
@@ -20,6 +23,7 @@
 		y: number;
 		valor: number;
 		label: string;
+		source: MejorSet;
 	}
 
 	function chartPoints(pts: MejorSet[]): ChartPoint[] {
@@ -36,7 +40,7 @@
 			const x = u.length === 1 ? W / 2 : pad + (i / (u.length - 1)) * (W - 2 * pad);
 			const valor = p.valor;
 			const y = u.length === 1 ? H / 2 : pad + (1 - (valor - min) / range) * (H - 2 * pad);
-			return { x, y, valor, label: formatoNumero(valor) };
+			return { x, y, valor, label: formatoNumero(valor), source: p };
 		});
 	}
 
@@ -98,6 +102,7 @@
 			/>
 			{#each chart as p, i (`${p.x}-${p.y}`)}
 				<circle
+					use:mantener={() => onEditarPunto?.(p.source)}
 					cx={p.x}
 					cy={p.y}
 					r={i === chart.length - 1 ? 2.4 : 1.7}

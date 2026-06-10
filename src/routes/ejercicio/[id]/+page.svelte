@@ -18,6 +18,8 @@
 		addSet,
 		removeSet,
 		marcarPrCelebrado,
+		actualizarSetHistorial,
+		borrarSetHistorial,
 		pesoEfectivo,
 		valorMetrica,
 		mejorSet,
@@ -353,6 +355,35 @@
 		return { peso: s.peso!, reps: s.reps, esMax: !!s.esMax, extraKg: s.extraKg, fecha: fechaSesion, valor };
 	}
 
+	async function editarPuntoHistorial(punto: MejorSet) {
+		if (!punto.sesionId || punto.setIndex == null) return;
+		const actual = `${formatoNumero(punto.peso)} ${punto.reps ?? ''}`.trim();
+		const respuesta = prompt(
+			`Editar serie histórica (${formatoSet(punto, unidad)}). Escribí "borrar" o "peso reps".`,
+			actual
+		);
+		if (respuesta == null) return;
+		if (respuesta.trim().toLowerCase() === 'borrar') {
+			if (!confirm(`¿Borrar del historial la serie ${formatoSet(punto, unidad)}?`)) return;
+			await borrarSetHistorial(punto.sesionId, $page.params.id!, punto.setIndex, metrica);
+			return;
+		}
+		const [pesoTxt, repsTxt] = respuesta.trim().replace(',', '.').split(/\s+/);
+		const peso = Number.parseFloat(pesoTxt ?? '');
+		const reps = repsTxt ? Number.parseInt(repsTxt, 10) : punto.reps;
+		if (!Number.isFinite(peso) || peso <= 0 || (reps != null && (!Number.isFinite(reps) || reps <= 0))) {
+			alert('Usá el formato: peso reps. Ejemplo: 80 10');
+			return;
+		}
+		await actualizarSetHistorial(
+			punto.sesionId,
+			$page.params.id!,
+			punto.setIndex,
+			{ peso: redondear(peso), reps, esMax: punto.esMax, extraKg: punto.extraKg },
+			metrica
+		);
+	}
+
 	/** Recompensa especial inmediata por PR: no bloquea el registro (pointer-events-none). */
 	function celebrarPrFlash(mejor: MejorSet) {
 		prFlash = mejor;
@@ -653,7 +684,7 @@
 					<p class="mt-2.5 text-[11px] leading-relaxed border-t border-white/5 pt-2" style="color: var(--muted)">
 						💡 {DESCRIPCION_METRICA[metrica]}
 					</p>
-					<MiniChart {puntos} glow={g.glow} {metricaLabel} {unidad} />
+					<MiniChart {puntos} glow={g.glow} {metricaLabel} {unidad} onEditarPunto={editarPuntoHistorial} />
 				</section>
 			{:else if !cargandoSeries}
 				<section
