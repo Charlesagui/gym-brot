@@ -61,6 +61,12 @@ export interface MejorSet {
 	extraKg?: number;
 	fecha: string;
 	valor: number;
+	sesionId?: string;
+	setIndex?: number;
+}
+
+export interface RecordEjercicio extends MejorSet {
+	exerciseId: string;
 }
 
 /** El mejor de dos sets bajo `valor` (desempata por reps). */
@@ -71,8 +77,13 @@ export function mejorSet(a: MejorSet | null, b: MejorSet): MejorSet {
 	return a;
 }
 
-function mejorSetDeSeries(sets: SetSesion[], fecha: string, metrica: MetricaPr): MejorSet | null {
-	return sets.reduce<MejorSet | null>((best, set) => {
+function mejorSetDeSeries(
+	sets: SetSesion[],
+	fecha: string,
+	metrica: MetricaPr,
+	sesionIdFuente?: string
+): MejorSet | null {
+	return sets.reduce<MejorSet | null>((best, set, setIndex) => {
 		if (!set.hecha) return best;
 		const ef = pesoEfectivo(set);
 		if (ef == null) return best;
@@ -82,7 +93,9 @@ function mejorSetDeSeries(sets: SetSesion[], fecha: string, metrica: MetricaPr):
 			esMax: !!set.esMax,
 			extraKg: set.extraKg,
 			fecha,
-			valor: valorMetrica(ef, set.reps, metrica)
+			valor: valorMetrica(ef, set.reps, metrica),
+			sesionId: sesionIdFuente,
+			setIndex
 		});
 	}, null);
 }
@@ -104,23 +117,42 @@ export function historialObs(exerciseId: string, metrica: MetricaPr = 'peso') {
 		for (const s of todas) {
 			const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
 			if (!e) continue;
-			let mejor: MejorSet | null = null;
-			for (const set of e.sets) {
-				if (!set.hecha) continue;
-				const ef = pesoEfectivo(set);
-				if (ef == null) continue;
-				mejor = mejorSet(mejor, {
-					peso: set.peso!,
-					reps: set.reps,
-					esMax: !!set.esMax,
-					extraKg: set.extraKg,
-					fecha: s.fecha,
-					valor: valorMetrica(ef, set.reps, metrica)
-				});
-			}
+			const mejor = mejorSetDeSeries(e.sets, s.fecha, metrica, s.id);
 			if (mejor) puntos.push(mejor);
 		}
 		return puntos;
+	});
+}
+
+export function recordsGlobalesObs(metrica: MetricaPr = 'peso') {
+	return liveQuery(async () => {
+		const todas = await db.sesiones.orderBy('fecha').toArray();
+		const mejores = new Map<string, RecordEjercicio>();
+		for (const s of todas) {
+			for (const ejercicio of s.ejercicios) {
+				for (const set of ejercicio.sets) {
+					if (!set.hecha) continue;
+					const ef = pesoEfectivo(set);
+					if (ef == null) continue;
+					const candidato: RecordEjercicio = {
+						exerciseId: ejercicio.exerciseId,
+						peso: set.peso!,
+						reps: set.reps,
+						esMax: !!set.esMax,
+						extraKg: set.extraKg,
+						fecha: s.fecha,
+						valor: valorMetrica(ef, set.reps, metrica),
+						sesionId: s.id,
+						setIndex: ejercicio.sets.indexOf(set)
+					};
+					mejores.set(
+						ejercicio.exerciseId,
+						mejorSet(mejores.get(ejercicio.exerciseId) ?? null, candidato) as RecordEjercicio
+					);
+				}
+			}
+		}
+		return [...mejores.values()].sort((a, b) => b.valor - a.valor);
 	});
 }
 
@@ -199,17 +231,62 @@ async function recalcularPrCelebrado(sesion: Sesion, exerciseId: string, metrica
 		if (s.id === sesion.id) return best;
 		const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
 		if (!e) return best;
-		const mejor = mejorSetDeSeries(e.sets, s.fecha, metrica);
+		const mejor = mejorSetDeSeries(e.sets, s.fecha, metrica, s.id);
 		return mejor ? mejorSet(best, mejor) : best;
 	}, null);
 	const valorPrevio = mejorPrevio?.valor ?? null;
 
-	const mejorRestante = mejorSetDeSeries(ejercicio.sets, sesion.fecha, metrica);
+	const mejorRestante = mejorSetDeSeries(ejercicio.sets, sesion.fecha, metrica, sesion.id);
 	if (!mejorRestante || (valorPrevio != null && mejorRestante.valor <= valorPrevio)) {
 		ejercicio.prCelebrado = undefined;
 		return;
 	}
 	ejercicio.prCelebrado = snapPr(mejorRestante);
+}
+
+export interface CambiosSetHistorial {
+	peso?: number;
+	reps?: number;
+	esMax?: boolean;
+	extraKg?: number;
+}
+
+export async function actualizarSetHistorial(
+	idSesion: string,
+	exerciseId: string,
+	setIndex: number,
+	cambios: CambiosSetHistorial,
+	metrica: MetricaPr = 'peso'
+) {
+	await db.transaction('rw', db.sesiones, async () => {
+		const s = await db.sesiones.get(idSesion);
+		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
+		const set = e?.sets[setIndex];
+		if (!s || !set?.hecha) return;
+		set.peso = cambios.peso;
+		set.reps = cambios.reps;
+		set.esMax = cambios.esMax;
+		set.extraKg = cambios.extraKg;
+		await recalcularPrCelebrado(s, exerciseId, metrica);
+		await db.sesiones.put(s);
+	});
+}
+
+export async function borrarSetHistorial(
+	idSesion: string,
+	exerciseId: string,
+	setIndex: number,
+	metrica: MetricaPr = 'peso'
+) {
+	await db.transaction('rw', db.sesiones, async () => {
+		const s = await db.sesiones.get(idSesion);
+		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
+		const set = e?.sets[setIndex];
+		if (!s || !set?.hecha) return;
+		set.hecha = false;
+		await recalcularPrCelebrado(s, exerciseId, metrica);
+		await db.sesiones.put(s);
+	});
 }
 
 export async function toggleSet(

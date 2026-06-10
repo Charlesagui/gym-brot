@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from './db';
 import {
 	addSet,
+	actualizarSetHistorial,
+	borrarSetHistorial,
 	ensureEjercicio,
 	historialObs,
 	hoyStr,
@@ -10,6 +12,7 @@ import {
 	marcarPrCelebrado,
 	reabrirDia,
 	reanudarEjercicio,
+	recordsGlobalesObs,
 	removeSet,
 	saltarEjercicio,
 	sesionHoyObs,
@@ -132,8 +135,88 @@ describe('sesion con IndexedDB', () => {
 
 		const puntos = await primerValor(historialObs('press', 'peso'));
 		expect(puntos).toEqual([
-			{ peso: 90, reps: 5, esMax: false, extraKg: undefined, fecha: '2026-01-01', valor: 90 }
+			{
+				peso: 90,
+				reps: 5,
+				esMax: false,
+				extraKg: undefined,
+				fecha: '2026-01-01',
+				valor: 90,
+				sesionId: '2026-01-01__push',
+				setIndex: 1
+			}
 		]);
+	});
+
+	it('recordsGlobalesObs devuelve el PR vigente de cada ejercicio entrenado', async () => {
+		await ensureEjercicio('push', 'press', 2, '2026-01-01');
+		await setPeso('push', 'press', 0, 80, '2026-01-01');
+		await setReps('push', 'press', 0, 10, '2026-01-01');
+		await setPeso('push', 'press', 1, 90, '2026-01-01');
+		await setReps('push', 'press', 1, 3, '2026-01-01');
+		await toggleSet('push', 'press', 0, '2026-01-01', 'e1rm');
+		await toggleSet('push', 'press', 1, '2026-01-01', 'e1rm');
+
+		await ensureEjercicio('pull', 'remo', 1, '2026-01-02');
+		await setPeso('pull', 'remo', 0, 70, '2026-01-02');
+		await setReps('pull', 'remo', 0, 8, '2026-01-02');
+		await toggleSet('pull', 'remo', 0, '2026-01-02', 'e1rm');
+
+		expect(await primerValor(recordsGlobalesObs('e1rm'))).toEqual([
+			{
+				exerciseId: 'press',
+				peso: 80,
+				reps: 10,
+				esMax: false,
+				extraKg: undefined,
+				fecha: '2026-01-01',
+				valor: 106.66666666666666,
+				sesionId: '2026-01-01__push',
+				setIndex: 0
+			},
+			{
+				exerciseId: 'remo',
+				peso: 70,
+				reps: 8,
+				esMax: false,
+				extraKg: undefined,
+				fecha: '2026-01-02',
+				valor: 88.66666666666666,
+				sesionId: '2026-01-02__pull',
+				setIndex: 0
+			}
+		]);
+	});
+
+	it('edita y borra una serie historica recalculando el historial', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-01');
+		await setPeso('push', 'press', 0, 100, '2026-01-01');
+		await setReps('push', 'press', 0, 5, '2026-01-01');
+		await toggleSet('push', 'press', 0, '2026-01-01', 'peso');
+		await marcarPrCelebrado('push', 'press', { peso: 100, reps: 5 }, 'peso', '2026-01-01');
+
+		await actualizarSetHistorial(
+			'2026-01-01__push',
+			'press',
+			0,
+			{ peso: 90, reps: 6, esMax: false },
+			'peso'
+		);
+
+		expect((await primerValor(historialObs('press', 'peso')))[0]).toMatchObject({
+			peso: 90,
+			reps: 6,
+			valor: 90
+		});
+		expect((await db.sesiones.get('2026-01-01__push'))?.ejercicios[0]?.prCelebrado).toMatchObject({
+			peso: 90,
+			reps: 6
+		});
+
+		await borrarSetHistorial('2026-01-01__push', 'press', 0, 'peso');
+
+		expect(await primerValor(historialObs('press', 'peso'))).toEqual([]);
+		expect((await db.sesiones.get('2026-01-01__push'))?.ejercicios[0]?.prCelebrado).toBeUndefined();
 	});
 
 	it('saltar, reanudar, terminar y reabrir dia actual', async () => {
@@ -173,7 +256,16 @@ describe('sesion con IndexedDB', () => {
 		expect(actual?.ejercicios[0]?.prCelebrado).toBeUndefined();
 		expect(resumenDiaSesion(actual).prs).toHaveLength(0);
 		expect(await primerValor(historialObs('press', 'peso'))).toEqual([
-			{ peso: 100, reps: 5, esMax: false, extraKg: undefined, fecha: '2026-01-01', valor: 100 }
+			{
+				peso: 100,
+				reps: 5,
+				esMax: false,
+				extraKg: undefined,
+				fecha: '2026-01-01',
+				valor: 100,
+				sesionId: '2026-01-01__push',
+				setIndex: 0
+			}
 		]);
 	});
 
