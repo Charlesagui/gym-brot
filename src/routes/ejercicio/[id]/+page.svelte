@@ -56,15 +56,14 @@
 	// sin esperar a "Terminar" (así no se pierde si salís con ←).
 	let prFlash = $state<MejorSet | null>(null);
 	let prFlashId: ReturnType<typeof setTimeout> | null = null;
-	// Video grande solo la primera visita a cada ejercicio; después arranca
-	// como miniatura en el header para dejar las series a mano sin scroll.
+	// El gif de demostración arranca grande en cada ejercicio; se puede achicar a
+	// miniatura en el header tocándolo, pero al cambiar de ejercicio vuelve a grande.
 	let videoGrande = $state(true);
 	let tecnicaAbierta = $state(false);
 
 	$effect(() => {
-		const key = `gb-video-visto-${$page.params.id!}`;
-		videoGrande = !localStorage.getItem(key);
-		localStorage.setItem(key, '1');
+		$page.params.id; // dep: reinicia "grande" al cambiar de ejercicio
+		videoGrande = true;
 	});
 
 	// Hint de MAX: solo en máquinas de placas, las primeras 3 visitas o hasta "Entendido".
