@@ -3,11 +3,27 @@
 	import { goto } from '$app/navigation';
 	import { onDestroy } from 'svelte';
 	import { fly } from 'svelte/transition';
+	import { flip } from 'svelte/animate';
+	import { dndzone, type DndEvent } from 'svelte-dnd-action';
 	import { liveQuery } from 'dexie';
 	import { db, type Ajustes, type Dia, type Sesion } from '$lib/db';
 	import { ejercicioPorId, grupos } from '$lib/catalog';
-	import { actualizarDia, borrarDia, quitarEjercicio, setSeries, coloresDia } from '$lib/dias';
-	import { marcarDiaTerminado, reabrirDia, sesionHoyObs } from '$lib/sesion';
+	import {
+		actualizarDia,
+		borrarDia,
+		quitarEjercicio,
+		setSeries,
+		coloresDia,
+		reordenarEjercicios
+	} from '$lib/dias';
+	import { mantener } from '$lib/mantener';
+	import {
+		marcarDiaTerminado,
+		reabrirDia,
+		sesionHoyObs,
+		saltarEjercicio,
+		reanudarEjercicio
+	} from '$lib/sesion';
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
 	import { sonarDiaTerminado } from '$lib/audio';
 	import { reproducirEnVista } from '$lib/video';
@@ -20,6 +36,17 @@
 	let nombreEdit = $state('');
 	let premioDia = $state(false);
 	let premioId: ReturnType<typeof setTimeout> | null = null;
+	// Modo reordenar: se entra con long-press; las cards se arrastran (svelte-dnd-action).
+	interface ItemOrden {
+		id: string;
+		nombre: string;
+		demoVideo: string;
+		glow: string;
+		emoji: string;
+	}
+	let reordenando = $state(false);
+	let ordenItems = $state<ItemOrden[]>([]);
+	const flipMs = dur(180);
 
 	const diaId = $derived($page.params.id!);
 
@@ -45,22 +72,37 @@
 		if (premioId) clearTimeout(premioId);
 	});
 
-	const ejerciciosCompletos = $derived(
-		dia?.ejercicios.filter((item) => {
-			const p = progreso(item.exerciseId);
-			return !!p && p.total > 0 && p.hechas === p.total;
-		}).length ?? 0
-	);
-	const totalEjercicios = $derived(dia?.ejercicios.length ?? 0);
-	const diaListo = $derived(totalEjercicios > 0 && ejerciciosCompletos === totalEjercicios);
-	const diaTerminado = $derived(!!sesion?.diaTerminado);
-	const sonidoActivo = $derived(ajustes.sonido);
-
 	function progreso(exId: string): { hechas: number; total: number } | null {
 		const e = sesion?.ejercicios.find((x) => x.exerciseId === exId);
 		if (!e || e.sets.length === 0) return null;
 		return { hechas: e.sets.filter((s) => s.hecha).length, total: e.sets.length };
 	}
+
+	function estaCompleto(exId: string): boolean {
+		const p = progreso(exId);
+		return !!p && p.total > 0 && p.hechas === p.total;
+	}
+
+	function estaSaltado(exId: string): boolean {
+		return !!sesion?.ejercicios.find((x) => x.exerciseId === exId)?.saltado;
+	}
+
+	const ejerciciosCompletos = $derived(
+		dia?.ejercicios.filter((item) => estaCompleto(item.exerciseId)).length ?? 0
+	);
+	const ejerciciosSaltados = $derived(
+		dia?.ejercicios.filter((item) => estaSaltado(item.exerciseId)).length ?? 0
+	);
+	// Un ejercicio "resuelto" está hecho o saltado: ninguno bloquea terminar el día.
+	const ejerciciosResueltos = $derived(
+		dia?.ejercicios.filter(
+			(item) => estaCompleto(item.exerciseId) || estaSaltado(item.exerciseId)
+		).length ?? 0
+	);
+	const totalEjercicios = $derived(dia?.ejercicios.length ?? 0);
+	const diaListo = $derived(totalEjercicios > 0 && ejerciciosResueltos === totalEjercicios);
+	const diaTerminado = $derived(!!sesion?.diaTerminado);
+	const sonidoActivo = $derived(ajustes.sonido);
 
 	function abrirEdicion() {
 		nombreEdit = dia?.nombre ?? '';
@@ -93,6 +135,36 @@
 		await reabrirDia(diaId);
 	}
 
+	function entrarReordenar() {
+		if (!dia) return;
+		ordenItems = [...dia.ejercicios]
+			.sort((a, b) => a.orden - b.orden)
+			.map((it) => {
+				const e = ejercicioPorId(it.exerciseId);
+				const g = e ? grupos[e.grupo] : undefined;
+				return {
+					id: it.exerciseId,
+					nombre: e?.nombre ?? it.exerciseId,
+					demoVideo: e?.demoVideo ?? '',
+					glow: g?.glow ?? '124 92 255',
+					emoji: g?.emoji ?? ''
+				};
+			});
+		reordenando = true;
+	}
+
+	function alConsiderar(e: CustomEvent<DndEvent<ItemOrden>>) {
+		ordenItems = e.detail.items;
+	}
+
+	function alSoltar(e: CustomEvent<DndEvent<ItemOrden>>) {
+		ordenItems = e.detail.items;
+		void reordenarEjercicios(
+			diaId,
+			ordenItems.map((it) => it.id)
+		);
+	}
+
 </script>
 
 <main class="glow-bg min-h-dvh px-5 pb-12 pt-6">
@@ -116,7 +188,7 @@
 			>
 		{:else}
 			<h1 class="flex-1 text-xl font-bold">{dia?.nombre ?? ''}</h1>
-			{#if dia}
+			{#if dia && !reordenando}
 				<button
 					onclick={abrirEdicion}
 					class="flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-sm font-semibold"
@@ -130,6 +202,42 @@
 		<p class="text-center text-sm" style="color: var(--muted)">Cargando…</p>
 	{:else if !dia}
 		<p class="text-center text-sm" style="color: var(--muted)">Día no encontrado.</p>
+	{:else if reordenando}
+		<p class="mb-3 text-center text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+			Arrastrá para ordenar
+		</p>
+		<section
+			use:dndzone={{ items: ordenItems, flipDurationMs: flipMs, dropTargetStyle: {} }}
+			onconsider={alConsiderar}
+			onfinalize={alSoltar}
+			class="space-y-3"
+		>
+			{#each ordenItems as it (it.id)}
+				<div
+					animate:flip={{ duration: flipMs }}
+					class="flex touch-none items-center gap-3 rounded-2xl border border-white/10 p-2.5"
+					style="background: radial-gradient(150% 130% at 0% 0%, rgb({it.glow} / 0.14), transparent 60%), var(--surface)"
+				>
+					<span class="shrink-0 text-lg leading-none" style="color: var(--muted)" aria-hidden="true">⠿</span>
+					<video
+						use:reproducirEnVista={it.demoVideo}
+						class="size-14 shrink-0 rounded-xl bg-white object-contain"
+						aria-label={it.nombre}
+						loop
+						muted
+						playsinline
+						preload="none"
+					></video>
+					<p class="min-w-0 flex-1 truncate text-sm font-semibold leading-tight">{it.nombre}</p>
+					<span class="shrink-0 text-base" aria-hidden="true">{it.emoji}</span>
+				</div>
+			{/each}
+		</section>
+		<button
+			onclick={() => (reordenando = false)}
+			class="mt-5 w-full rounded-2xl py-3 text-sm font-bold"
+			style="background: var(--accent); color: white">✓ Listo</button
+		>
 	{:else}
 		{#if editando}
 			<p class="mb-2 text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
@@ -174,6 +282,7 @@
 				{#if e}
 					{@const g = grupos[e.grupo]}
 					{@const p = progreso(e.id)}
+					{@const saltado = estaSaltado(e.id)}
 					{#if editando}
 						<div
 							class="flex items-center gap-3 rounded-2xl border border-white/10 p-2.5"
@@ -214,39 +323,64 @@
 							>
 						</div>
 					{:else}
-						<a
-							href={`/ejercicio/${e.id}?dia=${diaId}`}
-							class="flex items-center gap-3 rounded-2xl border border-white/10 p-2.5"
+						<div
+							use:mantener={entrarReordenar}
+							class="flex items-center gap-2 rounded-2xl border border-white/10 p-2.5 {saltado
+								? 'opacity-55'
+								: ''}"
 							style="background: radial-gradient(150% 130% at 0% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface)"
 						>
-							<video
-								use:reproducirEnVista={e.demoVideo}
-								class="size-16 shrink-0 rounded-xl bg-white object-contain"
-								aria-label={e.nombre}
-								loop
-								muted
-								playsinline
-								preload="none"
-							></video>
-							<div class="min-w-0 flex-1">
-								<p class="truncate text-sm font-semibold leading-tight">{e.nombre}</p>
-								<p class="mt-0.5 text-xs font-medium" style="color: rgb({g.glow})">
-									{g.emoji} {g.label}
-								</p>
-							</div>
-							<div class="pr-1 text-right">
-								{#if p && p.hechas === p.total}
-									<p class="text-xl leading-none" style="color: rgb({g.glow})">✓</p>
-									<p class="text-[11px]" style="color: var(--muted)">hecho</p>
-								{:else if p}
-									<p class="text-lg font-bold leading-none">{p.hechas}/{p.total}</p>
-									<p class="text-[11px]" style="color: var(--muted)">series</p>
-								{:else}
-									<p class="text-lg font-bold leading-none">{item.seriesObjetivo}</p>
-									<p class="text-[11px]" style="color: var(--muted)">series</p>
-								{/if}
-							</div>
-						</a>
+							<a
+								href={`/ejercicio/${e.id}?dia=${diaId}`}
+								class="flex min-w-0 flex-1 items-center gap-3"
+							>
+								<video
+									use:reproducirEnVista={e.demoVideo}
+									class="size-16 shrink-0 rounded-xl bg-white object-contain"
+									aria-label={e.nombre}
+									loop
+									muted
+									playsinline
+									preload="none"
+								></video>
+								<div class="min-w-0 flex-1">
+									<p class="truncate text-sm font-semibold leading-tight">{e.nombre}</p>
+									<p class="mt-0.5 text-xs font-medium" style="color: rgb({g.glow})">
+										{g.emoji} {g.label}
+									</p>
+								</div>
+								<div class="pr-1 text-right">
+									{#if saltado}
+										<p class="text-[11px] font-bold leading-none" style="color: var(--muted)">Saltado</p>
+										<p class="text-[11px]" style="color: var(--muted)">hoy</p>
+									{:else if p && p.hechas === p.total}
+										<p class="text-xl leading-none" style="color: rgb({g.glow})">✓</p>
+										<p class="text-[11px]" style="color: var(--muted)">hecho</p>
+									{:else if p}
+										<p class="text-lg font-bold leading-none">{p.hechas}/{p.total}</p>
+										<p class="text-[11px]" style="color: var(--muted)">series</p>
+									{:else}
+										<p class="text-lg font-bold leading-none">{item.seriesObjetivo}</p>
+										<p class="text-[11px]" style="color: var(--muted)">series</p>
+									{/if}
+								</div>
+							</a>
+							{#if saltado}
+								<button
+									onclick={() => reanudarEjercicio(diaId, e.id)}
+									class="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 text-sm"
+									style="color: var(--accent)"
+									aria-label={`Reanudar ${e.nombre} hoy`}>↩</button
+								>
+							{:else}
+								<button
+									onclick={() => saltarEjercicio(diaId, e.id, item.seriesObjetivo)}
+									class="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 text-sm"
+									style="color: var(--muted)"
+									aria-label={`Saltar ${e.nombre} hoy`}>⏭</button
+								>
+							{/if}
+						</div>
 					{/if}
 				{/if}
 			{/each}
@@ -269,7 +403,12 @@
 							Estado del día
 						</p>
 						<p class="mt-1 text-sm font-bold">
-							{ejerciciosCompletos}/{totalEjercicios} ejercicios
+							{ejerciciosCompletos}/{totalEjercicios} ejercicios{#if ejerciciosSaltados > 0}<span
+									class="font-medium"
+									style="color: var(--muted)"> · {ejerciciosSaltados} saltado{ejerciciosSaltados === 1
+										? ''
+										: 's'}</span
+								>{/if}
 						</p>
 					</div>
 					{#if diaTerminado}
@@ -303,7 +442,12 @@
 						class="mt-3 w-full rounded-2xl py-3 text-sm font-bold disabled:opacity-45"
 						style="background: {diaListo ? 'var(--accent)' : 'rgba(255,255,255,.08)'}; color: {diaListo ? 'white' : 'var(--muted)'}"
 					>
-						{diaListo ? '🏁 Terminar día' : `Faltan ${totalEjercicios - ejerciciosCompletos} ejercicios`}
+						{#if diaListo}
+							🏁 Terminar día
+						{:else}
+							{@const faltan = totalEjercicios - ejerciciosResueltos}
+							Faltan {faltan} ejercicio{faltan === 1 ? '' : 's'}
+						{/if}
 					</button>
 				{/if}
 			</section>

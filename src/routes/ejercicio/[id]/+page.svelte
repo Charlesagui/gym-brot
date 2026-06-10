@@ -69,6 +69,8 @@
 
 	// Hint de MAX: solo en máquinas de placas, las primeras 3 visitas o hasta "Entendido".
 	let mostrarHintMax = $state(false);
+	// Hint para activar el descanso: una sola vez, al marcar una serie con el timer apagado.
+	let mostrarHintTimer = $state(false);
 
 	$effect(() => {
 		if (!ej?.maquinaPlacas || localStorage.getItem('gb-hint-max-ok')) {
@@ -198,6 +200,8 @@
 			(valorCelebrado == null || valorMejorHoy > valorCelebrado)
 	);
 	const pasoPeso = $derived(ajustes.pasoPeso ?? AJUSTES_DEFAULT.pasoPeso);
+	// Sin PR ni serie previa: es la primera vez con este ejercicio → hint de peso inicial.
+	const sinHistorial = $derived(!cargandoSeries && puntos.length === 0 && anteriores.length === 0);
 
 	function mejorSetLocal(localSets: SetSesion[], soloHechas: boolean): MejorSet | null {
 		return localSets.reduce<MejorSet | null>((best, s) => {
@@ -338,7 +342,20 @@
 		const seCompletanTodas = sets.filter((s) => s.hecha).length === sets.length - 1;
 		if (!seCompletanTodas && ajustes.timer.activo) {
 			descanso.iniciar(ajustes.timer.minutos, g?.glow ?? '124 92 255'); // recién hecha → arranca descanso
+		} else if (!seCompletanTodas && !ajustes.timer.activo && !localStorage.getItem('gb-hint-timer-ok')) {
+			// Timer apagado: sugerir activarlo (una sola vez) para que avise cuándo volver.
+			mostrarHintTimer = true;
 		}
+	}
+
+	function activarDescansoDesdeHint() {
+		cambiarTimer(ajustes.timer.minutos || 2);
+		descartarHintTimer();
+	}
+
+	function descartarHintTimer() {
+		localStorage.setItem('gb-hint-timer-ok', '1');
+		mostrarHintTimer = false;
 	}
 
 	/** Devuelve el set como MejorSet si supera al PR vigente; si no, null. */
@@ -565,6 +582,14 @@
 							/>
 						{/each}
 					</div>
+					{#if sinHistorial}
+						<div class="mt-2 flex items-start gap-2 rounded-xl p-2.5" style="background: rgb({g.glow} / .08)">
+							<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
+								💡 Primera vez con este ejercicio. Empezá con un peso que te deje hacer ~12 repeticiones
+								cómodas y ajustá la próxima.
+							</p>
+						</div>
+					{/if}
 					{#if mostrarHintMax}
 						<div class="mt-2 flex items-start gap-2 rounded-xl p-2.5" style="background: rgb(var(--max) / .08)">
 							<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
@@ -599,6 +624,21 @@
 						>
 					{/each}
 				</div>
+				{#if mostrarHintTimer}
+					<div class="mt-2 flex items-center gap-2 rounded-xl p-2.5" style="background: rgb({g.glow} / .08)">
+						<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
+							💡 ¿Activar el descanso? Te avisa cuándo volver a la serie.
+						</p>
+						<button
+							onclick={activarDescansoDesdeHint}
+							class="shrink-0 rounded-full px-3 py-1 text-xs font-bold"
+							style="background: var(--accent); color: white">Activar</button
+						>
+						<button onclick={descartarHintTimer} class="shrink-0 text-xs font-bold" style="color: var(--muted)"
+							>Ahora no</button
+						>
+					</div>
+				{/if}
 			</section>
 
 			{#if pr}
