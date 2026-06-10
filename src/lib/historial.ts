@@ -128,10 +128,7 @@ function resumenSesionAgrupada(sesiones: Sesion[], dias: Dia[]): DiaEntrenado {
 	};
 }
 
-export function crearHistorialResumen(
-	sesiones: Sesion[],
-	dias: Dia[]
-): HistorialResumen {
+export function crearHistorialResumen(sesiones: Sesion[], dias: Dia[]): HistorialResumen {
 	const entrenadas = sesiones.filter(tieneEntrenamiento);
 	if (entrenadas.length === 0) {
 		return { dias: [], semanas: [], rachaSemanal: 0, diasEstaSemana: 0, totalDias: 0 };
@@ -181,9 +178,12 @@ export function crearHistorialResumen(
 	};
 }
 
-export function historialObs() {
+export function resumenHistorialObs() {
 	return liveQuery(async () => {
-		const [sesiones, dias] = await Promise.all([db.sesiones.orderBy('fecha').toArray(), db.dias.toArray()]);
+		const [sesiones, dias] = await Promise.all([
+			db.sesiones.orderBy('fecha').toArray(),
+			db.dias.toArray()
+		]);
 		return crearHistorialResumen(sesiones, dias);
 	});
 }

@@ -31,7 +31,12 @@ describe('crearHistorialResumen', () => {
 	it('cuenta racha semanal cruzando de anio y descarta sesiones sin series hechas', () => {
 		vi.setSystemTime(new Date('2026-01-07T12:00:00'));
 		const resumen = crearHistorialResumen(
-			[sesion('2025-12-23'), sesion('2025-12-31'), sesion('2026-01-06'), sesion('2026-01-07', false)],
+			[
+				sesion('2025-12-23'),
+				sesion('2025-12-31'),
+				sesion('2026-01-06'),
+				sesion('2026-01-07', false)
+			],
 			[dia]
 		);
 
