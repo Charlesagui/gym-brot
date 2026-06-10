@@ -21,6 +21,7 @@ import {
 	toggleSet,
 	ultimaSesion
 } from './sesion';
+import { resumenDiaSesion } from './historial';
 
 async function limpiarDb() {
 	await db.open();
@@ -151,6 +152,72 @@ describe('sesion con IndexedDB', () => {
 		expect(await db.sesiones.get('2026-01-07__push')).toMatchObject({
 			diaTerminado: false,
 			diaTerminadoAt: undefined
+		});
+	});
+
+	it('destildar el set del PR limpia el resumen y conserva el historial real', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-01');
+		await setPeso('push', 'press', 0, 100, '2026-01-01');
+		await setReps('push', 'press', 0, 5, '2026-01-01');
+		await toggleSet('push', 'press', 0, '2026-01-01', 'peso');
+
+		await ensureEjercicio('push', 'press', 1, '2026-01-02');
+		await setPeso('push', 'press', 0, 110, '2026-01-02');
+		await setReps('push', 'press', 0, 5, '2026-01-02');
+		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
+		await marcarPrCelebrado('push', 'press', { peso: 110, reps: 5 }, 'peso', '2026-01-02');
+
+		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
+
+		const actual = await db.sesiones.get('2026-01-02__push');
+		expect(actual?.ejercicios[0]?.prCelebrado).toBeUndefined();
+		expect(resumenDiaSesion(actual).prs).toHaveLength(0);
+		expect(await primerValor(historialObs('press', 'peso'))).toEqual([
+			{ peso: 100, reps: 5, esMax: false, extraKg: undefined, fecha: '2026-01-01', valor: 100 }
+		]);
+	});
+
+	it('destildar el set del PR recalcula el umbral con otra serie hecha que supera el historial previo', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-01');
+		await setPeso('push', 'press', 0, 100, '2026-01-01');
+		await toggleSet('push', 'press', 0, '2026-01-01', 'peso');
+
+		await ensureEjercicio('push', 'press', 2, '2026-01-02');
+		await setPeso('push', 'press', 0, 110, '2026-01-02');
+		await setPeso('push', 'press', 1, 105, '2026-01-02');
+		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
+		await toggleSet('push', 'press', 1, '2026-01-02', 'peso');
+		await marcarPrCelebrado('push', 'press', { peso: 110 }, 'peso', '2026-01-02');
+
+		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
+
+		expect((await db.sesiones.get('2026-01-02__push'))?.ejercicios[0]?.prCelebrado).toEqual({
+			peso: 105,
+			reps: undefined,
+			esMax: false,
+			extraKg: undefined
+		});
+	});
+
+	it('destildar un empate no borra el PR si otra serie hecha lo respalda', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-01');
+		await setPeso('push', 'press', 0, 100, '2026-01-01');
+		await toggleSet('push', 'press', 0, '2026-01-01', 'peso');
+
+		await ensureEjercicio('push', 'press', 2, '2026-01-02');
+		await setPeso('push', 'press', 0, 110, '2026-01-02');
+		await setPeso('push', 'press', 1, 110, '2026-01-02');
+		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
+		await toggleSet('push', 'press', 1, '2026-01-02', 'peso');
+		await marcarPrCelebrado('push', 'press', { peso: 110 }, 'peso', '2026-01-02');
+
+		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
+
+		expect((await db.sesiones.get('2026-01-02__push'))?.ejercicios[0]?.prCelebrado).toEqual({
+			peso: 110,
+			reps: undefined,
+			esMax: false,
+			extraKg: undefined
 		});
 	});
 });

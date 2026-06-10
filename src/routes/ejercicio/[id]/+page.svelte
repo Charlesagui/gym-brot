@@ -297,7 +297,7 @@
 
 	function onToggle(i: number) {
 		const yaEstaba = sets[i]?.hecha;
-		toggleSet(diaId!, $page.params.id!, i, fechaSesion);
+		toggleSet(diaId!, $page.params.id!, i, fechaSesion, metrica);
 		if (yaEstaba) {
 			descanso.saltar();
 			return;

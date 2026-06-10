@@ -71,6 +71,31 @@ export function mejorSet(a: MejorSet | null, b: MejorSet): MejorSet {
 	return a;
 }
 
+function mejorSetDeSeries(sets: SetSesion[], fecha: string, metrica: MetricaPr): MejorSet | null {
+	return sets.reduce<MejorSet | null>((best, set) => {
+		if (!set.hecha) return best;
+		const ef = pesoEfectivo(set);
+		if (ef == null) return best;
+		return mejorSet(best, {
+			peso: set.peso!,
+			reps: set.reps,
+			esMax: !!set.esMax,
+			extraKg: set.extraKg,
+			fecha,
+			valor: valorMetrica(ef, set.reps, metrica)
+		});
+	}, null);
+}
+
+function snapPr(set: MejorSet): PrCelebrado {
+	return {
+		peso: set.peso,
+		reps: set.reps,
+		esMax: set.esMax,
+		extraKg: set.extraKg
+	};
+}
+
 /** Mejor set hecho por sesión, ordenado por fecha — PR bajo la métrica elegida. */
 export function historialObs(exerciseId: string, metrica: MetricaPr = 'peso') {
 	return liveQuery(async () => {
@@ -165,20 +190,47 @@ async function mutar(
 		});
 }
 
-export function toggleSet(diaId: string, exerciseId: string, i: number, fecha = hoyStr()) {
-	return mutar(
-		diaId,
-		exerciseId,
-		(sets, sesion) => {
-			if (!sets[i]) return;
-			sets[i].hecha = !sets[i].hecha;
-			if (!sets[i].hecha) {
-				sesion.diaTerminado = false;
-				sesion.diaTerminadoAt = undefined;
-			}
-		},
-		fecha
-	);
+async function recalcularPrCelebrado(sesion: Sesion, exerciseId: string, metrica: MetricaPr) {
+	const ejercicio = sesion.ejercicios.find((x) => x.exerciseId === exerciseId);
+	if (!ejercicio?.prCelebrado) return;
+
+	const todas = await db.sesiones.toArray();
+	const mejorPrevio = todas.reduce<MejorSet | null>((best, s) => {
+		if (s.id === sesion.id) return best;
+		const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
+		if (!e) return best;
+		const mejor = mejorSetDeSeries(e.sets, s.fecha, metrica);
+		return mejor ? mejorSet(best, mejor) : best;
+	}, null);
+	const valorPrevio = mejorPrevio?.valor ?? null;
+
+	const mejorRestante = mejorSetDeSeries(ejercicio.sets, sesion.fecha, metrica);
+	if (!mejorRestante || (valorPrevio != null && mejorRestante.valor <= valorPrevio)) {
+		ejercicio.prCelebrado = undefined;
+		return;
+	}
+	ejercicio.prCelebrado = snapPr(mejorRestante);
+}
+
+export async function toggleSet(
+	diaId: string,
+	exerciseId: string,
+	i: number,
+	fecha = hoyStr(),
+	metrica: MetricaPr = 'peso'
+) {
+	await db.transaction('rw', db.sesiones, async () => {
+		const s = await db.sesiones.get(sesionId(diaId, fecha));
+		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
+		if (!s || !e?.sets[i]) return;
+		e.sets[i].hecha = !e.sets[i].hecha;
+		if (!e.sets[i].hecha) {
+			s.diaTerminado = false;
+			s.diaTerminadoAt = undefined;
+			await recalcularPrCelebrado(s, exerciseId, metrica);
+		}
+		await db.sesiones.put(s);
+	});
 }
 export function toggleMax(diaId: string, exerciseId: string, i: number, fecha = hoyStr()) {
 	return mutar(
