@@ -25,7 +25,7 @@ export const AJUSTES_DEFAULT: Ajustes = {
 	pasoPeso: 5
 };
 
-function normalizarAjustes(a?: Ajustes | null): Ajustes {
+export function normalizarAjustes(a?: Ajustes | null): Ajustes {
 	return {
 		...AJUSTES_DEFAULT,
 		...(a ?? {}),

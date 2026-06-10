@@ -2,6 +2,7 @@ node_modules/
 /build/
 /.svelte-kit/
 /package
+/coverage/
 
 # Configuración local de Claude (no compartir)
 .claude/settings.local.json
