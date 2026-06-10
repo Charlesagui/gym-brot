@@ -237,6 +237,10 @@
 					muted
 					playsinline
 					preload="auto"
+					onpointerdown={iniciarArrastre}
+					onpointermove={moverArrastre}
+					onpointerup={terminarArrastre}
+					onpointercancel={cancelarArrastre}
 				></video>
 				<p class="mt-3 text-center text-sm font-medium" style="color: rgb({g.glow})">
 					{g.emoji} {g.label} · {p.musculo}
