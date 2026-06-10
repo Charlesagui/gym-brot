@@ -12,8 +12,10 @@
 	import { mantener } from '$lib/mantener';
 
 	const dias = liveQuery(() => db.dias.orderBy('orden').toArray());
+	let fechaHoy = $state(hoyStr());
+	let hoy = $state(new Date().getDay());
 	// Sesiones de hoy, para reflejar el progreso del día en la portada.
-	const sesionesHoy = liveQuery(() => db.sesiones.where('fecha').equals(hoyStr()).toArray());
+	const sesionesHoy = $derived(liveQuery(() => db.sesiones.where('fecha').equals(fechaHoy).toArray()));
 
 	// Modo reordenar días: se entra con long-press; las cards se arrastran (svelte-dnd-action).
 	interface ItemDia {
@@ -79,7 +81,6 @@
 		const id = await crearDia();
 		goto(`/dia/${id}`);
 	}
-	const hoy = new Date().getDay();
 	const nombresDia = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 	const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
@@ -89,7 +90,19 @@
 
 	let mostrarWelcome = $state(false);
 	onMount(() => {
+		function refrescarHoy() {
+			fechaHoy = hoyStr();
+			hoy = new Date().getDay();
+		}
+
+		refrescarHoy();
 		mostrarWelcome = !localStorage.getItem('gym-brot-welcome-closed');
+		document.addEventListener('visibilitychange', refrescarHoy);
+		window.addEventListener('focus', refrescarHoy);
+		return () => {
+			document.removeEventListener('visibilitychange', refrescarHoy);
+			window.removeEventListener('focus', refrescarHoy);
+		};
 	});
 	function cerrarWelcome() {
 		localStorage.setItem('gym-brot-welcome-closed', 'true');
