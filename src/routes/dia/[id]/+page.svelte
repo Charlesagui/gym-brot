@@ -30,7 +30,7 @@
 	import { reproducirEnVista } from '$lib/video';
 	import { dur } from '$lib/motion';
 	import { fromLiveQuery } from '$lib/live';
-	import { formatoNumero } from '$lib/formato';
+	import { formatoVolumen } from '$lib/formato';
 
 	let dia = $state<Dia | undefined>(undefined);
 	let cargando = $state(true);
@@ -534,9 +534,9 @@
 			<div class="mt-4 grid grid-cols-2 gap-2 text-left">
 				<div class="rounded-xl border border-white/10 bg-white/[0.04] p-3">
 					<p class="text-lg font-extrabold tabular-nums">
-						{formatoNumero(resumenDia.volumen)} <span class="text-sm" style="color: var(--muted)">{ajustes.unidad}</span>
+						{formatoVolumen(resumenDia.volumen)} <span class="text-sm" style="color: var(--muted)">{ajustes.unidad}</span>
 					</p>
-					<p class="text-[11px] font-semibold" style="color: var(--muted)">volumen total</p>
+					<p class="text-[11px] font-semibold" style="color: var(--muted)">volumen (peso × reps ✓)</p>
 				</div>
 				<div class="rounded-xl border border-white/10 bg-white/[0.04] p-3">
 					<p class="text-lg font-extrabold tabular-nums">{resumenDia.prs.length}</p>

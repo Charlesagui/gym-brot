@@ -96,16 +96,20 @@ export async function setUnidad(unidad: 'kg' | 'lb'): Promise<void> {
 					}
 				}
 				// El umbral de PR ya celebrado se guarda en peso → convertir también.
+				// En modo reps (sin peso) no hay nada que convertir.
 				if (ejercicio.prCelebrado) {
-					ejercicio.prCelebrado.peso = convertirPeso(ejercicio.prCelebrado.peso, a.unidad, unidad);
+					if (ejercicio.prCelebrado.peso != null) {
+						ejercicio.prCelebrado.peso = convertirPeso(ejercicio.prCelebrado.peso, a.unidad, unidad);
+						cambio = true;
+					}
 					if (ejercicio.prCelebrado.extraKg != null) {
 						ejercicio.prCelebrado.extraKg = convertirPeso(
 							ejercicio.prCelebrado.extraKg,
 							a.unidad,
 							unidad
 						);
+						cambio = true;
 					}
-					cambio = true;
 				}
 			}
 			if (cambio) await db.sesiones.put(sesion);
@@ -190,7 +194,7 @@ function esDia(value: unknown): value is Dia {
 function esPrCelebrado(value: unknown): boolean {
 	return (
 		esRecord(value) &&
-		esNumero(value.peso) &&
+		(value.peso === undefined || esNumero(value.peso)) &&
 		(value.reps === undefined || esNumero(value.reps)) &&
 		(value.esMax === undefined || esBoolean(value.esMax)) &&
 		(value.extraKg === undefined || esNumero(value.extraKg))

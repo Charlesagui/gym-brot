@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
-	import { formatoNumero, formatoSet, fechaCorta } from '$lib/formato';
+	import { formatoNumero, formatoSet, formatoVolumen, fechaCorta } from '$lib/formato';
 	import {
 		crearHistorialResumen,
 		resumenHistorialObs,
@@ -69,6 +69,15 @@
 				<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">días entrenados</p>
 			</div>
 		</div>
+		{#if historial.rachaSemanal > 0 && historial.diasEstaSemana === 0}
+			<!-- Racha con gracia: la semana en curso no la corta hasta terminar sin entrenar. -->
+			<p
+				class="mt-3 border-t border-white/10 pt-2.5 text-center text-xs"
+				style="color: var(--muted)"
+			>
+				Todavía no entrenaste esta semana · la racha se mantiene hasta el domingo
+			</p>
+		{/if}
 	</section>
 
 	<section class="mb-4 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
@@ -153,6 +162,9 @@
 							style="color: rgb(var(--max))"
 						>
 							{formatoNumero(record.valor)}
+							<span class="text-[11px] font-semibold" style="color: var(--muted)"
+								>{record.modo === 'reps' ? 'reps' : ajustes.unidad}</span
+							>
 						</p>
 					</div>
 				</article>
@@ -195,8 +207,8 @@
 							<p style="color: var(--muted)">sets hechos</p>
 						</div>
 						<div class="rounded-xl bg-white/[0.035] p-2">
-							<p class="font-bold tabular-nums">{formatoNumero(dia.volumen)} {ajustes.unidad}</p>
-							<p style="color: var(--muted)">volumen</p>
+							<p class="font-bold tabular-nums">{formatoVolumen(dia.volumen)} {ajustes.unidad}</p>
+							<p style="color: var(--muted)">volumen (peso × reps ✓)</p>
 						</div>
 					</div>
 				</article>

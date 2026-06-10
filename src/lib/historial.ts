@@ -29,7 +29,8 @@ export interface HistorialResumen {
 export interface PrDelDia {
 	exerciseId: string;
 	nombre: string;
-	peso: number;
+	/** Ausente en ejercicios sin peso (modo reps). */
+	peso?: number;
 	reps?: number;
 	esMax: boolean;
 	extraKg?: number;
@@ -38,6 +39,8 @@ export interface PrDelDia {
 export interface ResumenDiaSesion {
 	setsHechos: number;
 	volumen: number;
+	/** Series ✓ sin peso o sin reps: quedan fuera del volumen (peso × reps) y la UI lo dice. */
+	setsSinVolumen: number;
 	prs: PrDelDia[];
 }
 
@@ -71,9 +74,10 @@ function addDias(d: Date, dias: number): Date {
 }
 
 export function resumenDiaSesion(sesion: Sesion | undefined): ResumenDiaSesion {
-	if (!sesion) return { setsHechos: 0, volumen: 0, prs: [] };
+	if (!sesion) return { setsHechos: 0, volumen: 0, setsSinVolumen: 0, prs: [] };
 	let setsHechos = 0;
 	let volumen = 0;
+	let setsSinVolumen = 0;
 	const prs: PrDelDia[] = [];
 
 	for (const ejercicio of sesion.ejercicios) {
@@ -82,6 +86,7 @@ export function resumenDiaSesion(sesion: Sesion | undefined): ResumenDiaSesion {
 			setsHechos++;
 			const peso = pesoEfectivo(set);
 			if (peso != null && set.reps != null) volumen += peso * set.reps;
+			else setsSinVolumen++;
 		}
 		if (ejercicio.prCelebrado) {
 			const ej = ejercicioPorId(ejercicio.exerciseId);
@@ -96,7 +101,7 @@ export function resumenDiaSesion(sesion: Sesion | undefined): ResumenDiaSesion {
 		}
 	}
 
-	return { setsHechos, volumen, prs };
+	return { setsHechos, volumen, setsSinVolumen, prs };
 }
 
 function tieneEntrenamiento(sesion: Sesion): boolean {
@@ -162,8 +167,10 @@ export function crearHistorialResumen(sesiones: Sesion[], dias: Dia[]): Historia
 		});
 	}
 
-	let rachaSemanal = 0;
-	for (let i = semanas.length - 1; i >= 0; i--) {
+	// Racha con gracia: la semana en curso suma si entrenaste, pero mientras esté
+	// incompleta no corta la racha que traen las semanas anteriores.
+	let rachaSemanal = semanas[semanas.length - 1]?.entrenada ? 1 : 0;
+	for (let i = semanas.length - 2; i >= 0; i--) {
 		if (!semanas[i]!.entrenada) break;
 		rachaSemanal++;
 	}

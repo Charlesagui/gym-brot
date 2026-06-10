@@ -50,16 +50,24 @@ describe('crearHistorialResumen', () => {
 		});
 	});
 
-	it('la semana actual sin entrenar corta la racha', () => {
+	it('la semana actual sin entrenar no corta la racha (gracia hasta que termine)', () => {
 		vi.setSystemTime(new Date('2026-01-07T12:00:00'));
 		const resumen = crearHistorialResumen([sesion('2025-12-23'), sesion('2025-12-31')], [dia]);
 
-		expect(resumen.rachaSemanal).toBe(0);
+		expect(resumen.rachaSemanal).toBe(2);
 		expect(resumen.diasEstaSemana).toBe(0);
 		expect(resumen.semanas[0]).toMatchObject({
 			inicio: '2026-01-05',
 			entrenada: false
 		});
+	});
+
+	it('una semana completa sin entrenar si corta la racha', () => {
+		vi.setSystemTime(new Date('2026-01-07T12:00:00'));
+		// Entrenada la semana del 22/12, vacia la del 29/12, vacia la actual → racha 0.
+		const resumen = crearHistorialResumen([sesion('2025-12-23')], [dia]);
+
+		expect(resumen.rachaSemanal).toBe(0);
 	});
 });
 
@@ -83,6 +91,29 @@ describe('resumenDiaSesion', () => {
 
 		expect(resumen.setsHechos).toBe(1);
 		expect(resumen.volumen).toBe(500);
+		expect(resumen.setsSinVolumen).toBe(0);
 		expect(resumen.prs).toHaveLength(1);
+	});
+
+	it('cuenta las series hechas que quedan fuera del volumen (sin reps o sin peso)', () => {
+		const resumen = resumenDiaSesion({
+			id: '2026-01-07__piernas',
+			fecha: '2026-01-07',
+			diaId: 'piernas',
+			ejercicios: [
+				{
+					exerciseId: 'sentadilla',
+					sets: [
+						{ peso: 100, reps: 5, hecha: true },
+						{ peso: 100, hecha: true },
+						{ reps: 12, hecha: true }
+					]
+				}
+			]
+		});
+
+		expect(resumen.setsHechos).toBe(3);
+		expect(resumen.volumen).toBe(500);
+		expect(resumen.setsSinVolumen).toBe(2);
 	});
 });

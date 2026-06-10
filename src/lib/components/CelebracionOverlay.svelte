@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { fly } from 'svelte/transition';
 	import type { MejorSet } from '$lib/sesion';
-	import type { Ajustes } from '$lib/db';
 	import { dur } from '$lib/motion';
 	import { formatoNumero, formatoSet } from '$lib/formato';
 
@@ -17,7 +16,8 @@
 		exito: 'normal' | 'pr' | 'parcial';
 		prExito: MejorSet | null;
 		glow: string;
-		unidad: Ajustes['unidad'];
+		/** Unidad del valor del PR: kg/lb, o "reps" en ejercicios sin peso. */
+		unidad: string;
 		metricaLabel: string;
 		hechas: number;
 		total: number;
