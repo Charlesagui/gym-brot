@@ -3,11 +3,36 @@
 	import { fly } from 'svelte/transition';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { db } from '$lib/db';
+	import { db, type Dia, type Sesion } from '$lib/db';
 	import { crearDia } from '$lib/dias';
+	import { hoyStr } from '$lib/sesion';
 	import { dur } from '$lib/motion';
 
 	const dias = liveQuery(() => db.dias.orderBy('orden').toArray());
+	// Sesiones de hoy, para reflejar el progreso del día en la portada.
+	const sesionesHoy = liveQuery(() => db.sesiones.where('fecha').equals(hoyStr()).toArray());
+
+	interface ProgresoDia {
+		completos: number;
+		total: number;
+		terminado: boolean;
+	}
+
+	/** Progreso de un día según la sesión de hoy (null si todavía no se tocó nada). */
+	function progresoDia(dia: Dia, sesiones: Sesion[] | undefined): ProgresoDia | null {
+		const sesion = sesiones?.find((s) => s.diaId === dia.id);
+		if (!sesion || dia.ejercicios.length === 0) return null;
+		let completos = 0;
+		let conActividad = 0;
+		for (const item of dia.ejercicios) {
+			const e = sesion.ejercicios.find((x) => x.exerciseId === item.exerciseId);
+			if (!e || e.sets.length === 0) continue;
+			if (e.sets.some((s) => s.hecha)) conActividad++;
+			if (e.sets.every((s) => s.hecha)) completos++;
+		}
+		if (conActividad === 0 && !sesion.diaTerminado) return null;
+		return { completos, total: dia.ejercicios.length, terminado: !!sesion.diaTerminado };
+	}
 
 	async function nuevoDia() {
 		const id = await crearDia();
@@ -49,7 +74,7 @@
 			</button>
 			<h2 class="text-sm font-bold" style="color: var(--accent)">👋 ¡Te damos la bienvenida!</h2>
 			<p class="mt-1.5 text-xs leading-relaxed" style="color: var(--muted)">
-				Agregamos rutinas de ejemplo para que explores la app. Podés editarlas, reordenarlas o eliminarlas en cualquier momento. ¡Comenzá tocando una rutina!
+				Agregamos rutinas de ejemplo para que explores la app. Podés editarlas o eliminarlas en cualquier momento. ¡Comenzá tocando una rutina!
 			</p>
 		</div>
 	{/if}
@@ -57,18 +82,33 @@
 	{#if $dias}
 		{@const hoyDia = $dias.find((d) => d.diaSemana === hoy)}
 		{#if hoyDia}
+			{@const prog = progresoDia(hoyDia, $sesionesHoy)}
 			<a
 				href={`/dia/${hoyDia.id}`}
 				class="mb-6 block rounded-2xl border border-white/10 p-4"
 				style="background: radial-gradient(120% 130% at 0% 0%, rgb({hoyDia.color} / 0.30), transparent 62%), var(--surface)"
 			>
-				<p class="text-[11px] font-bold uppercase tracking-[0.2em]" style="color: rgb({hoyDia.color})">
-					Hoy entrenás
-				</p>
+				<div class="flex items-center justify-between gap-3">
+					<p class="text-[11px] font-bold uppercase tracking-[0.2em]" style="color: rgb({hoyDia.color})">
+						Hoy entrenás
+					</p>
+					{#if prog?.terminado}
+						<span
+							class="rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+							style="background: rgba(74,222,128,.16); color: #4ade80">✓ Terminado</span
+						>
+					{/if}
+				</div>
 				<p class="mt-1 text-2xl font-bold leading-tight">{hoyDia.nombre}</p>
-				<p class="mt-0.5 text-xs" style="color: var(--muted)">
-					{hoyDia.ejercicios.length} ejercicios →
-				</p>
+				{#if prog && !prog.terminado}
+					<p class="mt-0.5 text-xs font-semibold" style="color: rgb({hoyDia.color})">
+						{prog.completos}/{prog.total} ejercicios hechos →
+					</p>
+				{:else}
+					<p class="mt-0.5 text-xs" style="color: var(--muted)">
+						{hoyDia.ejercicios.length} ejercicios →
+					</p>
+				{/if}
 			</a>
 		{:else}
 			<div
@@ -88,6 +128,7 @@
 		</p>
 		<div class="space-y-3">
 			{#each $dias as d, i (d.id)}
+				{@const prog = progresoDia(d, $sesionesHoy)}
 				<a
 					href={`/dia/${d.id}`}
 					in:fly={{ y: 12, duration: dur(250), delay: dur(i * 45) }}
@@ -99,7 +140,18 @@
 						<p class="font-semibold leading-tight">{d.nombre}</p>
 						<p class="text-xs" style="color: var(--muted)">{d.ejercicios.length} ejercicios</p>
 					</div>
-					<span class="text-2xl" aria-hidden="true" style="color: var(--muted)">›</span>
+					{#if prog?.terminado}
+						<span
+							class="rounded-full px-2.5 py-1 text-[11px] font-bold"
+							style="background: rgba(74,222,128,.16); color: #4ade80">✓ Hoy</span
+						>
+					{:else if prog}
+						<span class="text-xs font-bold tabular-nums" style="color: rgb({d.color})"
+							>{prog.completos}/{prog.total}</span
+						>
+					{:else}
+						<span class="text-2xl" aria-hidden="true" style="color: var(--muted)">›</span>
+					{/if}
 				</a>
 			{/each}
 		</div>

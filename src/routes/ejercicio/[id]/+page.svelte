@@ -26,7 +26,8 @@
 		type MejorSet
 	} from '$lib/sesion';
 	import { notaObs, setNota, ajustesObs, setTimer, AJUSTES_DEFAULT } from '$lib/extras';
-	import { sonarSetHecho, sonarExito, sonarDescansoTerminado } from '$lib/audio';
+	import { sonarSetHecho, sonarExito } from '$lib/audio';
+	import { descanso } from '$lib/descanso.svelte';
 	import { pulsar } from '$lib/pulsar';
 	import { dur } from '$lib/motion';
 
@@ -48,6 +49,10 @@
 	let cargandoSeries = $state(false);
 	let exito = $state<'normal' | 'pr' | 'parcial' | null>(null);
 	let prExito = $state<MejorSet | null>(null);
+	// Flash de PR no bloqueante: celebra el récord en el instante en que se gana,
+	// sin esperar a "Terminar" (así no se pierde si salís con ←).
+	let prFlash = $state<MejorSet | null>(null);
+	let prFlashId: ReturnType<typeof setTimeout> | null = null;
 	// Video grande solo la primera visita a cada ejercicio; después arranca
 	// como miniatura en el header para dejar las series a mano sin scroll.
 	let videoGrande = $state(true);
@@ -77,19 +82,8 @@
 		mostrarHintMax = false;
 	}
 
-	// Descanso: la fuente de verdad son timestamps, no un contador — así el tiempo
-	// sigue siendo correcto aunque se bloquee la pantalla o la app pase a background.
-	// Se persiste en localStorage para sobrevivir la navegación entre pantallas.
-	const DESCANSO_KEY = 'gb-descanso';
-	let restoSeg = $state(0);
-	let avisoFinDescanso = $state(false);
-	let descansoInicio: number | null = null;
-	let descansoHasta: number | null = null;
-	let intId: ReturnType<typeof setInterval> | null = null;
-	let avisoId: ReturnType<typeof setTimeout> | null = null;
+	// El descanso ahora es un store global (sobrevive navegar entre pantallas).
 	let exitoId: ReturnType<typeof setTimeout> | null = null;
-	// La pantalla queda despierta durante el descanso para que el aviso llegue a tiempo.
-	let wakeLock: WakeLockSentinel | null = null;
 
 	$effect(() => {
 		const exId = $page.params.id!;
@@ -110,42 +104,6 @@
 	$effect(() => {
 		const sub = ajustesObs().subscribe((a) => (ajustes = a));
 		return () => sub.unsubscribe();
-	});
-
-	// Al volver del background o del bloqueo de pantalla, recalcular el descanso al instante.
-	$effect(() => {
-		const refrescar = () => {
-			recalcDescanso();
-			// El wake lock se libera solo al pasar a background: repedirlo si sigue el descanso.
-			if (descansoHasta != null && document.visibilityState === 'visible') void pedirWakeLock();
-		};
-		document.addEventListener('visibilitychange', refrescar);
-		window.addEventListener('focus', refrescar);
-		return () => {
-			document.removeEventListener('visibilitychange', refrescar);
-			window.removeEventListener('focus', refrescar);
-		};
-	});
-
-	// Restaurar un descanso en curso al entrar: sobrevive navegar a otra pantalla.
-	$effect(() => {
-		const crudo = localStorage.getItem(DESCANSO_KEY);
-		if (!crudo) return;
-		try {
-			const d = JSON.parse(crudo) as { inicio?: number; hasta?: number };
-			if (typeof d.inicio !== 'number' || typeof d.hasta !== 'number' || d.hasta <= Date.now()) {
-				localStorage.removeItem(DESCANSO_KEY);
-				return;
-			}
-			descansoInicio = d.inicio;
-			descansoHasta = d.hasta;
-			restoSeg = Math.ceil((d.hasta - Date.now()) / 1000);
-			if (intId) clearInterval(intId);
-			intId = setInterval(recalcDescanso, 500);
-			void pedirWakeLock();
-		} catch {
-			localStorage.removeItem(DESCANSO_KEY);
-		}
 	});
 
 	$effect(() => {
@@ -196,10 +154,8 @@
 	});
 
 	onDestroy(() => {
-		if (intId) clearInterval(intId);
-		if (avisoId) clearTimeout(avisoId);
 		if (exitoId) clearTimeout(exitoId);
-		soltarWakeLock();
+		if (prFlashId) clearTimeout(prFlashId);
 	});
 
 	const hechas = $derived(sets.filter((s) => s.hecha).length);
@@ -374,20 +330,61 @@
 		const yaEstaba = sets[i]?.hecha;
 		toggleSet(diaId!, $page.params.id!, i, fechaSesion);
 		if (yaEstaba) {
-			saltarDescanso();
+			descanso.saltar();
 			return;
 		}
-		if (sonidoActivo) void sonarSetHecho().catch(() => {});
+
+		// ¿Esta serie acaba de marcar un PR? Lo celebramos y persistimos en el acto,
+		// para que el récord no se pierda si salís con ← antes de "Terminar".
+		const nuevoPr = prDeSet(sets[i]);
+		if (nuevoPr) {
+			void marcarPrCelebrado(
+				diaId!,
+				$page.params.id!,
+				{ peso: nuevoPr.peso, reps: nuevoPr.reps, esMax: nuevoPr.esMax, extraKg: nuevoPr.extraKg },
+				metrica,
+				fechaSesion
+			);
+			celebrarPrFlash(nuevoPr);
+		} else {
+			if (sonidoActivo) void sonarSetHecho().catch(() => {});
+			// Háptica breve: el switch de silencio de iOS puede mutear el audio, la vibra no.
+			if (vibracionActiva && 'vibrate' in navigator) navigator.vibrate(20);
+		}
 
 		const seCompletanTodas = sets.filter((s) => s.hecha).length === sets.length - 1;
-		if (!seCompletanTodas) {
-			iniciarDescanso(); // recién marcada como hecha → arranca descanso
+		if (!seCompletanTodas && ajustes.timer.activo) {
+			descanso.iniciar(ajustes.timer.minutos, g?.glow ?? '124 92 255'); // recién hecha → arranca descanso
 		}
+	}
+
+	/** Devuelve el set como MejorSet si supera al PR vigente; si no, null. */
+	function prDeSet(s: SetSesion | undefined): MejorSet | null {
+		if (!s) return null;
+		const ef = pesoEfectivo(s);
+		if (ef == null) return null;
+		const valor = valorMetrica(ef, s.reps, metrica);
+		const esNuevoPr =
+			(mejorPrevio == null || valor > mejorPrevio) &&
+			(valorCelebrado == null || valor > valorCelebrado);
+		if (!esNuevoPr) return null;
+		return { peso: s.peso!, reps: s.reps, esMax: !!s.esMax, extraKg: s.extraKg, fecha: fechaSesion, valor };
+	}
+
+	/** Recompensa especial inmediata por PR: no bloquea el registro (pointer-events-none). */
+	function celebrarPrFlash(mejor: MejorSet) {
+		prFlash = mejor;
+		if (sonidoActivo) void sonarExito(true).catch(() => {});
+		if (vibracionActiva && 'vibrate' in navigator) navigator.vibrate([120, 70, 180]);
+		if (prFlashId) clearTimeout(prFlashId);
+		prFlashId = setTimeout(() => (prFlash = null), 1700);
 	}
 
 	async function terminarEjercicio() {
 		if (!diaId || exito) return;
-		saltarDescanso();
+		descanso.saltar();
+		if (prFlashId) clearTimeout(prFlashId);
+		prFlash = null;
 		// Sin series hechas no hay nada que celebrar: salida directa y en silencio.
 		if (hechas === 0) {
 			goto(volver);
@@ -421,99 +418,14 @@
 	}
 
 	function apagarTimer() {
-		saltarDescanso();
+		descanso.saltar();
 		void setTimer(false, ajustes.timer.minutos);
 	}
 
 	function cambiarTimer(minutos: number) {
 		void setTimer(true, minutos);
 		// Si hay un descanso en curso, ajusta su fin en vez de reiniciarlo desde cero.
-		if (descansoInicio != null && descansoHasta != null) {
-			descansoHasta = descansoInicio + minutos * 60_000;
-			guardarDescanso();
-			recalcDescanso();
-		}
-	}
-
-	function iniciarDescanso(minutos?: number) {
-		if (minutos == null && !ajustes.timer.activo) return;
-		if (intId) clearInterval(intId);
-		ocultarAvisoFin();
-		descansoInicio = Date.now();
-		descansoHasta = descansoInicio + (minutos ?? ajustes.timer.minutos) * 60_000;
-		restoSeg = Math.ceil((descansoHasta - Date.now()) / 1000);
-		intId = setInterval(recalcDescanso, 500);
-		guardarDescanso();
-		void pedirWakeLock();
-	}
-
-	function guardarDescanso() {
-		if (descansoInicio == null || descansoHasta == null) return;
-		localStorage.setItem(
-			DESCANSO_KEY,
-			JSON.stringify({ inicio: descansoInicio, hasta: descansoHasta })
-		);
-	}
-
-	async function pedirWakeLock() {
-		try {
-			if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
-		} catch {
-			// Denegado o sin soporte: el timer por timestamps sigue siendo correcto igual.
-		}
-	}
-
-	function soltarWakeLock() {
-		void wakeLock?.release().catch(() => {});
-		wakeLock = null;
-	}
-
-	function recalcDescanso() {
-		if (descansoHasta == null) return;
-		const resto = Math.ceil((descansoHasta - Date.now()) / 1000);
-		if (resto > 0) {
-			restoSeg = resto;
-			return;
-		}
-		// Venció: sonar/vibrar solo si acaba de pasar con la app a la vista — al volver
-		// de un bloqueo largo no tiene sentido avisar tarde; queda la señal visual breve.
-		const recienVencido = Date.now() - descansoHasta < 3000;
-		const visible = document.visibilityState === 'visible';
-		limpiarDescanso();
-		if (recienVencido && visible) {
-			if (sonidoActivo) void sonarDescansoTerminado().catch(() => {});
-			if (vibracionActiva && 'vibrate' in navigator) navigator.vibrate([200, 100, 200]);
-		}
-		avisoFinDescanso = true;
-		if (avisoId) clearTimeout(avisoId);
-		avisoId = setTimeout(() => (avisoFinDescanso = false), 2500);
-	}
-
-	function limpiarDescanso() {
-		if (intId) clearInterval(intId);
-		intId = null;
-		descansoInicio = null;
-		descansoHasta = null;
-		restoSeg = 0;
-		localStorage.removeItem(DESCANSO_KEY);
-		soltarWakeLock();
-	}
-
-	function ocultarAvisoFin() {
-		avisoFinDescanso = false;
-		if (avisoId) clearTimeout(avisoId);
-		avisoId = null;
-	}
-
-	/** Corta el descanso sin señal alguna (Saltar, destildar una serie, terminar ejercicio). */
-	function saltarDescanso() {
-		limpiarDescanso();
-		ocultarAvisoFin();
-	}
-	function mmss(s: number): string {
-		const m = Math.floor(s / 60);
-		const sec = s % 60;
-		return `${m}:${String(sec).padStart(2, '0')}`;
+		descanso.ajustarFin(minutos);
 	}
 
 	function chartPoints(pts: MejorSet[]): ChartPoint[] {
@@ -558,7 +470,7 @@
 		<header class="mb-4 flex items-center gap-3">
 			<a
 				href={volver}
-				class="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
+				class="grid size-10 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
 				aria-label="Volver">←</a
 			>
 			{#if !videoGrande}
@@ -655,7 +567,7 @@
 							<button
 								onclick={quitarSerie}
 								disabled={sets.length <= 1}
-								class="grid size-8 touch-manipulation place-items-center rounded-full text-sm font-bold disabled:opacity-35"
+								class="grid size-10 touch-manipulation place-items-center rounded-full text-sm font-bold disabled:opacity-35"
 								style="color: var(--muted)"
 								aria-label="Quitar serie de hoy">−</button
 							>
@@ -666,7 +578,7 @@
 							>
 							<button
 								onclick={() => addSet(diaId, $page.params.id!, fechaSesion)}
-								class="grid size-8 touch-manipulation place-items-center rounded-full text-sm font-bold"
+								class="grid size-10 touch-manipulation place-items-center rounded-full text-sm font-bold"
 								style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
 								aria-label="Agregar serie de hoy">+</button
 							>
@@ -971,12 +883,12 @@
 				></textarea>
 			</details>
 
-			{#if completo && restoSeg === 0 && !avisoFinDescanso}
+			{#if completo && descanso.restoSeg === 0 && !descanso.avisoFin}
 				<!-- Con todo hecho, el cierre queda fijo al alcance del pulgar -->
 				<div
 					transition:fly={{ y: 40, duration: dur(200) }}
-					class="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md px-5 pb-5 pt-6"
-					style="background: linear-gradient(transparent, rgba(8,8,12,.92) 55%)"
+					class="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md px-5 pt-6"
+					style="padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgba(8,8,12,.92) 55%)"
 				>
 					<button
 						onclick={terminarEjercicio}
@@ -1105,29 +1017,34 @@
 		</div>
 	{/if}
 
-	{#if (restoSeg > 0 || avisoFinDescanso) && g}
+	{#if prFlash && g}
+		<!-- Flash de PR: brillo celebratorio que deja seguir registrando debajo. -->
 		<div
-			transition:fly={{ y: 80, duration: dur(220) }}
-			class="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-md items-center justify-between gap-3 border-t border-white/10 px-5 py-3"
-			style="background: color-mix(in oklab, var(--surface) 94%, transparent); backdrop-filter: blur(10px)"
+			class="pointer-events-none fixed inset-0 z-[60] grid place-items-center px-8"
+			style="background: radial-gradient(70% 50% at 50% 42%, rgb({g.glow} / .26), transparent 72%)"
 		>
-			{#if restoSeg > 0}
-				<span class="text-sm font-semibold" style="color: var(--muted)">⏱️ Descanso</span>
-				<span class="text-3xl font-extrabold tabular-nums" style="color: rgb({g.glow})"
-					>{mmss(restoSeg)}</span
+			<div
+				transition:fly={{ y: 18, duration: dur(240) }}
+				class="text-center"
+				aria-live="polite"
+				aria-label="Nuevo PR"
+			>
+				<div
+					class="mx-auto grid size-24 place-items-center rounded-full border border-white/15 text-5xl font-extrabold"
+					style="background: rgb({g.glow} / .22); color: rgb({g.glow}); box-shadow: 0 0 55px rgb({g.glow} / .25)"
 				>
-				<button
-					onclick={saltarDescanso}
-					class="rounded-full px-4 py-1.5 text-sm font-semibold"
-					style="background: rgba(255,255,255,.12)">Saltar</button
-				>
-			{:else}
-				<span
-					class="mx-auto py-1.5 text-xl font-extrabold"
-					style="color: rgb({g.glow})"
-					aria-live="polite">✓ Descanso terminado</span
-				>
-			{/if}
+					🏆
+				</div>
+				<p class="mt-5 text-2xl font-extrabold">¡Nuevo PR!</p>
+				<p class="mt-2 text-4xl font-extrabold tabular-nums">
+					{formatoNumero(prFlash.valor)}<span class="text-xl font-semibold" style="color: var(--muted)">
+						{unidad}</span
+					>
+				</p>
+				<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
+					{metricaLabel} · {formatoSet(prFlash)}
+				</p>
+			</div>
 		</div>
 	{/if}
 {/if}
