@@ -169,6 +169,12 @@
 		);
 	}
 
+	async function quitarEnReorden(it: ItemOrden) {
+		if (!confirm(`¿Quitar "${it.nombre}" de este día?`)) return;
+		ordenItems = ordenItems.filter((x) => x.id !== it.id);
+		await quitarEjercicio(diaId, it.id);
+	}
+
 </script>
 
 <main class="glow-bg min-h-dvh px-5 pb-12 pt-6">
@@ -234,6 +240,13 @@
 					></video>
 					<p class="min-w-0 flex-1 truncate text-sm font-semibold leading-tight">{it.nombre}</p>
 					<span class="shrink-0 text-base" aria-hidden="true">{it.emoji}</span>
+					<button
+						onpointerdown={(ev) => ev.stopPropagation()}
+						onclick={() => quitarEnReorden(it)}
+						class="grid size-8 shrink-0 place-items-center rounded-full text-sm"
+						style="background: rgba(255,80,80,.15); color: #ff6b6b"
+						aria-label={`Quitar ${it.nombre}`}>✕</button
+					>
 				</div>
 			{/each}
 		</section>
