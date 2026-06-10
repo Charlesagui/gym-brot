@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { MejorSet } from '$lib/sesion';
-	import type { Ajustes } from '$lib/db';
 	import { formatoNumero } from '$lib/formato';
 	import { mantener } from '$lib/mantener';
 
@@ -14,7 +13,8 @@
 		puntos: MejorSet[];
 		glow: string;
 		metricaLabel: string;
-		unidad: Ajustes['unidad'];
+		/** Unidad del valor: kg/lb, o "reps" en ejercicios sin peso. */
+		unidad: string;
 		onEditarPunto?: (punto: MejorSet) => void;
 	} = $props();
 

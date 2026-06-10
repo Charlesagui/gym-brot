@@ -1,10 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { fechaCorta, formatoAnterior, formatoNumero, formatoSet } from './formato';
+import { fechaCorta, formatoAnterior, formatoNumero, formatoSet, formatoVolumen } from './formato';
 
 describe('formato', () => {
 	it('formatea numeros sin arrastre decimal', () => {
 		expect(formatoNumero(10)).toBe('10');
 		expect(formatoNumero(10.25)).toBe('10.3');
+	});
+
+	it('formatea volumen con separador de miles es-AR', () => {
+		expect(formatoVolumen(12450)).toBe('12.450');
+		expect(formatoVolumen(980)).toBe('980');
+		expect(formatoVolumen(3450.5)).toBe('3.450,5');
+	});
+
+	it('formatea sets de modo reps (sin peso) por repeticiones', () => {
+		expect(formatoSet({ reps: 14, esMax: false, fecha: '2026-01-01', valor: 14 }, 'kg')).toBe(
+			'14 reps'
+		);
 	});
 
 	it('formatea sets completos y anteriores', () => {

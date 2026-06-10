@@ -172,7 +172,8 @@ describe('sesion con IndexedDB', () => {
 				fecha: '2026-01-01',
 				valor: 106.66666666666666,
 				sesionId: '2026-01-01__push',
-				setIndex: 0
+				setIndex: 0,
+				modo: 'peso'
 			},
 			{
 				exerciseId: 'remo',
@@ -182,6 +183,73 @@ describe('sesion con IndexedDB', () => {
 				extraKg: undefined,
 				fecha: '2026-01-02',
 				valor: 88.66666666666666,
+				sesionId: '2026-01-02__pull',
+				setIndex: 0,
+				modo: 'peso'
+			}
+		]);
+	});
+
+	it('ejercicio sin peso (bodyweight) puntua por reps: PR, historial y record en modo reps', async () => {
+		await ensureEjercicio('pull', 'dominadas', 2, '2026-01-01');
+		await setReps('pull', 'dominadas', 0, 8, '2026-01-01');
+		await setReps('pull', 'dominadas', 1, 10, '2026-01-01');
+		await toggleSet('pull', 'dominadas', 0, '2026-01-01');
+		await toggleSet('pull', 'dominadas', 1, '2026-01-01');
+
+		// La metrica de ajustes (peso/e1rm) no cambia el valor: son reps.
+		for (const metrica of ['peso', 'e1rm'] as const) {
+			const puntos = await primerValor(historialObs('dominadas', metrica));
+			expect(puntos).toEqual([
+				{
+					peso: undefined,
+					reps: 10,
+					esMax: false,
+					extraKg: undefined,
+					fecha: '2026-01-01',
+					valor: 10,
+					sesionId: '2026-01-01__pull',
+					setIndex: 1
+				}
+			]);
+		}
+
+		expect(await primerValor(recordsGlobalesObs('peso'))).toEqual([
+			{
+				exerciseId: 'dominadas',
+				peso: undefined,
+				reps: 10,
+				esMax: false,
+				extraKg: undefined,
+				fecha: '2026-01-01',
+				valor: 10,
+				sesionId: '2026-01-01__pull',
+				setIndex: 1,
+				modo: 'reps'
+			}
+		]);
+	});
+
+	it('historial mixto: con algun set con peso, las series sin peso no puntuan', async () => {
+		await ensureEjercicio('pull', 'dominadas', 1, '2026-01-01');
+		await setReps('pull', 'dominadas', 0, 12, '2026-01-01');
+		await toggleSet('pull', 'dominadas', 0, '2026-01-01');
+
+		// Aparece el lastre: el ejercicio pasa a modo peso en todo su historial.
+		await ensureEjercicio('pull', 'dominadas', 1, '2026-01-02');
+		await setPeso('pull', 'dominadas', 0, 10, '2026-01-02');
+		await setReps('pull', 'dominadas', 0, 6, '2026-01-02');
+		await toggleSet('pull', 'dominadas', 0, '2026-01-02');
+
+		const puntos = await primerValor(historialObs('dominadas', 'peso'));
+		expect(puntos).toEqual([
+			{
+				peso: 10,
+				reps: 6,
+				esMax: false,
+				extraKg: undefined,
+				fecha: '2026-01-02',
+				valor: 10,
 				sesionId: '2026-01-02__pull',
 				setIndex: 0
 			}

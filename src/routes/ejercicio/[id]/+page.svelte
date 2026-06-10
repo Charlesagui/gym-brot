@@ -22,10 +22,13 @@
 		borrarSetHistorial,
 		pesoEfectivo,
 		valorMetrica,
+		valorSet,
 		mejorSet,
 		DESCRIPCION_METRICA,
 		hoyStr,
-		type MejorSet
+		type MejorSet,
+		type ModoPr,
+		type MetricaEfectiva
 	} from '$lib/sesion';
 	import { notaObs, setNota, ajustesObs, setTimer, AJUSTES_DEFAULT } from '$lib/extras';
 	import { sonarSetHecho, sonarExito } from '$lib/audio';
@@ -176,14 +179,30 @@
 	const sonidoActivo = $derived(ajustes.sonido);
 	const vibracionActiva = $derived(ajustes.vibracion ?? true);
 	const metrica = $derived(ajustes.metricaPr);
-	const metricaLabel = $derived(metrica === 'e1rm' ? '1RM estimado (1 Repetición Máxima)' : 'peso máximo');
+	// Modo del ejercicio: por reps si ni el historial ni la sesión de hoy registraron peso (bodyweight).
+	const modo = $derived<ModoPr>(
+		puntos.some((p) => p.peso != null) || sets.some((s) => s.peso != null) ? 'peso' : 'reps'
+	);
+	const metricaEfectiva = $derived<MetricaEfectiva>(modo === 'reps' ? 'reps' : metrica);
+	const metricaLabel = $derived(
+		modo === 'reps'
+			? 'reps máximas'
+			: metrica === 'e1rm'
+				? '1RM estimado (1 Repetición Máxima)'
+				: 'peso máximo'
+	);
+	// Unidad del valor del PR: en modo reps el número son repeticiones, no kg/lb.
+	const unidadValor = $derived(modo === 'reps' ? 'reps' : unidad);
 	const otraMetrica = $derived(metrica === 'e1rm' ? 'peso' : 'e1rm');
 	const otraLabel = $derived(metrica === 'e1rm' ? 'peso máx.' : '1RM est. (1 rep. máx.)');
 	const tecnicaEmbedUrl = $derived(ej?.videoUrl ? youtubeEmbedUrl(ej.videoUrl) : null);
 
 	const pr = $derived(puntos.reduce<MejorSet | null>((best, p) => mejorSet(best, p), null));
+	// Equivalencia en la otra métrica: solo tiene sentido cuando el PR es por peso.
 	const valorOtraPr = $derived(
-		pr && pesoEfectivo(pr) != null ? valorMetrica(pesoEfectivo(pr)!, pr.reps, otraMetrica) : null
+		modo === 'peso' && pr && pesoEfectivo(pr) != null
+			? valorMetrica(pesoEfectivo(pr)!, pr.reps, otraMetrica)
+			: null
 	);
 	const mejorHoy = $derived(mejorSetLocal(sets, true));
 	const mejorPrevio = $derived(
@@ -191,11 +210,7 @@
 			.filter((p) => p.fecha !== fechaSesion)
 			.reduce<number | null>((m, p) => (m == null || p.valor > m ? p.valor : m), null)
 	);
-	const valorCelebrado = $derived(
-		prCelebrado && pesoEfectivo(prCelebrado) != null
-			? valorMetrica(pesoEfectivo(prCelebrado)!, prCelebrado.reps, metrica)
-			: null
-	);
+	const valorCelebrado = $derived(prCelebrado ? valorSet(prCelebrado, metrica, modo) : null);
 	const valorMejorHoy = $derived(mejorHoy ? mejorHoy.valor : null);
 	const superado = $derived(
 		valorMejorHoy != null &&
@@ -209,15 +224,15 @@
 	function mejorSetLocal(localSets: SetSesion[], soloHechas: boolean): MejorSet | null {
 		return localSets.reduce<MejorSet | null>((best, s) => {
 			if (soloHechas && !s.hecha) return best;
-			const ef = pesoEfectivo(s);
-			if (ef == null) return best;
+			const valor = valorSet(s, metrica, modo);
+			if (valor == null) return best;
 			return mejorSet(best, {
-				peso: s.peso!,
+				peso: s.peso,
 				reps: s.reps,
 				esMax: !!s.esMax,
 				extraKg: s.extraKg,
 				fecha: fechaSesion,
-				valor: valorMetrica(ef, s.reps, metrica)
+				valor
 			});
 		}, null);
 	}
@@ -314,7 +329,8 @@
 				$page.params.id!,
 				{ peso: nuevoPr.peso, reps: nuevoPr.reps, esMax: nuevoPr.esMax, extraKg: nuevoPr.extraKg },
 				metrica,
-				fechaSesion
+				fechaSesion,
+				modo
 			);
 			celebrarPrFlash(nuevoPr);
 		} else {
@@ -345,18 +361,37 @@
 	/** Devuelve el set como MejorSet si supera al PR vigente; si no, null. */
 	function prDeSet(s: SetSesion | undefined): MejorSet | null {
 		if (!s) return null;
-		const ef = pesoEfectivo(s);
-		if (ef == null) return null;
-		const valor = valorMetrica(ef, s.reps, metrica);
+		const valor = valorSet(s, metrica, modo);
+		if (valor == null) return null;
 		const esNuevoPr =
 			(mejorPrevio == null || valor > mejorPrevio) &&
 			(valorCelebrado == null || valor > valorCelebrado);
 		if (!esNuevoPr) return null;
-		return { peso: s.peso!, reps: s.reps, esMax: !!s.esMax, extraKg: s.extraKg, fecha: fechaSesion, valor };
+		return { peso: s.peso, reps: s.reps, esMax: !!s.esMax, extraKg: s.extraKg, fecha: fechaSesion, valor };
 	}
 
 	async function editarPuntoHistorial(punto: MejorSet) {
 		if (!punto.sesionId || punto.setIndex == null) return;
+		// Modo reps: la serie no tiene peso, se edita solo la cantidad de reps.
+		if (punto.peso == null) {
+			const respuesta = prompt(
+				`Editar serie histórica (${formatoSet(punto, unidad)}). Escribí "borrar" o las reps.`,
+				punto.reps != null ? String(punto.reps) : ''
+			);
+			if (respuesta == null) return;
+			if (respuesta.trim().toLowerCase() === 'borrar') {
+				if (!confirm(`¿Borrar del historial la serie ${formatoSet(punto, unidad)}?`)) return;
+				await borrarSetHistorial(punto.sesionId, $page.params.id!, punto.setIndex, metrica);
+				return;
+			}
+			const reps = Number.parseInt(respuesta.trim(), 10);
+			if (!Number.isFinite(reps) || reps <= 0) {
+				alert('Escribí solo las reps. Ejemplo: 12');
+				return;
+			}
+			await actualizarSetHistorial(punto.sesionId, $page.params.id!, punto.setIndex, { reps }, metrica);
+			return;
+		}
 		const actual = `${formatoNumero(punto.peso)} ${punto.reps ?? ''}`.trim();
 		const respuesta = prompt(
 			`Editar serie histórica (${formatoSet(punto, unidad)}). Escribí "borrar" o "peso reps".`,
@@ -416,7 +451,8 @@
 				$page.params.id!,
 				{ peso: mejor.peso, reps: mejor.reps, esMax: mejor.esMax, extraKg: mejor.extraKg },
 				metrica,
-				fechaSesion
+				fechaSesion,
+				modo
 			);
 		}
 		// La fanfarria es para el ejercicio completo (o PR); cierre parcial = sobrio.
@@ -670,11 +706,11 @@
 					<p class="mt-1 text-3xl font-extrabold">
 						🏆 {formatoNumero(pr.valor)}<span
 							class="text-lg font-semibold"
-							style="color: var(--muted)"> {unidad}</span
+							style="color: var(--muted)"> {unidadValor}</span
 						>
 					</p>
 					<p class="mt-0.5 text-xs font-medium" style="color: var(--muted)">
-						Mejor set: {formatoSet(pr, unidad)}
+						Mejor set: {formatoSet(pr, unidad)} · {fechaCorta(pr.fecha)}
 					</p>
 					{#if valorOtraPr != null}
 						<p class="mt-0.5 text-[11px] font-medium" style="color: var(--muted)">
@@ -682,9 +718,9 @@
 						</p>
 					{/if}
 					<p class="mt-2.5 text-[11px] leading-relaxed border-t border-white/5 pt-2" style="color: var(--muted)">
-						💡 {DESCRIPCION_METRICA[metrica]}
+						💡 {DESCRIPCION_METRICA[metricaEfectiva]}
 					</p>
-					<MiniChart {puntos} glow={g.glow} {metricaLabel} {unidad} onEditarPunto={editarPuntoHistorial} />
+					<MiniChart {puntos} glow={g.glow} {metricaLabel} unidad={unidadValor} onEditarPunto={editarPuntoHistorial} />
 				</section>
 			{:else if !cargandoSeries}
 				<section
@@ -754,7 +790,7 @@
 			{exito}
 			{prExito}
 			glow={g.glow}
-			{unidad}
+			unidad={unidadValor}
 			{metricaLabel}
 			{hechas}
 			total={sets.length}
@@ -782,7 +818,7 @@
 				<p class="mt-5 text-2xl font-extrabold">¡Nuevo PR!</p>
 				<p class="mt-2 text-4xl font-extrabold tabular-nums">
 					{formatoNumero(prFlash.valor)}<span class="text-xl font-semibold" style="color: var(--muted)">
-						{unidad}</span
+						{unidadValor}</span
 					>
 				</p>
 				<p class="mt-1 text-sm font-medium" style="color: var(--muted)">

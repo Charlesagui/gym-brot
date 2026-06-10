@@ -11,23 +11,47 @@ export function pesoEfectivo(s: {
 	return s.peso + (s.esMax ? (s.extraKg ?? 0) : 0);
 }
 
+/** Cómo puntúa un ejercicio: por peso (default) o por reps si nunca registró peso (bodyweight). */
+export type ModoPr = 'peso' | 'reps';
+
+/** Métrica que la UI rotula: la de ajustes, o reps máximas cuando el ejercicio es modo reps. */
+export type MetricaEfectiva = MetricaPr | 'reps';
+
+/** Epley sobreestima fuerte con reps altas → tope en 12 (por encima puntúa como 12). */
+const TOPE_REPS_E1RM = 12;
+
 /**
  * Valor de un set bajo la métrica elegida.
  * - `peso`: el peso efectivo tal cual.
- * - `e1rm`: 1RM estimado con Epley = peso × (1 + reps/30). reps se trata como ≥1.
+ * - `e1rm`: 1RM estimado con Epley = peso × (1 + reps/30). reps se trata como ≥1 y ≤12.
  */
 export function valorMetrica(peso: number, reps: number | undefined, metrica: MetricaPr): number {
 	if (metrica === 'e1rm') {
-		const r = Math.max(1, reps ?? 1);
+		const r = Math.min(TOPE_REPS_E1RM, Math.max(1, reps ?? 1));
 		return peso * (1 + r / 30);
 	}
 	return peso;
 }
 
+/**
+ * Valor de un set bajo métrica y modo del ejercicio; null si no puntúa.
+ * En modo reps (ejercicio sin peso) el valor son las reps y la métrica de ajustes no aplica.
+ */
+export function valorSet(
+	set: { peso?: number; reps?: number; esMax?: boolean; extraKg?: number },
+	metrica: MetricaPr,
+	modo: ModoPr = 'peso'
+): number | null {
+	if (modo === 'reps') return set.reps ?? null;
+	const ef = pesoEfectivo(set);
+	return ef == null ? null : valorMetrica(ef, set.reps, metrica);
+}
+
 /** Explicación corta de cada métrica de PR — única fuente para toda la UI. */
-export const DESCRIPCION_METRICA: Record<MetricaPr, string> = {
-	e1rm: 'El 1RM estimado (1 Repetición Máxima, fórmula de Epley) calcula tu fuerza máxima teórica a partir de peso y reps: 95 × 12 supera a 100 × 1. Premia la sobrecarga por repeticiones.',
-	peso: 'El récord es la serie de mayor peso, sin importar las reps. Simple y directo.'
+export const DESCRIPCION_METRICA: Record<MetricaEfectiva, string> = {
+	e1rm: 'El 1RM estimado (1 Repetición Máxima, fórmula de Epley) calcula tu fuerza máxima teórica a partir de peso y reps: 95 × 12 supera a 100 × 1. Premia la sobrecarga por repeticiones. Es fiable hasta ~12 reps: por encima se calcula como 12.',
+	peso: 'El récord es la serie de mayor peso, sin importar las reps. Simple y directo.',
+	reps: 'Este ejercicio se hace sin peso: el récord es la serie hecha con más repeticiones. La métrica de PR de Ajustes (peso/1RM) no aplica acá.'
 };
 
 /** Fecha local en formato YYYY-MM-DD. */
@@ -55,7 +79,8 @@ async function ensureSesion(diaId: string, fecha = hoyStr()): Promise<Sesion> {
 }
 
 export interface MejorSet {
-	peso: number;
+	/** Ausente en modo reps: el ejercicio no usa peso y el valor son las reps. */
+	peso?: number;
 	reps?: number;
 	esMax: boolean;
 	extraKg?: number;
@@ -67,6 +92,22 @@ export interface MejorSet {
 
 export interface RecordEjercicio extends MejorSet {
 	exerciseId: string;
+	/** Con qué se midió el récord, para que la UI siempre rotule (kg vs reps). */
+	modo: ModoPr;
+}
+
+/** 'reps' si el ejercicio tiene series hechas y ninguna registró peso; si no, 'peso'. */
+export function modoEjercicio(sesiones: Sesion[], exerciseId: string): ModoPr {
+	let tieneHechas = false;
+	for (const s of sesiones) {
+		const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
+		for (const set of e?.sets ?? []) {
+			if (!set.hecha) continue;
+			if (set.peso != null) return 'peso';
+			tieneHechas = true;
+		}
+	}
+	return tieneHechas ? 'reps' : 'peso';
 }
 
 /** El mejor de dos sets bajo `valor` (desempata por reps). */
@@ -81,19 +122,20 @@ function mejorSetDeSeries(
 	sets: SetSesion[],
 	fecha: string,
 	metrica: MetricaPr,
-	sesionIdFuente?: string
+	sesionIdFuente?: string,
+	modo: ModoPr = 'peso'
 ): MejorSet | null {
 	return sets.reduce<MejorSet | null>((best, set, setIndex) => {
 		if (!set.hecha) return best;
-		const ef = pesoEfectivo(set);
-		if (ef == null) return best;
+		const valor = valorSet(set, metrica, modo);
+		if (valor == null) return best;
 		return mejorSet(best, {
-			peso: set.peso!,
+			peso: set.peso,
 			reps: set.reps,
 			esMax: !!set.esMax,
 			extraKg: set.extraKg,
 			fecha,
-			valor: valorMetrica(ef, set.reps, metrica),
+			valor,
 			sesionId: sesionIdFuente,
 			setIndex
 		});
@@ -109,15 +151,16 @@ function snapPr(set: MejorSet): PrCelebrado {
 	};
 }
 
-/** Mejor set hecho por sesión, ordenado por fecha — PR bajo la métrica elegida. */
+/** Mejor set hecho por sesión, ordenado por fecha — PR bajo la métrica elegida (o reps). */
 export function historialObs(exerciseId: string, metrica: MetricaPr = 'peso') {
 	return liveQuery(async () => {
 		const todas = await db.sesiones.orderBy('fecha').toArray();
+		const modo = modoEjercicio(todas, exerciseId);
 		const puntos: MejorSet[] = [];
 		for (const s of todas) {
 			const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
 			if (!e) continue;
-			const mejor = mejorSetDeSeries(e.sets, s.fecha, metrica, s.id);
+			const mejor = mejorSetDeSeries(e.sets, s.fecha, metrica, s.id, modo);
 			if (mejor) puntos.push(mejor);
 		}
 		return puntos;
@@ -127,29 +170,19 @@ export function historialObs(exerciseId: string, metrica: MetricaPr = 'peso') {
 export function recordsGlobalesObs(metrica: MetricaPr = 'peso') {
 	return liveQuery(async () => {
 		const todas = await db.sesiones.orderBy('fecha').toArray();
+		// Modo por ejercicio en una pasada: con algún set ✓ con peso puntúa por peso.
+		const conPeso = new Set<string>();
+		for (const s of todas)
+			for (const e of s.ejercicios)
+				for (const set of e.sets) if (set.hecha && set.peso != null) conPeso.add(e.exerciseId);
 		const mejores = new Map<string, RecordEjercicio>();
 		for (const s of todas) {
 			for (const ejercicio of s.ejercicios) {
-				for (const set of ejercicio.sets) {
-					if (!set.hecha) continue;
-					const ef = pesoEfectivo(set);
-					if (ef == null) continue;
-					const candidato: RecordEjercicio = {
-						exerciseId: ejercicio.exerciseId,
-						peso: set.peso!,
-						reps: set.reps,
-						esMax: !!set.esMax,
-						extraKg: set.extraKg,
-						fecha: s.fecha,
-						valor: valorMetrica(ef, set.reps, metrica),
-						sesionId: s.id,
-						setIndex: ejercicio.sets.indexOf(set)
-					};
-					mejores.set(
-						ejercicio.exerciseId,
-						mejorSet(mejores.get(ejercicio.exerciseId) ?? null, candidato) as RecordEjercicio
-					);
-				}
+				const modo: ModoPr = conPeso.has(ejercicio.exerciseId) ? 'peso' : 'reps';
+				const candidato = mejorSetDeSeries(ejercicio.sets, s.fecha, metrica, s.id, modo);
+				if (!candidato) continue;
+				const mejor = mejorSet(mejores.get(ejercicio.exerciseId) ?? null, candidato);
+				mejores.set(ejercicio.exerciseId, { ...mejor, exerciseId: ejercicio.exerciseId, modo });
 			}
 		}
 		return [...mejores.values()].sort((a, b) => b.valor - a.valor);
@@ -227,16 +260,18 @@ async function recalcularPrCelebrado(sesion: Sesion, exerciseId: string, metrica
 	if (!ejercicio?.prCelebrado) return;
 
 	const todas = await db.sesiones.toArray();
+	// `todas` trae la versión ya persistida de esta sesión: el modo se decide con la copia editada.
+	const modo = modoEjercicio([...todas.filter((s) => s.id !== sesion.id), sesion], exerciseId);
 	const mejorPrevio = todas.reduce<MejorSet | null>((best, s) => {
 		if (s.id === sesion.id) return best;
 		const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
 		if (!e) return best;
-		const mejor = mejorSetDeSeries(e.sets, s.fecha, metrica, s.id);
+		const mejor = mejorSetDeSeries(e.sets, s.fecha, metrica, s.id, modo);
 		return mejor ? mejorSet(best, mejor) : best;
 	}, null);
 	const valorPrevio = mejorPrevio?.valor ?? null;
 
-	const mejorRestante = mejorSetDeSeries(ejercicio.sets, sesion.fecha, metrica, sesion.id);
+	const mejorRestante = mejorSetDeSeries(ejercicio.sets, sesion.fecha, metrica, sesion.id, modo);
 	if (!mejorRestante || (valorPrevio != null && mejorRestante.valor <= valorPrevio)) {
 		ejercicio.prCelebrado = undefined;
 		return;
@@ -411,7 +446,8 @@ export function marcarPrCelebrado(
 	exerciseId: string,
 	snap: PrCelebrado,
 	metrica: MetricaPr = 'peso',
-	fecha = hoyStr()
+	fecha = hoyStr(),
+	modo: ModoPr = 'peso'
 ) {
 	return db.sesiones
 		.where('id')
@@ -419,11 +455,8 @@ export function marcarPrCelebrado(
 		.modify((s) => {
 			const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
 			if (!e) return;
-			const prevEf = e.prCelebrado ? pesoEfectivo(e.prCelebrado) : null;
-			const prevVal =
-				prevEf != null ? valorMetrica(prevEf, e.prCelebrado!.reps, metrica) : -Infinity;
-			const nuevoEf = pesoEfectivo(snap);
-			const nuevoVal = nuevoEf != null ? valorMetrica(nuevoEf, snap.reps, metrica) : -Infinity;
+			const prevVal = e.prCelebrado ? (valorSet(e.prCelebrado, metrica, modo) ?? -Infinity) : -Infinity;
+			const nuevoVal = valorSet(snap, metrica, modo) ?? -Infinity;
 			if (nuevoVal >= prevVal) {
 				e.prCelebrado = {
 					peso: snap.peso,

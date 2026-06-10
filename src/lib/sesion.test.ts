@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { mejorSet, pesoEfectivo, valorMetrica, type MejorSet } from './sesion';
+import {
+	mejorSet,
+	modoEjercicio,
+	pesoEfectivo,
+	valorMetrica,
+	valorSet,
+	type MejorSet
+} from './sesion';
+import type { Sesion } from './db';
 
 describe('pesoEfectivo', () => {
 	it('devuelve null si el peso no esta cargado', () => {
@@ -23,6 +31,54 @@ describe('valorMetrica', () => {
 		expect(valorMetrica(100, undefined, 'e1rm')).toBeCloseTo(103.333, 3);
 		expect(valorMetrica(100, 0, 'e1rm')).toBeCloseTo(103.333, 3);
 		expect(valorMetrica(100, 12, 'e1rm')).toBe(140);
+	});
+
+	it('Epley con tope: por encima de 12 reps puntua igual que 12', () => {
+		expect(valorMetrica(100, 20, 'e1rm')).toBe(valorMetrica(100, 12, 'e1rm'));
+		expect(valorMetrica(100, 20, 'e1rm')).toBe(140);
+	});
+});
+
+describe('valorSet', () => {
+	it('en modo peso usa el peso efectivo y la metrica; sin peso no puntua', () => {
+		expect(valorSet({ peso: 80, reps: 10 }, 'peso')).toBe(80);
+		expect(valorSet({ peso: 80, reps: 10, esMax: true, extraKg: 5 }, 'peso')).toBe(85);
+		expect(valorSet({ reps: 10 }, 'peso')).toBeNull();
+	});
+
+	it('en modo reps el valor son las reps, sin importar la metrica de ajustes', () => {
+		expect(valorSet({ reps: 14 }, 'peso', 'reps')).toBe(14);
+		expect(valorSet({ reps: 14 }, 'e1rm', 'reps')).toBe(14);
+		expect(valorSet({}, 'peso', 'reps')).toBeNull();
+	});
+});
+
+describe('modoEjercicio', () => {
+	function sesionCon(sets: { peso?: number; reps?: number; hecha: boolean }[]): Sesion {
+		return {
+			id: '2026-01-01__push',
+			fecha: '2026-01-01',
+			diaId: 'push',
+			ejercicios: [{ exerciseId: 'dominadas', sets }]
+		};
+	}
+
+	it('es reps solo si hay series hechas y ninguna registro peso', () => {
+		expect(modoEjercicio([sesionCon([{ reps: 10, hecha: true }])], 'dominadas')).toBe('reps');
+		expect(
+			modoEjercicio(
+				[
+					sesionCon([
+						{ reps: 10, hecha: true },
+						{ peso: 5, reps: 8, hecha: true }
+					])
+				],
+				'dominadas'
+			)
+		).toBe('peso');
+		// Sin series hechas (o sin historial) el default es peso.
+		expect(modoEjercicio([sesionCon([{ reps: 10, hecha: false }])], 'dominadas')).toBe('peso');
+		expect(modoEjercicio([], 'dominadas')).toBe('peso');
 	});
 });
 

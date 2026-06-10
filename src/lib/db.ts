@@ -22,7 +22,8 @@ export interface SetSesion {
 
 /** Snapshot del set que ya disparó la celebración de PR en esta sesión (anti-repetición). */
 export interface PrCelebrado {
-	peso: number;
+	/** Ausente en ejercicios sin peso (modo reps): el récord es por repeticiones. */
+	peso?: number;
 	reps?: number;
 	esMax?: boolean;
 	extraKg?: number;
