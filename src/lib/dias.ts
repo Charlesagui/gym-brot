@@ -32,6 +32,23 @@ export async function borrarDia(id: string): Promise<void> {
 	await db.dias.delete(id);
 }
 
+/** Reordena los días según `idsEnOrden` y normaliza `orden` a 0..n-1. */
+export async function reordenarDias(idsEnOrden: string[]): Promise<void> {
+	const todos = await db.dias.toArray();
+	const porId = new Map(todos.map((d) => [d.id, d]));
+	const ordenados: Dia[] = [];
+	for (const id of idsEnOrden) {
+		const d = porId.get(id);
+		if (d) {
+			ordenados.push(d);
+			porId.delete(id);
+		}
+	}
+	for (const d of todos) if (porId.has(d.id)) ordenados.push(d);
+	ordenados.forEach((d, i) => (d.orden = i));
+	await db.dias.bulkPut(ordenados);
+}
+
 export async function agregarEjercicio(diaId: string, exerciseId: string): Promise<void> {
 	const dia = await db.dias.get(diaId);
 	if (!dia) return;

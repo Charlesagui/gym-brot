@@ -7,6 +7,10 @@
 		<span class="icon">🏠</span>
 		<span class="label">Rutinas</span>
 	</a>
+	<a href="/historial" class="nav-item" class:active={$page.url.pathname === '/historial'}>
+		<span class="icon">📈</span>
+		<span class="label">Historial</span>
+	</a>
 	<a href="/ajustes" class="nav-item" class:active={$page.url.pathname === '/ajustes'}>
 		<span class="icon">⚙️</span>
 		<span class="label">Ajustes</span>
