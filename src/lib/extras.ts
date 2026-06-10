@@ -18,7 +18,7 @@ export const AJUSTES_DEFAULT: Ajustes = {
 	id: 'app',
 	darkMode: true,
 	unidad: 'kg',
-	timer: { activo: false, minutos: 2 },
+	timer: { activo: true, minutos: 2 },
 	sonido: true,
 	vibracion: true,
 	metricaPr: 'peso',
@@ -210,7 +210,8 @@ function esSesion(value: unknown): value is Sesion {
 		ejercicios.every((e) => {
 			if (!esRecord(e) || !esString(e.exerciseId) || !Array.isArray(e.sets)) return false;
 			return (
-				(e.prCelebrado === undefined || esPrCelebrado(e.prCelebrado)) &&
+				(e.saltado === undefined || esBoolean(e.saltado)) &&
+					(e.prCelebrado === undefined || esPrCelebrado(e.prCelebrado)) &&
 				// legacy: backups viejos guardaban un escalar prPesoCelebrado → se tolera y se ignora.
 				(e.prPesoCelebrado === undefined || esNumero(e.prPesoCelebrado)) &&
 				e.sets.every(

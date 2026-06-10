@@ -246,6 +246,33 @@ export function removeSet(diaId: string, exerciseId: string, i: number, fecha = 
 	);
 }
 
+/** Marca/desmarca el ejercicio como saltado SOLO en la sesión (no toca la rutina). */
+function setSaltado(diaId: string, exerciseId: string, saltado: boolean, fecha = hoyStr()) {
+	return db.sesiones
+		.where('id')
+		.equals(sesionId(diaId, fecha))
+		.modify((s) => {
+			const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
+			if (e) e.saltado = saltado;
+		});
+}
+
+/** Saltar el ejercicio hoy (p. ej. máquina ocupada): se asegura su entrada y lo marca. */
+export async function saltarEjercicio(
+	diaId: string,
+	exerciseId: string,
+	nSets: number,
+	fecha = hoyStr()
+): Promise<void> {
+	await ensureEjercicio(diaId, exerciseId, nSets, fecha);
+	await setSaltado(diaId, exerciseId, true, fecha);
+}
+
+/** Reanudar un ejercicio saltado: vuelve a contar para terminar el día. */
+export function reanudarEjercicio(diaId: string, exerciseId: string, fecha = hoyStr()) {
+	return setSaltado(diaId, exerciseId, false, fecha);
+}
+
 /**
  * Marca como ya celebrado el set que disparó el PR en esta sesión (anti-repetición).
  * Guarda el set (no un escalar) y conserva el de mayor valor bajo la métrica vigente.

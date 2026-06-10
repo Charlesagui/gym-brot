@@ -27,6 +27,12 @@
 		for (const item of dia.ejercicios) {
 			const e = sesion.ejercicios.find((x) => x.exerciseId === item.exerciseId);
 			if (!e || e.sets.length === 0) continue;
+			// Saltado cuenta como resuelto (igual que en la pantalla del día).
+			if (e.saltado) {
+				conActividad++;
+				completos++;
+				continue;
+			}
 			if (e.sets.some((s) => s.hecha)) conActividad++;
 			if (e.sets.every((s) => s.hecha)) completos++;
 		}

@@ -49,6 +49,28 @@ export async function quitarEjercicio(diaId: string, exerciseId: string): Promis
 	await db.dias.put(dia);
 }
 
+/**
+ * Reordena los ejercicios del día según `idsEnOrden` y normaliza `orden` a 0..n-1.
+ * Los ids que falten (defensivo) se preservan al final con su orden relativo.
+ */
+export async function reordenarEjercicios(diaId: string, idsEnOrden: string[]): Promise<void> {
+	const dia = await db.dias.get(diaId);
+	if (!dia) return;
+	const porId = new Map(dia.ejercicios.map((e) => [e.exerciseId, e]));
+	const nuevos: Dia['ejercicios'] = [];
+	for (const id of idsEnOrden) {
+		const e = porId.get(id);
+		if (e) {
+			nuevos.push(e);
+			porId.delete(id);
+		}
+	}
+	for (const e of dia.ejercicios) if (porId.has(e.exerciseId)) nuevos.push(e);
+	nuevos.forEach((e, i) => (e.orden = i));
+	dia.ejercicios = nuevos;
+	await db.dias.put(dia);
+}
+
 export async function setSeries(diaId: string, exerciseId: string, n: number): Promise<void> {
 	const dia = await db.dias.get(diaId);
 	if (!dia) return;

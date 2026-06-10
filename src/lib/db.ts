@@ -33,6 +33,8 @@ export interface EjercicioSesion {
 	sets: SetSesion[];
 	/** Guarda el set, no un escalar, para recomputar su valor al cambiar métrica o unidad. */
 	prCelebrado?: PrCelebrado;
+	/** Saltado solo en esta sesión (p. ej. máquina ocupada): no bloquea terminar el día. */
+	saltado?: boolean;
 }
 
 /** Progreso de una sesión (id = `${fecha}__${diaId}`, se resetea por día). */
