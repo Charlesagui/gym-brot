@@ -27,6 +27,8 @@
 		ultimosDias(28).map((fecha) => ({ fecha, entrenado: diasEntrenados.has(fecha) }))
 	);
 	const semanas = $derived(historial.semanas.slice(0, 8));
+	// Paginación de entrenamientos: el historial viejo siempre es alcanzable.
+	let visibles = $state(10);
 
 	function ultimosDias(cantidad: number): string[] {
 		const hoy = new Date();
@@ -90,15 +92,25 @@
 		<div class="grid grid-cols-7 gap-1.5">
 			{#each calendario as d (d.fecha)}
 				<div class="text-center">
-					<div
-						class="grid aspect-square place-items-center rounded-lg border text-[10px] font-bold"
-						style={d.entrenado
-							? 'background: rgb(var(--exito) / .18); border-color: rgb(var(--exito) / .36); color: rgb(var(--exito))'
-							: 'background: rgba(255,255,255,.035); border-color: rgba(255,255,255,.06); color: var(--muted)'}
-						aria-label={`${fechaCorta(d.fecha)} ${d.entrenado ? 'entrenado' : 'sin entrenamiento'}`}
-					>
-						{inicialDia(d.fecha)}
-					</div>
+					{#if d.entrenado}
+						<!-- Día entrenado: tap → detalle de ese día -->
+						<a
+							href={`/historial/dia/${d.fecha}`}
+							class="grid aspect-square place-items-center rounded-lg border text-[10px] font-bold"
+							style="background: rgb(var(--exito) / .18); border-color: rgb(var(--exito) / .36); color: rgb(var(--exito))"
+							aria-label={`${fechaCorta(d.fecha)} entrenado · ver detalle`}
+						>
+							{inicialDia(d.fecha)}
+						</a>
+					{:else}
+						<div
+							class="grid aspect-square place-items-center rounded-lg border text-[10px] font-bold"
+							style="background: rgba(255,255,255,.035); border-color: rgba(255,255,255,.06); color: var(--muted)"
+							aria-label={`${fechaCorta(d.fecha)} sin entrenamiento`}
+						>
+							{inicialDia(d.fecha)}
+						</div>
+					{/if}
 				</div>
 			{/each}
 		</div>
@@ -185,8 +197,13 @@
 			Últimos entrenamientos
 		</p>
 		<div class="space-y-2">
-			{#each historial.dias.slice(0, 10) as dia (dia.fecha)}
-				<article class="rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+			{#each historial.dias.slice(0, visibles) as dia (dia.fecha)}
+				<a
+					href={`/historial/dia/${dia.fecha}`}
+					class="block rounded-2xl border border-white/10 p-4"
+					style="background: var(--surface)"
+					aria-label={`Ver detalle del ${fechaCorta(dia.fecha)}`}
+				>
 					<div class="flex items-start justify-between gap-3">
 						<div class="min-w-0">
 							<p class="text-sm font-bold">{fechaCorta(dia.fecha)}</p>
@@ -211,8 +228,18 @@
 							<p style="color: var(--muted)">volumen (peso × reps ✓)</p>
 						</div>
 					</div>
-				</article>
+				</a>
 			{/each}
+			{#if historial.dias.length > visibles}
+				<button
+					onclick={() => (visibles += 10)}
+					class="w-full rounded-2xl border border-white/10 py-3 text-sm font-semibold"
+					style="background: var(--surface); color: var(--muted)"
+				>
+					Ver más ({historial.dias.length - visibles}
+					{historial.dias.length - visibles === 1 ? 'anterior' : 'anteriores'})
+				</button>
+			{/if}
 			{#if historial.dias.length === 0}
 				<p
 					class="rounded-2xl border border-dashed border-white/15 p-6 text-center text-sm"

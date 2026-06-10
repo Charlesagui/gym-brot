@@ -1,5 +1,4 @@
 import type { SetSesion, Ajustes } from './db';
-import type { MejorSet } from './sesion';
 
 type Unidad = Ajustes['unidad'];
 
@@ -15,8 +14,16 @@ export function formatoVolumen(n: number): string {
 	return FMT_VOLUMEN.format(n);
 }
 
+/** Lo mínimo de un set que hace falta para describirlo (MejorSet, SetSesion o PrCelebrado). */
+interface SetDescribible {
+	peso?: number;
+	reps?: number;
+	esMax?: boolean;
+	extraKg?: number;
+}
+
 /** Resumen de un set (peso + extra MAX + reps + etiqueta MAX). La unidad solo aplica con peso. */
-export function formatoSet(set: MejorSet, unidad: string): string {
+export function formatoSet(set: SetDescribible, unidad: string): string {
 	// Modo reps (ejercicio sin peso): el set se describe solo por sus repeticiones.
 	if (set.peso == null) return set.reps != null ? `${set.reps} reps` : '—';
 	const extra = set.esMax && set.extraKg ? ` +${formatoNumero(set.extraKg)}` : '';
