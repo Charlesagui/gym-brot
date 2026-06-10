@@ -4418,5 +4418,805 @@
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/weighted-side-bend-on-stability-ball.mp4",
 		"videoUrl": ""
+	},
+	{
+		"id": "archer-push-up",
+		"nombre": "Flexión arquero",
+		"grupo": "pecho",
+		"musculo": "Pectoral + tríceps",
+		"demoVideo": "/videos/archer-push-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "assisted-chest-dip-kneeling",
+		"nombre": "Fondo de pecho asistido de rodillas",
+		"grupo": "pecho",
+		"musculo": "Pectoral inferior",
+		"demoVideo": "/videos/assisted-chest-dip-kneeling.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "assisted-wide-grip-chest-dip-kneeling",
+		"nombre": "Fondo de pecho asistido agarre ancho",
+		"grupo": "pecho",
+		"musculo": "Pectoral inferior",
+		"demoVideo": "/videos/assisted-wide-grip-chest-dip-kneeling.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "chest-dip-on-dip-pull-up-cage",
+		"nombre": "Fondo de pecho en estación",
+		"grupo": "pecho",
+		"musculo": "Pectoral inferior",
+		"demoVideo": "/videos/chest-dip-on-dip-pull-up-cage.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "chest-dip-on-straight-bar",
+		"nombre": "Fondo de pecho en barra recta",
+		"grupo": "pecho",
+		"musculo": "Pectoral inferior",
+		"demoVideo": "/videos/chest-dip-on-straight-bar.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "chest-dip",
+		"nombre": "Fondo de pecho",
+		"grupo": "pecho",
+		"musculo": "Pectoral inferior",
+		"demoVideo": "/videos/chest-dip.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "chest-tap-push-up-male",
+		"nombre": "Flexión con toque de pecho",
+		"grupo": "pecho",
+		"musculo": "Pectoral + core",
+		"demoVideo": "/videos/chest-tap-push-up-male.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "clap-push-up",
+		"nombre": "Flexión con palmada",
+		"grupo": "pecho",
+		"musculo": "Pectoral explosivo",
+		"demoVideo": "/videos/clap-push-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "clock-push-up",
+		"nombre": "Flexión reloj",
+		"grupo": "pecho",
+		"musculo": "Pectoral + core",
+		"demoVideo": "/videos/clock-push-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "decline-push-up",
+		"nombre": "Flexión declinada",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior",
+		"demoVideo": "/videos/decline-push-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "deep-push-up",
+		"nombre": "Flexión profunda",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/deep-push-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "drop-push-up",
+		"nombre": "Flexión drop",
+		"grupo": "pecho",
+		"musculo": "Pectoral explosivo",
+		"demoVideo": "/videos/drop-push-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "exercise-ball-pike-push-up",
+		"nombre": "Flexión pike en fitball",
+		"grupo": "pecho",
+		"musculo": "Pectoral + hombros",
+		"demoVideo": "/videos/exercise-ball-pike-push-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "incline-push-up-on-box",
+		"nombre": "Flexión inclinada en cajón",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/incline-push-up-on-box.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "incline-push-up",
+		"nombre": "Flexión inclinada",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/incline-push-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "incline-reverse-grip-push-up",
+		"nombre": "Flexión inclinada agarre invertido",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior",
+		"demoVideo": "/videos/incline-reverse-grip-push-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "isometric-chest-squeeze",
+		"nombre": "Apretón isométrico de pecho",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/isometric-chest-squeeze.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "isometric-wipers",
+		"nombre": "Limpiaparabrisas isométrico",
+		"grupo": "pecho",
+		"musculo": "Pectoral + core",
+		"demoVideo": "/videos/isometric-wipers.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kneeling-push-up-male",
+		"nombre": "Flexión de rodillas",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/kneeling-push-up-male.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "korean-dips",
+		"nombre": "Fondos coreanos",
+		"grupo": "pecho",
+		"musculo": "Pectoral + tríceps",
+		"demoVideo": "/videos/korean-dips.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "medicine-ball-chest-pass",
+		"nombre": "Pase de pecho con balón medicinal",
+		"grupo": "pecho",
+		"musculo": "Pectoral explosivo",
+		"demoVideo": "/videos/medicine-ball-chest-pass.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "medicine-ball-chest-push-from-3-point-stance",
+		"nombre": "Empuje de pecho con balón desde 3 apoyos",
+		"grupo": "pecho",
+		"musculo": "Pectoral explosivo",
+		"demoVideo": "/videos/medicine-ball-chest-push-from-3-point-stance.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "medicine-ball-chest-push-multiple-response",
+		"nombre": "Empuje de pecho con balón respuesta múltiple",
+		"grupo": "pecho",
+		"musculo": "Pectoral explosivo",
+		"demoVideo": "/videos/medicine-ball-chest-push-multiple-response.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "medicine-ball-chest-push-single-response",
+		"nombre": "Empuje de pecho con balón respuesta simple",
+		"grupo": "pecho",
+		"musculo": "Pectoral explosivo",
+		"demoVideo": "/videos/medicine-ball-chest-push-single-response.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "medicine-ball-chest-push-with-run-release",
+		"nombre": "Empuje de pecho con balón en carrera",
+		"grupo": "pecho",
+		"musculo": "Pectoral explosivo",
+		"demoVideo": "/videos/medicine-ball-chest-push-with-run-release.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "modified-hindu-push-up-male",
+		"nombre": "Flexión hindú modificada",
+		"grupo": "pecho",
+		"musculo": "Pectoral + hombros",
+		"demoVideo": "/videos/modified-hindu-push-up-male.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "push-and-pull-bodyweight",
+		"nombre": "Empuje y tracción con peso corporal",
+		"grupo": "pecho",
+		"musculo": "Pectoral + espalda",
+		"demoVideo": "/videos/push-and-pull-bodyweight.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "push-up-bosu-ball",
+		"nombre": "Flexión en bosu",
+		"grupo": "pecho",
+		"musculo": "Pectoral + core",
+		"demoVideo": "/videos/push-up-bosu-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "push-up-medicine-ball",
+		"nombre": "Flexión con balón medicinal",
+		"grupo": "pecho",
+		"musculo": "Pectoral + core",
+		"demoVideo": "/videos/push-up-medicine-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "push-up-on-stability-ball",
+		"nombre": "Flexión en fitball",
+		"grupo": "pecho",
+		"musculo": "Pectoral + core",
+		"demoVideo": "/videos/push-up-on-stability-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "push-up-plus",
+		"nombre": "Flexión plus",
+		"grupo": "pecho",
+		"musculo": "Pectoral + serrato",
+		"demoVideo": "/videos/push-up-plus.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "push-up-wall",
+		"nombre": "Flexión en pared",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/push-up-wall.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "push-up",
+		"nombre": "Flexión",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/push-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "raise-single-arm-push-up",
+		"nombre": "Flexión a una mano con elevación",
+		"grupo": "pecho",
+		"musculo": "Pectoral + core",
+		"demoVideo": "/videos/raise-single-arm-push-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "shoulder-tap-push-up",
+		"nombre": "Flexión con toque de hombro",
+		"grupo": "pecho",
+		"musculo": "Pectoral + core",
+		"demoVideo": "/videos/shoulder-tap-push-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "single-arm-push-up",
+		"nombre": "Flexión a una mano",
+		"grupo": "pecho",
+		"musculo": "Pectoral + core",
+		"demoVideo": "/videos/single-arm-push-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "superman-push-up",
+		"nombre": "Flexión superman",
+		"grupo": "pecho",
+		"musculo": "Pectoral explosivo",
+		"demoVideo": "/videos/superman-push-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "suspended-push-up",
+		"nombre": "Flexión suspendida",
+		"grupo": "pecho",
+		"musculo": "Pectoral + core",
+		"demoVideo": "/videos/suspended-push-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "weighted-drop-push-up",
+		"nombre": "Flexión drop con peso",
+		"grupo": "pecho",
+		"musculo": "Pectoral explosivo",
+		"demoVideo": "/videos/weighted-drop-push-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "weighted-straight-bar-dip",
+		"nombre": "Fondo en barra recta con peso",
+		"grupo": "pecho",
+		"musculo": "Pectoral inferior",
+		"demoVideo": "/videos/weighted-straight-bar-dip.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "weighted-svend-press",
+		"nombre": "Svend press con peso",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/weighted-svend-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "wide-grip-chest-dip-on-high-parallel-bars",
+		"nombre": "Fondo de pecho agarre ancho en paralelas",
+		"grupo": "pecho",
+		"musculo": "Pectoral inferior",
+		"demoVideo": "/videos/wide-grip-chest-dip-on-high-parallel-bars.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "wide-hand-push-up",
+		"nombre": "Flexión con manos abiertas",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/wide-hand-push-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "incline-scapula-push-up",
+		"nombre": "Flexión escapular inclinada",
+		"grupo": "pecho",
+		"musculo": "Serrato anterior",
+		"demoVideo": "/videos/incline-scapula-push-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "scapula-push-up",
+		"nombre": "Flexión escapular",
+		"grupo": "pecho",
+		"musculo": "Serrato anterior",
+		"demoVideo": "/videos/scapula-push-up.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "band-bench-press",
+		"nombre": "Press de banca con banda",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/band-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "band-one-arm-twisting-chest-press",
+		"nombre": "Press de pecho con banda a una mano y giro",
+		"grupo": "pecho",
+		"musculo": "Pectoral + core",
+		"demoVideo": "/videos/band-one-arm-twisting-chest-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "resistance-band-seated-chest-press",
+		"nombre": "Press de pecho sentado con banda",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/resistance-band-seated-chest-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "roller-seated-shoulder-flexor-depresor-retractor",
+		"nombre": "Movilidad escapular con rodillo sentado",
+		"grupo": "pecho",
+		"musculo": "Serrato anterior",
+		"demoVideo": "/videos/roller-seated-shoulder-flexor-depresor-retractor.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "roller-seated-single-leg-shoulder-flexor-depresor-retractor",
+		"nombre": "Movilidad escapular con rodillo a una pierna",
+		"grupo": "pecho",
+		"musculo": "Serrato anterior",
+		"demoVideo": "/videos/roller-seated-single-leg-shoulder-flexor-depresor-retractor.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-decline-pullover",
+		"nombre": "Pullover declinado con barra",
+		"grupo": "pecho",
+		"musculo": "Pectoral + dorsales",
+		"demoVideo": "/videos/barbell-decline-pullover.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-decline-wide-grip-press",
+		"nombre": "Press declinado agarre ancho con barra",
+		"grupo": "pecho",
+		"musculo": "Pectoral inferior",
+		"demoVideo": "/videos/barbell-decline-wide-grip-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-front-raise-and-pullover",
+		"nombre": "Elevación frontal y pullover con barra",
+		"grupo": "pecho",
+		"musculo": "Pectoral + hombros",
+		"demoVideo": "/videos/barbell-front-raise-and-pullover.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-guillotine-bench-press",
+		"nombre": "Press guillotina con barra",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior",
+		"demoVideo": "/videos/barbell-guillotine-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-reverse-grip-decline-bench-press",
+		"nombre": "Press declinado agarre invertido con barra",
+		"grupo": "pecho",
+		"musculo": "Pectoral inferior",
+		"demoVideo": "/videos/barbell-reverse-grip-decline-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-reverse-grip-incline-bench-press",
+		"nombre": "Press inclinado agarre invertido con barra",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior",
+		"demoVideo": "/videos/barbell-reverse-grip-incline-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-wide-reverse-grip-bench-press",
+		"nombre": "Press agarre invertido ancho con barra",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/barbell-wide-reverse-grip-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "floor-fly-with-barbell",
+		"nombre": "Apertura en suelo con barra",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/floor-fly-with-barbell.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "barbell-incline-shoulder-raise",
+		"nombre": "Elevación escapular inclinada con barra",
+		"grupo": "pecho",
+		"musculo": "Serrato anterior",
+		"demoVideo": "/videos/barbell-incline-shoulder-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-around-pullover",
+		"nombre": "Pullover circular con mancuerna",
+		"grupo": "pecho",
+		"musculo": "Pectoral + dorsales",
+		"demoVideo": "/videos/dumbbell-around-pullover.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-decline-hammer-press",
+		"nombre": "Press declinado martillo con mancuernas",
+		"grupo": "pecho",
+		"musculo": "Pectoral inferior",
+		"demoVideo": "/videos/dumbbell-decline-hammer-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-decline-one-arm-fly",
+		"nombre": "Apertura declinada a una mano con mancuerna",
+		"grupo": "pecho",
+		"musculo": "Pectoral inferior",
+		"demoVideo": "/videos/dumbbell-decline-one-arm-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-decline-twist-fly",
+		"nombre": "Apertura declinada con giro con mancuernas",
+		"grupo": "pecho",
+		"musculo": "Pectoral inferior",
+		"demoVideo": "/videos/dumbbell-decline-twist-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-fly-on-exercise-ball",
+		"nombre": "Apertura con mancuernas en fitball",
+		"grupo": "pecho",
+		"musculo": "Pectoral + core",
+		"demoVideo": "/videos/dumbbell-fly-on-exercise-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-incline-alternate-press",
+		"nombre": "Press inclinado alternado con mancuernas",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior",
+		"demoVideo": "/videos/dumbbell-incline-alternate-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-incline-breeding",
+		"nombre": "Apertura inclinada profunda con mancuernas",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior",
+		"demoVideo": "/videos/dumbbell-incline-breeding.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-incline-fly-on-exercise-ball",
+		"nombre": "Apertura inclinada con mancuernas en fitball",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior + core",
+		"demoVideo": "/videos/dumbbell-incline-fly-on-exercise-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-incline-one-arm-fly",
+		"nombre": "Apertura inclinada a una mano con mancuerna",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior",
+		"demoVideo": "/videos/dumbbell-incline-one-arm-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-incline-one-arm-press",
+		"nombre": "Press inclinado a una mano con mancuerna",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior",
+		"demoVideo": "/videos/dumbbell-incline-one-arm-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-incline-palm-in-press",
+		"nombre": "Press inclinado agarre neutro con mancuernas",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior",
+		"demoVideo": "/videos/dumbbell-incline-palm-in-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-incline-press-on-exercise-ball",
+		"nombre": "Press inclinado con mancuernas en fitball",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior + core",
+		"demoVideo": "/videos/dumbbell-incline-press-on-exercise-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-incline-twisted-flyes",
+		"nombre": "Apertura inclinada con giro con mancuernas",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior",
+		"demoVideo": "/videos/dumbbell-incline-twisted-flyes.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-lying-one-arm-press",
+		"nombre": "Press tumbado a una mano con mancuerna",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/dumbbell-lying-one-arm-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-lying-pullover-on-exercise-ball",
+		"nombre": "Pullover tumbado con mancuerna en fitball",
+		"grupo": "pecho",
+		"musculo": "Pectoral + dorsales",
+		"demoVideo": "/videos/dumbbell-lying-pullover-on-exercise-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-one-arm-bench-fly",
+		"nombre": "Apertura en banco a una mano con mancuerna",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/dumbbell-one-arm-bench-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-one-arm-chest-fly-on-exercise-ball",
+		"nombre": "Apertura de pecho a una mano en fitball",
+		"grupo": "pecho",
+		"musculo": "Pectoral + core",
+		"demoVideo": "/videos/dumbbell-one-arm-chest-fly-on-exercise-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-one-arm-decline-chest-press",
+		"nombre": "Press declinado a una mano con mancuerna",
+		"grupo": "pecho",
+		"musculo": "Pectoral inferior",
+		"demoVideo": "/videos/dumbbell-one-arm-decline-chest-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-one-arm-fly-on-exercise-ball",
+		"nombre": "Apertura a una mano con mancuerna en fitball",
+		"grupo": "pecho",
+		"musculo": "Pectoral + core",
+		"demoVideo": "/videos/dumbbell-one-arm-fly-on-exercise-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-one-arm-incline-chest-press",
+		"nombre": "Press inclinado de pecho a una mano con mancuerna",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior",
+		"demoVideo": "/videos/dumbbell-one-arm-incline-chest-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-one-arm-press-on-exercise-ball",
+		"nombre": "Press a una mano con mancuerna en fitball",
+		"grupo": "pecho",
+		"musculo": "Pectoral + core",
+		"demoVideo": "/videos/dumbbell-one-arm-press-on-exercise-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-one-arm-pullover-on-exercise-ball",
+		"nombre": "Pullover a una mano con mancuerna en fitball",
+		"grupo": "pecho",
+		"musculo": "Pectoral + dorsales",
+		"demoVideo": "/videos/dumbbell-one-arm-pullover-on-exercise-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-one-arm-reverse-grip-press",
+		"nombre": "Press a una mano agarre invertido con mancuerna",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior",
+		"demoVideo": "/videos/dumbbell-one-arm-reverse-grip-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-one-leg-fly-on-exercise-ball",
+		"nombre": "Apertura con mancuernas a una pierna en fitball",
+		"grupo": "pecho",
+		"musculo": "Pectoral + core",
+		"demoVideo": "/videos/dumbbell-one-leg-fly-on-exercise-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-press-on-exercise-ball",
+		"nombre": "Press con mancuernas en fitball",
+		"grupo": "pecho",
+		"musculo": "Pectoral + core",
+		"demoVideo": "/videos/dumbbell-press-on-exercise-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-pullover-hip-extension-on-exercise-ball",
+		"nombre": "Pullover con extensión de cadera en fitball",
+		"grupo": "pecho",
+		"musculo": "Pectoral + glúteos",
+		"demoVideo": "/videos/dumbbell-pullover-hip-extension-on-exercise-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-pullover-on-exercise-ball",
+		"nombre": "Pullover con mancuerna en fitball",
+		"grupo": "pecho",
+		"musculo": "Pectoral + dorsales",
+		"demoVideo": "/videos/dumbbell-pullover-on-exercise-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-reverse-bench-press",
+		"nombre": "Press de banca invertido con mancuernas",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior",
+		"demoVideo": "/videos/dumbbell-reverse-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "hyght-dumbbell-fly",
+		"nombre": "Apertura alta con mancuernas",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior",
+		"demoVideo": "/videos/hyght-dumbbell-fly.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "dumbbell-incline-shoulder-raise",
+		"nombre": "Elevación escapular inclinada con mancuernas",
+		"grupo": "pecho",
+		"musculo": "Serrato anterior",
+		"demoVideo": "/videos/dumbbell-incline-shoulder-raise.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-decline-reverse-grip-press",
+		"nombre": "Press declinado agarre invertido en Smith",
+		"grupo": "pecho",
+		"musculo": "Pectoral inferior",
+		"demoVideo": "/videos/smith-decline-reverse-grip-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-incline-reverse-grip-press",
+		"nombre": "Press inclinado agarre invertido en Smith",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior",
+		"demoVideo": "/videos/smith-incline-reverse-grip-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-machine-reverse-decline-close-grip-bench-press",
+		"nombre": "Press declinado cerrado invertido en Smith",
+		"grupo": "pecho",
+		"musculo": "Pectoral + tríceps",
+		"demoVideo": "/videos/smith-machine-reverse-decline-close-grip-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-reverse-grip-press",
+		"nombre": "Press agarre invertido en Smith",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior",
+		"demoVideo": "/videos/smith-reverse-grip-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-wide-grip-decline-bench-press",
+		"nombre": "Press declinado agarre ancho en Smith",
+		"grupo": "pecho",
+		"musculo": "Pectoral inferior",
+		"demoVideo": "/videos/smith-wide-grip-decline-bench-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "smith-incline-shoulder-raises",
+		"nombre": "Elevación escapular inclinada en Smith",
+		"grupo": "pecho",
+		"musculo": "Serrato anterior",
+		"demoVideo": "/videos/smith-incline-shoulder-raises.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "machine-inner-chest-press",
+		"nombre": "Press interno de pecho en máquina",
+		"grupo": "pecho",
+		"musculo": "Pectoral interno",
+		"demoVideo": "/videos/machine-inner-chest-press.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-incline-fly-on-stability-ball",
+		"nombre": "Apertura inclinada en polea sobre fitball",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior + core",
+		"demoVideo": "/videos/cable-incline-fly-on-stability-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-one-arm-fly-on-exercise-ball",
+		"nombre": "Apertura en polea a una mano sobre fitball",
+		"grupo": "pecho",
+		"musculo": "Pectoral + core",
+		"demoVideo": "/videos/cable-one-arm-fly-on-exercise-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "cable-one-arm-incline-press-on-exercise-ball",
+		"nombre": "Press inclinado en polea a una mano sobre fitball",
+		"grupo": "pecho",
+		"musculo": "Pectoral superior + core",
+		"demoVideo": "/videos/cable-one-arm-incline-press-on-exercise-ball.mp4",
+		"videoUrl": ""
+	},
+	{
+		"id": "kettlebell-extended-range-one-arm-press-on-floor",
+		"nombre": "Press en suelo a una mano con kettlebell",
+		"grupo": "pecho",
+		"musculo": "Pectoral",
+		"demoVideo": "/videos/kettlebell-extended-range-one-arm-press-on-floor.mp4",
+		"videoUrl": ""
 	}
 ]
