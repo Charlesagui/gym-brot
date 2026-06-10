@@ -43,7 +43,7 @@
 	}
 </script>
 
-<main class="glow-bg min-h-dvh px-5 pb-12 pt-8">
+<main class="glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-12 pt-8">
 	<header class="mb-6">
 		<p class="text-xs font-bold uppercase tracking-[0.22em]" style="color: var(--muted)">
 			Progreso

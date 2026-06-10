@@ -56,7 +56,7 @@
 	}
 </script>
 
-<main class="glow-bg min-h-dvh px-5 pb-12 pt-6">
+<main class="glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-12 pt-6">
 	<header class="mb-6 flex items-center gap-3">
 		<a
 			href="/"
