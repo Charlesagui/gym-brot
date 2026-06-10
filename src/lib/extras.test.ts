@@ -52,7 +52,14 @@ async function limpiarDb() {
 
 describe('normalizarAjustes', () => {
 	it('rellena defaults de campos faltantes', () => {
-		expect(normalizarAjustes({ id: 'app', darkMode: false, unidad: 'kg', timer: { activo: false, minutos: 1 } } as Ajustes)).toEqual({
+		expect(
+			normalizarAjustes({
+				id: 'app',
+				darkMode: false,
+				unidad: 'kg',
+				timer: { activo: false, minutos: 1 }
+			} as Ajustes)
+		).toEqual({
 			...AJUSTES_DEFAULT,
 			darkMode: false,
 			unidad: 'kg',

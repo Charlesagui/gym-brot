@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { youtubeEmbedUrl } from './youtube';
 
-const embed = 'https://www.youtube-nocookie.com/embed/abc_DEF-123?rel=0&modestbranding=1&playsinline=1';
+const embed =
+	'https://www.youtube-nocookie.com/embed/abc_DEF-123?rel=0&modestbranding=1&playsinline=1';
 
 describe('youtubeEmbedUrl', () => {
 	it('acepta hosts y formatos validos de YouTube', () => {
