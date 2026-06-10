@@ -14,25 +14,13 @@ describe('formato', () => {
 	});
 
 	it('formatea sets de modo reps (sin peso) por repeticiones', () => {
-		expect(formatoSet({ reps: 14, esMax: false, fecha: '2026-01-01', valor: 14 }, 'kg')).toBe(
-			'14 reps'
-		);
+		expect(formatoSet({ reps: 14, esMax: false }, 'kg')).toBe('14 reps');
 	});
 
 	it('formatea sets completos y anteriores', () => {
-		expect(
-			formatoSet(
-				{
-					peso: 100,
-					reps: 8,
-					esMax: true,
-					extraKg: 2.5,
-					fecha: '2026-01-01',
-					valor: 102.5
-				},
-				'kg'
-			)
-		).toBe('100 +2.5 kg × 8 · MAX');
+		expect(formatoSet({ peso: 100, reps: 8, esMax: true, extraKg: 2.5 }, 'kg')).toBe(
+			'100 +2.5 kg × 8 · MAX'
+		);
 		expect(formatoAnterior({ peso: 40, reps: 12, hecha: false }, 'kg')).toBe('40 kg × 12');
 		expect(formatoAnterior({ reps: 10, hecha: false }, 'kg')).toBe('— × 10');
 		expect(formatoAnterior(undefined, 'kg')).toBeNull();
