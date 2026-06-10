@@ -53,6 +53,7 @@
 	const diaId = $derived($page.params.id!);
 
 	const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+	const grupoArchivado = { label: 'Archivado', glow: '148 163 184', emoji: '·' };
 
 	// El día gestiona su propio flag de carga; la sesión y los ajustes son stores legibles con `$`.
 	$effect(() => {
@@ -282,29 +283,44 @@
 		<div class="space-y-3">
 			{#each dia.ejercicios.slice().sort((a, b) => a.orden - b.orden) as item (item.exerciseId)}
 				{@const e = ejercicioPorId(item.exerciseId)}
-				{#if e}
-					{@const g = grupos[e.grupo]}
-					{@const p = progreso(e.id)}
-					{@const saltado = estaSaltado(e.id)}
+				{@const g = e ? grupos[e.grupo] : grupoArchivado}
+				{@const nombre = e?.nombre ?? 'Ejercicio archivado'}
+				{@const p = progreso(item.exerciseId)}
+				{@const saltado = estaSaltado(item.exerciseId)}
 					{#if editando}
 						<div
 							class="flex items-center gap-3 rounded-2xl border border-white/10 p-2.5"
 							style="background: radial-gradient(150% 130% at 0% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface)"
 						>
-							<video
-								use:reproducirEnVista={e.demoVideo}
-								class="size-14 shrink-0 rounded-xl bg-white object-contain"
-								aria-label={e.nombre}
-								loop
-								muted
-								playsinline
-								preload="none"
-							></video>
+							{#if e}
+								<video
+									use:reproducirEnVista={e.demoVideo}
+									class="size-14 shrink-0 rounded-xl bg-white object-contain"
+									aria-label={e.nombre}
+									loop
+									muted
+									playsinline
+									preload="none"
+								></video>
+							{:else}
+								<div
+									class="grid size-14 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-lg font-black"
+									style="color: rgb({g.glow})"
+									aria-label="Ejercicio archivado"
+								>
+									?
+								</div>
+							{/if}
 							<div class="min-w-0 flex-1">
-								<p class="truncate text-sm font-semibold leading-tight">{e.nombre}</p>
+								<p class="truncate text-sm font-semibold leading-tight">{nombre}</p>
+								{#if !e}
+									<p class="mt-0.5 text-xs" style="color: var(--muted)">
+										ID guardado: {item.exerciseId}
+									</p>
+								{/if}
 								<div class="mt-1.5 flex items-center gap-2">
 									<button
-										onclick={() => setSeries(diaId, e.id, item.seriesObjetivo - 1)}
+										onclick={() => setSeries(diaId, item.exerciseId, item.seriesObjetivo - 1)}
 										class="grid size-6 place-items-center rounded-full bg-white/10 text-sm"
 										aria-label="Menos series">−</button
 									>
@@ -312,14 +328,14 @@
 										>{item.seriesObjetivo} series objetivo</span
 									>
 									<button
-										onclick={() => setSeries(diaId, e.id, item.seriesObjetivo + 1)}
+										onclick={() => setSeries(diaId, item.exerciseId, item.seriesObjetivo + 1)}
 										class="grid size-6 place-items-center rounded-full bg-white/10 text-sm"
 										aria-label="Más series">+</button
 									>
 								</div>
 							</div>
 							<button
-								onclick={() => quitarEjercicio(diaId, e.id)}
+								onclick={() => quitarEjercicio(diaId, item.exerciseId)}
 								class="grid size-8 shrink-0 place-items-center rounded-full text-sm"
 								style="background: rgba(255,80,80,.15); color: #ff6b6b"
 								aria-label="Quitar">✕</button
@@ -334,23 +350,38 @@
 							style="background: radial-gradient(150% 130% at 0% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface)"
 						>
 							<a
-								href={`/ejercicio/${e.id}?dia=${diaId}`}
+								href={`/ejercicio/${item.exerciseId}?dia=${diaId}`}
 								class="flex min-w-0 flex-1 items-center gap-3"
 							>
-								<video
-									use:reproducirEnVista={e.demoVideo}
-									class="size-16 shrink-0 rounded-xl bg-white object-contain"
-									aria-label={e.nombre}
-									loop
-									muted
-									playsinline
-									preload="none"
-								></video>
+								{#if e}
+									<video
+										use:reproducirEnVista={e.demoVideo}
+										class="size-16 shrink-0 rounded-xl bg-white object-contain"
+										aria-label={e.nombre}
+										loop
+										muted
+										playsinline
+										preload="none"
+									></video>
+								{:else}
+									<div
+										class="grid size-16 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-xl font-black"
+										style="color: rgb({g.glow})"
+										aria-label="Ejercicio archivado"
+									>
+										?
+									</div>
+								{/if}
 								<div class="min-w-0 flex-1">
-									<p class="truncate text-sm font-semibold leading-tight">{e.nombre}</p>
+									<p class="truncate text-sm font-semibold leading-tight">{nombre}</p>
 									<p class="mt-0.5 text-xs font-medium" style="color: rgb({g.glow})">
 										{g.emoji} {g.label}
 									</p>
+									{#if !e}
+										<p class="mt-0.5 truncate text-[11px]" style="color: var(--muted)">
+											ID guardado: {item.exerciseId}
+										</p>
+									{/if}
 								</div>
 								<div class="pr-1 text-right">
 									{#if saltado}
@@ -370,22 +401,21 @@
 							</a>
 							{#if saltado}
 								<button
-									onclick={() => reanudarEjercicio(diaId, e.id)}
+									onclick={() => reanudarEjercicio(diaId, item.exerciseId)}
 									class="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 text-sm"
 									style="color: var(--accent)"
-									aria-label={`Reanudar ${e.nombre} hoy`}>↩</button
+									aria-label={`Reanudar ${nombre} hoy`}>↩</button
 								>
 							{:else}
 								<button
-									onclick={() => saltarEjercicio(diaId, e.id, item.seriesObjetivo)}
+									onclick={() => saltarEjercicio(diaId, item.exerciseId, item.seriesObjetivo)}
 									class="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 text-sm"
 									style="color: var(--muted)"
-									aria-label={`Saltar ${e.nombre} hoy`}>⏭</button
+									aria-label={`Saltar ${nombre} hoy`}>⏭</button
 								>
 							{/if}
 						</div>
 					{/if}
-				{/if}
 			{/each}
 
 			{#if dia.ejercicios.length === 0}
