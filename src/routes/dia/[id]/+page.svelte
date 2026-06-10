@@ -406,14 +406,14 @@
 									style="color: var(--accent)"
 									aria-label={`Reanudar ${nombre} hoy`}>↩</button
 								>
-							{:else}
-								<button
-									onclick={() => saltarEjercicio(diaId, item.exerciseId, item.seriesObjetivo)}
-									class="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 text-sm"
-									style="color: var(--muted)"
-									aria-label={`Saltar ${nombre} hoy`}>⏭</button
-								>
-							{/if}
+								{:else}
+									<button
+										onclick={() => saltarEjercicio(diaId, item.exerciseId, item.seriesObjetivo)}
+										class="shrink-0 rounded-full border border-white/10 px-3 py-2 text-xs font-bold"
+										style="color: var(--muted)"
+										aria-label={`Saltar ${nombre} hoy`}>Saltar</button
+									>
+								{/if}
 						</div>
 					{/if}
 			{/each}
