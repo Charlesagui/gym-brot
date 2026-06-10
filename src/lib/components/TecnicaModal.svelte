@@ -32,6 +32,7 @@
 	let pointerActivo: number | null = null;
 	let arrastrando = $state(false);
 	let arrastreY = $state(0);
+	let videoInteractivo = $state(false);
 
 	const panelStyle = $derived(
 		`background: radial-gradient(140% 100% at 50% 0%, rgb(${glow} / 0.14), transparent 60%), var(--surface); max-height: calc(100dvh - 3rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); transform: translate3d(0, ${arrastreY}px, 0); transition: ${arrastrando ? 'none' : 'transform 160ms ease-out'}`
@@ -123,6 +124,24 @@
 		}
 	}
 
+	function terminarArrastreVideo(e: PointerEvent) {
+		if (!arrastrando || pointerActivo !== e.pointerId) return;
+		const debeCerrar = Math.abs(arrastreY) >= cierrePorArrastrePx;
+		arrastrando = false;
+		pointerActivo = null;
+		try {
+			(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+		} catch {
+			// El navegador puede liberar la captura antes si cambia el foco.
+		}
+		if (debeCerrar) {
+			onClose();
+		} else {
+			arrastreY = 0;
+			videoInteractivo = true;
+		}
+	}
+
 	function cancelarArrastre(e: PointerEvent) {
 		if (pointerActivo !== e.pointerId) return;
 		arrastrando = false;
@@ -181,7 +200,7 @@
 					aria-label="Cerrar técnica">×</button
 				>
 			</div>
-			<div class="overflow-hidden rounded-2xl border border-white/10 bg-black">
+			<div class="relative overflow-hidden rounded-2xl border border-white/10 bg-black">
 				<iframe
 					src={embedUrl}
 					title={`Video de técnica para ${nombre}`}
@@ -190,6 +209,16 @@
 					referrerpolicy="strict-origin-when-cross-origin"
 					allowfullscreen
 				></iframe>
+				{#if !videoInteractivo}
+					<button
+						class="absolute inset-0 touch-none bg-transparent"
+						aria-label="Activar video o arrastrar para cerrar técnica"
+						onpointerdown={iniciarArrastre}
+						onpointermove={moverArrastre}
+						onpointerup={terminarArrastreVideo}
+						onpointercancel={cancelarArrastre}
+					></button>
+				{/if}
 			</div>
 			{#if videoUrl}
 				<a
