@@ -5,6 +5,7 @@ import {
 	AJUSTES_DEFAULT,
 	exportarJSON,
 	importarBackup,
+	necesitaBackup,
 	normalizarAjustes,
 	parseBackup,
 	setUnidad
@@ -123,5 +124,27 @@ describe('backup', () => {
 				})
 			)
 		).not.toThrow();
+	});
+});
+
+describe('necesitaBackup', () => {
+	const ahora = new Date('2026-06-10T12:00:00');
+
+	it('sin entrenamientos nunca recuerda', () => {
+		expect(necesitaBackup(undefined, [], ahora)).toBe(false);
+	});
+
+	it('sin backup previo recuerda recien con >30 dias de historial', () => {
+		expect(necesitaBackup(undefined, ['2026-06-01'], ahora)).toBe(false);
+		expect(necesitaBackup(undefined, ['2026-04-01', '2026-06-01'], ahora)).toBe(true);
+	});
+
+	it('con backup reciente no recuerda aunque haya sesiones nuevas', () => {
+		expect(necesitaBackup('2026-06-01T10:00:00.000Z', ['2026-06-05'], ahora)).toBe(false);
+	});
+
+	it('con backup viejo recuerda solo si hay sesiones posteriores al backup', () => {
+		expect(necesitaBackup('2026-01-01T10:00:00.000Z', ['2026-03-01'], ahora)).toBe(true);
+		expect(necesitaBackup('2026-01-01T10:00:00.000Z', ['2025-12-20'], ahora)).toBe(false);
 	});
 });

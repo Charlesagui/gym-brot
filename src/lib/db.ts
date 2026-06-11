@@ -68,6 +68,8 @@ export interface Ajustes {
 	metricaPr: MetricaPr;
 	/** Cuánto suma/resta cada toque de −/+ al cargar peso. */
 	pasoPeso: number;
+	/** ISO del último export de backup: alimenta el recordatorio en /historial. */
+	ultimoBackup?: string;
 }
 
 export const db = new Dexie('gym-brot') as Dexie & {

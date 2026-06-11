@@ -162,19 +162,8 @@ describe('sesion con IndexedDB', () => {
 		await setReps('pull', 'remo', 0, 8, '2026-01-02');
 		await toggleSet('pull', 'remo', 0, '2026-01-02', 'e1rm');
 
+		// Récord más reciente primero: el remo (2/1) aparece antes que el press (1/1).
 		expect(await primerValor(recordsGlobalesObs('e1rm'))).toEqual([
-			{
-				exerciseId: 'press',
-				peso: 80,
-				reps: 10,
-				esMax: false,
-				extraKg: undefined,
-				fecha: '2026-01-01',
-				valor: 106.66666666666666,
-				sesionId: '2026-01-01__push',
-				setIndex: 0,
-				modo: 'peso'
-			},
 			{
 				exerciseId: 'remo',
 				peso: 70,
@@ -184,6 +173,18 @@ describe('sesion con IndexedDB', () => {
 				fecha: '2026-01-02',
 				valor: 88.66666666666666,
 				sesionId: '2026-01-02__pull',
+				setIndex: 0,
+				modo: 'peso'
+			},
+			{
+				exerciseId: 'press',
+				peso: 80,
+				reps: 10,
+				esMax: false,
+				extraKg: undefined,
+				fecha: '2026-01-01',
+				valor: 106.66666666666666,
+				sesionId: '2026-01-01__push',
 				setIndex: 0,
 				modo: 'peso'
 			}

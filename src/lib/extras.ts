@@ -66,6 +66,39 @@ export async function setPasoPeso(pasoPeso: number): Promise<void> {
 	await db.ajustes.put({ ...a, pasoPeso });
 }
 
+/** Registra que se exportó un backup recién: apaga el recordatorio por un tiempo. */
+export async function registrarBackup(fecha = new Date()): Promise<void> {
+	const a = normalizarAjustes(await db.ajustes.get('app'));
+	await db.ajustes.put({ ...a, ultimoBackup: fecha.toISOString() });
+}
+
+const MS_DIA = 24 * 60 * 60 * 1000;
+/** Más de este tiempo sin backup (con datos nuevos) → recordatorio en /historial. */
+const DIAS_RECORDATORIO_BACKUP = 30;
+
+export function diasDesde(iso: string, ahora = new Date()): number {
+	return Math.floor((ahora.getTime() - new Date(iso).getTime()) / MS_DIA);
+}
+
+/**
+ * true si corresponde recordar el backup: pasaron >30 días del último (o del
+ * primer entrenamiento, si nunca exportó) y hay sesiones posteriores al último backup.
+ */
+export function necesitaBackup(
+	ultimoBackup: string | undefined,
+	fechasEntrenadas: string[],
+	ahora = new Date()
+): boolean {
+	if (fechasEntrenadas.length === 0) return false;
+	if (!ultimoBackup) {
+		const primera = [...fechasEntrenadas].sort()[0]!;
+		return diasDesde(`${primera}T00:00:00`, ahora) > DIAS_RECORDATORIO_BACKUP;
+	}
+	if (diasDesde(ultimoBackup, ahora) <= DIAS_RECORDATORIO_BACKUP) return false;
+	const fechaBackup = new Date(ultimoBackup).toLocaleDateString('sv');
+	return fechasEntrenadas.some((f) => f > fechaBackup);
+}
+
 const KG_TO_LB = 2.2046226218;
 
 function convertirPeso(peso: number, desde: Ajustes['unidad'], hacia: Ajustes['unidad']): number {
@@ -99,7 +132,11 @@ export async function setUnidad(unidad: 'kg' | 'lb'): Promise<void> {
 				// En modo reps (sin peso) no hay nada que convertir.
 				if (ejercicio.prCelebrado) {
 					if (ejercicio.prCelebrado.peso != null) {
-						ejercicio.prCelebrado.peso = convertirPeso(ejercicio.prCelebrado.peso, a.unidad, unidad);
+						ejercicio.prCelebrado.peso = convertirPeso(
+							ejercicio.prCelebrado.peso,
+							a.unidad,
+							unidad
+						);
 						cambio = true;
 					}
 					if (ejercicio.prCelebrado.extraKg != null) {
@@ -183,10 +220,7 @@ function esDia(value: unknown): value is Dia {
 		Array.isArray(ejercicios) &&
 		ejercicios.every(
 			(e) =>
-				esRecord(e) &&
-				esString(e.exerciseId) &&
-				esNumero(e.seriesObjetivo) &&
-				esNumero(e.orden)
+				esRecord(e) && esString(e.exerciseId) && esNumero(e.seriesObjetivo) && esNumero(e.orden)
 		)
 	);
 }
@@ -215,7 +249,7 @@ function esSesion(value: unknown): value is Sesion {
 			if (!esRecord(e) || !esString(e.exerciseId) || !Array.isArray(e.sets)) return false;
 			return (
 				(e.saltado === undefined || esBoolean(e.saltado)) &&
-					(e.prCelebrado === undefined || esPrCelebrado(e.prCelebrado)) &&
+				(e.prCelebrado === undefined || esPrCelebrado(e.prCelebrado)) &&
 				// legacy: backups viejos guardaban un escalar prPesoCelebrado → se tolera y se ignora.
 				(e.prPesoCelebrado === undefined || esNumero(e.prPesoCelebrado)) &&
 				e.sets.every(
@@ -248,7 +282,8 @@ function esAjustes(value: unknown): value is Ajustes {
 		(value.sonido === undefined || esBoolean(value.sonido)) &&
 		(value.vibracion === undefined || esBoolean(value.vibracion)) &&
 		(value.metricaPr === undefined || value.metricaPr === 'peso' || value.metricaPr === 'e1rm') &&
-		(value.pasoPeso === undefined || esNumero(value.pasoPeso))
+		(value.pasoPeso === undefined || esNumero(value.pasoPeso)) &&
+		(value.ultimoBackup === undefined || esString(value.ultimoBackup))
 	);
 }
 

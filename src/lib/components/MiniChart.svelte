@@ -68,7 +68,14 @@
 				<span>{formatoNumero(chartMin)}</span>
 			{/if}
 		</div>
-		<svg viewBox="0 0 100 28" class="min-w-0 flex-1" preserveAspectRatio="none" style="height: 46px">
+		<svg
+			viewBox="0 0 100 28"
+			class="min-w-0 flex-1"
+			preserveAspectRatio="none"
+			style="height: 46px"
+			role="img"
+			aria-label={`Mini gráfico de ${metricaLabel}: último ${ultimoChart.label} ${unidad}${chartMax != null ? `, máximo ${formatoNumero(chartMax)} ${unidad}` : ''}`}
+		>
 			{#if chartMin !== chartMax}
 				<line
 					x1="0"
