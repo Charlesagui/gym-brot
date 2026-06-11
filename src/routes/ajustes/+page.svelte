@@ -11,6 +11,7 @@
 		exportarJSON,
 		parseBackup,
 		importarBackup,
+		registrarBackup,
 		AJUSTES_DEFAULT
 	} from '$lib/extras';
 	import { fromLiveQuery } from '$lib/live';
@@ -28,6 +29,7 @@
 		a.download = `gym-brot-backup-${new Date().toLocaleDateString('sv')}.json`;
 		a.click();
 		URL.revokeObjectURL(url);
+		await registrarBackup();
 		msg = '✅ Backup descargado';
 	}
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
+	import { ajustesObs, diasDesde, necesitaBackup, AJUSTES_DEFAULT } from '$lib/extras';
 	import { formatoNumero, formatoSet, formatoVolumen, fechaCorta } from '$lib/formato';
 	import {
 		crearHistorialResumen,
@@ -27,8 +27,17 @@
 		ultimosDias(28).map((fecha) => ({ fecha, entrenado: diasEntrenados.has(fecha) }))
 	);
 	const semanas = $derived(historial.semanas.slice(0, 8));
-	// Paginación de entrenamientos: el historial viejo siempre es alcanzable.
+	// Paginación: el historial y los récords viejos siempre son alcanzables.
 	let visibles = $state(10);
+	let recordsVisibles = $state(12);
+
+	// Recordatorio de backup: el historial vive solo en este teléfono.
+	const recordarBackup = $derived(
+		necesitaBackup(
+			ajustes.ultimoBackup,
+			historial.dias.map((d) => d.fecha)
+		)
+	);
 
 	function ultimosDias(cantidad: number): string[] {
 		const hoy = new Date();
@@ -52,6 +61,24 @@
 		</p>
 		<h1 class="mt-1 text-3xl font-extrabold tracking-tight">Historial</h1>
 	</header>
+
+	{#if recordarBackup}
+		<!-- Discreto y accionable: el dato local se puede perder sin backup (iOS purga IndexedDB). -->
+		<a
+			href="/ajustes"
+			class="mb-4 flex items-center gap-3 rounded-2xl border border-white/10 p-3.5"
+			style="background: var(--surface)"
+		>
+			<span class="text-lg">💾</span>
+			<span class="min-w-0 flex-1 text-xs leading-relaxed" style="color: var(--muted)">
+				Tu historial vive solo en este teléfono ·
+				{ajustes.ultimoBackup
+					? `último backup hace ${diasDesde(ajustes.ultimoBackup)} días`
+					: 'todavía sin backup'}
+			</span>
+			<span class="shrink-0 text-xs font-bold" style="color: var(--accent)">Exportar →</span>
+		</a>
+	{/if}
 
 	<section
 		class="mb-4 rounded-2xl border border-white/10 p-4"
@@ -156,12 +183,19 @@
 			<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
 				Récords vigentes
 			</p>
-			<p class="text-xs font-semibold" style="color: var(--muted)">{metricaLabel}</p>
+			<p class="text-xs font-semibold" style="color: var(--muted)">
+				{metricaLabel} · recientes primero
+			</p>
 		</div>
 		<div class="space-y-2">
-			{#each records.slice(0, 12) as record (record.exerciseId)}
+			{#each records.slice(0, recordsVisibles) as record (record.exerciseId)}
 				{@const ejercicio = ejercicioPorId(record.exerciseId)}
-				<article class="rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+				<a
+					href={`/ejercicio/${record.exerciseId}`}
+					class="block rounded-2xl border border-white/10 p-4"
+					style="background: var(--surface)"
+					aria-label={`Ver progreso de ${ejercicio?.nombre ?? 'ejercicio archivado'}`}
+				>
 					<div class="flex items-start justify-between gap-3">
 						<div class="min-w-0">
 							<p class="truncate text-sm font-bold">{ejercicio?.nombre ?? 'Ejercicio archivado'}</p>
@@ -179,8 +213,18 @@
 							>
 						</p>
 					</div>
-				</article>
+				</a>
 			{/each}
+			{#if records.length > recordsVisibles}
+				<button
+					onclick={() => (recordsVisibles += 12)}
+					class="w-full rounded-2xl border border-white/10 py-3 text-sm font-semibold"
+					style="background: var(--surface); color: var(--muted)"
+				>
+					Ver más ({records.length - recordsVisibles}
+					{records.length - recordsVisibles === 1 ? 'récord' : 'récords'})
+				</button>
+			{/if}
 			{#if records.length === 0}
 				<p
 					class="rounded-2xl border border-dashed border-white/15 p-5 text-center text-sm"

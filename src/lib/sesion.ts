@@ -185,7 +185,11 @@ export function recordsGlobalesObs(metrica: MetricaPr = 'peso') {
 				mejores.set(ejercicio.exerciseId, { ...mejor, exerciseId: ejercicio.exerciseId, modo });
 			}
 		}
-		return [...mejores.values()].sort((a, b) => b.valor - a.valor);
+		// Récord más reciente primero: así los récords chicos también aparecen
+		// (ordenar por valor dejaba siempre arriba a la prensa y afuera a las elevaciones).
+		return [...mejores.values()].sort(
+			(a, b) => b.fecha.localeCompare(a.fecha) || b.valor - a.valor
+		);
 	});
 }
 
@@ -354,7 +358,13 @@ export function toggleMax(diaId: string, exerciseId: string, i: number, fecha = 
 		fecha
 	);
 }
-export function setPeso(diaId: string, exerciseId: string, i: number, peso?: number, fecha = hoyStr()) {
+export function setPeso(
+	diaId: string,
+	exerciseId: string,
+	i: number,
+	peso?: number,
+	fecha = hoyStr()
+) {
 	return mutar(
 		diaId,
 		exerciseId,
@@ -364,7 +374,13 @@ export function setPeso(diaId: string, exerciseId: string, i: number, peso?: num
 		fecha
 	);
 }
-export function setReps(diaId: string, exerciseId: string, i: number, reps?: number, fecha = hoyStr()) {
+export function setReps(
+	diaId: string,
+	exerciseId: string,
+	i: number,
+	reps?: number,
+	fecha = hoyStr()
+) {
 	return mutar(
 		diaId,
 		exerciseId,
@@ -375,7 +391,13 @@ export function setReps(diaId: string, exerciseId: string, i: number, reps?: num
 	);
 }
 /** Kg encima de la placa full (solo aplica al PR cuando el set es MAX). */
-export function setExtra(diaId: string, exerciseId: string, i: number, extraKg?: number, fecha = hoyStr()) {
+export function setExtra(
+	diaId: string,
+	exerciseId: string,
+	i: number,
+	extraKg?: number,
+	fecha = hoyStr()
+) {
 	return mutar(
 		diaId,
 		exerciseId,
@@ -455,7 +477,9 @@ export function marcarPrCelebrado(
 		.modify((s) => {
 			const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
 			if (!e) return;
-			const prevVal = e.prCelebrado ? (valorSet(e.prCelebrado, metrica, modo) ?? -Infinity) : -Infinity;
+			const prevVal = e.prCelebrado
+				? (valorSet(e.prCelebrado, metrica, modo) ?? -Infinity)
+				: -Infinity;
 			const nuevoVal = valorSet(snap, metrica, modo) ?? -Infinity;
 			if (nuevoVal >= prevVal) {
 				e.prCelebrado = {
