@@ -10,17 +10,22 @@
 	import { fromLiveQuery } from '$lib/live';
 	import { formatoNumero, formatoSet, fechaCorta } from '$lib/formato';
 	import ChartProgreso from './ChartProgreso.svelte';
+	import EditarSerieSheet, { type SerieEditable } from './EditarSerieSheet.svelte';
 
 	let {
 		exerciseId,
 		glow,
 		unidad,
-		metrica
+		metrica,
+		pasoPeso,
+		maquinaPlacas
 	}: {
 		exerciseId: string;
 		glow: string;
 		unidad: string;
 		metrica: MetricaPr;
+		pasoPeso: number;
+		maquinaPlacas: boolean;
 	} = $props();
 
 	const VACIO: ProgresoEjercicio = {
@@ -49,6 +54,8 @@
 
 	// Historial completo paginado de a 15 sesiones.
 	let visibles = $state(15);
+	// Serie en edición → bottom sheet (sin prompt/confirm nativos).
+	let serieEditando = $state<SerieEditable | null>(null);
 </script>
 
 <section class="mt-6 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
@@ -172,14 +179,27 @@
 					</div>
 					<div class="mt-2 space-y-1">
 						{#each sesion.series as serie (serie.setIndex)}
-							<div class="flex items-center gap-2 rounded-lg bg-white/[0.025] px-3 py-1.5 text-xs">
+							<button
+								onclick={() =>
+									(serieEditando = {
+										sesionId: serie.sesionId,
+										exerciseId,
+										setIndex: serie.setIndex,
+										set: serie.set,
+										fecha: serie.fecha,
+										maquinaPlacas
+									})}
+								class="flex min-h-10 w-full items-center gap-2 rounded-lg bg-white/[0.025] px-3 py-1.5 text-left text-xs"
+								aria-label={`Editar serie ${formatoSet(serie.set, unidad)} del ${fechaCorta(serie.fecha)}`}
+							>
 								<span class="min-w-0 flex-1 truncate font-semibold tabular-nums">
 									{formatoSet(serie.set, unidad)}
 								</span>
 								{#if serie.esPr}
 									<span class="shrink-0" aria-label={`PR de ${metricaLabel}`}>🏆</span>
 								{/if}
-							</div>
+								<span class="shrink-0 text-[10px]" style="color: var(--muted)">✎</span>
+							</button>
 						{/each}
 					</div>
 				</article>
@@ -197,3 +217,14 @@
 		</div>
 	{/if}
 </section>
+
+{#if serieEditando}
+	<EditarSerieSheet
+		serie={serieEditando}
+		{glow}
+		{unidad}
+		{pasoPeso}
+		{metrica}
+		onClose={() => (serieEditando = null)}
+	/>
+{/if}
