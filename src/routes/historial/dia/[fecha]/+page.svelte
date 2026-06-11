@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { liveQuery } from 'dexie';
-	import { db, type Dia, type PrCelebrado, type Sesion, type SetSesion } from '$lib/db';
+	import { db, type Dia, type Sesion, type SetSesion } from '$lib/db';
 	import { ejercicioPorId, grupos } from '$lib/catalog';
 	import { resumenDiaSesion } from '$lib/historial';
+	import { indexSetPr } from '$lib/progreso';
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
 	import { fromLiveQuery } from '$lib/live';
 	import { formatoSet, formatoVolumen } from '$lib/formato';
@@ -46,19 +47,6 @@
 			year: 'numeric'
 		})
 	);
-
-	/** ¿Esta serie ✓ es la que celebró el PR del ejercicio? (solo se marca la primera). */
-	function indexSetPr(sets: SetSesion[], pr: PrCelebrado | undefined): number {
-		if (!pr) return -1;
-		return sets.findIndex(
-			(s) =>
-				s.hecha &&
-				s.peso === pr.peso &&
-				s.reps === pr.reps &&
-				!!s.esMax === !!pr.esMax &&
-				(s.extraKg ?? 0) === (pr.extraKg ?? 0)
-		);
-	}
 
 	function sinVolumen(s: SetSesion): boolean {
 		return s.peso == null || s.reps == null;

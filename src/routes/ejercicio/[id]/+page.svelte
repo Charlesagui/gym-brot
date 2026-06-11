@@ -41,11 +41,16 @@
 	import MiniChart from '$lib/components/MiniChart.svelte';
 	import CelebracionOverlay from '$lib/components/CelebracionOverlay.svelte';
 	import TecnicaModal from '$lib/components/TecnicaModal.svelte';
+	import ProgresoEjercicio from '$lib/components/ProgresoEjercicio.svelte';
 
 	const ej = $derived(ejercicioPorId($page.params.id!));
 	const g = $derived(ej ? grupos[ej.grupo] : undefined);
 	const diaId = $derived($page.url.searchParams.get('dia'));
-	const volver = $derived(diaId ? `/dia/${diaId}` : '/');
+	// `desde`: día desde el que se abrió la vista de progreso (para volver a entrenar).
+	const desde = $derived($page.url.searchParams.get('desde'));
+	const volver = $derived(
+		diaId ? `/dia/${diaId}` : desde ? `/ejercicio/${$page.params.id}?dia=${desde}` : '/historial'
+	);
 
 	let sets = $state<SetSesion[]>([]);
 	let anteriores = $state<SetSesion[]>([]);
@@ -299,7 +304,10 @@
 		if (!diaId || sets.length <= 1) return;
 		const ultima = sets[sets.length - 1];
 		// No borrar un registro real con un mistap: la serie hecha pide confirmación.
-		if (ultima?.hecha && !confirm(`La serie ${sets.length} ya está marcada como hecha. ¿Quitarla igual?`))
+		if (
+			ultima?.hecha &&
+			!confirm(`La serie ${sets.length} ya está marcada como hecha. ¿Quitarla igual?`)
+		)
 			return;
 		removeSet(diaId, $page.params.id!, sets.length - 1, fechaSesion);
 	}
@@ -342,7 +350,11 @@
 		const seCompletanTodas = sets.filter((s) => s.hecha).length === sets.length - 1;
 		if (!seCompletanTodas && ajustes.timer.activo) {
 			descanso.iniciar(ajustes.timer.minutos, g?.glow ?? '124 92 255'); // recién hecha → arranca descanso
-		} else if (!seCompletanTodas && !ajustes.timer.activo && !localStorage.getItem('gb-hint-timer-ok')) {
+		} else if (
+			!seCompletanTodas &&
+			!ajustes.timer.activo &&
+			!localStorage.getItem('gb-hint-timer-ok')
+		) {
 			// Timer apagado: sugerir activarlo (una sola vez) para que avise cuándo volver.
 			mostrarHintTimer = true;
 		}
@@ -367,7 +379,14 @@
 			(mejorPrevio == null || valor > mejorPrevio) &&
 			(valorCelebrado == null || valor > valorCelebrado);
 		if (!esNuevoPr) return null;
-		return { peso: s.peso, reps: s.reps, esMax: !!s.esMax, extraKg: s.extraKg, fecha: fechaSesion, valor };
+		return {
+			peso: s.peso,
+			reps: s.reps,
+			esMax: !!s.esMax,
+			extraKg: s.extraKg,
+			fecha: fechaSesion,
+			valor
+		};
 	}
 
 	async function editarPuntoHistorial(punto: MejorSet) {
@@ -389,7 +408,13 @@
 				alert('Escribí solo las reps. Ejemplo: 12');
 				return;
 			}
-			await actualizarSetHistorial(punto.sesionId, $page.params.id!, punto.setIndex, { reps }, metrica);
+			await actualizarSetHistorial(
+				punto.sesionId,
+				$page.params.id!,
+				punto.setIndex,
+				{ reps },
+				metrica
+			);
 			return;
 		}
 		const actual = `${formatoNumero(punto.peso)} ${punto.reps ?? ''}`.trim();
@@ -406,7 +431,11 @@
 		const [pesoTxt, repsTxt] = respuesta.trim().replace(',', '.').split(/\s+/);
 		const peso = Number.parseFloat(pesoTxt ?? '');
 		const reps = repsTxt ? Number.parseInt(repsTxt, 10) : punto.reps;
-		if (!Number.isFinite(peso) || peso <= 0 || (reps != null && (!Number.isFinite(reps) || reps <= 0))) {
+		if (
+			!Number.isFinite(peso) ||
+			peso <= 0 ||
+			(reps != null && (!Number.isFinite(reps) || reps <= 0))
+		) {
 			alert('Usá el formato: peso reps. Ejemplo: 80 10');
 			return;
 		}
@@ -513,7 +542,8 @@
 			<div class="min-w-0 flex-1">
 				<h1 class="text-lg font-bold leading-tight">{ej.nombre}</h1>
 				<p class="mt-0.5 text-xs font-medium" style="color: rgb({g.glow})">
-					{g.emoji} {g.label} · {ej.musculo}
+					{g.emoji}
+					{g.label} · {ej.musculo}
 				</p>
 			</div>
 		</header>
@@ -549,14 +579,18 @@
 		{/if}
 
 		{#if !diaId}
-			<p
-				class="mt-6 rounded-2xl border border-white/10 p-4 text-center text-sm"
-				style="color: var(--muted)"
-			>
-				Abrí este ejercicio desde un día para registrar tus series.
-			</p>
+			<!-- Sin ?dia= no se entrena: vista de consulta con el progreso completo. -->
+			<ProgresoEjercicio
+				exerciseId={$page.params.id!}
+				glow={g.glow}
+				unidad={ajustes.unidad}
+				metrica={ajustes.metricaPr}
+			/>
 		{:else}
-			<section class="mt-6 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+			<section
+				class="mt-6 rounded-2xl border border-white/10 p-4"
+				style="background: var(--surface)"
+			>
 				<div class="flex items-start justify-between gap-3">
 					<div>
 						<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
@@ -570,7 +604,10 @@
 								>
 							{/if}
 						</p>
-						<p class="mt-0.5 text-[11px] font-medium uppercase tracking-wider" style="color: var(--muted)">
+						<p
+							class="mt-0.5 text-[11px] font-medium uppercase tracking-wider"
+							style="color: var(--muted)"
+						>
 							Sesión actual
 						</p>
 						{#if anterioresFecha}
@@ -594,7 +631,8 @@
 							<span
 								class="min-w-11 text-center text-sm font-bold tabular-nums"
 								style="color: {completo ? `rgb(${g.glow})` : 'var(--text)'}"
-								aria-label={`${hechas} de ${sets.length} series hechas`}>{hechas}/{sets.length}</span
+								aria-label={`${hechas} de ${sets.length} series hechas`}
+								>{hechas}/{sets.length}</span
 							>
 							<button
 								onclick={() => addSet(diaId, $page.params.id!, fechaSesion)}
@@ -607,7 +645,10 @@
 				</div>
 
 				{#if cargandoSeries}
-					<p class="mt-3 rounded-xl bg-white/[0.025] p-4 text-center text-sm" style="color: var(--muted)">
+					<p
+						class="mt-3 rounded-xl bg-white/[0.025] p-4 text-center text-sm"
+						style="color: var(--muted)"
+					>
 						Preparando series…
 					</p>
 				{:else}
@@ -632,18 +673,25 @@
 						{/each}
 					</div>
 					{#if sinHistorial}
-						<div class="mt-2 flex items-start gap-2 rounded-xl p-2.5" style="background: rgb({g.glow} / .08)">
+						<div
+							class="mt-2 flex items-start gap-2 rounded-xl p-2.5"
+							style="background: rgb({g.glow} / .08)"
+						>
 							<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
-								💡 Primera vez con este ejercicio. Empezá con un peso que te deje hacer ~12 repeticiones
-								cómodas y ajustá la próxima.
+								💡 Primera vez con este ejercicio. Empezá con un peso que te deje hacer ~12
+								repeticiones cómodas y ajustá la próxima.
 							</p>
 						</div>
 					{/if}
 					{#if mostrarHintMax}
-						<div class="mt-2 flex items-start gap-2 rounded-xl p-2.5" style="background: rgb(var(--max) / .08)">
+						<div
+							class="mt-2 flex items-start gap-2 rounded-xl p-2.5"
+							style="background: rgb(var(--max) / .08)"
+						>
 							<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
-								💡 ¿Llegaste al tope de la pila de placas? Marcá <b style="color: rgb(var(--max))">MAX</b> en esa
-								serie y anotá los kg extra que pongas encima.
+								💡 ¿Llegaste al tope de la pila de placas? Marcá <b style="color: rgb(var(--max))"
+									>MAX</b
+								> en esa serie y anotá los kg extra que pongas encima.
 							</p>
 							<button
 								onclick={entendidoHintMax}
@@ -674,7 +722,10 @@
 					{/each}
 				</div>
 				{#if mostrarHintTimer}
-					<div class="mt-2 flex items-center gap-2 rounded-xl p-2.5" style="background: rgb({g.glow} / .08)">
+					<div
+						class="mt-2 flex items-center gap-2 rounded-xl p-2.5"
+						style="background: rgb({g.glow} / .08)"
+					>
 						<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
 							💡 ¿Activar el descanso? Te avisa cuándo volver a la serie.
 						</p>
@@ -683,15 +734,20 @@
 							class="shrink-0 rounded-full px-3 py-1 text-xs font-bold"
 							style="background: var(--accent); color: white">Activar</button
 						>
-						<button onclick={descartarHintTimer} class="shrink-0 text-xs font-bold" style="color: var(--muted)"
-							>Ahora no</button
+						<button
+							onclick={descartarHintTimer}
+							class="shrink-0 text-xs font-bold"
+							style="color: var(--muted)">Ahora no</button
 						>
 					</div>
 				{/if}
 			</section>
 
 			{#if pr}
-				<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+				<section
+					class="mt-3 rounded-2xl border border-white/10 p-4"
+					style="background: var(--surface)"
+				>
 					<div class="flex items-center justify-between">
 						<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
 							PR {metricaLabel}
@@ -706,7 +762,9 @@
 					<p class="mt-1 text-3xl font-extrabold">
 						🏆 {formatoNumero(pr.valor)}<span
 							class="text-lg font-semibold"
-							style="color: var(--muted)"> {unidadValor}</span
+							style="color: var(--muted)"
+						>
+							{unidadValor}</span
 						>
 					</p>
 					<p class="mt-0.5 text-xs font-medium" style="color: var(--muted)">
@@ -714,13 +772,29 @@
 					</p>
 					{#if valorOtraPr != null}
 						<p class="mt-0.5 text-[11px] font-medium" style="color: var(--muted)">
-							≈ {formatoNumero(valorOtraPr)} {unidad} en {otraLabel}
+							≈ {formatoNumero(valorOtraPr)}
+							{unidad} en {otraLabel}
 						</p>
 					{/if}
-					<p class="mt-2.5 text-[11px] leading-relaxed border-t border-white/5 pt-2" style="color: var(--muted)">
+					<p
+						class="mt-2.5 text-[11px] leading-relaxed border-t border-white/5 pt-2"
+						style="color: var(--muted)"
+					>
 						💡 {DESCRIPCION_METRICA[metricaEfectiva]}
 					</p>
-					<MiniChart {puntos} glow={g.glow} {metricaLabel} unidad={unidadValor} onEditarPunto={editarPuntoHistorial} />
+					<MiniChart
+						{puntos}
+						glow={g.glow}
+						{metricaLabel}
+						unidad={unidadValor}
+						onEditarPunto={editarPuntoHistorial}
+					/>
+					<!-- Link discreto: la operación manda, el progreso completo se consulta aparte. -->
+					<a
+						href={`/ejercicio/${$page.params.id}?desde=${diaId}`}
+						class="mt-2.5 block text-right text-xs font-bold"
+						style="color: rgb({g.glow})">Ver progreso completo →</a
+					>
 				</section>
 			{:else if !cargandoSeries}
 				<section
@@ -735,7 +809,10 @@
 				</section>
 			{/if}
 
-			<details class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+			<details
+				class="mt-3 rounded-2xl border border-white/10 p-4"
+				style="background: var(--surface)"
+			>
 				<summary class="cursor-pointer text-sm font-medium" style="color: var(--muted)">
 					📝 Notas {#if tieneNota}<span style="color: rgb({g.glow})">●</span>{/if}
 				</summary>
@@ -817,7 +894,10 @@
 				</div>
 				<p class="mt-5 text-2xl font-extrabold">¡Nuevo PR!</p>
 				<p class="mt-2 text-4xl font-extrabold tabular-nums">
-					{formatoNumero(prFlash.valor)}<span class="text-xl font-semibold" style="color: var(--muted)">
+					{formatoNumero(prFlash.valor)}<span
+						class="text-xl font-semibold"
+						style="color: var(--muted)"
+					>
 						{unidadValor}</span
 					>
 				</p>
