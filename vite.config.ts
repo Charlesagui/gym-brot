@@ -8,7 +8,12 @@ export default defineConfig({
 		environment: 'node',
 		coverage: {
 			provider: 'v8',
-			include: ['src/lib/sesion.ts', 'src/lib/historial.ts', 'src/lib/formato.ts'],
+			include: [
+				'src/lib/sesion.ts',
+				'src/lib/historial.ts',
+				'src/lib/formato.ts',
+				'src/lib/progreso.ts'
+			],
 			thresholds: {
 				lines: 80,
 				functions: 80,
