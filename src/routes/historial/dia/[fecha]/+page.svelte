@@ -8,12 +8,17 @@
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
 	import { fromLiveQuery } from '$lib/live';
 	import { formatoSet, formatoVolumen } from '$lib/formato';
+	import EditarSerieSheet, { type SerieEditable } from '$lib/components/EditarSerieSheet.svelte';
 
 	const fecha = $derived($page.params.fecha!);
 
 	const ajustesStore = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
 	const ajustes = $derived($ajustesStore);
 	const metricaLabel = $derived(ajustes.metricaPr === 'e1rm' ? '1RM estimado' : 'peso máximo');
+
+	// Serie en edición → bottom sheet; guarda también el glow del grupo del ejercicio.
+	let serieEditando = $state<SerieEditable | null>(null);
+	let glowEditando = $state('124 92 255');
 
 	// Puede haber más de una sesión (día de rutina) en la misma fecha: se muestran agrupadas.
 	const sesionesStore = $derived(
@@ -149,8 +154,20 @@
 							<div class="mt-2.5 space-y-1.5">
 								{#each ejercicio.sets as set, i (i)}
 									{#if set.hecha}
-										<div
-											class="flex items-center gap-2 rounded-xl bg-white/[0.025] px-3 py-2 text-sm"
+										<button
+											onclick={() => {
+												glowEditando = g?.glow ?? '124 92 255';
+												serieEditando = {
+													sesionId: sesion.id,
+													exerciseId: ejercicio.exerciseId,
+													setIndex: i,
+													set,
+													fecha: sesion.fecha,
+													maquinaPlacas: !!ej?.maquinaPlacas
+												};
+											}}
+											class="flex min-h-10 w-full items-center gap-2 rounded-xl bg-white/[0.025] px-3 py-2 text-left text-sm"
+											aria-label={`Editar serie ${i + 1}: ${formatoSet(set, ajustes.unidad)}`}
 										>
 											<span
 												class="grid size-6 shrink-0 place-items-center rounded-full border border-white/10 text-[11px] font-bold"
@@ -167,7 +184,8 @@
 													>sin volumen</span
 												>
 											{/if}
-										</div>
+											<span class="shrink-0 text-[10px]" style="color: var(--muted)">✎</span>
+										</button>
 									{/if}
 								{/each}
 							</div>
@@ -178,3 +196,14 @@
 		{/each}
 	{/if}
 </main>
+
+{#if serieEditando}
+	<EditarSerieSheet
+		serie={serieEditando}
+		glow={glowEditando}
+		unidad={ajustes.unidad}
+		pasoPeso={ajustes.pasoPeso}
+		metrica={ajustes.metricaPr}
+		onClose={() => (serieEditando = null)}
+	/>
+{/if}

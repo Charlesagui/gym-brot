@@ -18,8 +18,6 @@
 		addSet,
 		removeSet,
 		marcarPrCelebrado,
-		actualizarSetHistorial,
-		borrarSetHistorial,
 		pesoEfectivo,
 		valorMetrica,
 		valorSet,
@@ -42,6 +40,7 @@
 	import CelebracionOverlay from '$lib/components/CelebracionOverlay.svelte';
 	import TecnicaModal from '$lib/components/TecnicaModal.svelte';
 	import ProgresoEjercicio from '$lib/components/ProgresoEjercicio.svelte';
+	import EditarSerieSheet, { type SerieEditable } from '$lib/components/EditarSerieSheet.svelte';
 
 	const ej = $derived(ejercicioPorId($page.params.id!));
 	const g = $derived(ej ? grupos[ej.grupo] : undefined);
@@ -389,63 +388,19 @@
 		};
 	}
 
-	async function editarPuntoHistorial(punto: MejorSet) {
+	// Serie histórica en edición (long-press en un punto del chart) → bottom sheet.
+	let serieEditando = $state<SerieEditable | null>(null);
+
+	function editarPuntoHistorial(punto: MejorSet) {
 		if (!punto.sesionId || punto.setIndex == null) return;
-		// Modo reps: la serie no tiene peso, se edita solo la cantidad de reps.
-		if (punto.peso == null) {
-			const respuesta = prompt(
-				`Editar serie histórica (${formatoSet(punto, unidad)}). Escribí "borrar" o las reps.`,
-				punto.reps != null ? String(punto.reps) : ''
-			);
-			if (respuesta == null) return;
-			if (respuesta.trim().toLowerCase() === 'borrar') {
-				if (!confirm(`¿Borrar del historial la serie ${formatoSet(punto, unidad)}?`)) return;
-				await borrarSetHistorial(punto.sesionId, $page.params.id!, punto.setIndex, metrica);
-				return;
-			}
-			const reps = Number.parseInt(respuesta.trim(), 10);
-			if (!Number.isFinite(reps) || reps <= 0) {
-				alert('Escribí solo las reps. Ejemplo: 12');
-				return;
-			}
-			await actualizarSetHistorial(
-				punto.sesionId,
-				$page.params.id!,
-				punto.setIndex,
-				{ reps },
-				metrica
-			);
-			return;
-		}
-		const actual = `${formatoNumero(punto.peso)} ${punto.reps ?? ''}`.trim();
-		const respuesta = prompt(
-			`Editar serie histórica (${formatoSet(punto, unidad)}). Escribí "borrar" o "peso reps".`,
-			actual
-		);
-		if (respuesta == null) return;
-		if (respuesta.trim().toLowerCase() === 'borrar') {
-			if (!confirm(`¿Borrar del historial la serie ${formatoSet(punto, unidad)}?`)) return;
-			await borrarSetHistorial(punto.sesionId, $page.params.id!, punto.setIndex, metrica);
-			return;
-		}
-		const [pesoTxt, repsTxt] = respuesta.trim().replace(',', '.').split(/\s+/);
-		const peso = Number.parseFloat(pesoTxt ?? '');
-		const reps = repsTxt ? Number.parseInt(repsTxt, 10) : punto.reps;
-		if (
-			!Number.isFinite(peso) ||
-			peso <= 0 ||
-			(reps != null && (!Number.isFinite(reps) || reps <= 0))
-		) {
-			alert('Usá el formato: peso reps. Ejemplo: 80 10');
-			return;
-		}
-		await actualizarSetHistorial(
-			punto.sesionId,
-			$page.params.id!,
-			punto.setIndex,
-			{ peso: redondear(peso), reps, esMax: punto.esMax, extraKg: punto.extraKg },
-			metrica
-		);
+		serieEditando = {
+			sesionId: punto.sesionId,
+			exerciseId: $page.params.id!,
+			setIndex: punto.setIndex,
+			set: { peso: punto.peso, reps: punto.reps, esMax: punto.esMax, extraKg: punto.extraKg },
+			fecha: punto.fecha,
+			maquinaPlacas: !!ej?.maquinaPlacas
+		};
 	}
 
 	/** Recompensa especial inmediata por PR: no bloquea el registro (pointer-events-none). */
@@ -585,6 +540,8 @@
 				glow={g.glow}
 				unidad={ajustes.unidad}
 				metrica={ajustes.metricaPr}
+				{pasoPeso}
+				maquinaPlacas={!!ej.maquinaPlacas}
 			/>
 		{:else}
 			<section
@@ -871,6 +828,17 @@
 			{metricaLabel}
 			{hechas}
 			total={sets.length}
+		/>
+	{/if}
+
+	{#if serieEditando && g}
+		<EditarSerieSheet
+			serie={serieEditando}
+			glow={g.glow}
+			{unidad}
+			{pasoPeso}
+			{metrica}
+			onClose={() => (serieEditando = null)}
 		/>
 	{/if}
 
