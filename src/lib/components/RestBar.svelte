@@ -14,15 +14,19 @@
 	}
 </script>
 
-{#if descanso.restoSeg > 0 || descanso.avisoFin}
+{#if descanso.restoSeg > 0 || descanso.vencido}
 	<div
 		transition:fly={{ y: 80, duration: dur(220) }}
-		class="fixed inset-x-0 z-50 mx-auto flex max-w-md items-center justify-between gap-3 border-t border-white/10 px-5 pt-3"
+		class="fixed inset-x-0 z-50 mx-auto flex max-w-md items-center justify-between gap-3 border-t border-white/10 px-5 pt-3 {descanso.vencido
+			? 'rest-vencido'
+			: ''}"
 		style="bottom: {offsetNav
 			? 'calc(64px + env(safe-area-inset-bottom))'
 			: '0'}; padding-bottom: {offsetNav
 			? '0.75rem'
-			: 'calc(0.75rem + env(safe-area-inset-bottom))'}; background: color-mix(in oklab, var(--surface) 94%, transparent); backdrop-filter: blur(10px)"
+			: 'calc(0.75rem + env(safe-area-inset-bottom))'}; background: {descanso.vencido
+			? `linear-gradient(0deg, rgb(${descanso.glow} / 0.22), rgb(${descanso.glow} / 0.10)), color-mix(in oklab, var(--surface) 94%, transparent)`
+			: 'color-mix(in oklab, var(--surface) 94%, transparent)'}; backdrop-filter: blur(10px)"
 	>
 		{#if descanso.restoSeg > 0}
 			<span class="text-sm font-semibold" style="color: var(--muted)">⏱️ Descanso</span>
@@ -35,11 +39,38 @@
 				style="background: rgba(255,255,255,.12)">Saltar</button
 			>
 		{:else}
-			<span
-				class="mx-auto py-1.5 text-xl font-extrabold"
-				style="color: rgb({descanso.glow})"
-				aria-live="polite">✓ Descanso terminado</span
+			<!-- Vencido: queda hasta que se atienda; el excedido dice cuánto te pasaste. -->
+			<span class="text-base font-extrabold" style="color: rgb({descanso.glow})" aria-live="polite"
+				>⏰ ¡A la serie!</span
+			>
+			<span class="text-2xl font-extrabold tabular-nums" style="color: rgb({descanso.glow})"
+				>+{mmss(descanso.vencidoSeg)}</span
+			>
+			<button
+				onclick={() => descanso.atender()}
+				class="min-h-10 rounded-full px-5 text-sm font-bold"
+				style="background: rgb({descanso.glow}); color: white">✓ Listo</button
 			>
 		{/if}
 	</div>
 {/if}
+
+<style>
+	@keyframes rest-pulso {
+		0%,
+		100% {
+			filter: brightness(1);
+		}
+		50% {
+			filter: brightness(1.35);
+		}
+	}
+	.rest-vencido {
+		animation: rest-pulso 1.1s ease-in-out infinite;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.rest-vencido {
+			animation: none;
+		}
+	}
+</style>
