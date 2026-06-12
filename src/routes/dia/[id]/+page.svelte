@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import { flip } from 'svelte/animate';
 	import { dndzone, type DndEvent } from 'svelte-dnd-action';
@@ -18,6 +18,7 @@
 	} from '$lib/dias';
 	import { mantener } from '$lib/mantener';
 	import {
+		hoyStr,
 		marcarDiaTerminado,
 		reabrirDia,
 		sesionHoyObs,
@@ -75,10 +76,23 @@
 		return () => sub.unsubscribe();
 	});
 
-	const sesionStore = $derived(fromLiveQuery(sesionHoyObs(diaId), undefined));
+	// Fecha reactiva: si la app queda abierta y cruza la medianoche, al volver
+	// a la vista la pantalla apunta a la sesión del día nuevo (no a la de ayer).
+	let fechaHoy = $state(hoyStr());
+	const sesionStore = $derived(fromLiveQuery(sesionHoyObs(diaId, fechaHoy), undefined));
 	const sesion = $derived<Sesion | undefined>($sesionStore);
 	const ajustesStore = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
 	const ajustes = $derived<Ajustes>($ajustesStore);
+
+	onMount(() => {
+		const refrescarHoy = () => (fechaHoy = hoyStr());
+		document.addEventListener('visibilitychange', refrescarHoy);
+		window.addEventListener('focus', refrescarHoy);
+		return () => {
+			document.removeEventListener('visibilitychange', refrescarHoy);
+			window.removeEventListener('focus', refrescarHoy);
+		};
+	});
 
 	onDestroy(() => {
 		if (premioId) clearTimeout(premioId);
