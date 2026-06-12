@@ -52,8 +52,17 @@
 
 	const diaId = $derived($page.params.id!);
 
-	const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+	const abrevDia = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 	const grupoArchivado = { label: 'Archivado', glow: '148 163 184', emoji: '·' };
+
+	/** Agenda multi-día: cada chip suma o quita ese día de la semana. */
+	function toggleDiaSemana(i: number) {
+		const actual = dia?.diasSemana ?? [];
+		const nuevo = actual.includes(i)
+			? actual.filter((x) => x !== i)
+			: [...actual, i].sort((a, b) => a - b);
+		actualizarDia(diaId, { diasSemana: nuevo.length ? nuevo : undefined });
+	}
 
 	// El día gestiona su propio flag de carga; la sesión y los ajustes son stores legibles con `$`.
 	$effect(() => {
@@ -258,17 +267,16 @@
 	{:else}
 		{#if editando}
 			<p class="mb-2 text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
-				Día de la semana
+				Días de la semana (podés elegir varios)
 			</p>
 			<div class="mb-4 flex gap-1.5">
-				{#each diasSemana as d, i (i)}
+				{#each abrevDia as d, i (i)}
 					<button
-						onclick={() =>
-							actualizarDia(diaId, { diaSemana: dia?.diaSemana === i ? undefined : i })}
+						onclick={() => toggleDiaSemana(i)}
 						class="flex-1 rounded-lg py-2 text-xs font-semibold"
-						aria-pressed={dia.diaSemana === i}
+						aria-pressed={dia.diasSemana?.includes(i) ?? false}
 						aria-label={`Entrenar los días ${d}`}
-						style={dia.diaSemana === i
+						style={dia.diasSemana?.includes(i)
 							? 'background: var(--accent); color: white'
 							: 'background: rgba(255,255,255,.05); color: var(--muted)'}>{d}</button
 					>

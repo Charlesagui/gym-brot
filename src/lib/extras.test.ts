@@ -15,7 +15,7 @@ const dia: Dia = {
 	id: 'push',
 	nombre: 'Push',
 	color: '255 122 92',
-	diaSemana: 1,
+	diasSemana: [1, 4],
 	orden: 1,
 	ejercicios: [{ exerciseId: 'press', seriesObjetivo: 3, orden: 1 }]
 };
@@ -103,6 +103,24 @@ describe('backup', () => {
 		expect(vuelta?.ejercicios[0]?.sets[1]?.extraKg).toBeCloseTo(5, 1);
 		expect(vuelta?.ejercicios[0]?.prCelebrado?.peso).toBeCloseTo(100, 1);
 		expect(vuelta?.ejercicios[0]?.prCelebrado?.extraKg).toBeCloseTo(5, 1);
+	});
+
+	it('importarBackup migra el diaSemana único de backups viejos a diasSemana[]', async () => {
+		const legacy = { ...dia, diasSemana: undefined, diaSemana: 1 };
+		const backup = parseBackup(
+			JSON.stringify({
+				app: 'gym-brot',
+				dias: [legacy],
+				sesiones: [],
+				notas: [],
+				ajustes: []
+			})
+		);
+		await importarBackup(backup);
+
+		const vuelta = await db.dias.get('push');
+		expect(vuelta?.diasSemana).toEqual([1]);
+		expect(vuelta && 'diaSemana' in vuelta).toBe(false);
 	});
 
 	it('parseBackup rechaza JSON malformado o ajeno y tolera prPesoCelebrado legacy', () => {

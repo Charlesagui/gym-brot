@@ -6,7 +6,7 @@ const ejemplos: Dia[] = [
 		id: 'dia-piernas',
 		nombre: 'Piernas',
 		color: '255 111 174',
-		diaSemana: 1,
+		diasSemana: [1],
 		orden: 0,
 		ejercicios: [
 			{ exerciseId: 'prensa-pierna-45', seriesObjetivo: 4, orden: 0 },
@@ -21,7 +21,7 @@ const ejemplos: Dia[] = [
 		id: 'dia-pecho-triceps-hombro',
 		nombre: 'Pecho · Tríceps · Hombro',
 		color: '255 122 92',
-		diaSemana: 3,
+		diasSemana: [3],
 		orden: 1,
 		ejercicios: [
 			{ exerciseId: 'press-pecho', seriesObjetivo: 4, orden: 0 },
@@ -37,7 +37,7 @@ const ejemplos: Dia[] = [
 		id: 'dia-espalda-biceps',
 		nombre: 'Espalda · Bíceps',
 		color: '52 211 153',
-		diaSemana: 5,
+		diasSemana: [5],
 		orden: 2,
 		ejercicios: [
 			{ exerciseId: 'jalon-pecho', seriesObjetivo: 4, orden: 0 },

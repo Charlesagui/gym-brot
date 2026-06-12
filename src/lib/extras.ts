@@ -207,6 +207,10 @@ function esBoolean(value: unknown): value is boolean {
 	return typeof value === 'boolean';
 }
 
+function esDiaSemanaValido(n: unknown): n is number {
+	return esNumero(n) && n >= 0 && n <= 6 && Number.isInteger(n);
+}
+
 function esDia(value: unknown): value is Dia {
 	if (!esRecord(value)) return false;
 	const ejercicios = value.ejercicios;
@@ -214,8 +218,10 @@ function esDia(value: unknown): value is Dia {
 		esString(value.id) &&
 		esString(value.nombre) &&
 		(value.color === undefined || esString(value.color)) &&
-		(value.diaSemana === undefined ||
-			(esNumero(value.diaSemana) && value.diaSemana >= 0 && value.diaSemana <= 6)) &&
+		// legacy: backups viejos guardaban un único diaSemana → se tolera y se migra al importar.
+		(value.diaSemana === undefined || esDiaSemanaValido(value.diaSemana)) &&
+		(value.diasSemana === undefined ||
+			(Array.isArray(value.diasSemana) && value.diasSemana.every(esDiaSemanaValido))) &&
 		esNumero(value.orden) &&
 		Array.isArray(ejercicios) &&
 		ejercicios.every(
@@ -317,11 +323,18 @@ export function parseBackup(texto: string): Backup {
 	return data as Backup;
 }
 
+/** Migra un día de backup viejo: diaSemana único → diasSemana[]. */
+function normalizarDiaBackup(dia: Dia & { diaSemana?: number }): Dia {
+	const { diaSemana, ...resto } = dia;
+	if (diaSemana != null && resto.diasSemana == null) resto.diasSemana = [diaSemana];
+	return resto;
+}
+
 /** Reemplaza TODOS los datos locales por los del backup (destructivo). */
 export async function importarBackup(data: Backup): Promise<void> {
 	await db.transaction('rw', db.dias, db.sesiones, db.notas, db.ajustes, async () => {
 		await Promise.all([db.dias.clear(), db.sesiones.clear(), db.notas.clear(), db.ajustes.clear()]);
-		if (data.dias?.length) await db.dias.bulkPut(data.dias);
+		if (data.dias?.length) await db.dias.bulkPut(data.dias.map(normalizarDiaBackup));
 		if (data.sesiones?.length) await db.sesiones.bulkPut(data.sesiones);
 		if (data.notas?.length) await db.notas.bulkPut(data.notas);
 		if (data.ajustes?.length) await db.ajustes.bulkPut(data.ajustes.map(normalizarAjustes));
