@@ -29,26 +29,38 @@
 			: 'color-mix(in oklab, var(--surface) 94%, transparent)'}; backdrop-filter: blur(10px)"
 	>
 		{#if descanso.restoSeg > 0}
-			<span class="text-sm font-semibold" style="color: var(--muted)">⏱️ Descanso</span>
+			<div class="min-w-0 flex-1">
+				<p class="text-sm font-semibold" style="color: var(--muted)">⏱️ Descanso</p>
+				{#if descanso.siguiente}
+					<p class="truncate text-[11px] font-medium" style="color: var(--muted)">
+						Sig: {descanso.siguiente}
+					</p>
+				{/if}
+			</div>
 			<span class="text-3xl font-extrabold tabular-nums" style="color: rgb({descanso.glow})"
 				>{mmss(descanso.restoSeg)}</span
 			>
 			<button
 				onclick={() => descanso.saltar()}
-				class="min-h-10 rounded-full px-5 text-sm font-semibold"
+				class="min-h-10 shrink-0 rounded-full px-5 text-sm font-semibold"
 				style="background: rgba(255,255,255,.12)">Saltar</button
 			>
 		{:else}
 			<!-- Vencido: queda hasta que se atienda; el excedido dice cuánto te pasaste. -->
-			<span class="text-base font-extrabold" style="color: rgb({descanso.glow})" aria-live="polite"
-				>⏰ ¡A la serie!</span
-			>
+			<div class="min-w-0 flex-1" aria-live="polite">
+				<p class="text-base font-extrabold" style="color: rgb({descanso.glow})">⏰ ¡A la serie!</p>
+				{#if descanso.siguiente}
+					<p class="truncate text-[11px] font-medium" style="color: var(--muted)">
+						{descanso.siguiente}
+					</p>
+				{/if}
+			</div>
 			<span class="text-2xl font-extrabold tabular-nums" style="color: rgb({descanso.glow})"
 				>+{mmss(descanso.vencidoSeg)}</span
 			>
 			<button
 				onclick={() => descanso.atender()}
-				class="min-h-10 rounded-full px-5 text-sm font-bold"
+				class="min-h-10 shrink-0 rounded-full px-5 text-sm font-bold"
 				style="background: rgb({descanso.glow}); color: white">✓ Listo</button
 			>
 		{/if}

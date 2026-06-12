@@ -20,11 +20,15 @@ const SONAR_TARDE_MS = 60_000;
 /** Vencido hace más que esto (app cerrada, otra cosa): se descarta sin señal. */
 const MAX_VENCIDO_MS = 10 * 60_000;
 const VIBRA_ALARMA = [300, 100, 300, 100, 500];
+/** Vencido sin atender: la alarma insiste cada tanto, pocas veces. */
+const REPETIR_SEG = 45;
+const MAX_REPETICIONES = 2;
 
 interface Persistido {
 	inicio: number;
 	hasta: number;
 	glow?: string;
+	siguiente?: string;
 }
 
 class Descanso {
@@ -36,9 +40,12 @@ class Descanso {
 	vencidoSeg = $state(0);
 	/** Color del ejercicio que inició el descanso, para teñir la barra. */
 	glow = $state('124 92 255');
+	/** Qué viene después del descanso (ej. "Press pecho · serie 3/4"), para no perder el hilo. */
+	siguiente = $state('');
 
 	#inicio: number | null = null;
 	#hasta: number | null = null;
+	#marcaRepeticion = 0;
 	#intId: ReturnType<typeof setInterval> | null = null;
 	#finId: ReturnType<typeof setTimeout> | null = null;
 	#wakeLock: WakeLockSentinel | null = null;
@@ -75,12 +82,14 @@ class Descanso {
 	}
 
 	/** Arranca un descanso de `minutos`, teñido con `glow`. */
-	iniciar(minutos: number, glow: string) {
+	iniciar(minutos: number, glow: string, siguiente = '') {
 		this.#pararTimers();
 		this.vencido = false;
 		this.vencidoSeg = 0;
 		this.#senalPendiente = false;
 		this.#notificado = false;
+		this.#marcaRepeticion = 0;
+		this.siguiente = siguiente;
 		this.glow = glow;
 		this.#inicio = Date.now();
 		this.#hasta = this.#inicio + minutos * 60_000;
@@ -124,6 +133,7 @@ class Descanso {
 			this.#inicio = d.inicio!;
 			this.#hasta = d.hasta!;
 			if (typeof d.glow === 'string') this.glow = d.glow;
+			if (typeof d.siguiente === 'string') this.siguiente = d.siguiente;
 			this.#armarTimers();
 			// Si ya venció, #recalc marca el estado y dispara la señal que corresponda.
 			this.#recalc();
@@ -140,7 +150,12 @@ class Descanso {
 		if (this.#inicio == null || this.#hasta == null) return;
 		localStorage.setItem(
 			DESCANSO_KEY,
-			JSON.stringify({ inicio: this.#inicio, hasta: this.#hasta, glow: this.glow })
+			JSON.stringify({
+				inicio: this.#inicio,
+				hasta: this.#hasta,
+				glow: this.glow,
+				siguiente: this.siguiente || undefined
+			})
 		);
 	}
 
@@ -190,6 +205,8 @@ class Descanso {
 		if (!this.vencido) {
 			this.vencido = true;
 			this.restoSeg = 0;
+			// Si se restaura ya vencido hace rato, las repeticiones pasadas no se deben.
+			this.#marcaRepeticion = Math.floor((ahora - this.#hasta) / 1000 / REPETIR_SEG);
 			if (document.visibilityState === 'visible') {
 				// Recién vencido a la vista → alarma; si venció hace rato (volvimos de un
 				// background largo) la señal sonora ya quedó pendiente de visibilitychange.
@@ -200,6 +217,16 @@ class Descanso {
 			}
 		}
 		this.vencidoSeg = Math.floor((ahora - this.#hasta) / 1000);
+		// Sin atender, la alarma insiste un par de veces (solo con la app a la vista).
+		const marca = Math.floor(this.vencidoSeg / REPETIR_SEG);
+		if (
+			marca > this.#marcaRepeticion &&
+			marca <= MAX_REPETICIONES &&
+			document.visibilityState === 'visible'
+		) {
+			this.#marcaRepeticion = marca;
+			this.#sonarYVibrar();
+		}
 	}
 
 	#sonarYVibrar() {
@@ -253,7 +280,9 @@ class Descanso {
 		this.restoSeg = 0;
 		this.vencido = false;
 		this.vencidoSeg = 0;
+		this.siguiente = '';
 		this.#senalPendiente = false;
+		this.#marcaRepeticion = 0;
 		localStorage.removeItem(DESCANSO_KEY);
 		this.#soltarWakeLock();
 		void this.#cerrarNotificacion();
