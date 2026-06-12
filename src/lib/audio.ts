@@ -92,11 +92,18 @@ export function sonarExito(esPr: boolean): Promise<void> {
 	});
 }
 
-/** Señal breve de fin de descanso. */
+/**
+ * Alarma de fin de descanso: tiene que oírse en un gym con música, no es un
+ * "ding" de UI. Tres ráfagas de dos tonos agudos en onda cuadrada (armónicos
+ * ricos = más volumen percibido en el parlante del teléfono).
+ */
 export function sonarDescansoTerminado(): Promise<void> {
 	return conContexto((ctx, now) => {
-		beep(ctx, now, 880, 0.16, 0.16, 'triangle');
-		beep(ctx, now + 0.18, 1175, 0.2, 0.17, 'sine');
+		for (let r = 0; r < 3; r++) {
+			const t = now + r * 0.55;
+			beep(ctx, t, 1568, 0.18, 0.55, 'square');
+			beep(ctx, t + 0.2, 1976, 0.28, 0.55, 'square');
+		}
 	});
 }
 

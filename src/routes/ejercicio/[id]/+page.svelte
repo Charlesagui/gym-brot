@@ -782,7 +782,7 @@
 				></textarea>
 			</details>
 
-			{#if completo && descanso.restoSeg === 0 && !descanso.avisoFin}
+			{#if completo && descanso.restoSeg === 0 && !descanso.vencido}
 				<!-- Con todo hecho, el cierre queda fijo al alcance del pulgar -->
 				<div
 					transition:fly={{ y: 40, duration: dur(200) }}
