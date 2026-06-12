@@ -6,8 +6,9 @@
  * bloquee la pantalla o la app pase a background.
  *
  * El fin de descanso es un ESTADO (vencido + segundos de excedido), no un flash:
- * queda visible hasta que el usuario lo atiende. Si venció con la app fuera de
- * vista, al volver suena igual (si fue hace poco) y el excedido siempre se ve.
+ * la alarma suena en loop y la barra queda visible hasta que el usuario lo
+ * atiende (con tope de 10 min). Si venció con la app fuera de vista, al volver
+ * el loop arranca solo y el excedido siempre se ve.
  */
 import { sonarDescansoTerminado } from './audio';
 import { ajustesObs } from './extras';
@@ -15,14 +16,11 @@ import { ajustesObs } from './extras';
 const DESCANSO_KEY = 'gb-descanso';
 const NOTIF_PEDIDA_KEY = 'gb-notif-pedida';
 const NOTIF_TAG = 'gb-descanso';
-/** Volver dentro de esta ventana tras vencer → la señal sonora todavía sirve. */
-const SONAR_TARDE_MS = 60_000;
 /** Vencido hace más que esto (app cerrada, otra cosa): se descarta sin señal. */
 const MAX_VENCIDO_MS = 10 * 60_000;
 const VIBRA_ALARMA = [300, 100, 300, 100, 500];
-/** Vencido sin atender: la alarma insiste cada tanto, pocas veces. */
-const REPETIR_SEG = 45;
-const MAX_REPETICIONES = 2;
+/** La alarma suena en loop con esta cadencia hasta que se atienda (el patrón dura ~1.7s). */
+const ALARMA_CADA_MS = 2200;
 
 interface Persistido {
 	inicio: number;
@@ -45,15 +43,14 @@ class Descanso {
 
 	#inicio: number | null = null;
 	#hasta: number | null = null;
-	#marcaRepeticion = 0;
+	/** Última vez que sonó la alarma del loop de vencido. */
+	#ultimaAlarma = 0;
 	#intId: ReturnType<typeof setInterval> | null = null;
 	#finId: ReturnType<typeof setTimeout> | null = null;
 	#wakeLock: WakeLockSentinel | null = null;
 	#sonido = true;
 	#vibracion = true;
 	#iniciado = false;
-	/** Venció con la app fuera de vista: la señal sonora queda pendiente. */
-	#senalPendiente = false;
 	#notificado = false;
 
 	/** Conecta listeners globales y restaura un descanso en curso. Idempotente. */
@@ -66,14 +63,10 @@ class Descanso {
 		});
 		// Al volver del background o del bloqueo de pantalla, recalcular al instante.
 		const refrescar = () => {
+			// Si hay un vencido sin atender, el loop de alarma se retoma solo en #recalc.
 			this.#recalc();
 			if (document.visibilityState !== 'visible') return;
 			if (this.#hasta != null && !this.vencido) void this.#pedirWakeLock();
-			if (this.#senalPendiente) {
-				this.#senalPendiente = false;
-				// Venció hace poco: avisar tarde sigue siendo útil; hace mucho, solo queda lo visual.
-				if (this.vencido && Date.now() - (this.#hasta ?? 0) < SONAR_TARDE_MS) this.#sonarYVibrar();
-			}
 			void this.#cerrarNotificacion();
 		};
 		document.addEventListener('visibilitychange', refrescar);
@@ -86,9 +79,8 @@ class Descanso {
 		this.#pararTimers();
 		this.vencido = false;
 		this.vencidoSeg = 0;
-		this.#senalPendiente = false;
 		this.#notificado = false;
-		this.#marcaRepeticion = 0;
+		this.#ultimaAlarma = 0;
 		this.siguiente = siguiente;
 		this.glow = glow;
 		this.#inicio = Date.now();
@@ -205,26 +197,15 @@ class Descanso {
 		if (!this.vencido) {
 			this.vencido = true;
 			this.restoSeg = 0;
-			// Si se restaura ya vencido hace rato, las repeticiones pasadas no se deben.
-			this.#marcaRepeticion = Math.floor((ahora - this.#hasta) / 1000 / REPETIR_SEG);
-			if (document.visibilityState === 'visible') {
-				// Recién vencido a la vista → alarma; si venció hace rato (volvimos de un
-				// background largo) la señal sonora ya quedó pendiente de visibilitychange.
-				if (ahora - this.#hasta < SONAR_TARDE_MS) this.#sonarYVibrar();
-			} else {
-				this.#senalPendiente = true;
-				void this.#notificar();
-			}
+			// Vencido en background: notificación del sistema (la web no puede sonar oculta).
+			if (document.visibilityState !== 'visible') void this.#notificar();
 		}
 		this.vencidoSeg = Math.floor((ahora - this.#hasta) / 1000);
-		// Sin atender, la alarma insiste un par de veces (solo con la app a la vista).
-		const marca = Math.floor(this.vencidoSeg / REPETIR_SEG);
-		if (
-			marca > this.#marcaRepeticion &&
-			marca <= MAX_REPETICIONES &&
-			document.visibilityState === 'visible'
-		) {
-			this.#marcaRepeticion = marca;
+		// Alarma continua: suena en loop hasta que se atienda (✓ Listo, marcar la serie
+		// o saltar) o hasta el tope de MAX_VENCIDO_MS. Solo con la app a la vista; si se
+		// vuelve de un bloqueo con el vencido activo, el loop arranca solo acá.
+		if (document.visibilityState === 'visible' && ahora - this.#ultimaAlarma >= ALARMA_CADA_MS) {
+			this.#ultimaAlarma = ahora;
 			this.#sonarYVibrar();
 		}
 	}
@@ -281,8 +262,7 @@ class Descanso {
 		this.vencido = false;
 		this.vencidoSeg = 0;
 		this.siguiente = '';
-		this.#senalPendiente = false;
-		this.#marcaRepeticion = 0;
+		this.#ultimaAlarma = 0;
 		localStorage.removeItem(DESCANSO_KEY);
 		this.#soltarWakeLock();
 		void this.#cerrarNotificacion();
