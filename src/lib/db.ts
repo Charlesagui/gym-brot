@@ -5,7 +5,8 @@ export interface Dia {
 	id: string;
 	nombre: string;
 	color?: string;
-	diaSemana?: number; // 0 (dom) - 6 (sáb)
+	/** Días de la semana agendados, 0 (dom) - 6 (sáb). Una rutina puede repetirse. */
+	diasSemana?: number[];
 	orden: number;
 	ejercicios: { exerciseId: string; seriesObjetivo: number; orden: number }[];
 }
@@ -91,6 +92,21 @@ db.version(1).stores({
 db.version(2).stores({
 	registros: null
 });
+
+// v3: una rutina puede agendarse varios días por semana → diaSemana pasa a diasSemana[].
+db.version(3)
+	.stores({
+		dias: 'id, orden'
+	})
+	.upgrade(async (tx) => {
+		await tx
+			.table('dias')
+			.toCollection()
+			.modify((d: Dia & { diaSemana?: number }) => {
+				if (d.diaSemana != null && d.diasSemana == null) d.diasSemana = [d.diaSemana];
+				delete d.diaSemana;
+			});
+	});
 
 // Atajo solo-desarrollo para inspeccionar/sembrar datos desde la consola.
 if (import.meta.env.DEV) (globalThis as Record<string, unknown>).gdb = db;
