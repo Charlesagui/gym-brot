@@ -24,6 +24,7 @@
 		mejorSet,
 		DESCRIPCION_METRICA,
 		hoyStr,
+		sesionId,
 		type MejorSet,
 		type ModoPr,
 		type MetricaEfectiva
@@ -209,9 +210,11 @@
 			: null
 	);
 	const mejorHoy = $derived(mejorSetLocal(sets, true));
+	// "Previo" = todo menos la sesión actual: si hiciste este ejercicio hoy en otra
+	// rutina, ese valor también cuenta (mismo criterio que recalcularPrCelebrado).
 	const mejorPrevio = $derived(
 		puntos
-			.filter((p) => p.fecha !== fechaSesion)
+			.filter((p) => !diaId || p.sesionId !== sesionId(diaId, fechaSesion))
 			.reduce<number | null>((m, p) => (m == null || p.valor > m ? p.valor : m), null)
 	);
 	const valorCelebrado = $derived(prCelebrado ? valorSet(prCelebrado, metrica, modo) : null);

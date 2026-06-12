@@ -36,9 +36,12 @@
 		);
 	});
 
-	function toggle(id: string) {
-		if (yaEn.has(id)) quitarEjercicio(diaId, id);
-		else agregarEjercicio(diaId, id);
+	function toggle(e: Ejercicio) {
+		if (yaEn.has(e.id)) {
+			// Quitar pierde las series objetivo configuradas: que no pase por un mistap.
+			if (!confirm(`¿Quitar "${e.nombre}" de este día?`)) return;
+			quitarEjercicio(diaId, e.id);
+		} else agregarEjercicio(diaId, e.id);
 	}
 
 	let preview = $state<Ejercicio | null>(null);
@@ -163,7 +166,7 @@
 					</div>
 				</button>
 				<button
-					onclick={() => toggle(e.id)}
+					onclick={() => toggle(e)}
 					class="grid size-9 shrink-0 place-items-center rounded-full text-lg font-bold transition"
 					style={added
 						? `background: rgb(${g.glow}); color: #000`
@@ -247,7 +250,7 @@
 				</p>
 				<button
 					onclick={() => {
-						toggle(p.id);
+						toggle(p);
 						cerrarPreview();
 					}}
 					class="mt-5 w-full rounded-2xl py-3.5 text-base font-bold transition"
