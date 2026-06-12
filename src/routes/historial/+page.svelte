@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ajustesObs, diasDesde, necesitaBackup, AJUSTES_DEFAULT } from '$lib/extras';
-	import { formatoNumero, formatoSet, formatoVolumen, fechaCorta } from '$lib/formato';
+	import { formatoNumero, fechaCorta } from '$lib/formato';
 	import {
 		crearHistorialResumen,
 		resumenHistorialObs,
@@ -8,7 +8,7 @@
 	} from '$lib/historial';
 	import { ejercicioPorId } from '$lib/catalog';
 	import { fromLiveQuery } from '$lib/live';
-	import { recordsGlobalesObs, type RecordEjercicio } from '$lib/sesion';
+	import { hoyStr, recordsGlobalesObs, type RecordEjercicio } from '$lib/sesion';
 
 	const VACIO: HistorialResumen = crearHistorialResumen([], []);
 
@@ -23,13 +23,38 @@
 	const metricaLabel = $derived(ajustes.metricaPr === 'e1rm' ? '1RM estimado' : 'peso máximo');
 
 	const diasEntrenados = $derived(new Set(historial.dias.map((d) => d.fecha)));
-	const calendario = $derived(
-		ultimosDias(28).map((fecha) => ({ fecha, entrenado: diasEntrenados.has(fecha) }))
-	);
 	const semanas = $derived(historial.semanas.slice(0, 8));
-	// Paginación: el historial y los récords viejos siempre son alcanzables.
-	let visibles = $state(10);
-	let recordsVisibles = $state(12);
+	// Paginación: los récords viejos siempre son alcanzables.
+	let recordsVisibles = $state(10);
+
+	// Calendario mensual navegable: todo el historial es alcanzable, mes a mes.
+	const hoy = hoyStr();
+	let mesOffset = $state(0);
+
+	interface Mes {
+		label: string;
+		ym: string;
+		celdas: (string | null)[];
+	}
+
+	function mesGrid(offset: number): Mes {
+		const ahora = new Date();
+		const base = new Date(ahora.getFullYear(), ahora.getMonth() + offset, 1);
+		const label = base.toLocaleDateString('es', { month: 'long', year: 'numeric' });
+		// Semana arranca lunes: celdas vacías hasta el día 1.
+		const pad = (base.getDay() + 6) % 7;
+		const nDias = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+		const celdas: (string | null)[] = Array.from({ length: pad }, () => null);
+		for (let dia = 1; dia <= nDias; dia++) {
+			celdas.push(new Date(base.getFullYear(), base.getMonth(), dia).toLocaleDateString('sv'));
+		}
+		return { label, ym: celdas[pad]!.slice(0, 7), celdas };
+	}
+
+	const mes = $derived(mesGrid(mesOffset));
+	const primeraFecha = $derived(historial.dias.at(-1)?.fecha ?? null);
+	// Atrás solo hasta el mes del primer entrenamiento; adelante solo hasta hoy.
+	const sinMesAnterior = $derived(!primeraFecha || mes.ym <= primeraFecha.slice(0, 7));
 
 	// Recordatorio de backup: el historial vive solo en este teléfono.
 	const recordarBackup = $derived(
@@ -38,20 +63,6 @@
 			historial.dias.map((d) => d.fecha)
 		)
 	);
-
-	function ultimosDias(cantidad: number): string[] {
-		const hoy = new Date();
-		return Array.from({ length: cantidad }, (_, i) => {
-			const d = new Date(hoy);
-			d.setDate(hoy.getDate() - (cantidad - 1 - i));
-			return d.toLocaleDateString('sv');
-		});
-	}
-
-	function inicialDia(fecha: string): string {
-		const d = new Date(`${fecha}T00:00:00`);
-		return d.toLocaleDateString('es', { weekday: 'narrow' }).slice(0, 1).toUpperCase();
-	}
 </script>
 
 <main class="glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-12 pt-8">
@@ -110,37 +121,62 @@
 	</section>
 
 	<section class="mb-4 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
-		<div class="mb-3 flex items-center justify-between">
+		<div class="mb-3 flex items-center justify-between gap-2">
+			<button
+				onclick={() => (mesOffset -= 1)}
+				disabled={sinMesAnterior}
+				class="grid size-9 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
+				aria-label="Mes anterior">‹</button
+			>
 			<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
-				Últimos 28 días
+				{mes.label}
 			</p>
-			<p class="text-xs font-semibold" style="color: rgb(var(--exito))">● entrenado</p>
+			<button
+				onclick={() => (mesOffset += 1)}
+				disabled={mesOffset >= 0}
+				class="grid size-9 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
+				aria-label="Mes siguiente">›</button
+			>
 		</div>
 		<div class="grid grid-cols-7 gap-1.5">
-			{#each calendario as d (d.fecha)}
-				<div class="text-center">
-					{#if d.entrenado}
-						<!-- Día entrenado: tap → detalle de ese día -->
-						<a
-							href={`/historial/dia/${d.fecha}`}
-							class="grid aspect-square place-items-center rounded-lg border text-[10px] font-bold"
-							style="background: rgb(var(--exito) / .18); border-color: rgb(var(--exito) / .36); color: rgb(var(--exito))"
-							aria-label={`${fechaCorta(d.fecha)} entrenado · ver detalle`}
-						>
-							{inicialDia(d.fecha)}
-						</a>
-					{:else}
-						<div
-							class="grid aspect-square place-items-center rounded-lg border text-[10px] font-bold"
-							style="background: rgba(255,255,255,.035); border-color: rgba(255,255,255,.06); color: var(--muted)"
-							aria-label={`${fechaCorta(d.fecha)} sin entrenamiento`}
-						>
-							{inicialDia(d.fecha)}
-						</div>
-					{/if}
-				</div>
+			{#each ['L', 'M', 'X', 'J', 'V', 'S', 'D'] as letra, i (i)}
+				<p class="text-center text-[10px] font-bold" style="color: var(--muted)">{letra}</p>
+			{/each}
+			{#each mes.celdas as fecha, i (i)}
+				{#if fecha == null}
+					<div></div>
+				{:else if diasEntrenados.has(fecha)}
+					<!-- Día entrenado: tap → detalle de ese día -->
+					<a
+						href={`/historial/dia/${fecha}`}
+						class="grid aspect-square place-items-center rounded-lg border text-[11px] font-bold"
+						style="background: rgb(var(--exito) / .18); border-color: rgb(var(--exito) / {fecha ===
+						hoy
+							? '.9'
+							: '.36'}); color: rgb(var(--exito))"
+						aria-label={`${fechaCorta(fecha)} entrenado · ver detalle`}
+					>
+						{Number(fecha.slice(8, 10))}
+					</a>
+				{:else}
+					<div
+						class="grid aspect-square place-items-center rounded-lg border text-[11px] font-semibold {fecha >
+						hoy
+							? 'opacity-35'
+							: ''}"
+						style="background: rgba(255,255,255,.035); border-color: {fecha === hoy
+							? 'rgba(255,255,255,.4)'
+							: 'rgba(255,255,255,.06)'}; color: var(--muted)"
+						aria-label={`${fechaCorta(fecha)} sin entrenamiento`}
+					>
+						{Number(fecha.slice(8, 10))}
+					</div>
+				{/if}
 			{/each}
 		</div>
+		<p class="mt-2.5 text-right text-[11px] font-semibold" style="color: rgb(var(--exito))">
+			● entrenado
+		</p>
 	</section>
 
 	<section class="mb-4 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
@@ -187,38 +223,37 @@
 				{metricaLabel} · recientes primero
 			</p>
 		</div>
-		<div class="space-y-2">
+		<div class="space-y-1.5">
 			{#each records.slice(0, recordsVisibles) as record (record.exerciseId)}
 				{@const ejercicio = ejercicioPorId(record.exerciseId)}
+				<!-- Fila compacta: el detalle del set vive en la pantalla del ejercicio. -->
 				<a
 					href={`/ejercicio/${record.exerciseId}`}
-					class="block rounded-2xl border border-white/10 p-4"
+					class="flex min-h-11 items-center gap-2 rounded-xl border border-white/10 px-3 py-2"
 					style="background: var(--surface)"
 					aria-label={`Ver progreso de ${ejercicio?.nombre ?? 'ejercicio archivado'}`}
 				>
-					<div class="flex items-start justify-between gap-3">
-						<div class="min-w-0">
-							<p class="truncate text-sm font-bold">{ejercicio?.nombre ?? 'Ejercicio archivado'}</p>
-							<p class="mt-0.5 text-xs" style="color: var(--muted)">
-								{fechaCorta(record.fecha)} · {formatoSet(record, ajustes.unidad)}
-							</p>
-						</div>
-						<p
-							class="shrink-0 text-right text-sm font-extrabold tabular-nums"
-							style="color: rgb(var(--max))"
+					<p class="min-w-0 flex-1 truncate text-sm font-semibold">
+						{ejercicio?.nombre ?? 'Ejercicio archivado'}
+					</p>
+					<span class="shrink-0 text-[11px]" style="color: var(--muted)"
+						>{fechaCorta(record.fecha)}</span
+					>
+					<p
+						class="shrink-0 text-right text-sm font-extrabold tabular-nums"
+						style="color: rgb(var(--max))"
+					>
+						{formatoNumero(record.valor)}
+						<span class="text-[11px] font-semibold" style="color: var(--muted)"
+							>{record.modo === 'reps' ? 'reps' : ajustes.unidad}</span
 						>
-							{formatoNumero(record.valor)}
-							<span class="text-[11px] font-semibold" style="color: var(--muted)"
-								>{record.modo === 'reps' ? 'reps' : ajustes.unidad}</span
-							>
-						</p>
-					</div>
+					</p>
 				</a>
 			{/each}
 			{#if records.length > recordsVisibles}
 				<button
-					onclick={() => (recordsVisibles += 12)}
-					class="w-full rounded-2xl border border-white/10 py-3 text-sm font-semibold"
+					onclick={() => (recordsVisibles += 15)}
+					class="w-full rounded-xl border border-white/10 py-2.5 text-sm font-semibold"
 					style="background: var(--surface); color: var(--muted)"
 				>
 					Ver más ({records.length - recordsVisibles}
@@ -231,65 +266,6 @@
 					style="color: var(--muted)"
 				>
 					Tus récords aparecen cuando marques series hechas.
-				</p>
-			{/if}
-		</div>
-	</section>
-
-	<section>
-		<p class="mb-2 px-1 text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
-			Últimos entrenamientos
-		</p>
-		<div class="space-y-2">
-			{#each historial.dias.slice(0, visibles) as dia (dia.fecha)}
-				<a
-					href={`/historial/dia/${dia.fecha}`}
-					class="block rounded-2xl border border-white/10 p-4"
-					style="background: var(--surface)"
-					aria-label={`Ver detalle del ${fechaCorta(dia.fecha)}`}
-				>
-					<div class="flex items-start justify-between gap-3">
-						<div class="min-w-0">
-							<p class="text-sm font-bold">{fechaCorta(dia.fecha)}</p>
-							<p class="mt-0.5 truncate text-xs" style="color: var(--muted)">
-								{dia.dias.length ? dia.dias.join(' · ') : 'Rutina'}
-							</p>
-						</div>
-						{#if dia.prs > 0}
-							<span
-								class="rounded-full px-2.5 py-1 text-[11px] font-bold"
-								style="background: rgb(var(--max) / .14); color: rgb(var(--max))">🏆 {dia.prs}</span
-							>
-						{/if}
-					</div>
-					<div class="mt-3 grid grid-cols-2 gap-2 text-xs">
-						<div class="rounded-xl bg-white/[0.035] p-2">
-							<p class="font-bold tabular-nums">{dia.sets}</p>
-							<p style="color: var(--muted)">sets hechos</p>
-						</div>
-						<div class="rounded-xl bg-white/[0.035] p-2">
-							<p class="font-bold tabular-nums">{formatoVolumen(dia.volumen)} {ajustes.unidad}</p>
-							<p style="color: var(--muted)">volumen (peso × reps ✓)</p>
-						</div>
-					</div>
-				</a>
-			{/each}
-			{#if historial.dias.length > visibles}
-				<button
-					onclick={() => (visibles += 10)}
-					class="w-full rounded-2xl border border-white/10 py-3 text-sm font-semibold"
-					style="background: var(--surface); color: var(--muted)"
-				>
-					Ver más ({historial.dias.length - visibles}
-					{historial.dias.length - visibles === 1 ? 'anterior' : 'anteriores'})
-				</button>
-			{/if}
-			{#if historial.dias.length === 0}
-				<p
-					class="rounded-2xl border border-dashed border-white/15 p-6 text-center text-sm"
-					style="color: var(--muted)"
-				>
-					Cuando completes tus primeras series, el historial aparece acá.
 				</p>
 			{/if}
 		</div>
