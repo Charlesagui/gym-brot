@@ -108,5 +108,13 @@ db.version(3)
 			});
 	});
 
+// Multi-pestaña: cuando otra instancia migra el esquema, soltar la conexión y
+// recargar para tomar el código nuevo; si no, esta pestaña vieja bloquea la
+// migración y la otra queda esperando en "Cargando…" para siempre.
+db.on('versionchange', () => {
+	db.close();
+	if (typeof location !== 'undefined') location.reload();
+});
+
 // Atajo solo-desarrollo para inspeccionar/sembrar datos desde la consola.
 if (import.meta.env.DEV) (globalThis as Record<string, unknown>).gdb = db;

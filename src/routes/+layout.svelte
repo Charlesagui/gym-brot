@@ -14,11 +14,17 @@
 	// en la pantalla de ejercicio ese espacio es para la barra de descanso.
 	const sinNav = $derived($page.url.pathname.startsWith('/ejercicio/'));
 	let dbError = $state<string | null>(null);
+	// Apertura demorada (típico: otra pestaña vieja bloquea la migración del
+	// esquema): avisar con la solución en vez de dejar un "Cargando…" mudo.
+	let dbLenta = $state(false);
 
 	onMount(() => {
+		const lentaId = setTimeout(() => (dbLenta = true), 4000);
 		(async () => {
 			try {
 				await db.open();
+				clearTimeout(lentaId);
+				dbLenta = false;
 				await seedSiVacio();
 				// Pide almacenamiento persistente: reduce el riesgo de que el navegador
 				// (sobre todo iOS) borre los datos locales por presión de espacio.
@@ -26,12 +32,15 @@
 				// Restaura un descanso en curso y engancha listeners globales.
 				descanso.init();
 			} catch (error) {
+				clearTimeout(lentaId);
+				dbLenta = false;
 				dbError =
 					error instanceof Error
 						? error.message
 						: 'El navegador no permitió abrir la base de datos local.';
 			}
 		})();
+		return () => clearTimeout(lentaId);
 	});
 </script>
 
@@ -69,4 +78,16 @@
 <!-- Barra de descanso global: visible en todas las pantallas mientras corre. -->
 {#if !dbError}
 	<RestBar offsetNav={!sinNav} />
+{/if}
+
+{#if dbLenta && !dbError}
+	<div class="fixed inset-x-0 top-0 z-[80] mx-auto max-w-md px-5 pt-3">
+		<p
+			class="rounded-2xl border border-white/10 p-3.5 text-xs leading-relaxed shadow-xl"
+			style="background: var(--surface); color: var(--muted)"
+		>
+			⏳ Tus datos están tardando en abrir. Suele pasar cuando Gym-brot quedó abierto en otra
+			pestaña o ventana con una versión vieja: cerralas todas, dejá una sola y recargá.
+		</p>
+	</div>
 {/if}
