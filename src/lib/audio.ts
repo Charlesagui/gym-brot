@@ -99,10 +99,12 @@ export function sonarExito(esPr: boolean): Promise<void> {
  */
 export function sonarDescansoTerminado(): Promise<void> {
 	return conContexto((ctx, now) => {
+		// Ganancia al tope: el compresor del master evita el clipping y de paso
+		// aplica makeup gain, así que entrar fuerte = salir lo más fuerte posible.
 		for (let r = 0; r < 3; r++) {
 			const t = now + r * 0.55;
-			beep(ctx, t, 1568, 0.18, 0.55, 'square');
-			beep(ctx, t + 0.2, 1976, 0.28, 0.55, 'square');
+			beep(ctx, t, 1568, 0.18, 1, 'square');
+			beep(ctx, t + 0.2, 1976, 0.28, 1, 'square');
 		}
 	});
 }
