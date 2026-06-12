@@ -348,7 +348,8 @@
 
 		const seCompletanTodas = sets.filter((s) => s.hecha).length === sets.length - 1;
 		if (!seCompletanTodas && ajustes.timer.activo) {
-			descanso.iniciar(ajustes.timer.minutos, g?.glow ?? '124 92 255'); // recién hecha → arranca descanso
+			// recién hecha → arranca descanso, con la próxima serie como recordatorio
+			descanso.iniciar(ajustes.timer.minutos, g?.glow ?? '124 92 255', proximaSerie(i));
 		} else if (
 			!seCompletanTodas &&
 			!ajustes.timer.activo &&
@@ -367,6 +368,15 @@
 	function descartarHintTimer() {
 		localStorage.setItem('gb-hint-timer-ok', '1');
 		mostrarHintTimer = false;
+	}
+
+	/** Etiqueta de lo que sigue tras el descanso: la próxima serie pendiente. */
+	function proximaSerie(reciente: number): string {
+		const pendientes = sets
+			.map((s, idx) => ({ hecha: s.hecha, idx }))
+			.filter((p) => p.idx !== reciente && !p.hecha);
+		const prox = pendientes.find((p) => p.idx > reciente) ?? pendientes[0];
+		return prox ? `${ej?.nombre ?? ''} · serie ${prox.idx + 1}/${sets.length}` : '';
 	}
 
 	/** Devuelve el set como MejorSet si supera al PR vigente; si no, null. */
