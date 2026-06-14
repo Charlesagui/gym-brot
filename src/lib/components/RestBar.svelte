@@ -12,11 +12,26 @@
 		const sec = s % 60;
 		return `${m}:${String(sec).padStart(2, '0')}`;
 	}
+
+	function expandir() {
+		descanso.expandirFocus();
+	}
+
+	function expandirConTeclado(event: KeyboardEvent) {
+		if (event.key !== 'Enter' && event.key !== ' ') return;
+		event.preventDefault();
+		expandir();
+	}
 </script>
 
 {#if descanso.restoSeg > 0 || descanso.vencido}
 	<div
 		transition:fly={{ y: 80, duration: dur(220) }}
+		onclick={expandir}
+		onkeydown={expandirConTeclado}
+		role="button"
+		tabindex="0"
+		aria-label="Abrir descanso"
 		class="fixed inset-x-0 z-50 mx-auto flex max-w-md items-center justify-between gap-3 border-t border-white/10 px-5 pt-3 {descanso.vencido
 			? 'rest-vencido'
 			: ''}"
@@ -41,7 +56,10 @@
 				>{mmss(descanso.restoSeg)}</span
 			>
 			<button
-				onclick={() => descanso.saltar()}
+				onclick={(event) => {
+					event.stopPropagation();
+					descanso.saltar();
+				}}
 				class="min-h-10 shrink-0 rounded-full px-5 text-sm font-semibold"
 				style="background: rgba(255,255,255,.12)">Saltar</button
 			>
@@ -59,7 +77,10 @@
 				>+{mmss(descanso.vencidoSeg)}</span
 			>
 			<button
-				onclick={() => descanso.atender()}
+				onclick={(event) => {
+					event.stopPropagation();
+					descanso.atender();
+				}}
 				class="min-h-10 shrink-0 rounded-full px-5 text-sm font-bold"
 				style="background: rgb({descanso.glow}); color: white">✓ Listo</button
 			>

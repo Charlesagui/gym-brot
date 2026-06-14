@@ -6,6 +6,7 @@
 		setUnidad,
 		setSonido,
 		setVibracion,
+		setDescansoPantallaCompleta,
 		setMetricaPr,
 		setPasoPeso,
 		exportarJSON,
@@ -153,6 +154,26 @@
 					? 'background: var(--accent); color: white'
 					: 'background: rgba(255,255,255,.06); color: var(--muted)'}
 				>{ajustes.sonido ? 'On' : 'Off'}</button
+			>
+		</div>
+	</section>
+
+	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+		<div class="flex items-center justify-between gap-4">
+			<div>
+				<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+					Descanso grande
+				</p>
+				<p class="mt-1 text-xs" style="color: var(--muted)">Pantalla completa al marcar serie</p>
+			</div>
+			<button
+				onclick={() => setDescansoPantallaCompleta(!ajustes.descansoPantallaCompleta)}
+				aria-pressed={ajustes.descansoPantallaCompleta}
+				class="min-w-16 rounded-full px-4 py-2 text-sm font-bold"
+				style={ajustes.descansoPantallaCompleta
+					? 'background: var(--accent); color: white'
+					: 'background: rgba(255,255,255,.06); color: var(--muted)'}
+				>{ajustes.descansoPantallaCompleta ? 'On' : 'Off'}</button
 			>
 		</div>
 	</section>
