@@ -57,7 +57,10 @@
 		</p>
 		{#if exito === 'pr' && prExito}
 			<p class="mt-2 text-4xl font-extrabold tabular-nums">
-				{formatoNumero(prExito.valor)}<span class="text-xl font-semibold" style="color: var(--muted)">
+				{formatoNumero(prExito.valor)}<span
+					class="ml-1 text-xl font-semibold"
+					style="color: var(--muted)"
+				>
 					{unidad}</span
 				>
 			</p>
