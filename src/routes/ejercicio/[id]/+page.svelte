@@ -36,6 +36,13 @@
 	import { fromLiveQuery } from '$lib/live';
 	import { formatoNumero, formatoSet, fechaCorta } from '$lib/formato';
 	import { youtubeEmbedUrl } from '$lib/youtube';
+	import {
+		completaEjercicioAlMarcar,
+		metricaEfectivaEjercicio,
+		metricaLabelEjercicio,
+		modoEjercicioActivo,
+		unidadValorEjercicio
+	} from '$lib/ejercicio-activo';
 	import SetRow from '$lib/components/SetRow.svelte';
 	import MiniChart from '$lib/components/MiniChart.svelte';
 	import CelebracionOverlay from '$lib/components/CelebracionOverlay.svelte';
@@ -184,20 +191,11 @@
 	const sonidoActivo = $derived(ajustes.sonido);
 	const vibracionActiva = $derived(ajustes.vibracion ?? true);
 	const metrica = $derived(ajustes.metricaPr);
-	// Modo del ejercicio: por reps si ni el historial ni la sesión de hoy registraron peso (bodyweight).
-	const modo = $derived<ModoPr>(
-		puntos.some((p) => p.peso != null) || sets.some((s) => s.peso != null) ? 'peso' : 'reps'
-	);
-	const metricaEfectiva = $derived<MetricaEfectiva>(modo === 'reps' ? 'reps' : metrica);
-	const metricaLabel = $derived(
-		modo === 'reps'
-			? 'reps máximas'
-			: metrica === 'e1rm'
-				? '1RM estimado (1 Repetición Máxima)'
-				: 'peso máximo'
-	);
+	const modo = $derived<ModoPr>(modoEjercicioActivo(puntos, sets));
+	const metricaEfectiva = $derived<MetricaEfectiva>(metricaEfectivaEjercicio(modo, metrica));
+	const metricaLabel = $derived(metricaLabelEjercicio(modo, metrica));
 	// Unidad del valor del PR: en modo reps el número son repeticiones, no kg/lb.
-	const unidadValor = $derived(modo === 'reps' ? 'reps' : unidad);
+	const unidadValor = $derived(unidadValorEjercicio(modo, unidad));
 	const otraMetrica = $derived(metrica === 'e1rm' ? 'peso' : 'e1rm');
 	const otraLabel = $derived(metrica === 'e1rm' ? 'peso máx.' : '1RM est. (1 rep. máx.)');
 	const tecnicaEmbedUrl = $derived(ej?.videoUrl ? youtubeEmbedUrl(ej.videoUrl) : null);
@@ -324,6 +322,7 @@
 
 	async function onToggle(i: number) {
 		const yaEstaba = sets[i]?.hecha;
+		const seCompletanTodas = completaEjercicioAlMarcar(sets, i);
 		await toggleSet(diaId!, $page.params.id!, i, fechaSesion, metrica);
 		if (yaEstaba) {
 			descanso.saltar();
@@ -349,15 +348,13 @@
 			if (vibracionActiva && 'vibrate' in navigator) navigator.vibrate(20);
 		}
 
-		const seCompletanTodas = sets.filter((s) => s.hecha).length === sets.length - 1;
-		if (!seCompletanTodas && ajustes.timer.activo) {
+		if (seCompletanTodas) {
+			mostrarHintTimer = false;
+			descanso.saltar();
+		} else if (ajustes.timer.activo) {
 			// recién hecha → arranca descanso, con la próxima serie como recordatorio
 			descanso.iniciar(ajustes.timer.minutos, g?.glow ?? '124 92 255', proximaSerie(i));
-		} else if (
-			!seCompletanTodas &&
-			!ajustes.timer.activo &&
-			!localStorage.getItem('gb-hint-timer-ok')
-		) {
+		} else if (!ajustes.timer.activo && !localStorage.getItem('gb-hint-timer-ok')) {
 			// Timer apagado: sugerir activarlo (una sola vez) para que avise cuándo volver.
 			mostrarHintTimer = true;
 		}

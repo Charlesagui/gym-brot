@@ -1,4 +1,5 @@
 import { db, type Dia } from './db';
+import { normalizarAjustes } from './extras';
 
 /** Días de ejemplo precargados al primer arranque (editables en Fase 2). */
 const ejemplos: Dia[] = [
@@ -51,10 +52,14 @@ const ejemplos: Dia[] = [
 	}
 ];
 
-/** Crea los días de ejemplo solo si la base está vacía. */
+/** Crea los días de ejemplo solo una vez, en el primer arranque real de la app. */
 export async function seedSiVacio(): Promise<void> {
-	const n = await db.dias.count();
-	if (n === 0) {
-		await db.dias.bulkAdd(ejemplos);
-	}
+	await db.transaction('rw', db.dias, db.ajustes, async () => {
+		const ajustes = normalizarAjustes(await db.ajustes.get('app'));
+		if (ajustes.seedInicialHecho) return;
+
+		const n = await db.dias.count();
+		if (n === 0) await db.dias.bulkAdd(ejemplos);
+		await db.ajustes.put({ ...ajustes, seedInicialHecho: true });
+	});
 }
