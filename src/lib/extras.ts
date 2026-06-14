@@ -21,6 +21,7 @@ export const AJUSTES_DEFAULT: Ajustes = {
 	timer: { activo: true, minutos: 2 },
 	sonido: true,
 	vibracion: true,
+	descansoPantallaCompleta: true,
 	metricaPr: 'peso',
 	pasoPeso: 5,
 	seedInicialHecho: false
@@ -33,6 +34,8 @@ export function normalizarAjustes(a?: Ajustes | null): Ajustes {
 		timer: { ...AJUSTES_DEFAULT.timer, ...(a?.timer ?? {}) },
 		sonido: a?.sonido ?? AJUSTES_DEFAULT.sonido,
 		vibracion: a?.vibracion ?? AJUSTES_DEFAULT.vibracion,
+		descansoPantallaCompleta:
+			a?.descansoPantallaCompleta ?? AJUSTES_DEFAULT.descansoPantallaCompleta,
 		metricaPr: a?.metricaPr ?? AJUSTES_DEFAULT.metricaPr,
 		pasoPeso: a?.pasoPeso ?? AJUSTES_DEFAULT.pasoPeso,
 		seedInicialHecho: a?.seedInicialHecho ?? AJUSTES_DEFAULT.seedInicialHecho
@@ -56,6 +59,11 @@ export async function setSonido(sonido: boolean): Promise<void> {
 export async function setVibracion(vibracion: boolean): Promise<void> {
 	const a = normalizarAjustes(await db.ajustes.get('app'));
 	await db.ajustes.put({ ...a, vibracion });
+}
+
+export async function setDescansoPantallaCompleta(descansoPantallaCompleta: boolean): Promise<void> {
+	const a = normalizarAjustes(await db.ajustes.get('app'));
+	await db.ajustes.put({ ...a, descansoPantallaCompleta });
 }
 
 export async function setMetricaPr(metricaPr: MetricaPr): Promise<void> {
@@ -289,6 +297,8 @@ function esAjustes(value: unknown): value is Ajustes {
 		esNumero(timer.minutos) &&
 		(value.sonido === undefined || esBoolean(value.sonido)) &&
 		(value.vibracion === undefined || esBoolean(value.vibracion)) &&
+		(value.descansoPantallaCompleta === undefined ||
+			esBoolean(value.descansoPantallaCompleta)) &&
 		(value.metricaPr === undefined || value.metricaPr === 'peso' || value.metricaPr === 'e1rm') &&
 		(value.pasoPeso === undefined || esNumero(value.pasoPeso)) &&
 		(value.ultimoBackup === undefined || esString(value.ultimoBackup)) &&

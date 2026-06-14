@@ -36,6 +36,10 @@ class Descanso {
 	vencido = $state(false);
 	/** Segundos desde que venció, para el contador de excedido (+0:42). */
 	vencidoSeg = $state(0);
+	/** Duración total del descanso activo, usada para mostrar progreso visual. */
+	totalSeg = $state(0);
+	/** Capa visual enfocada: puede cerrarse sin cortar el timer. */
+	focusAbierto = $state(false);
 	/** Color del ejercicio que inició el descanso, para teñir la barra. */
 	glow = $state('124 92 255');
 	/** Qué viene después del descanso (ej. "Press pecho · serie 3/4"), para no perder el hilo. */
@@ -50,6 +54,7 @@ class Descanso {
 	#wakeLock: WakeLockSentinel | null = null;
 	#sonido = true;
 	#vibracion = true;
+	#focusHabilitado = true;
 	#iniciado = false;
 	#notificado = false;
 
@@ -60,6 +65,8 @@ class Descanso {
 		ajustesObs().subscribe((a) => {
 			this.#sonido = a.sonido;
 			this.#vibracion = a.vibracion ?? true;
+			this.#focusHabilitado = a.descansoPantallaCompleta ?? true;
+			if (!this.#focusHabilitado) this.focusAbierto = false;
 		});
 		// Al volver del background o del bloqueo de pantalla, recalcular al instante.
 		const refrescar = () => {
@@ -79,6 +86,8 @@ class Descanso {
 		this.#pararTimers();
 		this.vencido = false;
 		this.vencidoSeg = 0;
+		this.totalSeg = Math.max(1, Math.round(minutos * 60));
+		this.focusAbierto = this.#focusHabilitado;
 		this.#notificado = false;
 		this.#ultimaAlarma = 0;
 		this.siguiente = siguiente;
@@ -96,6 +105,7 @@ class Descanso {
 	ajustarFin(minutos: number) {
 		if (this.#inicio == null || this.#hasta == null || this.vencido) return;
 		this.#hasta = this.#inicio + minutos * 60_000;
+		this.totalSeg = Math.max(1, Math.round((this.#hasta - this.#inicio) / 1000));
 		this.#armarTimers();
 		this.#guardar();
 		this.#recalc();
@@ -111,6 +121,16 @@ class Descanso {
 		this.#limpiar();
 	}
 
+	/** Cierra la pantalla enfocada sin apagar el descanso. */
+	minimizarFocus() {
+		this.focusAbierto = false;
+	}
+
+	/** Vuelve a abrir el descanso grande si sigue siendo accionable. */
+	expandirFocus() {
+		if (this.restoSeg > 0 || this.vencido) this.focusAbierto = true;
+	}
+
 	#restaurar() {
 		const crudo = localStorage.getItem(DESCANSO_KEY);
 		if (!crudo) return;
@@ -124,6 +144,7 @@ class Descanso {
 			}
 			this.#inicio = d.inicio!;
 			this.#hasta = d.hasta!;
+			this.totalSeg = Math.max(1, Math.round((this.#hasta - this.#inicio) / 1000));
 			if (typeof d.glow === 'string') this.glow = d.glow;
 			if (typeof d.siguiente === 'string') this.siguiente = d.siguiente;
 			this.#armarTimers();
@@ -133,6 +154,7 @@ class Descanso {
 				this.restoSeg = Math.ceil((this.#hasta - Date.now()) / 1000);
 				void this.#pedirWakeLock();
 			}
+			this.focusAbierto = this.#focusHabilitado && (this.restoSeg > 0 || this.vencido);
 		} catch {
 			localStorage.removeItem(DESCANSO_KEY);
 		}
@@ -261,6 +283,8 @@ class Descanso {
 		this.restoSeg = 0;
 		this.vencido = false;
 		this.vencidoSeg = 0;
+		this.totalSeg = 0;
+		this.focusAbierto = false;
 		this.siguiente = '';
 		this.#ultimaAlarma = 0;
 		localStorage.removeItem(DESCANSO_KEY);

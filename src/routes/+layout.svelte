@@ -6,6 +6,7 @@
 	import { seedSiVacio } from '$lib/seed';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import RestBar from '$lib/components/RestBar.svelte';
+	import RestFocusOverlay from '$lib/components/RestFocusOverlay.svelte';
 	import { descanso } from '$lib/descanso.svelte';
 
 	let { children } = $props();
@@ -77,6 +78,7 @@
 
 <!-- Barra de descanso global: visible en todas las pantallas mientras corre. -->
 {#if !dbError}
+	<RestFocusOverlay />
 	<RestBar offsetNav={!sinNav} />
 {/if}
 

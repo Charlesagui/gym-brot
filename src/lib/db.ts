@@ -66,6 +66,8 @@ export interface Ajustes {
 	timer: { activo: boolean; minutos: number };
 	sonido: boolean;
 	vibracion: boolean;
+	/** Abre el descanso como pantalla enfocada al marcar una serie. */
+	descansoPantallaCompleta: boolean;
 	metricaPr: MetricaPr;
 	/** Cuánto suma/resta cada toque de −/+ al cargar peso. */
 	pasoPeso: number;
