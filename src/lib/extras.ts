@@ -22,7 +22,8 @@ export const AJUSTES_DEFAULT: Ajustes = {
 	sonido: true,
 	vibracion: true,
 	metricaPr: 'peso',
-	pasoPeso: 5
+	pasoPeso: 5,
+	seedInicialHecho: false
 };
 
 export function normalizarAjustes(a?: Ajustes | null): Ajustes {
@@ -33,7 +34,8 @@ export function normalizarAjustes(a?: Ajustes | null): Ajustes {
 		sonido: a?.sonido ?? AJUSTES_DEFAULT.sonido,
 		vibracion: a?.vibracion ?? AJUSTES_DEFAULT.vibracion,
 		metricaPr: a?.metricaPr ?? AJUSTES_DEFAULT.metricaPr,
-		pasoPeso: a?.pasoPeso ?? AJUSTES_DEFAULT.pasoPeso
+		pasoPeso: a?.pasoPeso ?? AJUSTES_DEFAULT.pasoPeso,
+		seedInicialHecho: a?.seedInicialHecho ?? AJUSTES_DEFAULT.seedInicialHecho
 	};
 }
 
@@ -289,7 +291,8 @@ function esAjustes(value: unknown): value is Ajustes {
 		(value.vibracion === undefined || esBoolean(value.vibracion)) &&
 		(value.metricaPr === undefined || value.metricaPr === 'peso' || value.metricaPr === 'e1rm') &&
 		(value.pasoPeso === undefined || esNumero(value.pasoPeso)) &&
-		(value.ultimoBackup === undefined || esString(value.ultimoBackup))
+		(value.ultimoBackup === undefined || esString(value.ultimoBackup)) &&
+		(value.seedInicialHecho === undefined || esBoolean(value.seedInicialHecho))
 	);
 }
 

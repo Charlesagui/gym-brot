@@ -71,6 +71,8 @@ export interface Ajustes {
 	pasoPeso: number;
 	/** ISO del último export de backup: alimenta el recordatorio en /historial. */
 	ultimoBackup?: string;
+	/** Evita volver a crear rutinas de ejemplo si el usuario borró todas. */
+	seedInicialHecho?: boolean;
 }
 
 export const db = new Dexie('gym-brot') as Dexie & {
