@@ -288,6 +288,45 @@ describe('sesion con IndexedDB', () => {
 		expect((await db.sesiones.get('2026-01-01__push'))?.ejercicios[0]?.prCelebrado).toBeUndefined();
 	});
 
+	it('editar una serie activa recalcula el PR celebrado de la sesion', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-01');
+		await setPeso('push', 'press', 0, 100, '2026-01-01');
+		await toggleSet('push', 'press', 0, '2026-01-01', 'peso');
+
+		await ensureEjercicio('push', 'press', 1, '2026-01-02');
+		await setPeso('push', 'press', 0, 110, '2026-01-02');
+		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
+		await marcarPrCelebrado('push', 'press', { peso: 110 }, 'peso', '2026-01-02');
+
+		await setPeso('push', 'press', 0, 95, '2026-01-02', 'peso');
+
+		const actual = await db.sesiones.get('2026-01-02__push');
+		expect(actual?.ejercicios[0]?.prCelebrado).toBeUndefined();
+		expect(resumenDiaSesion(actual).prs).toHaveLength(0);
+		expect(await primerValor(historialObs('press', 'peso'))).toEqual([
+			{
+				peso: 100,
+				reps: undefined,
+				esMax: false,
+				extraKg: undefined,
+				fecha: '2026-01-01',
+				valor: 100,
+				sesionId: '2026-01-01__push',
+				setIndex: 0
+			},
+			{
+				peso: 95,
+				reps: undefined,
+				esMax: false,
+				extraKg: undefined,
+				fecha: '2026-01-02',
+				valor: 95,
+				sesionId: '2026-01-02__push',
+				setIndex: 0
+			}
+		]);
+	});
+
 	it('saltar, reanudar, terminar y reabrir dia actual', async () => {
 		vi.setSystemTime(new Date('2026-01-07T12:00:00'));
 
@@ -304,6 +343,21 @@ describe('sesion con IndexedDB', () => {
 		expect(await db.sesiones.get('2026-01-07__push')).toMatchObject({
 			diaTerminado: false,
 			diaTerminadoAt: undefined
+		});
+	});
+
+	it('reanudar un ejercicio saltado reabre un dia terminado', async () => {
+		vi.setSystemTime(new Date('2026-01-07T12:00:00'));
+
+		await saltarEjercicio('push', 'press', 2);
+		await marcarDiaTerminado('push');
+
+		await reanudarEjercicio('push', 'press');
+
+		expect(await db.sesiones.get('2026-01-07__push')).toMatchObject({
+			diaTerminado: false,
+			diaTerminadoAt: undefined,
+			ejercicios: [{ exerciseId: 'press', saltado: false }]
 		});
 	});
 

@@ -244,7 +244,7 @@
 						style="color: rgb(var(--max))"
 					>
 						{formatoNumero(record.valor)}
-						<span class="text-[11px] font-semibold" style="color: var(--muted)"
+						<span class="ml-1 text-[11px] font-semibold" style="color: var(--muted)"
 							>{record.modo === 'reps' ? 'reps' : ajustes.unidad}</span
 						>
 					</p>

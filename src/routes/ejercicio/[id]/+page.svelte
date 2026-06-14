@@ -275,7 +275,7 @@
 		const siguiente = redondear(Math.max(0, actual + delta));
 		const peso = siguiente === 0 ? undefined : siguiente;
 		if (sets[i]) sets[i].peso = peso;
-		setPeso(diaId!, $page.params.id!, i, peso, fechaSesion);
+		setPeso(diaId!, $page.params.id!, i, peso, fechaSesion, metrica);
 	}
 
 	function ajustarReps(i: number, delta: number) {
@@ -283,7 +283,7 @@
 		const siguiente = Math.max(0, actual + delta);
 		const reps = siguiente === 0 ? undefined : siguiente;
 		if (sets[i]) sets[i].reps = reps;
-		setReps(diaId!, $page.params.id!, i, reps, fechaSesion);
+		setReps(diaId!, $page.params.id!, i, reps, fechaSesion, metrica);
 	}
 
 	function ajustarExtra(i: number, delta: number) {
@@ -291,14 +291,14 @@
 		const siguiente = redondear(Math.max(0, actual + delta));
 		const extra = siguiente === 0 ? undefined : siguiente;
 		if (sets[i]) sets[i].extraKg = extra;
-		setExtra(diaId!, $page.params.id!, i, extra, fechaSesion);
+		setExtra(diaId!, $page.params.id!, i, extra, fechaSesion, metrica);
 	}
 
 	function escribirPeso(i: number, el: HTMLInputElement) {
 		const n = Number.parseFloat(el.value.replace(',', '.'));
 		const peso = Number.isFinite(n) && n > 0 ? redondear(n) : undefined;
 		if (sets[i]) sets[i].peso = peso;
-		setPeso(diaId!, $page.params.id!, i, peso, fechaSesion);
+		setPeso(diaId!, $page.params.id!, i, peso, fechaSesion, metrica);
 		el.value = peso != null ? formatoNumero(peso) : '';
 	}
 
@@ -311,20 +311,20 @@
 			!confirm(`La serie ${sets.length} ya está marcada como hecha. ¿Quitarla igual?`)
 		)
 			return;
-		removeSet(diaId, $page.params.id!, sets.length - 1, fechaSesion);
+		removeSet(diaId, $page.params.id!, sets.length - 1, fechaSesion, metrica);
 	}
 
 	function escribirReps(i: number, el: HTMLInputElement) {
 		const n = Number.parseInt(el.value, 10);
 		const reps = Number.isFinite(n) && n > 0 ? n : undefined;
 		if (sets[i]) sets[i].reps = reps;
-		setReps(diaId!, $page.params.id!, i, reps, fechaSesion);
+		setReps(diaId!, $page.params.id!, i, reps, fechaSesion, metrica);
 		el.value = reps != null ? String(reps) : '';
 	}
 
-	function onToggle(i: number) {
+	async function onToggle(i: number) {
 		const yaEstaba = sets[i]?.hecha;
-		toggleSet(diaId!, $page.params.id!, i, fechaSesion, metrica);
+		await toggleSet(diaId!, $page.params.id!, i, fechaSesion, metrica);
 		if (yaEstaba) {
 			descanso.saltar();
 			return;
@@ -633,7 +633,7 @@
 								{unidad}
 								{pasoPeso}
 								onToggle={() => onToggle(i)}
-								onToggleMax={() => toggleMax(diaId, $page.params.id!, i, fechaSesion)}
+								onToggleMax={() => toggleMax(diaId, $page.params.id!, i, fechaSesion, metrica)}
 								onAjustarPeso={(d) => ajustarPeso(i, d)}
 								onEscribirPeso={(el) => escribirPeso(i, el)}
 								onAjustarReps={(d) => ajustarReps(i, d)}
@@ -731,7 +731,7 @@
 					</div>
 					<p class="mt-1 text-3xl font-extrabold">
 						🏆 {formatoNumero(pr.valor)}<span
-							class="text-lg font-semibold"
+							class="ml-1 text-lg font-semibold"
 							style="color: var(--muted)"
 						>
 							{unidadValor}</span
@@ -876,7 +876,7 @@
 				<p class="mt-5 text-2xl font-extrabold">¡Nuevo PR!</p>
 				<p class="mt-2 text-4xl font-extrabold tabular-nums">
 					{formatoNumero(prFlash.valor)}<span
-						class="text-xl font-semibold"
+						class="ml-1 text-xl font-semibold"
 						style="color: var(--muted)"
 					>
 						{unidadValor}</span

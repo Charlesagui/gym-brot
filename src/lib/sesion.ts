@@ -248,15 +248,18 @@ async function mutar(
 	diaId: string,
 	exerciseId: string,
 	fn: (sets: SetSesion[], sesion: Sesion) => void,
-	fecha = hoyStr()
+	fecha = hoyStr(),
+	metrica: MetricaPr = 'peso',
+	recalcularPr = false
 ): Promise<void> {
-	await db.sesiones
-		.where('id')
-		.equals(sesionId(diaId, fecha))
-		.modify((s) => {
-			const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
-			if (e) fn(e.sets, s);
-		});
+	await db.transaction('rw', db.sesiones, async () => {
+		const s = await db.sesiones.get(sesionId(diaId, fecha));
+		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
+		if (!s || !e) return;
+		fn(e.sets, s);
+		if (recalcularPr) await recalcularPrCelebrado(s, exerciseId, metrica);
+		await db.sesiones.put(s);
+	});
 }
 
 async function recalcularPrCelebrado(sesion: Sesion, exerciseId: string, metrica: MetricaPr) {
@@ -348,14 +351,22 @@ export async function toggleSet(
 		await db.sesiones.put(s);
 	});
 }
-export function toggleMax(diaId: string, exerciseId: string, i: number, fecha = hoyStr()) {
+export function toggleMax(
+	diaId: string,
+	exerciseId: string,
+	i: number,
+	fecha = hoyStr(),
+	metrica: MetricaPr = 'peso'
+) {
 	return mutar(
 		diaId,
 		exerciseId,
 		(sets) => {
 			if (sets[i]) sets[i].esMax = !sets[i].esMax;
 		},
-		fecha
+		fecha,
+		metrica,
+		true
 	);
 }
 export function setPeso(
@@ -363,7 +374,8 @@ export function setPeso(
 	exerciseId: string,
 	i: number,
 	peso?: number,
-	fecha = hoyStr()
+	fecha = hoyStr(),
+	metrica: MetricaPr = 'peso'
 ) {
 	return mutar(
 		diaId,
@@ -371,7 +383,9 @@ export function setPeso(
 		(sets) => {
 			if (sets[i]) sets[i].peso = peso;
 		},
-		fecha
+		fecha,
+		metrica,
+		true
 	);
 }
 export function setReps(
@@ -379,7 +393,8 @@ export function setReps(
 	exerciseId: string,
 	i: number,
 	reps?: number,
-	fecha = hoyStr()
+	fecha = hoyStr(),
+	metrica: MetricaPr = 'peso'
 ) {
 	return mutar(
 		diaId,
@@ -387,7 +402,9 @@ export function setReps(
 		(sets) => {
 			if (sets[i]) sets[i].reps = reps;
 		},
-		fecha
+		fecha,
+		metrica,
+		true
 	);
 }
 /** Kg encima de la placa full (solo aplica al PR cuando el set es MAX). */
@@ -396,7 +413,8 @@ export function setExtra(
 	exerciseId: string,
 	i: number,
 	extraKg?: number,
-	fecha = hoyStr()
+	fecha = hoyStr(),
+	metrica: MetricaPr = 'peso'
 ) {
 	return mutar(
 		diaId,
@@ -404,7 +422,9 @@ export function setExtra(
 		(sets) => {
 			if (sets[i]) sets[i].extraKg = extraKg;
 		},
-		fecha
+		fecha,
+		metrica,
+		true
 	);
 }
 export function addSet(diaId: string, exerciseId: string, fecha = hoyStr()) {
@@ -421,14 +441,24 @@ export function addSet(diaId: string, exerciseId: string, fecha = hoyStr()) {
 	);
 }
 
-export function removeSet(diaId: string, exerciseId: string, i: number, fecha = hoyStr()) {
+export function removeSet(
+	diaId: string,
+	exerciseId: string,
+	i: number,
+	fecha = hoyStr(),
+	metrica: MetricaPr = 'peso'
+) {
 	return mutar(
 		diaId,
 		exerciseId,
-		(sets) => {
+		(sets, sesion) => {
 			if (sets.length > 1 && sets[i]) sets.splice(i, 1);
+			sesion.diaTerminado = false;
+			sesion.diaTerminadoAt = undefined;
 		},
-		fecha
+		fecha,
+		metrica,
+		true
 	);
 }
 
@@ -439,7 +469,10 @@ function setSaltado(diaId: string, exerciseId: string, saltado: boolean, fecha =
 		.equals(sesionId(diaId, fecha))
 		.modify((s) => {
 			const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
-			if (e) e.saltado = saltado;
+			if (!e || e.saltado === saltado) return;
+			e.saltado = saltado;
+			s.diaTerminado = false;
+			s.diaTerminadoAt = undefined;
 		});
 }
 

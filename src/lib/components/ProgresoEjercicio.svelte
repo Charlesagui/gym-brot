@@ -92,7 +92,7 @@
 					</p>
 					<p class="mt-1 text-xl font-extrabold tabular-nums">
 						🏆 {formatoNumero(progreso.mejorReps.valor)}
-						<span class="text-sm font-semibold" style="color: var(--muted)">reps</span>
+						<span class="ml-1 text-sm font-semibold" style="color: var(--muted)">reps</span>
 					</p>
 					<p class="mt-0.5 text-[11px]" style="color: var(--muted)">
 						{fechaCorta(progreso.mejorReps.fecha)}
@@ -106,7 +106,7 @@
 						</p>
 						<p class="mt-1 text-xl font-extrabold tabular-nums">
 							{formatoNumero(progreso.mejorPeso.valor)}
-							<span class="text-sm font-semibold" style="color: var(--muted)">{unidad}</span>
+							<span class="ml-1 text-sm font-semibold" style="color: var(--muted)">{unidad}</span>
 						</p>
 						<p class="mt-0.5 text-[11px]" style="color: var(--muted)">
 							{formatoSet(progreso.mejorPeso, unidad)} · {fechaCorta(progreso.mejorPeso.fecha)}
@@ -120,7 +120,7 @@
 						</p>
 						<p class="mt-1 text-xl font-extrabold tabular-nums">
 							{formatoNumero(progreso.mejorE1rm.valor)}
-							<span class="text-sm font-semibold" style="color: var(--muted)">{unidad}</span>
+							<span class="ml-1 text-sm font-semibold" style="color: var(--muted)">{unidad}</span>
 						</p>
 						<p class="mt-0.5 text-[11px]" style="color: var(--muted)">
 							{formatoSet(progreso.mejorE1rm, unidad)} · {fechaCorta(progreso.mejorE1rm.fecha)}
