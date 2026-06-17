@@ -121,9 +121,8 @@
 	);
 	// Un ejercicio "resuelto" está hecho o saltado: ninguno bloquea terminar el día.
 	const ejerciciosResueltos = $derived(
-		dia?.ejercicios.filter(
-			(item) => estaCompleto(item.exerciseId) || estaSaltado(item.exerciseId)
-		).length ?? 0
+		dia?.ejercicios.filter((item) => estaCompleto(item.exerciseId) || estaSaltado(item.exerciseId))
+			.length ?? 0
 	);
 	const totalEjercicios = $derived(dia?.ejercicios.length ?? 0);
 	const diaListo = $derived(totalEjercicios > 0 && ejerciciosResueltos === totalEjercicios);
@@ -197,10 +196,9 @@
 		ordenItems = ordenItems.filter((x) => x.id !== it.id);
 		await quitarEjercicio(diaId, it.id);
 	}
-
 </script>
 
-<main class="glow-bg min-h-dvh px-5 pb-12 pt-6">
+<main class="gb-page glow-bg min-h-dvh px-5 pb-12 pt-6">
 	<header class="mb-5 flex items-center gap-3">
 		<a
 			href="/"
@@ -236,7 +234,10 @@
 	{:else if !dia}
 		<p class="text-center text-sm" style="color: var(--muted)">Día no encontrado.</p>
 	{:else if reordenando}
-		<p class="mb-3 text-center text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+		<p
+			class="mb-3 text-center text-xs font-semibold uppercase tracking-wider"
+			style="color: var(--muted)"
+		>
 			Arrastrá para ordenar
 		</p>
 		<section
@@ -251,7 +252,9 @@
 					class="flex touch-none items-center gap-3 rounded-2xl border border-white/10 p-2.5"
 					style="background: radial-gradient(150% 130% at 0% 0%, rgb({it.glow} / 0.14), transparent 60%), var(--surface)"
 				>
-					<span class="shrink-0 text-lg leading-none" style="color: var(--muted)" aria-hidden="true">⠿</span>
+					<span class="shrink-0 text-lg leading-none" style="color: var(--muted)" aria-hidden="true"
+						>⠿</span
+					>
 					<video
 						use:reproducirEnVista={it.demoVideo}
 						class="size-14 shrink-0 rounded-xl bg-white object-contain"
@@ -315,22 +318,83 @@
 			</div>
 		{/if}
 
-		<div class="space-y-3">
+		<div class="gb-landscape-cards space-y-3">
 			{#each dia.ejercicios.slice().sort((a, b) => a.orden - b.orden) as item (item.exerciseId)}
 				{@const e = ejercicioPorId(item.exerciseId)}
 				{@const g = e ? grupos[e.grupo] : grupoArchivado}
 				{@const nombre = e?.nombre ?? 'Ejercicio archivado'}
 				{@const p = progreso(item.exerciseId)}
 				{@const saltado = estaSaltado(item.exerciseId)}
-					{#if editando}
-						<div
-							class="flex items-center gap-3 rounded-2xl border border-white/10 p-2.5"
-							style="background: radial-gradient(150% 130% at 0% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface)"
+				{#if editando}
+					<div
+						class="flex items-center gap-3 rounded-2xl border border-white/10 p-2.5"
+						style="background: radial-gradient(150% 130% at 0% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface)"
+					>
+						{#if e}
+							<video
+								use:reproducirEnVista={e.demoVideo}
+								class="size-14 shrink-0 rounded-xl bg-white object-contain"
+								aria-label={e.nombre}
+								loop
+								muted
+								playsinline
+								preload="none"
+							></video>
+						{:else}
+							<div
+								class="grid size-14 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-lg font-black"
+								style="color: rgb({g.glow})"
+								aria-label="Ejercicio archivado"
+							>
+								?
+							</div>
+						{/if}
+						<div class="min-w-0 flex-1">
+							<p class="truncate text-sm font-semibold leading-tight">{nombre}</p>
+							{#if !e}
+								<p class="mt-0.5 text-xs" style="color: var(--muted)">
+									ID guardado: {item.exerciseId}
+								</p>
+							{/if}
+							<div class="mt-1.5 flex items-center gap-2">
+								<button
+									onclick={() => setSeries(diaId, item.exerciseId, item.seriesObjetivo - 1)}
+									class="grid size-6 place-items-center rounded-full bg-white/10 text-sm"
+									aria-label="Menos series">−</button
+								>
+								<span class="text-sm font-semibold tabular-nums"
+									>{item.seriesObjetivo} series objetivo</span
+								>
+								<button
+									onclick={() => setSeries(diaId, item.exerciseId, item.seriesObjetivo + 1)}
+									class="grid size-6 place-items-center rounded-full bg-white/10 text-sm"
+									aria-label="Más series">+</button
+								>
+							</div>
+						</div>
+						<button
+							onclick={() => quitarEjercicio(diaId, item.exerciseId)}
+							class="grid size-8 shrink-0 place-items-center rounded-full text-sm"
+							style="background: rgba(255,80,80,.15); color: #ff6b6b"
+							aria-label="Quitar">✕</button
+						>
+					</div>
+				{:else}
+					<div
+						use:mantener={entrarReordenar}
+						class="flex items-center gap-2 rounded-2xl border border-white/10 p-2.5 {saltado
+							? 'opacity-55'
+							: ''}"
+						style="background: radial-gradient(150% 130% at 0% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface)"
+					>
+						<a
+							href={`/ejercicio/${item.exerciseId}?dia=${diaId}`}
+							class="flex min-w-0 flex-1 items-center gap-3"
 						>
 							{#if e}
 								<video
 									use:reproducirEnVista={e.demoVideo}
-									class="size-14 shrink-0 rounded-xl bg-white object-contain"
+									class="size-16 shrink-0 rounded-xl bg-white object-contain"
 									aria-label={e.nombre}
 									loop
 									muted
@@ -339,7 +403,7 @@
 								></video>
 							{:else}
 								<div
-									class="grid size-14 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-lg font-black"
+									class="grid size-16 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-xl font-black"
 									style="color: rgb({g.glow})"
 									aria-label="Ejercicio archivado"
 								>
@@ -348,109 +412,51 @@
 							{/if}
 							<div class="min-w-0 flex-1">
 								<p class="truncate text-sm font-semibold leading-tight">{nombre}</p>
+								<p class="mt-0.5 text-xs font-medium" style="color: rgb({g.glow})">
+									{g.emoji}
+									{g.label}
+								</p>
 								{#if !e}
-									<p class="mt-0.5 text-xs" style="color: var(--muted)">
+									<p class="mt-0.5 truncate text-[11px]" style="color: var(--muted)">
 										ID guardado: {item.exerciseId}
 									</p>
 								{/if}
-								<div class="mt-1.5 flex items-center gap-2">
-									<button
-										onclick={() => setSeries(diaId, item.exerciseId, item.seriesObjetivo - 1)}
-										class="grid size-6 place-items-center rounded-full bg-white/10 text-sm"
-										aria-label="Menos series">−</button
-									>
-									<span class="text-sm font-semibold tabular-nums"
-										>{item.seriesObjetivo} series objetivo</span
-									>
-									<button
-										onclick={() => setSeries(diaId, item.exerciseId, item.seriesObjetivo + 1)}
-										class="grid size-6 place-items-center rounded-full bg-white/10 text-sm"
-										aria-label="Más series">+</button
-									>
-								</div>
 							</div>
-							<button
-								onclick={() => quitarEjercicio(diaId, item.exerciseId)}
-								class="grid size-8 shrink-0 place-items-center rounded-full text-sm"
-								style="background: rgba(255,80,80,.15); color: #ff6b6b"
-								aria-label="Quitar">✕</button
-							>
-						</div>
-					{:else}
-						<div
-							use:mantener={entrarReordenar}
-							class="flex items-center gap-2 rounded-2xl border border-white/10 p-2.5 {saltado
-								? 'opacity-55'
-								: ''}"
-							style="background: radial-gradient(150% 130% at 0% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface)"
-						>
-							<a
-								href={`/ejercicio/${item.exerciseId}?dia=${diaId}`}
-								class="flex min-w-0 flex-1 items-center gap-3"
-							>
-								{#if e}
-									<video
-										use:reproducirEnVista={e.demoVideo}
-										class="size-16 shrink-0 rounded-xl bg-white object-contain"
-										aria-label={e.nombre}
-										loop
-										muted
-										playsinline
-										preload="none"
-									></video>
-								{:else}
-									<div
-										class="grid size-16 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-xl font-black"
-										style="color: rgb({g.glow})"
-										aria-label="Ejercicio archivado"
-									>
-										?
-									</div>
-								{/if}
-								<div class="min-w-0 flex-1">
-									<p class="truncate text-sm font-semibold leading-tight">{nombre}</p>
-									<p class="mt-0.5 text-xs font-medium" style="color: rgb({g.glow})">
-										{g.emoji} {g.label}
+							<div class="pr-1 text-right">
+								{#if saltado}
+									<p class="text-[11px] font-bold leading-none" style="color: var(--muted)">
+										Saltado
 									</p>
-									{#if !e}
-										<p class="mt-0.5 truncate text-[11px]" style="color: var(--muted)">
-											ID guardado: {item.exerciseId}
-										</p>
-									{/if}
-								</div>
-								<div class="pr-1 text-right">
-									{#if saltado}
-										<p class="text-[11px] font-bold leading-none" style="color: var(--muted)">Saltado</p>
-										<p class="text-[11px]" style="color: var(--muted)">hoy</p>
-									{:else if p && p.hechas === p.total}
-										<p class="text-xl leading-none" style="color: rgb({g.glow})">✓</p>
-										<p class="text-[11px]" style="color: var(--muted)">hecho</p>
-									{:else if p}
-										<p class="text-lg font-bold leading-none">{p.hechas}/{p.total}</p>
-										<p class="text-[11px]" style="color: var(--muted)">series</p>
-									{:else}
-										<p class="text-lg font-bold leading-none">{item.seriesObjetivo}</p>
-										<p class="text-[11px]" style="color: var(--muted)">series</p>
-									{/if}
-								</div>
-							</a>
-							{#if saltado}
-								<button
-									onclick={() => reanudarEjercicio(diaId, item.exerciseId)}
-									class="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 text-sm"
-									style="color: var(--accent)"
-									aria-label={`Reanudar ${nombre} hoy`}>↩</button
-								>
+									<p class="text-[11px]" style="color: var(--muted)">hoy</p>
+								{:else if p && p.hechas === p.total}
+									<p class="text-xl leading-none" style="color: rgb({g.glow})">✓</p>
+									<p class="text-[11px]" style="color: var(--muted)">hecho</p>
+								{:else if p}
+									<p class="text-lg font-bold leading-none">{p.hechas}/{p.total}</p>
+									<p class="text-[11px]" style="color: var(--muted)">series</p>
 								{:else}
-									<button
-										onclick={() => saltarEjercicio(diaId, item.exerciseId, item.seriesObjetivo)}
-										class="shrink-0 rounded-full border border-white/10 px-3 py-2 text-xs font-bold"
-										style="color: var(--muted)"
-										aria-label={`Saltar ${nombre} hoy`}>Saltar</button
-									>
+									<p class="text-lg font-bold leading-none">{item.seriesObjetivo}</p>
+									<p class="text-[11px]" style="color: var(--muted)">series</p>
 								{/if}
-						</div>
-					{/if}
+							</div>
+						</a>
+						{#if saltado}
+							<button
+								onclick={() => reanudarEjercicio(diaId, item.exerciseId)}
+								class="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 text-sm"
+								style="color: var(--accent)"
+								aria-label={`Reanudar ${nombre} hoy`}>↩</button
+							>
+						{:else}
+							<button
+								onclick={() => saltarEjercicio(diaId, item.exerciseId, item.seriesObjetivo)}
+								class="shrink-0 rounded-full border border-white/10 px-3 py-2 text-xs font-bold"
+								style="color: var(--muted)"
+								aria-label={`Saltar ${nombre} hoy`}>Saltar</button
+							>
+						{/if}
+					</div>
+				{/if}
 			{/each}
 
 			{#if dia.ejercicios.length === 0}
@@ -464,7 +470,10 @@
 		</div>
 
 		{#if !editando && totalEjercicios > 0}
-			<section class="mt-4 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+			<section
+				class="mt-4 rounded-2xl border border-white/10 p-4"
+				style="background: var(--surface)"
+			>
 				<div class="flex items-center justify-between gap-3">
 					<div>
 						<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
@@ -473,9 +482,9 @@
 						<p class="mt-1 text-sm font-bold">
 							{ejerciciosCompletos}/{totalEjercicios} ejercicios{#if ejerciciosSaltados > 0}<span
 									class="font-medium"
-									style="color: var(--muted)"> · {ejerciciosSaltados} saltado{ejerciciosSaltados === 1
-										? ''
-										: 's'}</span
+									style="color: var(--muted)"
+								>
+									· {ejerciciosSaltados} saltado{ejerciciosSaltados === 1 ? '' : 's'}</span
 								>{/if}
 						</p>
 					</div>
@@ -508,7 +517,9 @@
 						onclick={terminarDia}
 						disabled={!diaListo}
 						class="mt-3 w-full rounded-2xl py-3 text-sm font-bold disabled:opacity-45"
-						style="background: {diaListo ? 'var(--accent)' : 'rgba(255,255,255,.08)'}; color: {diaListo ? 'white' : 'var(--muted)'}"
+						style="background: {diaListo
+							? 'var(--accent)'
+							: 'rgba(255,255,255,.08)'}; color: {diaListo ? 'white' : 'var(--muted)'}"
 					>
 						{#if diaListo}
 							🏁 Terminar día
@@ -556,9 +567,12 @@
 			<div class="mt-4 grid grid-cols-2 gap-2 text-left">
 				<div class="rounded-xl border border-white/10 bg-white/[0.04] p-3">
 					<p class="text-lg font-extrabold tabular-nums">
-						{formatoVolumen(resumenDia.volumen)} <span class="text-sm" style="color: var(--muted)">{ajustes.unidad}</span>
+						{formatoVolumen(resumenDia.volumen)}
+						<span class="text-sm" style="color: var(--muted)">{ajustes.unidad}</span>
 					</p>
-					<p class="text-[11px] font-semibold" style="color: var(--muted)">volumen (peso × reps ✓)</p>
+					<p class="text-[11px] font-semibold" style="color: var(--muted)">
+						volumen (peso × reps ✓)
+					</p>
 				</div>
 				<div class="rounded-xl border border-white/10 bg-white/[0.04] p-3">
 					<p class="text-lg font-extrabold tabular-nums">{resumenDia.prs.length}</p>

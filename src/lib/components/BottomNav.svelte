@@ -46,7 +46,9 @@
 		height: 100%;
 		text-decoration: none;
 		color: var(--muted, #9aa0b4);
-		transition: color 0.2s ease, transform 0.1s ease;
+		transition:
+			color 0.2s ease,
+			transform 0.1s ease;
 		font-size: 10px;
 		font-weight: 600;
 		gap: 3px;
@@ -62,5 +64,22 @@
 
 	.active {
 		color: var(--accent, rgb(99 102 241));
+	}
+
+	@media (orientation: landscape) and (max-height: 520px) {
+		.bottom-nav {
+			max-width: min(100vw, 64rem);
+			height: 52px;
+		}
+
+		.nav-item {
+			flex-direction: row;
+			gap: 6px;
+			font-size: 11px;
+		}
+
+		.icon {
+			font-size: 17px;
+		}
 	}
 </style>

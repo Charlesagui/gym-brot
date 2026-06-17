@@ -247,7 +247,11 @@ function esPrCelebrado(value: unknown): boolean {
 		(value.peso === undefined || esNumero(value.peso)) &&
 		(value.reps === undefined || esNumero(value.reps)) &&
 		(value.esMax === undefined || esBoolean(value.esMax)) &&
-		(value.extraKg === undefined || esNumero(value.extraKg))
+		(value.extraKg === undefined || esNumero(value.extraKg)) &&
+		(value.metrica === undefined ||
+			value.metrica === 'peso' ||
+			value.metrica === 'e1rm' ||
+			value.metrica === 'reps')
 	);
 }
 

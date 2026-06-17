@@ -142,12 +142,17 @@ function mejorSetDeSeries(
 	}, null);
 }
 
-function snapPr(set: MejorSet): PrCelebrado {
+function metricaEfectiva(metrica: MetricaPr, modo: ModoPr): MetricaPr | 'reps' {
+	return modo === 'reps' ? 'reps' : metrica;
+}
+
+function snapPr(set: MejorSet, metrica: MetricaPr, modo: ModoPr): PrCelebrado {
 	return {
 		peso: set.peso,
 		reps: set.reps,
 		esMax: set.esMax,
-		extraKg: set.extraKg
+		extraKg: set.extraKg,
+		metrica: metricaEfectiva(metrica, modo)
 	};
 }
 
@@ -283,7 +288,7 @@ async function recalcularPrCelebrado(sesion: Sesion, exerciseId: string, metrica
 		ejercicio.prCelebrado = undefined;
 		return;
 	}
-	ejercicio.prCelebrado = snapPr(mejorRestante);
+	ejercicio.prCelebrado = snapPr(mejorRestante, metrica, modo);
 }
 
 export interface CambiosSetHistorial {
@@ -519,7 +524,8 @@ export function marcarPrCelebrado(
 					peso: snap.peso,
 					reps: snap.reps,
 					esMax: snap.esMax,
-					extraKg: snap.extraKg
+					extraKg: snap.extraKg,
+					metrica: metricaEfectiva(metrica, modo)
 				};
 			}
 		});

@@ -65,7 +65,7 @@
 	);
 </script>
 
-<main class="glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-12 pt-8">
+<main class="gb-page glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-12 pt-8">
 	<header class="mb-6">
 		<p class="text-xs font-bold uppercase tracking-[0.22em]" style="color: var(--muted)">
 			Progreso
@@ -215,11 +215,11 @@
 	</section>
 
 	<section class="mb-4">
-		<div class="mb-2 flex items-center justify-between gap-3 px-1">
-			<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
+		<div class="mb-2 flex flex-wrap items-end justify-between gap-x-3 gap-y-1 px-1">
+			<p class="shrink-0 text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
 				Récords vigentes
 			</p>
-			<p class="text-xs font-semibold" style="color: var(--muted)">
+			<p class="text-right text-xs font-semibold" style="color: var(--muted)">
 				{metricaLabel} · recientes primero
 			</p>
 		</div>

@@ -1,7 +1,7 @@
 import { liveQuery } from 'dexie';
 import { db, type Dia, type Sesion } from './db';
 import { ejercicioPorId } from './catalog';
-import { pesoEfectivo } from './sesion';
+import { pesoEfectivo, type MetricaEfectiva } from './sesion';
 
 export interface DiaEntrenado {
 	fecha: string;
@@ -34,6 +34,7 @@ export interface PrDelDia {
 	reps?: number;
 	esMax: boolean;
 	extraKg?: number;
+	metrica?: MetricaEfectiva;
 }
 
 export interface ResumenDiaSesion {
@@ -43,8 +44,6 @@ export interface ResumenDiaSesion {
 	setsSinVolumen: number;
 	prs: PrDelDia[];
 }
-
-const MS_DIA = 24 * 60 * 60 * 1000;
 
 function fechaLocal(fecha: string): Date {
 	return new Date(`${fecha}T00:00:00`);
@@ -96,7 +95,8 @@ export function resumenDiaSesion(sesion: Sesion | undefined): ResumenDiaSesion {
 				peso: ejercicio.prCelebrado.peso,
 				reps: ejercicio.prCelebrado.reps,
 				esMax: !!ejercicio.prCelebrado.esMax,
-				extraKg: ejercicio.prCelebrado.extraKg
+				extraKg: ejercicio.prCelebrado.extraKg,
+				metrica: ejercicio.prCelebrado.metrica
 			});
 		}
 	}

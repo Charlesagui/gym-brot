@@ -12,7 +12,12 @@
 	const diaId = $derived($page.params.id!);
 	const cierrePorArrastrePx = 76;
 
-	const diaActual = $derived(fromLiveQuery(liveQuery(() => db.dias.get(diaId)), undefined));
+	const diaActual = $derived(
+		fromLiveQuery(
+			liveQuery(() => db.dias.get(diaId)),
+			undefined
+		)
+	);
 	const yaEn = $derived(new Set($diaActual?.ejercicios.map((e) => e.exerciseId) ?? []));
 
 	let q = $state('');
@@ -21,7 +26,10 @@
 
 	// Quita acentos y pasa a minúsculas: en el teclado del gym se escribe sin tildes.
 	function normalizar(s: string): string {
-		return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+		return s
+			.normalize('NFD')
+			.replace(/[\u0300-\u036f]/g, '')
+			.toLowerCase();
 	}
 
 	const filtrados = $derived.by(() => {
@@ -30,9 +38,7 @@
 			(e) =>
 				(filtro === 'todos' || e.grupo === filtro) &&
 				// También busca por músculo: la premisa es guiarse sin depender del nombre.
-				(term === '' ||
-					normalizar(e.nombre).includes(term) ||
-					normalizar(e.musculo).includes(term))
+				(term === '' || normalizar(e.nombre).includes(term) || normalizar(e.musculo).includes(term))
 		);
 	});
 
@@ -100,7 +106,7 @@
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && cerrarPreview()} />
 
-<main class="glow-bg min-h-dvh px-5 pb-12 pt-6">
+<main class="gb-page glow-bg min-h-dvh px-5 pb-12 pt-6">
 	<header class="mb-4 flex items-center gap-3">
 		<a
 			href={`/dia/${diaId}`}
@@ -116,7 +122,7 @@
 		class="mb-3 w-full rounded-xl bg-white/5 px-4 py-2.5 outline-none"
 	/>
 
-	<div class="mb-4 flex flex-wrap gap-2">
+	<div class="gb-filter-row mb-4 flex flex-wrap gap-2">
 		<button
 			onclick={() => (filtro = 'todos')}
 			class="rounded-full px-3 py-1 text-xs font-semibold"
@@ -136,13 +142,15 @@
 		{/each}
 	</div>
 
-	<div class="space-y-2.5">
+	<div class="gb-landscape-catalog space-y-2.5">
 		{#each filtrados as e (e.id)}
 			{@const g = grupos[e.grupo]}
 			{@const added = yaEn.has(e.id)}
 			<div
 				class="flex w-full items-center gap-2 rounded-2xl border p-2.5 transition"
-				style="border-color: {added ? `rgb(${g.glow} / .6)` : 'rgba(255,255,255,.1)'}; background: var(--surface)"
+				style="border-color: {added
+					? `rgb(${g.glow} / .6)`
+					: 'rgba(255,255,255,.1)'}; background: var(--surface)"
 			>
 				<button
 					onclick={() => (preview = e)}
@@ -161,7 +169,8 @@
 					<div class="min-w-0 flex-1">
 						<p class="truncate text-sm font-semibold leading-tight">{e.nombre}</p>
 						<p class="mt-0.5 truncate text-xs font-medium" style="color: rgb({g.glow})">
-							{g.emoji} {g.label} · {e.musculo}
+							{g.emoji}
+							{g.label} · {e.musculo}
 						</p>
 					</div>
 				</button>
@@ -171,13 +180,16 @@
 					style={added
 						? `background: rgb(${g.glow}); color: #000`
 						: 'background: rgba(255,255,255,.1); color: white'}
-					aria-label={added ? `Quitar ${e.nombre}` : `Agregar ${e.nombre}`}>{added ? '✓' : '+'}</button
+					aria-label={added ? `Quitar ${e.nombre}` : `Agregar ${e.nombre}`}
+					>{added ? '✓' : '+'}</button
 				>
 			</div>
 		{/each}
 
 		{#if filtrados.length === 0}
-			<p class="py-8 text-center text-sm" style="color: var(--muted)">Nada coincide con tu búsqueda.</p>
+			<p class="py-8 text-center text-sm" style="color: var(--muted)">
+				Nada coincide con tu búsqueda.
+			</p>
 		{/if}
 	</div>
 </main>
@@ -200,13 +212,12 @@
 			tabindex="-1"
 			onclick={cerrarPreview}
 		></button>
-		<div
-			in:fly={{ y: 40, duration: dur(240) }}
-			class="relative mx-auto w-full max-w-sm"
-		>
+		<div in:fly={{ y: 40, duration: dur(240) }} class="relative mx-auto w-full max-w-sm">
 			<div
 				class="relative w-full overflow-y-auto overscroll-contain rounded-3xl border border-white/10 px-5 pt-3 shadow-2xl"
-				style="background: radial-gradient(140% 100% at 50% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface); max-height: calc(100dvh - 3rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); transform: translate3d(0, {arrastreY}px, 0); transition: {arrastrando ? 'none' : 'transform 160ms ease-out'}"
+				style="background: radial-gradient(140% 100% at 50% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface); max-height: calc(100dvh - 3rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); transform: translate3d(0, {arrastreY}px, 0); transition: {arrastrando
+					? 'none'
+					: 'transform 160ms ease-out'}"
 			>
 				<div
 					class="-mx-2 mb-2 flex h-8 touch-none select-none items-center justify-center"
@@ -246,7 +257,8 @@
 					onpointercancel={cancelarArrastre}
 				></video>
 				<p class="mt-3 text-center text-sm font-medium" style="color: rgb({g.glow})">
-					{g.emoji} {g.label} · {p.musculo}
+					{g.emoji}
+					{g.label} · {p.musculo}
 				</p>
 				<button
 					onclick={() => {

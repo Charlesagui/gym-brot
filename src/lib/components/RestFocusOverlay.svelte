@@ -68,22 +68,33 @@
 			onpointermove={moverArrastre}
 			onpointerup={terminarArrastre}
 			onpointercancel={terminarArrastre}
-			class="mx-auto flex min-h-dvh max-w-md touch-none flex-col px-5 pb-6 pt-4"
+			class="rest-focus-panel mx-auto flex min-h-dvh max-w-md touch-none flex-col px-5 pb-6 pt-4"
 			style="--rest-glow: {descanso.glow}; transform: translate3d(0, {dragY}px, 0) scale({1 -
 				Math.min(dragY / 2200, 0.035)}); opacity: {1 -
 				Math.min(dragY / 420, 0.42)}; transition: {arrastrando
 				? 'none'
 				: 'transform 180ms ease, opacity 180ms ease'}; background: radial-gradient(96% 48% at 50% -4%, rgb(var(--rest-glow) / .34), transparent 72%), linear-gradient(180deg, rgb(var(--rest-glow) / .08), transparent 42%), var(--bg)"
 		>
-			<div class="mx-auto h-1.5 w-12 rounded-full bg-white/25" aria-hidden="true"></div>
+			<div
+				class="rest-focus-handle mx-auto h-1.5 w-12 rounded-full bg-white/25"
+				aria-hidden="true"
+			></div>
 
-			<div class="flex flex-1 flex-col items-center justify-center py-8 text-center">
+			<div
+				class="rest-focus-main flex flex-1 flex-col items-center justify-center py-8 text-center"
+			>
 				<p class="text-xs font-extrabold uppercase tracking-[0.28em]" style="color: var(--muted)">
 					{descanso.vencido ? 'Descanso terminado' : 'Descanso'}
 				</p>
 
-				<div class="relative mt-8 grid size-72 max-h-[42dvh] max-w-[72vw] place-items-center">
-					<svg viewBox="0 0 100 100" class="absolute inset-0 size-full -rotate-90" aria-hidden="true">
+				<div
+					class="rest-focus-ring relative mt-8 grid size-72 max-h-[42dvh] max-w-[72vw] place-items-center"
+				>
+					<svg
+						viewBox="0 0 100 100"
+						class="absolute inset-0 size-full -rotate-90"
+						aria-hidden="true"
+					>
 						<circle
 							cx="50"
 							cy="50"
@@ -107,12 +118,19 @@
 
 					<div aria-live="polite">
 						{#if descanso.vencido}
-							<p class="text-5xl font-black leading-none" style="color: rgb(var(--rest-glow))">
+							<p
+								class="rest-focus-done text-5xl font-black leading-none"
+								style="color: rgb(var(--rest-glow))"
+							>
 								A la serie
 							</p>
-							<p class="mt-4 text-4xl font-black tabular-nums">+{mmss(descanso.vencidoSeg)}</p>
+							<p class="rest-focus-over mt-4 text-4xl font-black tabular-nums">
+								+{mmss(descanso.vencidoSeg)}
+							</p>
 						{:else}
-							<p class="text-7xl font-black leading-none tracking-normal tabular-nums">
+							<p
+								class="rest-focus-time text-7xl font-black leading-none tracking-normal tabular-nums"
+							>
 								{mmss(descanso.restoSeg)}
 							</p>
 						{/if}
@@ -121,7 +139,7 @@
 
 				{#if descanso.siguiente}
 					<p
-						class="mt-7 max-w-[18rem] text-balance text-base font-semibold leading-snug"
+						class="rest-focus-next mt-7 max-w-[18rem] text-balance text-base font-semibold leading-snug"
 						style="color: var(--muted)"
 					>
 						{descanso.siguiente}
@@ -129,7 +147,10 @@
 				{/if}
 			</div>
 
-			<div class="grid gap-3" style="padding-bottom: env(safe-area-inset-bottom)">
+			<div
+				class="rest-focus-actions grid gap-3"
+				style="padding-bottom: env(safe-area-inset-bottom)"
+			>
 				{#if descanso.vencido}
 					<button
 						onclick={() => descanso.atender()}
@@ -154,6 +175,82 @@
 {/if}
 
 <style>
+	@media (orientation: landscape) and (max-height: 520px) {
+		.rest-focus-panel {
+			display: grid;
+			grid-template-columns: minmax(13rem, 0.9fr) minmax(15rem, 1fr);
+			grid-template-rows: auto 1fr;
+			column-gap: 1rem;
+			max-width: min(100vw, 56rem);
+			min-height: 100dvh;
+			padding: 0.75rem 1rem !important;
+		}
+
+		.rest-focus-handle {
+			grid-column: 1 / -1;
+		}
+
+		.rest-focus-main {
+			grid-column: 1;
+			padding-block: 0.25rem !important;
+		}
+
+		.rest-focus-ring {
+			width: min(46dvh, 13rem) !important;
+			height: min(46dvh, 13rem) !important;
+			max-width: none;
+			max-height: none;
+			margin-top: 0.75rem !important;
+		}
+
+		.rest-focus-time {
+			font-size: clamp(2.75rem, 12dvh, 4.5rem) !important;
+		}
+
+		.rest-focus-done {
+			font-size: clamp(1.8rem, 8dvh, 3rem) !important;
+		}
+
+		.rest-focus-over {
+			margin-top: 0.5rem !important;
+			font-size: clamp(1.5rem, 7dvh, 2.5rem) !important;
+		}
+
+		.rest-focus-next {
+			margin-top: 0.75rem !important;
+			max-width: 17rem;
+			font-size: 0.875rem;
+		}
+
+		.rest-focus-actions {
+			grid-column: 2;
+			align-self: center;
+			padding-bottom: 0 !important;
+		}
+
+		.rest-focus-actions button {
+			min-height: 3rem !important;
+			border-radius: 1rem !important;
+		}
+	}
+
+	@media (orientation: landscape) and (max-height: 380px) {
+		.rest-focus-panel {
+			grid-template-columns: minmax(10rem, 0.7fr) minmax(14rem, 1fr);
+			column-gap: 0.75rem;
+			padding-block: 0.5rem !important;
+		}
+
+		.rest-focus-ring {
+			width: min(42dvh, 10rem) !important;
+			height: min(42dvh, 10rem) !important;
+		}
+
+		.rest-focus-next {
+			margin-top: 0.5rem !important;
+		}
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		[role='dialog'] {
 			transition: none !important;

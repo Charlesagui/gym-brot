@@ -39,8 +39,8 @@
 	const ant = $derived(formatoAnterior(anterior, unidad));
 </script>
 
-<div class="rounded-xl bg-white/[0.025] p-2.5">
-	<div class="flex items-center gap-2">
+<div class="gb-set-row rounded-xl bg-white/[0.025] p-2.5">
+	<div class="gb-set-row-head flex items-center gap-2">
 		<span
 			class="grid size-8 shrink-0 place-items-center rounded-full border border-white/10 text-sm font-bold"
 			style="color: var(--muted)">{index + 1}</span
@@ -68,7 +68,7 @@
 			aria-label={`Marcar serie ${index + 1}`}>✓</button
 		>
 	</div>
-	<div class="mt-2 grid grid-cols-2 gap-2">
+	<div class="gb-set-grid mt-2 grid grid-cols-2 gap-2">
 		<div class="min-w-0">
 			<p class="mb-1 text-[11px] font-bold uppercase tracking-wider" style="color: var(--muted)">
 				Peso ({unidad})
@@ -119,7 +119,10 @@
 					style="background: rgba(255,255,255,.06); color: var(--muted)"
 					aria-label={`Bajar ${pasoPeso} ${unidad} encima en serie ${index + 1}`}>−</button
 				>
-				<span class="min-w-12 text-center text-xs font-bold tabular-nums" style="color: rgb(var(--max))">
+				<span
+					class="min-w-12 text-center text-xs font-bold tabular-nums"
+					style="color: rgb(var(--max))"
+				>
 					{set.extraKg ? `+${formatoNumero(set.extraKg)} ${unidad}` : '—'}
 				</span>
 				<button
