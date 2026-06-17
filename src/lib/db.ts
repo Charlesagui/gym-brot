@@ -28,6 +28,8 @@ export interface PrCelebrado {
 	reps?: number;
 	esMax?: boolean;
 	extraKg?: number;
+	/** Métrica usada al celebrar/recalcular el PR; ausente en sesiones viejas. */
+	metrica?: MetricaPr | 'reps';
 }
 
 export interface EjercicioSesion {

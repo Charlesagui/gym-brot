@@ -45,10 +45,13 @@
 	});
 </script>
 
-<div class="mx-auto min-h-dvh max-w-md {sinNav ? '' : 'pb-20'}">
+<div class="gb-shell mx-auto min-h-dvh max-w-md {sinNav ? '' : 'pb-20'}">
 	{#if dbError}
-		<main class="glow-bg grid min-h-dvh place-items-center px-5 py-10">
-			<section class="w-full rounded-2xl border border-white/10 p-5" style="background: var(--surface)">
+		<main class="gb-page glow-bg grid min-h-dvh place-items-center px-5 py-10">
+			<section
+				class="w-full rounded-2xl border border-white/10 p-5"
+				style="background: var(--surface)"
+			>
 				<p class="text-xs font-bold uppercase tracking-[0.22em]" style="color: #ff6b6b">
 					Almacenamiento bloqueado
 				</p>
@@ -58,7 +61,10 @@
 					con almacenamiento lleno o si IndexedDB quedo corrupto. Tus datos no se suben a ningun
 					servidor.
 				</p>
-				<p class="mt-3 rounded-xl bg-white/[0.04] p-3 text-xs leading-relaxed" style="color: var(--muted)">
+				<p
+					class="mt-3 rounded-xl bg-white/[0.04] p-3 text-xs leading-relaxed"
+					style="color: var(--muted)"
+				>
 					{dbError}
 				</p>
 				<a

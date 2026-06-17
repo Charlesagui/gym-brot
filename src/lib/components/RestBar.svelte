@@ -32,7 +32,7 @@
 		role="button"
 		tabindex="0"
 		aria-label="Abrir descanso"
-		class="fixed inset-x-0 z-50 mx-auto flex max-w-md items-center justify-between gap-3 border-t border-white/10 px-5 pt-3 {descanso.vencido
+		class="rest-bar fixed inset-x-0 z-50 mx-auto flex max-w-md items-center justify-between gap-3 border-t border-white/10 px-5 pt-3 {descanso.vencido
 			? 'rest-vencido'
 			: ''}"
 		style="bottom: {offsetNav
@@ -101,6 +101,14 @@
 	.rest-vencido {
 		animation: rest-pulso 1.1s ease-in-out infinite;
 	}
+
+	@media (orientation: landscape) and (max-height: 520px) {
+		.rest-bar {
+			max-width: min(100vw, 64rem);
+			padding-top: 0.6rem !important;
+		}
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.rest-vencido {
 			animation: none;

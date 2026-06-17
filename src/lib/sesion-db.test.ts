@@ -112,7 +112,8 @@ describe('sesion con IndexedDB', () => {
 			peso: 100,
 			reps: 1,
 			esMax: undefined,
-			extraKg: undefined
+			extraKg: undefined,
+			metrica: 'peso'
 		});
 
 		await marcarPrCelebrado('push', 'press', { peso: 95, reps: 20 }, 'e1rm', '2026-01-05');
@@ -120,7 +121,8 @@ describe('sesion con IndexedDB', () => {
 			peso: 95,
 			reps: 20,
 			esMax: undefined,
-			extraKg: undefined
+			extraKg: undefined,
+			metrica: 'e1rm'
 		});
 	});
 
@@ -410,7 +412,8 @@ describe('sesion con IndexedDB', () => {
 			peso: 105,
 			reps: undefined,
 			esMax: false,
-			extraKg: undefined
+			extraKg: undefined,
+			metrica: 'peso'
 		});
 	});
 
@@ -432,7 +435,8 @@ describe('sesion con IndexedDB', () => {
 			peso: 110,
 			reps: undefined,
 			esMax: false,
-			extraKg: undefined
+			extraKg: undefined,
+			metrica: 'peso'
 		});
 	});
 });

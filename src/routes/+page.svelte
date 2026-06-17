@@ -15,7 +15,9 @@
 	let fechaHoy = $state(hoyStr());
 	let hoy = $state(new Date().getDay());
 	// Sesiones de hoy, para reflejar el progreso del día en la portada.
-	const sesionesHoy = $derived(liveQuery(() => db.sesiones.where('fecha').equals(fechaHoy).toArray()));
+	const sesionesHoy = $derived(
+		liveQuery(() => db.sesiones.where('fecha').equals(fechaHoy).toArray())
+	);
 
 	// Modo reordenar días: se entra con long-press; las cards se arrastran (svelte-dnd-action).
 	interface ItemDia {
@@ -111,7 +113,7 @@
 	}
 </script>
 
-<main class="glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-12 pt-10">
+<main class="gb-page glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-12 pt-10">
 	<header class="mb-7 text-center">
 		<h1 class="text-3xl font-extrabold tracking-tight">
 			GYM<span style="color: var(--accent)">·</span>BROT
@@ -134,14 +136,18 @@
 			</button>
 			<h2 class="text-sm font-bold" style="color: var(--accent)">👋 ¡Te damos la bienvenida!</h2>
 			<p class="mt-1.5 text-xs leading-relaxed" style="color: var(--muted)">
-				Agregamos rutinas de ejemplo para que explores la app. Podés editarlas o eliminarlas en cualquier momento. ¡Comenzá tocando una rutina!
+				Agregamos rutinas de ejemplo para que explores la app. Podés editarlas o eliminarlas en
+				cualquier momento. ¡Comenzá tocando una rutina!
 			</p>
 		</div>
 	{/if}
 
 	{#if $dias}
 		{#if reordenando}
-			<p class="mb-3 text-center text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+			<p
+				class="mb-3 text-center text-xs font-semibold uppercase tracking-wider"
+				style="color: var(--muted)"
+			>
 				Arrastrá para ordenar
 			</p>
 			<section
@@ -156,8 +162,13 @@
 						class="flex touch-none items-center gap-3 rounded-2xl border border-white/10 p-4"
 						style="background: linear-gradient(90deg, rgb({it.color} / 0.12), transparent 55%), var(--surface)"
 					>
-						<span class="shrink-0 text-lg leading-none" style="color: var(--muted)" aria-hidden="true">⠿</span>
-						<span class="h-11 w-1.5 shrink-0 rounded-full" style="background: rgb({it.color})"></span>
+						<span
+							class="shrink-0 text-lg leading-none"
+							style="color: var(--muted)"
+							aria-hidden="true">⠿</span
+						>
+						<span class="h-11 w-1.5 shrink-0 rounded-full" style="background: rgb({it.color})"
+						></span>
 						<div class="min-w-0 flex-1">
 							<p class="truncate font-semibold leading-tight">{it.nombre}</p>
 							<p class="truncate text-xs" style="color: var(--muted)">{it.sub}</p>
@@ -172,96 +183,103 @@
 			>
 		{:else}
 			{@const hoyDias = $dias.filter((d) => d.diasSemana?.includes(hoy))}
-		{#if hoyDias.length > 0}
-			<div class="mb-6 space-y-3">
-				{#each hoyDias as hoyDia (hoyDia.id)}
-					{@const prog = progresoDia(hoyDia, $sesionesHoy)}
-					<a
-						href={`/dia/${hoyDia.id}`}
-						class="block rounded-2xl border border-white/10 p-4"
-						style="background: radial-gradient(120% 130% at 0% 0%, rgb({hoyDia.color} / 0.30), transparent 62%), var(--surface)"
-					>
-						<div class="flex items-center justify-between gap-3">
-							<p class="text-[11px] font-bold uppercase tracking-[0.2em]" style="color: rgb({hoyDia.color})">
-								Hoy entrenás
-							</p>
-							{#if prog?.terminado}
-								<span
-									class="rounded-full px-2.5 py-0.5 text-[11px] font-bold"
-									style="background: rgb(var(--exito) / .16); color: rgb(var(--exito))">✓ Terminado</span
+			{#if hoyDias.length > 0}
+				<div class="gb-landscape-cards mb-6 space-y-3">
+					{#each hoyDias as hoyDia (hoyDia.id)}
+						{@const prog = progresoDia(hoyDia, $sesionesHoy)}
+						<a
+							href={`/dia/${hoyDia.id}`}
+							class="block rounded-2xl border border-white/10 p-4"
+							style="background: radial-gradient(120% 130% at 0% 0%, rgb({hoyDia.color} / 0.30), transparent 62%), var(--surface)"
+						>
+							<div class="flex items-center justify-between gap-3">
+								<p
+									class="text-[11px] font-bold uppercase tracking-[0.2em]"
+									style="color: rgb({hoyDia.color})"
 								>
+									Hoy entrenás
+								</p>
+								{#if prog?.terminado}
+									<span
+										class="rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+										style="background: rgb(var(--exito) / .16); color: rgb(var(--exito))"
+										>✓ Terminado</span
+									>
+								{/if}
+							</div>
+							<p class="mt-1 text-2xl font-bold leading-tight">{hoyDia.nombre}</p>
+							{#if prog && !prog.terminado}
+								<p class="mt-0.5 text-xs font-semibold" style="color: rgb({hoyDia.color})">
+									{prog.completos}/{prog.total} ejercicios hechos →
+								</p>
+							{:else}
+								<p class="mt-0.5 text-xs" style="color: var(--muted)">
+									{agendaDia(hoyDia)} · {hoyDia.ejercicios.length} ejercicios →
+								</p>
 							{/if}
+						</a>
+					{/each}
+				</div>
+			{:else}
+				<div
+					class="mb-6 rounded-2xl border border-white/10 p-4 text-center"
+					style="background: var(--surface)"
+				>
+					<p class="text-2xl">💤</p>
+					<p class="mt-1 text-sm font-semibold">Hoy es tu día de descanso</p>
+					<p class="mt-0.5 text-xs" style="color: var(--muted)">
+						No tenés rutinas agendadas. Si igual entrenás, tocá cualquier rutina de abajo: se
+						registra con la fecha de hoy.
+					</p>
+				</div>
+			{/if}
+
+			<p
+				class="mb-2 px-1 text-xs font-semibold uppercase tracking-wider"
+				style="color: var(--muted)"
+			>
+				Tus días
+			</p>
+			<div class="gb-landscape-cards space-y-3">
+				{#each $dias as d, i (d.id)}
+					{@const prog = progresoDia(d, $sesionesHoy)}
+					<a
+						href={`/dia/${d.id}`}
+						use:mantener={entrarReordenar}
+						in:fly={{ y: 12, duration: dur(250), delay: dur(i * 45) }}
+						class="flex items-center gap-3 rounded-2xl border border-white/10 p-4"
+						style="background: linear-gradient(90deg, rgb({d.color} / 0.12), transparent 55%), var(--surface)"
+					>
+						<span class="h-11 w-1.5 rounded-full" style="background: rgb({d.color})"></span>
+						<div class="flex-1">
+							<p class="font-semibold leading-tight">{d.nombre}</p>
+							<p class="text-xs" style="color: var(--muted)">
+								{agendaDia(d)} · {d.ejercicios.length} ejercicios
+							</p>
 						</div>
-						<p class="mt-1 text-2xl font-bold leading-tight">{hoyDia.nombre}</p>
-						{#if prog && !prog.terminado}
-							<p class="mt-0.5 text-xs font-semibold" style="color: rgb({hoyDia.color})">
-								{prog.completos}/{prog.total} ejercicios hechos →
-							</p>
+						{#if prog?.terminado}
+							<span
+								class="rounded-full px-2.5 py-1 text-[11px] font-bold"
+								style="background: rgb(var(--exito) / .16); color: rgb(var(--exito))">✓ Hoy</span
+							>
+						{:else if prog}
+							<span class="text-xs font-bold tabular-nums" style="color: rgb({d.color})"
+								>{prog.completos}/{prog.total}</span
+							>
 						{:else}
-							<p class="mt-0.5 text-xs" style="color: var(--muted)">
-								{agendaDia(hoyDia)} · {hoyDia.ejercicios.length} ejercicios →
-							</p>
+							<span class="text-2xl" aria-hidden="true" style="color: var(--muted)">›</span>
 						{/if}
 					</a>
 				{/each}
 			</div>
-		{:else}
-			<div
-				class="mb-6 rounded-2xl border border-white/10 p-4 text-center"
-				style="background: var(--surface)"
+
+			<button
+				onclick={nuevoDia}
+				class="mt-4 w-full rounded-2xl border border-dashed border-white/20 p-4 text-sm font-medium"
+				style="color: var(--accent)"
 			>
-				<p class="text-2xl">💤</p>
-				<p class="mt-1 text-sm font-semibold">Hoy es tu día de descanso</p>
-				<p class="mt-0.5 text-xs" style="color: var(--muted)">
-					No tenés rutinas agendadas. Si igual entrenás, tocá cualquier rutina de abajo: se
-					registra con la fecha de hoy.
-				</p>
-			</div>
-		{/if}
-
-		<p class="mb-2 px-1 text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
-			Tus días
-		</p>
-		<div class="space-y-3">
-			{#each $dias as d, i (d.id)}
-				{@const prog = progresoDia(d, $sesionesHoy)}
-				<a
-					href={`/dia/${d.id}`}
-					use:mantener={entrarReordenar}
-					in:fly={{ y: 12, duration: dur(250), delay: dur(i * 45) }}
-					class="flex items-center gap-3 rounded-2xl border border-white/10 p-4"
-					style="background: linear-gradient(90deg, rgb({d.color} / 0.12), transparent 55%), var(--surface)"
-				>
-					<span class="h-11 w-1.5 rounded-full" style="background: rgb({d.color})"></span>
-					<div class="flex-1">
-						<p class="font-semibold leading-tight">{d.nombre}</p>
-						<p class="text-xs" style="color: var(--muted)">
-							{agendaDia(d)} · {d.ejercicios.length} ejercicios
-						</p>
-					</div>
-					{#if prog?.terminado}
-						<span
-							class="rounded-full px-2.5 py-1 text-[11px] font-bold"
-							style="background: rgb(var(--exito) / .16); color: rgb(var(--exito))">✓ Hoy</span
-						>
-					{:else if prog}
-						<span class="text-xs font-bold tabular-nums" style="color: rgb({d.color})"
-							>{prog.completos}/{prog.total}</span
-						>
-					{:else}
-						<span class="text-2xl" aria-hidden="true" style="color: var(--muted)">›</span>
-					{/if}
-				</a>
-			{/each}
-		</div>
-
-		<button
-			onclick={nuevoDia}
-			class="mt-4 w-full rounded-2xl border border-dashed border-white/20 p-4 text-sm font-medium"
-			style="color: var(--accent)"
-		>
-			+ Nuevo día
-		</button>
+				+ Nuevo día
+			</button>
 		{/if}
 	{:else}
 		<p class="text-center text-sm" style="color: var(--muted)">Cargando…</p>

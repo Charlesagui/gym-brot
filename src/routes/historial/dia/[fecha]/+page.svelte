@@ -14,7 +14,6 @@
 
 	const ajustesStore = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
 	const ajustes = $derived($ajustesStore);
-	const metricaLabel = $derived(ajustes.metricaPr === 'e1rm' ? '1RM estimado' : 'peso máximo');
 
 	// Serie en edición → bottom sheet; guarda también el glow del grupo del ejercicio.
 	let serieEditando = $state<SerieEditable | null>(null);
@@ -52,13 +51,23 @@
 			year: 'numeric'
 		})
 	);
+	const fechaTitulo = $derived(
+		(fechaLarga[0]?.toLocaleUpperCase('es') ?? '') + fechaLarga.slice(1)
+	);
+
+	function labelPr(metrica: 'peso' | 'e1rm' | 'reps' | undefined, tienePeso: boolean): string {
+		if (!tienePeso || metrica === 'reps') return 'reps máximas';
+		if (metrica === 'peso') return 'peso máximo';
+		if (metrica === 'e1rm') return '1RM estimado';
+		return 'registrado';
+	}
 
 	function sinVolumen(s: SetSesion): boolean {
 		return s.peso == null || s.reps == null;
 	}
 </script>
 
-<main class="glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-12 pt-6">
+<main class="gb-page glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-12 pt-6">
 	<header class="mb-5 flex items-center gap-3">
 		<a
 			href="/historial"
@@ -69,7 +78,7 @@
 			<p class="text-xs font-bold uppercase tracking-[0.22em]" style="color: var(--muted)">
 				Entrenamiento
 			</p>
-			<h1 class="mt-0.5 text-xl font-extrabold capitalize leading-tight">{fechaLarga}</h1>
+			<h1 class="mt-0.5 text-xl font-extrabold leading-tight">{fechaTitulo}</h1>
 		</div>
 	</header>
 
@@ -101,7 +110,7 @@
 				<div>
 					<p class="text-2xl font-extrabold tabular-nums">{totalPrs}</p>
 					<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">
-						PRs ({metricaLabel})
+						PRs registrados
 					</p>
 				</div>
 			</div>
@@ -145,9 +154,10 @@
 									<span
 										class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold"
 										style="background: rgb(var(--max) / .14); color: rgb(var(--max))"
-										>🏆 PR {ejercicio.prCelebrado.peso == null
-											? 'reps máximas'
-											: metricaLabel}</span
+										>🏆 PR {labelPr(
+											ejercicio.prCelebrado.metrica,
+											ejercicio.prCelebrado.peso != null
+										)}</span
 									>
 								{/if}
 							</div>

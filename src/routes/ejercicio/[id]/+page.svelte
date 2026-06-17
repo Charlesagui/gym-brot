@@ -478,345 +478,360 @@
 	</main>
 {:else}
 	<main
-		class="min-h-dvh px-5 pb-28 pt-6"
+		class="gb-page gb-page--exercise min-h-dvh px-5 pb-28 pt-6 {diaId ? 'gb-page--training' : ''}"
 		style="background: radial-gradient(85% 42% at 50% 0%, rgb({g.glow} / 0.20), transparent 72%), var(--bg)"
 	>
-		<header class="mb-4 flex items-center gap-3">
-			<a
-				href={volver}
-				class="grid size-10 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
-				aria-label="Volver">←</a
-			>
-			{#if !videoGrande}
-				<button
-					onclick={() => (videoGrande = true)}
-					class="shrink-0 overflow-hidden rounded-xl"
-					aria-label="Ver demostración en grande"
-				>
-					<video
-						src={ej.demoVideo}
-						class="size-12 bg-white object-contain"
-						autoplay
-						loop
-						muted
-						playsinline
-						preload="metadata"
-					></video>
-				</button>
-			{/if}
-			<div class="min-w-0 flex-1">
-				<h1 class="text-lg font-bold leading-tight">{ej.nombre}</h1>
-				<p class="mt-0.5 text-xs font-medium" style="color: rgb({g.glow})">
-					{g.emoji}
-					{g.label} · {ej.musculo}
-				</p>
-			</div>
-		</header>
-
-		{#if videoGrande}
-			<button
-				onclick={() => (videoGrande = false)}
-				class="block w-full"
-				aria-label="Achicar demostración"
-			>
-				<video
-					src={ej.demoVideo}
-					class="mx-auto aspect-square w-full max-w-xs rounded-2xl bg-white object-contain"
-					aria-label={ej.nombre}
-					autoplay
-					loop
-					muted
-					playsinline
-					preload="auto"
-				></video>
-			</button>
-		{/if}
-
-		{#if ej.videoUrl}
-			<div class="mt-3 flex justify-center">
-				<button
-					onclick={abrirTecnica}
-					class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold"
-					style="color: rgb({g.glow})"
-					aria-label={`Ver video de técnica para ${ej.nombre}`}>▶ Ver técnica</button
-				>
-			</div>
-		{/if}
-
-		{#if !diaId}
-			<!-- Sin ?dia= no se entrena: vista de consulta con el progreso completo. -->
-			<ProgresoEjercicio
-				exerciseId={$page.params.id!}
-				glow={g.glow}
-				unidad={ajustes.unidad}
-				metrica={ajustes.metricaPr}
-				{pasoPeso}
-				maquinaPlacas={!!ej.maquinaPlacas}
-			/>
-		{:else}
-			<section
-				class="mt-6 rounded-2xl border border-white/10 p-4"
-				style="background: var(--surface)"
-			>
-				<div class="flex items-start justify-between gap-3">
-					<div>
-						<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
-							Series
-							{#if ej.maquinaPlacas && !mostrarHintMax}
-								<button
-									onclick={() => (mostrarHintMax = true)}
-									class="ml-1 align-middle text-[11px] font-bold normal-case"
-									style="color: var(--muted)"
-									aria-label="Qué es MAX">ⓘ</button
-								>
-							{/if}
-						</p>
-						<p
-							class="mt-0.5 text-[11px] font-medium uppercase tracking-wider"
-							style="color: var(--muted)"
-						>
-							Sesión actual
-						</p>
-						{#if anterioresFecha}
-							<p class="mt-0.5 text-[11px] font-medium" style="color: var(--muted)">
-								Última vez · {fechaCorta(anterioresFecha)}
-							</p>
-						{/if}
-					</div>
-					{#if cargandoSeries}
-						<p class="text-xs font-bold" style="color: var(--muted)">Preparando…</p>
-					{:else}
-						<!-- Un solo control: hechas/total adentro del stepper de series de hoy -->
-						<div class="flex items-center rounded-full bg-white/5 p-0.5">
-							<button
-								onclick={quitarSerie}
-								disabled={sets.length <= 1}
-								class="grid size-10 touch-manipulation place-items-center rounded-full text-sm font-bold disabled:opacity-35"
-								style="color: var(--muted)"
-								aria-label="Quitar serie de hoy">−</button
-							>
-							<span
-								class="min-w-11 text-center text-sm font-bold tabular-nums"
-								style="color: {completo ? `rgb(${g.glow})` : 'var(--text)'}"
-								aria-label={`${hechas} de ${sets.length} series hechas`}
-								>{hechas}/{sets.length}</span
-							>
-							<button
-								onclick={() => addSet(diaId, $page.params.id!, fechaSesion)}
-								class="grid size-10 touch-manipulation place-items-center rounded-full text-sm font-bold"
-								style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
-								aria-label="Agregar serie de hoy">+</button
-							>
-						</div>
-					{/if}
-				</div>
-
-				{#if cargandoSeries}
-					<p
-						class="mt-3 rounded-xl bg-white/[0.025] p-4 text-center text-sm"
-						style="color: var(--muted)"
-					>
-						Preparando series…
-					</p>
-				{:else}
-					<div class="mt-3 space-y-2">
-						{#each sets as s, i (i)}
-							<SetRow
-								set={s}
-								index={i}
-								anterior={anteriores[i]}
-								maquinaPlacas={!!ej.maquinaPlacas}
-								glow={g.glow}
-								{unidad}
-								{pasoPeso}
-								onToggle={() => onToggle(i)}
-								onToggleMax={() => toggleMax(diaId, $page.params.id!, i, fechaSesion, metrica)}
-								onAjustarPeso={(d) => ajustarPeso(i, d)}
-								onEscribirPeso={(el) => escribirPeso(i, el)}
-								onAjustarReps={(d) => ajustarReps(i, d)}
-								onEscribirReps={(el) => escribirReps(i, el)}
-								onAjustarExtra={(d) => ajustarExtra(i, d)}
-							/>
-						{/each}
-					</div>
-					{#if sinHistorial}
-						<div
-							class="mt-2 flex items-start gap-2 rounded-xl p-2.5"
-							style="background: rgb({g.glow} / .08)"
-						>
-							<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
-								💡 Primera vez con este ejercicio. Empezá con un peso que te deje hacer ~12
-								repeticiones cómodas y ajustá la próxima.
-							</p>
-						</div>
-					{/if}
-					{#if mostrarHintMax}
-						<div
-							class="mt-2 flex items-start gap-2 rounded-xl p-2.5"
-							style="background: rgb(var(--max) / .08)"
-						>
-							<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
-								💡 ¿Llegaste al tope de la pila de placas? Marcá <b style="color: rgb(var(--max))"
-									>MAX</b
-								> en esa serie y anotá los kg extra que pongas encima.
-							</p>
-							<button
-								onclick={entendidoHintMax}
-								class="shrink-0 text-xs font-bold"
-								style="color: rgb(var(--max))">Entendido</button
-							>
-						</div>
-					{/if}
-				{/if}
-
-				<div class="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/10 pt-3">
-					<span class="mr-1 text-xs font-semibold" style="color: var(--muted)">⏱️ Descanso</span>
-					<button
-						onclick={apagarTimer}
-						class="rounded-full px-2.5 py-1 text-xs font-semibold"
-						style={!ajustes.timer.activo
-							? 'background: var(--accent); color: white'
-							: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Off</button
-					>
-					{#each [1, 2, 3, 4, 5] as m (m)}
-						<button
-							onclick={() => cambiarTimer(m)}
-							class="rounded-full px-2.5 py-1 text-xs font-semibold"
-							style={ajustes.timer.activo && ajustes.timer.minutos === m
-								? 'background: var(--accent); color: white'
-								: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{m}'</button
-						>
-					{/each}
-				</div>
-				{#if mostrarHintTimer}
-					<div
-						class="mt-2 flex items-center gap-2 rounded-xl p-2.5"
-						style="background: rgb({g.glow} / .08)"
-					>
-						<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
-							💡 ¿Activar el descanso? Te avisa cuándo volver a la serie.
-						</p>
-						<button
-							onclick={activarDescansoDesdeHint}
-							class="shrink-0 rounded-full px-3 py-1 text-xs font-bold"
-							style="background: var(--accent); color: white">Activar</button
-						>
-						<button
-							onclick={descartarHintTimer}
-							class="shrink-0 text-xs font-bold"
-							style="color: var(--muted)">Ahora no</button
-						>
-					</div>
-				{/if}
-			</section>
-
-			{#if pr}
-				<section
-					class="mt-3 rounded-2xl border border-white/10 p-4"
-					style="background: var(--surface)"
-				>
-					<div class="flex items-center justify-between">
-						<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
-							PR {metricaLabel}
-						</p>
-						{#if superado}
-							<span
-								class="rounded-full px-2 py-0.5 text-xs font-bold"
-								style="background: rgb({g.glow} / .2); color: rgb({g.glow})">🎉 Nuevo PR</span
-							>
-						{/if}
-					</div>
-					<p class="mt-1 text-3xl font-extrabold">
-						🏆 {formatoNumero(pr.valor)}<span
-							class="ml-1 text-lg font-semibold"
-							style="color: var(--muted)"
-						>
-							{unidadValor}</span
-						>
-					</p>
-					<p class="mt-0.5 text-xs font-medium" style="color: var(--muted)">
-						Mejor set: {formatoSet(pr, unidad)} · {fechaCorta(pr.fecha)}
-					</p>
-					{#if valorOtraPr != null}
-						<p class="mt-0.5 text-[11px] font-medium" style="color: var(--muted)">
-							≈ {formatoNumero(valorOtraPr)}
-							{unidad} en {otraLabel}
-						</p>
-					{/if}
-					<p
-						class="mt-2.5 text-[11px] leading-relaxed border-t border-white/5 pt-2"
-						style="color: var(--muted)"
-					>
-						💡 {DESCRIPCION_METRICA[metricaEfectiva]}
-					</p>
-					<MiniChart
-						{puntos}
-						glow={g.glow}
-						{metricaLabel}
-						unidad={unidadValor}
-						onEditarPunto={editarPuntoHistorial}
-					/>
-					<!-- Link discreto: la operación manda, el progreso completo se consulta aparte. -->
+		<div class={diaId ? 'gb-exercise-layout' : ''}>
+			<div class="gb-exercise-intro">
+				<header class="gb-exercise-header mb-4 flex items-center gap-3">
 					<a
-						href={`/ejercicio/${$page.params.id}?desde=${diaId}`}
-						class="mt-2.5 block text-right text-xs font-bold"
-						style="color: rgb({g.glow})">Ver progreso completo →</a
+						href={volver}
+						class="grid size-10 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
+						aria-label="Volver">←</a
 					>
-				</section>
-			{:else if !cargandoSeries}
-				<section
-					class="mt-3 rounded-2xl border border-dashed border-white/15 p-4 text-center"
-					style="background: var(--surface)"
-				>
-					<p class="text-3xl">🏆</p>
-					<p class="mt-1 text-sm font-semibold">Todavía sin PR</p>
-					<p class="mt-0.5 text-xs" style="color: var(--muted)">
-						Marcá una serie con ✓ para registrar tu primer récord de {metricaLabel}.
-					</p>
-				</section>
-			{/if}
+					{#if !videoGrande}
+						<button
+							onclick={() => (videoGrande = true)}
+							class="shrink-0 overflow-hidden rounded-xl"
+							aria-label="Ver demostración en grande"
+						>
+							<video
+								src={ej.demoVideo}
+								class="size-12 bg-white object-contain"
+								autoplay
+								loop
+								muted
+								playsinline
+								preload="metadata"
+							></video>
+						</button>
+					{/if}
+					<div class="min-w-0 flex-1">
+						<h1 class="text-lg font-bold leading-tight">{ej.nombre}</h1>
+						<p class="mt-0.5 text-xs font-medium" style="color: rgb({g.glow})">
+							{g.emoji}
+							{g.label} · {ej.musculo}
+						</p>
+					</div>
+				</header>
 
-			<details
-				class="mt-3 rounded-2xl border border-white/10 p-4"
-				style="background: var(--surface)"
-			>
-				<summary class="cursor-pointer text-sm font-medium" style="color: var(--muted)">
-					📝 Notas {#if tieneNota}<span style="color: rgb({g.glow})">●</span>{/if}
-				</summary>
-				<textarea
-					bind:value={notaTexto}
-					onblur={() => setNota($page.params.id!, notaTexto)}
-					placeholder="Ej: asiento en posición 4, agarre cerrado…"
-					rows="3"
-					class="mt-2 w-full resize-none rounded-lg bg-white/5 p-3 text-sm outline-none"
-				></textarea>
-			</details>
-
-			{#if completo && descanso.restoSeg === 0 && !descanso.vencido}
-				<!-- Con todo hecho, el cierre queda fijo al alcance del pulgar -->
-				<div
-					transition:fly={{ y: 40, duration: dur(200) }}
-					class="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md px-5 pt-6"
-					style="padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgb(var(--scrim) / .92) 55%)"
-				>
+				{#if videoGrande}
 					<button
-						onclick={terminarEjercicio}
-						disabled={!!exito}
-						class="block w-full rounded-2xl py-4 text-center font-bold"
-						style="background: rgb({g.glow}); color: white"
-						>{exito ? 'Cerrando…' : '✓ Volver al día'}</button
+						onclick={() => (videoGrande = false)}
+						class="gb-exercise-demo block w-full"
+						aria-label="Achicar demostración"
 					>
-				</div>
+						<video
+							src={ej.demoVideo}
+							class="gb-exercise-demo-video mx-auto aspect-square w-full max-w-xs rounded-2xl bg-white object-contain"
+							aria-label={ej.nombre}
+							autoplay
+							loop
+							muted
+							playsinline
+							preload="auto"
+						></video>
+					</button>
+				{/if}
+
+				{#if ej.videoUrl}
+					<div class="mt-3 flex justify-center">
+						<button
+							onclick={abrirTecnica}
+							class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold"
+							style="color: rgb({g.glow})"
+							aria-label={`Ver video de técnica para ${ej.nombre}`}>▶ Ver técnica</button
+						>
+					</div>
+				{/if}
+			</div>
+
+			{#if !diaId}
+				<!-- Sin ?dia= no se entrena: vista de consulta con el progreso completo. -->
+				<ProgresoEjercicio
+					exerciseId={$page.params.id!}
+					glow={g.glow}
+					unidad={ajustes.unidad}
+					metrica={ajustes.metricaPr}
+					{pasoPeso}
+					maquinaPlacas={!!ej.maquinaPlacas}
+				/>
 			{:else}
-				<button
-					onclick={terminarEjercicio}
-					disabled={!!exito}
-					class="mt-4 block w-full rounded-2xl py-4 text-center font-bold"
-					style="background: var(--accent); color: white"
-					>{exito ? 'Cerrando…' : 'Terminar ejercicio'}</button
-				>
+				<div class="gb-exercise-work">
+					<section
+						class="mt-6 rounded-2xl border border-white/10 p-4"
+						style="background: var(--surface)"
+					>
+						<div class="flex items-start justify-between gap-3">
+							<div>
+								<p
+									class="text-xs font-semibold uppercase tracking-wider"
+									style="color: var(--muted)"
+								>
+									Series
+									{#if ej.maquinaPlacas && !mostrarHintMax}
+										<button
+											onclick={() => (mostrarHintMax = true)}
+											class="ml-1 align-middle text-[11px] font-bold normal-case"
+											style="color: var(--muted)"
+											aria-label="Qué es MAX">ⓘ</button
+										>
+									{/if}
+								</p>
+								<p
+									class="mt-0.5 text-[11px] font-medium uppercase tracking-wider"
+									style="color: var(--muted)"
+								>
+									Sesión actual
+								</p>
+								{#if anterioresFecha}
+									<p class="mt-0.5 text-[11px] font-medium" style="color: var(--muted)">
+										Última vez · {fechaCorta(anterioresFecha)}
+									</p>
+								{/if}
+							</div>
+							{#if cargandoSeries}
+								<p class="text-xs font-bold" style="color: var(--muted)">Preparando…</p>
+							{:else}
+								<!-- Un solo control: hechas/total adentro del stepper de series de hoy -->
+								<div class="flex items-center rounded-full bg-white/5 p-0.5">
+									<button
+										onclick={quitarSerie}
+										disabled={sets.length <= 1}
+										class="grid size-10 touch-manipulation place-items-center rounded-full text-sm font-bold disabled:opacity-35"
+										style="color: var(--muted)"
+										aria-label="Quitar serie de hoy">−</button
+									>
+									<span
+										class="min-w-11 text-center text-sm font-bold tabular-nums"
+										style="color: {completo ? `rgb(${g.glow})` : 'var(--text)'}"
+										aria-label={`${hechas} de ${sets.length} series hechas`}
+										>{hechas}/{sets.length}</span
+									>
+									<button
+										onclick={() => addSet(diaId, $page.params.id!, fechaSesion)}
+										class="grid size-10 touch-manipulation place-items-center rounded-full text-sm font-bold"
+										style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
+										aria-label="Agregar serie de hoy">+</button
+									>
+								</div>
+							{/if}
+						</div>
+
+						{#if cargandoSeries}
+							<p
+								class="mt-3 rounded-xl bg-white/[0.025] p-4 text-center text-sm"
+								style="color: var(--muted)"
+							>
+								Preparando series…
+							</p>
+						{:else}
+							<div class="mt-3 space-y-2">
+								{#each sets as s, i (i)}
+									<SetRow
+										set={s}
+										index={i}
+										anterior={anteriores[i]}
+										maquinaPlacas={!!ej.maquinaPlacas}
+										glow={g.glow}
+										{unidad}
+										{pasoPeso}
+										onToggle={() => onToggle(i)}
+										onToggleMax={() => toggleMax(diaId, $page.params.id!, i, fechaSesion, metrica)}
+										onAjustarPeso={(d) => ajustarPeso(i, d)}
+										onEscribirPeso={(el) => escribirPeso(i, el)}
+										onAjustarReps={(d) => ajustarReps(i, d)}
+										onEscribirReps={(el) => escribirReps(i, el)}
+										onAjustarExtra={(d) => ajustarExtra(i, d)}
+									/>
+								{/each}
+							</div>
+							{#if sinHistorial}
+								<div
+									class="mt-2 flex items-start gap-2 rounded-xl p-2.5"
+									style="background: rgb({g.glow} / .08)"
+								>
+									<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
+										💡 Primera vez con este ejercicio. Empezá con un peso que te deje hacer ~12
+										repeticiones cómodas y ajustá la próxima.
+									</p>
+								</div>
+							{/if}
+							{#if mostrarHintMax}
+								<div
+									class="mt-2 flex items-start gap-2 rounded-xl p-2.5"
+									style="background: rgb(var(--max) / .08)"
+								>
+									<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
+										💡 ¿Llegaste al tope de la pila de placas? Marcá <b
+											style="color: rgb(var(--max))">MAX</b
+										> en esa serie y anotá los kg extra que pongas encima.
+									</p>
+									<button
+										onclick={entendidoHintMax}
+										class="shrink-0 text-xs font-bold"
+										style="color: rgb(var(--max))">Entendido</button
+									>
+								</div>
+							{/if}
+						{/if}
+
+						<div
+							class="gb-rest-presets mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/10 pt-3"
+						>
+							<span class="mr-1 text-xs font-semibold" style="color: var(--muted)">⏱️ Descanso</span
+							>
+							<button
+								onclick={apagarTimer}
+								class="rounded-full px-2.5 py-1 text-xs font-semibold"
+								style={!ajustes.timer.activo
+									? 'background: var(--accent); color: white'
+									: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Off</button
+							>
+							{#each [1, 2, 3, 4, 5] as m (m)}
+								<button
+									onclick={() => cambiarTimer(m)}
+									class="rounded-full px-2.5 py-1 text-xs font-semibold"
+									style={ajustes.timer.activo && ajustes.timer.minutos === m
+										? 'background: var(--accent); color: white'
+										: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{m}'</button
+								>
+							{/each}
+						</div>
+						{#if mostrarHintTimer}
+							<div
+								class="mt-2 flex items-center gap-2 rounded-xl p-2.5"
+								style="background: rgb({g.glow} / .08)"
+							>
+								<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
+									💡 ¿Activar el descanso? Te avisa cuándo volver a la serie.
+								</p>
+								<button
+									onclick={activarDescansoDesdeHint}
+									class="shrink-0 rounded-full px-3 py-1 text-xs font-bold"
+									style="background: var(--accent); color: white">Activar</button
+								>
+								<button
+									onclick={descartarHintTimer}
+									class="shrink-0 text-xs font-bold"
+									style="color: var(--muted)">Ahora no</button
+								>
+							</div>
+						{/if}
+					</section>
+
+					{#if pr}
+						<section
+							class="mt-3 rounded-2xl border border-white/10 p-4"
+							style="background: var(--surface)"
+						>
+							<div class="flex items-center justify-between">
+								<p
+									class="text-xs font-semibold uppercase tracking-wider"
+									style="color: var(--muted)"
+								>
+									PR {metricaLabel}
+								</p>
+								{#if superado}
+									<span
+										class="rounded-full px-2 py-0.5 text-xs font-bold"
+										style="background: rgb({g.glow} / .2); color: rgb({g.glow})">🎉 Nuevo PR</span
+									>
+								{/if}
+							</div>
+							<p class="mt-1 text-3xl font-extrabold">
+								🏆 {formatoNumero(pr.valor)}<span
+									class="ml-1 text-lg font-semibold"
+									style="color: var(--muted)"
+								>
+									{unidadValor}</span
+								>
+							</p>
+							<p class="mt-0.5 text-xs font-medium" style="color: var(--muted)">
+								Mejor set: {formatoSet(pr, unidad)} · {fechaCorta(pr.fecha)}
+							</p>
+							{#if valorOtraPr != null}
+								<p class="mt-0.5 text-[11px] font-medium" style="color: var(--muted)">
+									≈ {formatoNumero(valorOtraPr)}
+									{unidad} en {otraLabel}
+								</p>
+							{/if}
+							<p
+								class="mt-2.5 text-[11px] leading-relaxed border-t border-white/5 pt-2"
+								style="color: var(--muted)"
+							>
+								💡 {DESCRIPCION_METRICA[metricaEfectiva]}
+							</p>
+							<MiniChart
+								{puntos}
+								glow={g.glow}
+								{metricaLabel}
+								unidad={unidadValor}
+								onEditarPunto={editarPuntoHistorial}
+							/>
+							<!-- Link discreto: la operación manda, el progreso completo se consulta aparte. -->
+							<a
+								href={`/ejercicio/${$page.params.id}?desde=${diaId}`}
+								class="mt-2.5 block text-right text-xs font-bold"
+								style="color: rgb({g.glow})">Ver progreso completo →</a
+							>
+						</section>
+					{:else if !cargandoSeries}
+						<section
+							class="mt-3 rounded-2xl border border-dashed border-white/15 p-4 text-center"
+							style="background: var(--surface)"
+						>
+							<p class="text-3xl">🏆</p>
+							<p class="mt-1 text-sm font-semibold">Todavía sin PR</p>
+							<p class="mt-0.5 text-xs" style="color: var(--muted)">
+								Marcá una serie con ✓ para registrar tu primer récord de {metricaLabel}.
+							</p>
+						</section>
+					{/if}
+
+					<details
+						class="mt-3 rounded-2xl border border-white/10 p-4"
+						style="background: var(--surface)"
+					>
+						<summary class="cursor-pointer text-sm font-medium" style="color: var(--muted)">
+							📝 Notas {#if tieneNota}<span style="color: rgb({g.glow})">●</span>{/if}
+						</summary>
+						<textarea
+							bind:value={notaTexto}
+							onblur={() => setNota($page.params.id!, notaTexto)}
+							placeholder="Ej: asiento en posición 4, agarre cerrado…"
+							rows="3"
+							class="mt-2 w-full resize-none rounded-lg bg-white/5 p-3 text-sm outline-none"
+						></textarea>
+					</details>
+
+					{#if completo && descanso.restoSeg === 0 && !descanso.vencido}
+						<!-- Con todo hecho, el cierre queda fijo al alcance del pulgar -->
+						<div
+							transition:fly={{ y: 40, duration: dur(200) }}
+							class="gb-exercise-finish-bar fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md px-5 pt-6"
+							style="padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgb(var(--scrim) / .92) 55%)"
+						>
+							<button
+								onclick={terminarEjercicio}
+								disabled={!!exito}
+								class="block w-full rounded-2xl py-4 text-center font-bold"
+								style="background: rgb({g.glow}); color: white"
+								>{exito ? 'Cerrando…' : '✓ Volver al día'}</button
+							>
+						</div>
+					{:else}
+						<button
+							onclick={terminarEjercicio}
+							disabled={!!exito}
+							class="mt-4 block w-full rounded-2xl py-4 text-center font-bold"
+							style="background: var(--accent); color: white"
+							>{exito ? 'Cerrando…' : 'Terminar ejercicio'}</button
+						>
+					{/if}
+				</div>
 			{/if}
-		{/if}
+		</div>
 	</main>
 
 	{#if tecnicaAbierta && tecnicaEmbedUrl}
