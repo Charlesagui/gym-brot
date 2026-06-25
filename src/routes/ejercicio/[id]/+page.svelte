@@ -49,6 +49,7 @@
 	import TecnicaModal from '$lib/components/TecnicaModal.svelte';
 	import ProgresoEjercicio from '$lib/components/ProgresoEjercicio.svelte';
 	import EditarSerieSheet, { type SerieEditable } from '$lib/components/EditarSerieSheet.svelte';
+	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
 
 	const ej = $derived(ejercicioPorId($page.params.id!));
 	const g = $derived(ej ? grupos[ej.grupo] : undefined);
@@ -79,11 +80,22 @@
 	let videoGrande = $state(true);
 	let tecnicaAbierta = $state(false);
 	let tecnicaHistoryActiva = false;
+	let confirmacion = $state<{
+		titulo: string;
+		mensaje: string;
+		confirmarTexto: string;
+		onConfirm: () => void | Promise<void>;
+	} | null>(null);
 
 	$effect(() => {
 		$page.params.id; // dep: reinicia "grande" al cambiar de ejercicio
-		videoGrande = true;
+		videoGrande = localStorage.getItem('gb-demo-grande') !== '0';
 	});
+
+	function setVideoGrande(valor: boolean) {
+		videoGrande = valor;
+		localStorage.setItem('gb-demo-grande', valor ? '1' : '0');
+	}
 
 	// Hint de MAX: solo en máquinas de placas, las primeras 3 visitas o hasta "Entendido".
 	let mostrarHintMax = $state(false);
@@ -304,11 +316,18 @@
 		if (!diaId || sets.length <= 1) return;
 		const ultima = sets[sets.length - 1];
 		// No borrar un registro real con un mistap: la serie hecha pide confirmación.
-		if (
-			ultima?.hecha &&
-			!confirm(`La serie ${sets.length} ya está marcada como hecha. ¿Quitarla igual?`)
-		)
+		if (ultima?.hecha) {
+			confirmacion = {
+				titulo: 'Quitar serie hecha',
+				mensaje: `La serie ${sets.length} ya está marcada como hecha. Si la quitás, se recalcula el progreso y el PR de este ejercicio.`,
+				confirmarTexto: 'Quitar',
+				onConfirm: async () => {
+					await removeSet(diaId, $page.params.id!, sets.length - 1, fechaSesion, metrica);
+					confirmacion = null;
+				}
+			};
 			return;
+		}
 		removeSet(diaId, $page.params.id!, sets.length - 1, fechaSesion, metrica);
 	}
 
@@ -491,7 +510,7 @@
 					>
 					{#if !videoGrande}
 						<button
-							onclick={() => (videoGrande = true)}
+							onclick={() => setVideoGrande(true)}
 							class="shrink-0 overflow-hidden rounded-xl"
 							aria-label="Ver demostración en grande"
 						>
@@ -517,7 +536,7 @@
 
 				{#if videoGrande}
 					<button
-						onclick={() => (videoGrande = false)}
+						onclick={() => setVideoGrande(false)}
 						class="gb-exercise-demo block w-full"
 						aria-label="Achicar demostración"
 					>
@@ -572,7 +591,7 @@
 									{#if ej.maquinaPlacas && !mostrarHintMax}
 										<button
 											onclick={() => (mostrarHintMax = true)}
-											class="ml-1 align-middle text-[11px] font-bold normal-case"
+											class="ml-1 inline-grid size-8 place-items-center align-middle text-[11px] font-bold normal-case"
 											style="color: var(--muted)"
 											aria-label="Qué es MAX">ⓘ</button
 										>
@@ -683,7 +702,8 @@
 							>
 							<button
 								onclick={apagarTimer}
-								class="rounded-full px-2.5 py-1 text-xs font-semibold"
+								class="min-h-10 rounded-full px-3.5 py-2 text-xs font-semibold"
+								aria-label="Apagar descanso"
 								style={!ajustes.timer.activo
 									? 'background: var(--accent); color: white'
 									: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Off</button
@@ -691,7 +711,8 @@
 							{#each [1, 2, 3, 4, 5] as m (m)}
 								<button
 									onclick={() => cambiarTimer(m)}
-									class="rounded-full px-2.5 py-1 text-xs font-semibold"
+									class="min-h-10 rounded-full px-3.5 py-2 text-xs font-semibold"
+									aria-label={`Descanso ${m} ${m === 1 ? 'minuto' : 'minutos'}`}
 									style={ajustes.timer.activo && ajustes.timer.minutos === m
 										? 'background: var(--accent); color: white'
 										: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{m}'</button
@@ -899,5 +920,15 @@
 				</p>
 			</div>
 		</div>
+	{/if}
+
+	{#if confirmacion}
+		<ConfirmSheet
+			titulo={confirmacion.titulo}
+			mensaje={confirmacion.mensaje}
+			confirmarTexto={confirmacion.confirmarTexto}
+			onConfirm={confirmacion.onConfirm}
+			onCancel={() => (confirmacion = null)}
+		/>
 	{/if}
 {/if}

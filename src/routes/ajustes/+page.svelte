@@ -16,10 +16,18 @@
 		AJUSTES_DEFAULT
 	} from '$lib/extras';
 	import { fromLiveQuery } from '$lib/live';
+	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
 
 	const ajustesStore = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
 	const ajustes = $derived<Ajustes>($ajustesStore);
 	let msg = $state('');
+	let confirmacion = $state<{
+		titulo: string;
+		mensaje: string;
+		confirmarTexto: string;
+		onConfirm: () => void | Promise<void>;
+		onCancel?: () => void;
+	} | null>(null);
 
 	async function exportar() {
 		const json = await exportarJSON();
@@ -41,21 +49,34 @@
 		try {
 			const data = parseBackup(await file.text());
 			const nDias = data.dias?.length ?? 0;
-			const ok = confirm(
-				`⚠️ Esto REEMPLAZA todos tus datos actuales por los del backup ` +
-					`(${nDias} ${nDias === 1 ? 'día' : 'días'}).\n\nNo se puede deshacer. ¿Continuar?`
-			);
-			if (!ok) {
-				msg = 'Importación cancelada';
-				return;
-			}
-			await importarBackup(data);
-			msg = '✅ Datos restaurados';
+			confirmacion = {
+				titulo: 'Restaurar backup',
+				mensaje:
+					`Esto reemplaza todos tus datos actuales por los del backup ` +
+					`(${nDias} ${nDias === 1 ? 'día' : 'días'}). No se puede deshacer.`,
+				confirmarTexto: 'Restaurar',
+				onConfirm: async () => {
+					await importarBackup(data);
+					msg = '✅ Datos restaurados';
+					input.value = '';
+					confirmacion = null;
+				},
+				onCancel: () => {
+					msg = 'Importación cancelada';
+					input.value = '';
+				}
+			};
 		} catch {
 			msg = '❌ Archivo inválido';
-		} finally {
 			input.value = '';
+		} finally {
+			if (!confirmacion) input.value = '';
 		}
+	}
+
+	function cancelarConfirmacion() {
+		confirmacion?.onCancel?.();
+		confirmacion = null;
 	}
 </script>
 
@@ -118,7 +139,7 @@
 		<div class="mt-3 grid grid-cols-2 gap-2">
 			<button
 				onclick={() => setMetricaPr('peso')}
-				class="rounded-xl px-2 py-2.5 text-sm font-semibold"
+				class="min-h-11 rounded-xl px-2 py-2.5 text-sm font-semibold"
 				aria-pressed={ajustes.metricaPr === 'peso'}
 				style={ajustes.metricaPr === 'peso'
 					? 'background: var(--accent); color: white'
@@ -126,7 +147,7 @@
 			>
 			<button
 				onclick={() => setMetricaPr('e1rm')}
-				class="rounded-xl px-2 py-2.5 text-sm font-semibold"
+				class="min-h-11 rounded-xl px-2 py-2.5 text-sm font-semibold"
 				aria-pressed={ajustes.metricaPr === 'e1rm'}
 				style={ajustes.metricaPr === 'e1rm'
 					? 'background: var(--accent); color: white'
@@ -149,7 +170,7 @@
 			<button
 				onclick={() => setSonido(!ajustes.sonido)}
 				aria-pressed={ajustes.sonido}
-				class="min-w-16 rounded-full px-4 py-2 text-sm font-bold"
+				class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
 				style={ajustes.sonido
 					? 'background: var(--accent); color: white'
 					: 'background: rgba(255,255,255,.06); color: var(--muted)'}
@@ -169,7 +190,7 @@
 			<button
 				onclick={() => setDescansoPantallaCompleta(!ajustes.descansoPantallaCompleta)}
 				aria-pressed={ajustes.descansoPantallaCompleta}
-				class="min-w-16 rounded-full px-4 py-2 text-sm font-bold"
+				class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
 				style={ajustes.descansoPantallaCompleta
 					? 'background: var(--accent); color: white'
 					: 'background: rgba(255,255,255,.06); color: var(--muted)'}
@@ -189,7 +210,7 @@
 			<button
 				onclick={() => setVibracion(!ajustes.vibracion)}
 				aria-pressed={ajustes.vibracion}
-				class="min-w-16 rounded-full px-4 py-2 text-sm font-bold"
+				class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
 				style={ajustes.vibracion
 					? 'background: var(--accent); color: white'
 					: 'background: rgba(255,255,255,.06); color: var(--muted)'}
@@ -222,3 +243,14 @@
 		Gym-brot · todo se guarda en tu teléfono 📴
 	</p>
 </main>
+
+{#if confirmacion}
+	<ConfirmSheet
+		titulo={confirmacion.titulo}
+		mensaje={confirmacion.mensaje}
+		confirmarTexto={confirmacion.confirmarTexto}
+		tono="accent"
+		onConfirm={confirmacion.onConfirm}
+		onCancel={cancelarConfirmacion}
+	/>
+{/if}

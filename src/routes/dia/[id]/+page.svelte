@@ -32,6 +32,7 @@
 	import { dur } from '$lib/motion';
 	import { fromLiveQuery } from '$lib/live';
 	import { formatoVolumen } from '$lib/formato';
+	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
 
 	let dia = $state<Dia | undefined>(undefined);
 	let cargando = $state(true);
@@ -39,6 +40,12 @@
 	let nombreEdit = $state('');
 	let premioDia = $state(false);
 	let premioId: ReturnType<typeof setTimeout> | null = null;
+	let confirmacion = $state<{
+		titulo: string;
+		mensaje: string;
+		confirmarTexto: string;
+		onConfirm: () => void | Promise<void>;
+	} | null>(null);
 	// Modo reordenar: se entra con long-press; las cards se arrastran (svelte-dnd-action).
 	interface ItemOrden {
 		id: string;
@@ -138,10 +145,17 @@
 		if (dia && nombreEdit.trim()) actualizarDia(diaId, { nombre: nombreEdit.trim() });
 	}
 	async function eliminar() {
-		if (dia && confirm(`¿Borrar el día "${dia.nombre}"?`)) {
-			await borrarDia(diaId);
-			goto('/');
-		}
+		if (!dia) return;
+		confirmacion = {
+			titulo: 'Borrar día',
+			mensaje: `Vas a borrar "${dia.nombre}" de tus rutinas. El historial ya registrado no se borra.`,
+			confirmarTexto: 'Borrar',
+			onConfirm: async () => {
+				await borrarDia(diaId);
+				confirmacion = null;
+				goto('/');
+			}
+		};
 	}
 
 	async function terminarDia() {
@@ -192,9 +206,28 @@
 	}
 
 	async function quitarEnReorden(it: ItemOrden) {
-		if (!confirm(`¿Quitar "${it.nombre}" de este día?`)) return;
-		ordenItems = ordenItems.filter((x) => x.id !== it.id);
-		await quitarEjercicio(diaId, it.id);
+		confirmacion = {
+			titulo: 'Quitar ejercicio',
+			mensaje: `Vas a quitar "${it.nombre}" de este día. Si lo volvés a agregar, puede perder su configuración de series objetivo.`,
+			confirmarTexto: 'Quitar',
+			onConfirm: async () => {
+				ordenItems = ordenItems.filter((x) => x.id !== it.id);
+				await quitarEjercicio(diaId, it.id);
+				confirmacion = null;
+			}
+		};
+	}
+
+	function confirmarQuitarEjercicio(nombre: string, exerciseId: string) {
+		confirmacion = {
+			titulo: 'Quitar ejercicio',
+			mensaje: `Vas a quitar "${nombre}" de este día. Si lo volvés a agregar, puede perder su configuración de series objetivo.`,
+			confirmarTexto: 'Quitar',
+			onConfirm: async () => {
+				await quitarEjercicio(diaId, exerciseId);
+				confirmacion = null;
+			}
+		};
 	}
 </script>
 
@@ -214,7 +247,7 @@
 			/>
 			<button
 				onclick={() => (editando = false)}
-				class="shrink-0 rounded-full px-4 py-1.5 text-sm font-bold"
+				class="min-h-10 shrink-0 rounded-full px-4 py-2 text-sm font-bold"
 				style="background: var(--accent); color: white">✓ Listo</button
 			>
 		{:else}
@@ -222,7 +255,7 @@
 			{#if dia && !reordenando}
 				<button
 					onclick={abrirEdicion}
-					class="flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-sm font-semibold"
+					class="flex min-h-10 items-center gap-1.5 rounded-full border border-white/10 px-3 py-2 text-sm font-semibold"
 					aria-label="Editar">✏️ Editar</button
 				>
 			{/if}
@@ -269,7 +302,7 @@
 					<button
 						onpointerdown={(ev) => ev.stopPropagation()}
 						onclick={() => quitarEnReorden(it)}
-						class="grid size-8 shrink-0 place-items-center rounded-full text-sm"
+						class="grid size-10 shrink-0 place-items-center rounded-full text-sm"
 						style="background: rgba(255,80,80,.15); color: #ff6b6b"
 						aria-label={`Quitar ${it.nombre}`}>✕</button
 					>
@@ -350,7 +383,7 @@
 							</div>
 						{/if}
 						<div class="min-w-0 flex-1">
-							<p class="truncate text-sm font-semibold leading-tight">{nombre}</p>
+							<p class="gb-line-clamp-2 text-sm font-semibold leading-tight">{nombre}</p>
 							{#if !e}
 								<p class="mt-0.5 text-xs" style="color: var(--muted)">
 									ID guardado: {item.exerciseId}
@@ -373,8 +406,8 @@
 							</div>
 						</div>
 						<button
-							onclick={() => quitarEjercicio(diaId, item.exerciseId)}
-							class="grid size-8 shrink-0 place-items-center rounded-full text-sm"
+							onclick={() => confirmarQuitarEjercicio(nombre, item.exerciseId)}
+							class="grid size-10 shrink-0 place-items-center rounded-full text-sm"
 							style="background: rgba(255,80,80,.15); color: #ff6b6b"
 							aria-label="Quitar">✕</button
 						>
@@ -411,7 +444,7 @@
 								</div>
 							{/if}
 							<div class="min-w-0 flex-1">
-								<p class="truncate text-sm font-semibold leading-tight">{nombre}</p>
+								<p class="gb-line-clamp-2 text-sm font-semibold leading-tight">{nombre}</p>
 								<p class="mt-0.5 text-xs font-medium" style="color: rgb({g.glow})">
 									{g.emoji}
 									{g.label}
@@ -443,14 +476,14 @@
 						{#if saltado}
 							<button
 								onclick={() => reanudarEjercicio(diaId, item.exerciseId)}
-								class="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 text-sm"
+								class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-sm"
 								style="color: var(--accent)"
 								aria-label={`Reanudar ${nombre} hoy`}>↩</button
 							>
 						{:else}
 							<button
 								onclick={() => saltarEjercicio(diaId, item.exerciseId, item.seriesObjetivo)}
-								class="shrink-0 rounded-full border border-white/10 px-3 py-2 text-xs font-bold"
+								class="min-h-11 shrink-0 rounded-full border border-white/10 px-3.5 py-2 text-xs font-bold"
 								style="color: var(--muted)"
 								aria-label={`Saltar ${nombre} hoy`}>Saltar</button
 							>
@@ -598,4 +631,14 @@
 			{/if}
 		</div>
 	</div>
+{/if}
+
+{#if confirmacion}
+	<ConfirmSheet
+		titulo={confirmacion.titulo}
+		mensaje={confirmacion.mensaje}
+		confirmarTexto={confirmacion.confirmarTexto}
+		onConfirm={confirmacion.onConfirm}
+		onCancel={() => (confirmacion = null)}
+	/>
 {/if}

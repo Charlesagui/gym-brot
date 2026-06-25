@@ -137,7 +137,7 @@
 			<div class="mt-2 space-y-1">
 				{#each progreso.setRecords as record (record.reps)}
 					<div
-						class="flex items-center justify-between gap-2 rounded-lg bg-white/[0.025] px-3 py-1.5 text-xs"
+						class="flex min-h-10 items-center justify-between gap-2 rounded-lg bg-white/[0.025] px-3 py-2 text-xs"
 					>
 						<span class="font-bold tabular-nums" style="color: rgb({glow})"
 							>{record.reps} {record.reps === 1 ? 'rep' : 'reps'}</span
@@ -189,7 +189,7 @@
 										fecha: serie.fecha,
 										maquinaPlacas
 									})}
-								class="flex min-h-10 w-full items-center gap-2 rounded-lg bg-white/[0.025] px-3 py-1.5 text-left text-xs"
+								class="flex min-h-11 w-full items-center gap-2 rounded-lg bg-white/[0.025] px-3 py-2 text-left text-xs"
 								aria-label={`Editar serie ${formatoSet(serie.set, unidad)} del ${fechaCorta(serie.fecha)}`}
 							>
 								<span class="min-w-0 flex-1 truncate font-semibold tabular-nums">

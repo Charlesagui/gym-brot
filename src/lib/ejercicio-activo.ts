@@ -11,7 +11,7 @@ type SetActivo = Pick<SetSesion, 'peso' | 'reps' | 'hecha'>;
  */
 export function modoEjercicioActivo(puntos: PuntoConPeso[], sets: SetActivo[]): ModoPr {
 	if (puntos.some((p) => p.peso != null) || sets.some((s) => s.peso != null)) return 'peso';
-	if (sets.some((s) => s.hecha || s.reps != null)) return 'reps';
+	if (sets.some((s) => s.reps != null)) return 'reps';
 	return 'peso';
 }
 

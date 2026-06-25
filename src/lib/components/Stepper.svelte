@@ -27,10 +27,10 @@
 	} = $props();
 </script>
 
-<div class="flex items-center rounded-lg bg-white/5 p-1">
+<div class="flex min-h-12 items-stretch rounded-xl bg-white/5 p-1">
 	<button
 		use:pulsar={() => onStep(-step)}
-		class="grid size-10 shrink-0 touch-manipulation select-none place-items-center rounded-md text-lg font-bold"
+		class="grid min-h-11 w-11 shrink-0 touch-manipulation select-none place-items-center rounded-lg text-lg font-bold"
 		style="background: rgba(255,255,255,.06); color: var(--muted)"
 		aria-label={ariaDown}>−</button
 	>
@@ -42,12 +42,12 @@
 		onfocus={(e) => e.currentTarget.select()}
 		onchange={(e) => onCommit(e.currentTarget)}
 		onkeydown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-		class="w-full min-w-0 bg-transparent text-center text-base font-bold tabular-nums outline-none"
+		class="min-h-11 w-full min-w-0 rounded-lg bg-white/[0.035] px-1 text-center text-base font-bold tabular-nums outline-none focus:bg-white/[0.08]"
 		aria-label={ariaInput}
 	/>
 	<button
 		use:pulsar={() => onStep(step)}
-		class="grid size-10 shrink-0 touch-manipulation select-none place-items-center rounded-md text-lg font-bold"
+		class="grid min-h-11 w-11 shrink-0 touch-manipulation select-none place-items-center rounded-lg text-lg font-bold"
 		style="background: rgb({glow} / .18); color: rgb({glow})"
 		aria-label={ariaUp}>+</button
 	>

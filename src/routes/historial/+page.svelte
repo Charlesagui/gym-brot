@@ -125,7 +125,7 @@
 			<button
 				onclick={() => (mesOffset -= 1)}
 				disabled={sinMesAnterior}
-				class="grid size-9 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
+				class="grid size-11 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
 				aria-label="Mes anterior">‹</button
 			>
 			<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
@@ -134,7 +134,7 @@
 			<button
 				onclick={() => (mesOffset += 1)}
 				disabled={mesOffset >= 0}
-				class="grid size-9 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
+				class="grid size-11 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
 				aria-label="Mes siguiente">›</button
 			>
 		</div>
