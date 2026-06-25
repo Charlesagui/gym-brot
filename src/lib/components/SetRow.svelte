@@ -42,13 +42,13 @@
 <div class="gb-set-row rounded-xl bg-white/[0.025] p-2.5">
 	<div class="gb-set-row-head flex items-center gap-2">
 		<span
-			class="grid size-8 shrink-0 place-items-center rounded-full border border-white/10 text-sm font-bold"
+			class="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 text-sm font-bold"
 			style="color: var(--muted)">{index + 1}</span
 		>
 		{#if maquinaPlacas}
 			<button
 				onclick={onToggleMax}
-				class="flex h-8 shrink-0 touch-manipulation items-center rounded-full border px-2.5 text-[11px] font-bold"
+				class="flex min-h-9 shrink-0 touch-manipulation items-center rounded-full border px-3 text-[11px] font-bold"
 				style={set.esMax
 					? 'background: rgb(var(--max) / .22); color: rgb(var(--max)); border-color: rgb(var(--max) / .5)'
 					: 'color: var(--muted); border-color: rgba(255,255,255,.16); border-style: dashed'}
@@ -61,7 +61,7 @@
 		</p>
 		<button
 			onclick={onToggle}
-			class="grid size-11 shrink-0 touch-manipulation place-items-center rounded-full border-2 text-base font-bold transition-colors"
+			class="grid size-12 shrink-0 touch-manipulation place-items-center rounded-full border-2 text-base font-bold transition-colors"
 			style={set.hecha
 				? 'background: var(--accent); border-color: var(--accent); color: white'
 				: 'border-color: rgba(255,255,255,.22); color: transparent'}
@@ -115,7 +115,7 @@
 			<div class="flex items-center gap-1.5">
 				<button
 					use:pulsar={() => onAjustarExtra(-pasoPeso)}
-					class="grid size-8 touch-manipulation select-none place-items-center rounded-md text-sm font-bold"
+					class="grid size-10 touch-manipulation select-none place-items-center rounded-lg text-sm font-bold"
 					style="background: rgba(255,255,255,.06); color: var(--muted)"
 					aria-label={`Bajar ${pasoPeso} ${unidad} encima en serie ${index + 1}`}>−</button
 				>
@@ -127,7 +127,7 @@
 				</span>
 				<button
 					use:pulsar={() => onAjustarExtra(pasoPeso)}
-					class="grid size-8 touch-manipulation select-none place-items-center rounded-md text-sm font-bold"
+					class="grid size-10 touch-manipulation select-none place-items-center rounded-lg text-sm font-bold"
 					style="background: rgb(var(--max) / .18); color: rgb(var(--max))"
 					aria-label={`Subir ${pasoPeso} ${unidad} encima en serie ${index + 1}`}>+</button
 				>

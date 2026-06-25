@@ -10,6 +10,7 @@ import {
 describe('modoEjercicioActivo', () => {
 	it('sin datos todavia asume peso para no rotular maquinas nuevas como reps', () => {
 		expect(modoEjercicioActivo([], [{ hecha: false }])).toBe('peso');
+		expect(modoEjercicioActivo([], [{ hecha: true }])).toBe('peso');
 	});
 
 	it('usa peso cuando el historial o la sesion actual tienen peso', () => {

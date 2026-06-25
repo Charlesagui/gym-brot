@@ -3,11 +3,12 @@
 	import { fly } from 'svelte/transition';
 	import { liveQuery } from 'dexie';
 	import { db } from '$lib/db';
-	import { catalogo, grupos, type Grupo, type Ejercicio } from '$lib/catalog';
+	import { catalogo, ejercicioPorId, grupos, type Grupo, type Ejercicio } from '$lib/catalog';
 	import { agregarEjercicio, quitarEjercicio } from '$lib/dias';
 	import { reproducirEnVista } from '$lib/video';
 	import { dur } from '$lib/motion';
 	import { fromLiveQuery } from '$lib/live';
+	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
 
 	const diaId = $derived($page.params.id!);
 	const cierrePorArrastrePx = 76;
@@ -22,7 +23,14 @@
 
 	let q = $state('');
 	let filtro = $state<Grupo | 'todos'>('todos');
+	let filtroInicialAplicado = $state(false);
 	const gruposList: Grupo[] = ['piernas', 'pecho', 'espalda', 'hombros', 'brazos', 'core'];
+	let confirmacion = $state<{
+		titulo: string;
+		mensaje: string;
+		confirmarTexto: string;
+		onConfirm: () => void | Promise<void>;
+	} | null>(null);
 
 	// Quita acentos y pasa a minúsculas: en el teclado del gym se escribe sin tildes.
 	function normalizar(s: string): string {
@@ -32,22 +40,60 @@
 			.toLowerCase();
 	}
 
+	const grupoSugerido = $derived.by<Grupo | 'todos'>(() => {
+		const dia = $diaActual;
+		if (!dia?.ejercicios.length) return 'todos';
+		const conteo = new Map<Grupo, number>();
+		for (const item of dia.ejercicios) {
+			const e = ejercicioPorId(item.exerciseId);
+			if (!e) continue;
+			conteo.set(e.grupo, (conteo.get(e.grupo) ?? 0) + 1);
+		}
+		let mejor: Grupo | 'todos' = 'todos';
+		let max = 0;
+		for (const g of gruposList) {
+			const n = conteo.get(g) ?? 0;
+			if (n > max) {
+				mejor = g;
+				max = n;
+			}
+		}
+		return mejor;
+	});
+
+	$effect(() => {
+		if (filtroInicialAplicado || !$diaActual) return;
+		if (grupoSugerido !== 'todos') filtro = grupoSugerido;
+		filtroInicialAplicado = true;
+	});
+
 	const filtrados = $derived.by(() => {
 		const term = normalizar(q.trim());
 		return catalogo.filter(
 			(e) =>
-				(filtro === 'todos' || e.grupo === filtro) &&
+				(term !== '' || filtro === 'todos' || e.grupo === filtro) &&
 				// También busca por músculo: la premisa es guiarse sin depender del nombre.
 				(term === '' || normalizar(e.nombre).includes(term) || normalizar(e.musculo).includes(term))
 		);
 	});
 
-	function toggle(e: Ejercicio) {
+	function toggle(e: Ejercicio, cerrarDespues = false) {
 		if (yaEn.has(e.id)) {
 			// Quitar pierde las series objetivo configuradas: que no pase por un mistap.
-			if (!confirm(`¿Quitar "${e.nombre}" de este día?`)) return;
-			quitarEjercicio(diaId, e.id);
-		} else agregarEjercicio(diaId, e.id);
+			confirmacion = {
+				titulo: 'Quitar ejercicio',
+				mensaje: `Vas a quitar "${e.nombre}" de este día. Si lo volvés a agregar, puede perder su configuración de series objetivo.`,
+				confirmarTexto: 'Quitar',
+				onConfirm: async () => {
+					await quitarEjercicio(diaId, e.id);
+					confirmacion = null;
+					if (cerrarDespues) cerrarPreview();
+				}
+			};
+		} else {
+			agregarEjercicio(diaId, e.id);
+			if (cerrarDespues) cerrarPreview();
+		}
 	}
 
 	let preview = $state<Ejercicio | null>(null);
@@ -125,7 +171,7 @@
 	<div class="gb-filter-row mb-4 flex flex-wrap gap-2">
 		<button
 			onclick={() => (filtro = 'todos')}
-			class="rounded-full px-3 py-1 text-xs font-semibold"
+			class="min-h-10 rounded-full px-3.5 py-2 text-xs font-semibold"
 			style={filtro === 'todos'
 				? 'background: var(--accent); color: white'
 				: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Todos</button
@@ -134,7 +180,7 @@
 			{@const g = grupos[gKey]}
 			<button
 				onclick={() => (filtro = gKey)}
-				class="rounded-full px-3 py-1 text-xs font-semibold"
+				class="min-h-10 rounded-full px-3.5 py-2 text-xs font-semibold"
 				style={filtro === gKey
 					? `background: rgb(${g.glow}); color: #000`
 					: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{g.emoji} {g.label}</button
@@ -167,7 +213,7 @@
 						preload="none"
 					></video>
 					<div class="min-w-0 flex-1">
-						<p class="truncate text-sm font-semibold leading-tight">{e.nombre}</p>
+						<p class="gb-line-clamp-2 text-sm font-semibold leading-tight">{e.nombre}</p>
 						<p class="mt-0.5 truncate text-xs font-medium" style="color: rgb({g.glow})">
 							{g.emoji}
 							{g.label} · {e.musculo}
@@ -176,7 +222,7 @@
 				</button>
 				<button
 					onclick={() => toggle(e)}
-					class="grid size-9 shrink-0 place-items-center rounded-full text-lg font-bold transition"
+					class="grid size-11 shrink-0 place-items-center rounded-full text-lg font-bold transition"
 					style={added
 						? `background: rgb(${g.glow}); color: #000`
 						: 'background: rgba(255,255,255,.1); color: white'}
@@ -262,8 +308,7 @@
 				</p>
 				<button
 					onclick={() => {
-						toggle(p);
-						cerrarPreview();
+						toggle(p, true);
 					}}
 					class="mt-5 w-full rounded-2xl py-3.5 text-base font-bold transition"
 					style={added
@@ -275,4 +320,14 @@
 			</div>
 		</div>
 	</div>
+{/if}
+
+{#if confirmacion}
+	<ConfirmSheet
+		titulo={confirmacion.titulo}
+		mensaje={confirmacion.mensaje}
+		confirmarTexto={confirmacion.confirmarTexto}
+		onConfirm={confirmacion.onConfirm}
+		onCancel={() => (confirmacion = null)}
+	/>
 {/if}

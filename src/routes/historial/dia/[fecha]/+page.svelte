@@ -176,7 +176,7 @@
 													maquinaPlacas: !!ej?.maquinaPlacas
 												};
 											}}
-											class="flex min-h-10 w-full items-center gap-2 rounded-xl bg-white/[0.025] px-3 py-2 text-left text-sm"
+											class="flex min-h-11 w-full items-center gap-2 rounded-xl bg-white/[0.025] px-3 py-2 text-left text-sm"
 											aria-label={`Editar serie ${i + 1}: ${formatoSet(set, ajustes.unidad)}`}
 										>
 											<span

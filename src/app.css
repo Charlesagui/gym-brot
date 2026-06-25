@@ -31,6 +31,13 @@ body {
 	overscroll-behavior: none;
 }
 
+.gb-line-clamp-2 {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	overflow: hidden;
+}
+
 /* Brillo radial sutil reutilizable (color libre vía --glow) */
 .glow-bg {
 	background:
@@ -74,7 +81,7 @@ body {
 
 	.gb-filter-row button,
 	.gb-rest-presets button {
-		min-height: 2rem;
+		min-height: 2.5rem;
 	}
 
 	.gb-page--exercise {
