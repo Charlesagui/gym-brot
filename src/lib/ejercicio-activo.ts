@@ -15,14 +15,21 @@ export function modoEjercicioActivo(puntos: PuntoConPeso[], sets: SetActivo[]): 
 	return 'peso';
 }
 
-/** true si marcar esta serie completa todas las series del ejercicio. */
-export function completaEjercicioAlMarcar(
+/**
+ * Etiqueta de lo que sigue tras el descanso ("Press pecho · serie 3/4"), para no perder
+ * el hilo al volver. Busca la próxima pendiente después de `reciente` y, si esa era la
+ * última, vuelve a la primera pendiente. Vacío si no queda ninguna.
+ */
+export function etiquetaProximaSerie(
 	sets: Pick<SetSesion, 'hecha'>[],
-	index: number
-): boolean {
-	const set = sets[index];
-	if (!set || set.hecha || sets.length === 0) return false;
-	return sets.filter((s) => s.hecha).length === sets.length - 1;
+	reciente: number,
+	nombre: string
+): string {
+	const pendientes = sets
+		.map((s, idx) => ({ hecha: s.hecha, idx }))
+		.filter((p) => p.idx !== reciente && !p.hecha);
+	const prox = pendientes.find((p) => p.idx > reciente) ?? pendientes[0];
+	return prox ? `${nombre} · serie ${prox.idx + 1}/${sets.length}` : '';
 }
 
 export function metricaEfectivaEjercicio(modo: ModoPr, metrica: MetricaPr): MetricaEfectiva {

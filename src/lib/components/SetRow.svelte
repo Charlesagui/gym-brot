@@ -12,6 +12,7 @@
 		glow,
 		unidad,
 		pasoPeso,
+		pendiente = false,
 		onToggle,
 		onToggleMax,
 		onAjustarPeso,
@@ -27,6 +28,7 @@
 		glow: string;
 		unidad: Ajustes['unidad'];
 		pasoPeso: number;
+		pendiente?: boolean;
 		onToggle: () => void;
 		onToggleMax: () => void;
 		onAjustarPeso: (delta: number) => void;
@@ -61,11 +63,13 @@
 		</p>
 		<button
 			onclick={onToggle}
+			disabled={pendiente}
 			class="grid size-12 shrink-0 touch-manipulation place-items-center rounded-full border-2 text-base font-bold transition-colors"
 			style={set.hecha
 				? 'background: var(--accent); border-color: var(--accent); color: white'
 				: 'border-color: rgba(255,255,255,.22); color: transparent'}
-			aria-label={`Marcar serie ${index + 1}`}>✓</button
+			aria-pressed={set.hecha}
+			aria-label={`${set.hecha ? 'Desmarcar' : 'Marcar'} serie ${index + 1}`}>✓</button
 		>
 	</div>
 	<div class="gb-set-grid mt-2 grid grid-cols-2 gap-2">

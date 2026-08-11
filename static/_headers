@@ -23,6 +23,13 @@
 
 # La app no tiene backend ni auth: esto es endurecimiento barato. El único origen
 # externo es el iframe de YouTube de "Ver técnica".
+#
+# `script-src 'unsafe-inline'` acá NO es la política efectiva: SvelteKit emite además un
+# <meta> CSP con el sha256 del único script inline que genera (ver `csp` en
+# svelte.config.js). Las dos políticas se aplican en conjunto, así que un script inline
+# solo corre si su hash coincide con el del meta. La cabecera tiene que seguir
+# permitiéndolo porque se evalúa antes que el meta y si no bloquearía el bootstrap.
+# `style-src 'unsafe-inline'` sí es real: la UI usa atributos `style=` en todos lados.
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin

@@ -13,7 +13,7 @@ import {
 
 async function limpiarDb() {
 	await db.open();
-	await db.dias.clear();
+	await Promise.all([db.dias.clear(), db.sesiones.clear()]);
 }
 
 async function diaCon(ejercicios: string[]) {
@@ -62,6 +62,26 @@ describe('dias: escrituras concurrentes', () => {
 		await diaCon([]);
 		await Promise.all([agregarEjercicio('d1', 'press'), agregarEjercicio('d1', 'press')]);
 		expect((await db.dias.get('d1'))?.ejercicios).toHaveLength(1);
+	});
+
+	it('agregar un ejercicio reabre la sesión terminada del día actual', async () => {
+		await diaCon(['press']);
+		const fecha = new Date().toLocaleDateString('sv');
+		await db.sesiones.add({
+			id: `${fecha}__d1`,
+			fecha,
+			diaId: 'd1',
+			diaTerminado: true,
+			diaTerminadoAt: '2026-01-01T20:00:00.000Z',
+			ejercicios: []
+		});
+
+		await agregarEjercicio('d1', 'remo');
+
+		expect(await db.sesiones.get(`${fecha}__d1`)).toMatchObject({
+			diaTerminado: false,
+			diaTerminadoAt: undefined
+		});
 	});
 
 	it('dos chips de día de la semana seguidos suman los dos', async () => {

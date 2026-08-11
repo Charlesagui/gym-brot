@@ -1,5 +1,14 @@
 import { liveQuery } from 'dexie';
-import { db, type Dia, type Sesion, type Nota, type Ajustes, type MetricaPr } from './db';
+import {
+	conIndice,
+	db,
+	guardarSesion,
+	type Dia,
+	type Sesion,
+	type Nota,
+	type Ajustes,
+	type MetricaPr
+} from './db';
 
 // --- Notas por ejercicio ---
 
@@ -45,42 +54,62 @@ export function ajustesObs() {
 	return liveQuery(async () => normalizarAjustes(await db.ajustes.get('app')));
 }
 
+/**
+ * Actualiza la única fila de ajustes a partir del estado persistido. Todas las
+ * preferencias comparten esta vía para que dos toques rápidos (o dos pestañas) no
+ * restauren campos viejos al hacer un `get + put` fuera de una transacción.
+ */
+async function actualizarAjustes(mutador: (ajustes: Ajustes) => void): Promise<void> {
+	await db.transaction('rw', db.ajustes, async () => {
+		const ajustes = normalizarAjustes(await db.ajustes.get('app'));
+		mutador(ajustes);
+		await db.ajustes.put(ajustes);
+	});
+}
+
 export async function setTimer(activo: boolean, minutos: number): Promise<void> {
-	const a = normalizarAjustes(await db.ajustes.get('app'));
-	await db.ajustes.put({ ...a, timer: { activo, minutos } });
+	await actualizarAjustes((a) => {
+		a.timer = { activo, minutos };
+	});
 }
 
 export async function setSonido(sonido: boolean): Promise<void> {
-	const a = normalizarAjustes(await db.ajustes.get('app'));
-	await db.ajustes.put({ ...a, sonido });
+	await actualizarAjustes((a) => {
+		a.sonido = sonido;
+	});
 }
 
 export async function setVibracion(vibracion: boolean): Promise<void> {
-	const a = normalizarAjustes(await db.ajustes.get('app'));
-	await db.ajustes.put({ ...a, vibracion });
+	await actualizarAjustes((a) => {
+		a.vibracion = vibracion;
+	});
 }
 
 export async function setDescansoPantallaCompleta(
 	descansoPantallaCompleta: boolean
 ): Promise<void> {
-	const a = normalizarAjustes(await db.ajustes.get('app'));
-	await db.ajustes.put({ ...a, descansoPantallaCompleta });
+	await actualizarAjustes((a) => {
+		a.descansoPantallaCompleta = descansoPantallaCompleta;
+	});
 }
 
 export async function setMetricaPr(metricaPr: MetricaPr): Promise<void> {
-	const a = normalizarAjustes(await db.ajustes.get('app'));
-	await db.ajustes.put({ ...a, metricaPr });
+	await actualizarAjustes((a) => {
+		a.metricaPr = metricaPr;
+	});
 }
 
 export async function setPasoPeso(pasoPeso: number): Promise<void> {
-	const a = normalizarAjustes(await db.ajustes.get('app'));
-	await db.ajustes.put({ ...a, pasoPeso });
+	await actualizarAjustes((a) => {
+		a.pasoPeso = pasoPeso;
+	});
 }
 
 /** Registra que se exportó un backup recién: apaga el recordatorio por un tiempo. */
 export async function registrarBackup(fecha = new Date()): Promise<void> {
-	const a = normalizarAjustes(await db.ajustes.get('app'));
-	await db.ajustes.put({ ...a, ultimoBackup: fecha.toISOString() });
+	await actualizarAjustes((a) => {
+		a.ultimoBackup = fecha.toISOString();
+	});
 }
 
 const MS_DIA = 24 * 60 * 60 * 1000;
@@ -119,12 +148,15 @@ function convertirPeso(peso: number, desde: Ajustes['unidad'], hacia: Ajustes['u
 }
 
 export async function setUnidad(unidad: 'kg' | 'lb'): Promise<void> {
-	const a = normalizarAjustes(await db.ajustes.get('app'));
-	if (a.unidad === unidad) {
-		await db.ajustes.put({ ...a, unidad });
-		return;
-	}
 	await db.transaction('rw', db.sesiones, db.ajustes, async () => {
+		// La unidad debe leerse dentro de la misma transacción que convierte las
+		// sesiones. Así una segunda llamada ve la unidad ya persistida y no vuelve a
+		// convertir valores que la primera acabó de transformar.
+		const a = normalizarAjustes(await db.ajustes.get('app'));
+		if (a.unidad === unidad) {
+			await db.ajustes.put(a);
+			return;
+		}
 		const sesiones = await db.sesiones.toArray();
 		for (const sesion of sesiones) {
 			let cambio = false;
@@ -160,7 +192,7 @@ export async function setUnidad(unidad: 'kg' | 'lb'): Promise<void> {
 					}
 				}
 			}
-			if (cambio) await db.sesiones.put(sesion);
+			if (cambio) await guardarSesion(sesion);
 		}
 		await db.ajustes.put({ ...a, unidad });
 	});
@@ -179,19 +211,32 @@ export interface Backup {
 }
 
 export async function exportarJSON(): Promise<string> {
-	const [dias, sesiones, notas, ajustes] = await Promise.all([
-		db.dias.toArray(),
-		db.sesiones.toArray(),
-		db.notas.toArray(),
-		db.ajustes.toArray()
-	]);
+	// Las cuatro tablas tienen que representar el mismo instante: sin la
+	// transacción de solo lectura un toque concurrente podía dejar, por ejemplo,
+	// una rutina nueva apuntando a una sesión que todavía no entró al archivo.
+	const { dias, sesiones, notas, ajustes } = await db.transaction(
+		'r',
+		db.dias,
+		db.sesiones,
+		db.notas,
+		db.ajustes,
+		async () => ({
+			dias: await db.dias.toArray(),
+			sesiones: await db.sesiones.toArray(),
+			notas: await db.notas.toArray(),
+			ajustes: await db.ajustes.toArray()
+		})
+	);
 	return JSON.stringify(
 		{
 			app: 'gym-brot',
 			version: 1,
 			exportado: new Date().toISOString(),
 			dias,
-			sesiones,
+			// `exerciseIds` es un índice derivado de `ejercicios`: no viaja en el backup.
+			// Lo recalcula `conIndice` al importar, así el archivo no carga datos redundantes
+			// ni puede reinstalar un índice desfasado.
+			sesiones: sesiones.map(({ exerciseIds: _exerciseIds, ...sesion }) => sesion),
 			notas,
 			ajustes: ajustes.map(normalizarAjustes)
 		},
@@ -214,6 +259,10 @@ function esNumero(value: unknown): value is number {
 	return typeof value === 'number' && Number.isFinite(value);
 }
 
+function esNumeroNoNegativo(value: unknown): value is number {
+	return esNumero(value) && value >= 0;
+}
+
 function esBoolean(value: unknown): value is boolean {
 	return typeof value === 'boolean';
 }
@@ -233,11 +282,14 @@ function esDia(value: unknown): value is Dia {
 		(value.diaSemana === undefined || esDiaSemanaValido(value.diaSemana)) &&
 		(value.diasSemana === undefined ||
 			(Array.isArray(value.diasSemana) && value.diasSemana.every(esDiaSemanaValido))) &&
-		esNumero(value.orden) &&
+		esNumeroNoNegativo(value.orden) &&
 		Array.isArray(ejercicios) &&
 		ejercicios.every(
 			(e) =>
-				esRecord(e) && esString(e.exerciseId) && esNumero(e.seriesObjetivo) && esNumero(e.orden)
+				esRecord(e) &&
+				esString(e.exerciseId) &&
+				esNumeroNoNegativo(e.seriesObjetivo) &&
+				esNumeroNoNegativo(e.orden)
 		)
 	);
 }
@@ -245,11 +297,12 @@ function esDia(value: unknown): value is Dia {
 function esPrCelebrado(value: unknown): boolean {
 	return (
 		esRecord(value) &&
-		(value.peso === undefined || esNumero(value.peso)) &&
-		(value.reps === undefined || esNumero(value.reps)) &&
+		(value.peso === undefined || esNumeroNoNegativo(value.peso)) &&
+		(value.reps === undefined || esNumeroNoNegativo(value.reps)) &&
 		(value.esMax === undefined || esBoolean(value.esMax)) &&
-		(value.extraKg === undefined || esNumero(value.extraKg)) &&
-		(value.setIndex === undefined || esNumero(value.setIndex)) &&
+		(value.extraKg === undefined || esNumeroNoNegativo(value.extraKg)) &&
+		(value.setIndex === undefined ||
+			(esNumeroNoNegativo(value.setIndex) && Number.isInteger(value.setIndex))) &&
 		(value.metrica === undefined ||
 			value.metrica === 'peso' ||
 			value.metrica === 'e1rm' ||
@@ -278,10 +331,10 @@ function esSesion(value: unknown): value is Sesion {
 					(set) =>
 						esRecord(set) &&
 						esBoolean(set.hecha) &&
-						(set.peso === undefined || esNumero(set.peso)) &&
-						(set.reps === undefined || esNumero(set.reps)) &&
+						(set.peso === undefined || esNumeroNoNegativo(set.peso)) &&
+						(set.reps === undefined || esNumeroNoNegativo(set.reps)) &&
 						(set.esMax === undefined || esBoolean(set.esMax)) &&
-						(set.extraKg === undefined || esNumero(set.extraKg))
+						(set.extraKg === undefined || esNumeroNoNegativo(set.extraKg))
 				)
 			);
 		})
@@ -300,12 +353,12 @@ function esAjustes(value: unknown): value is Ajustes {
 		(value.unidad === 'kg' || value.unidad === 'lb') &&
 		esRecord(timer) &&
 		esBoolean(timer.activo) &&
-		esNumero(timer.minutos) &&
+		esNumeroNoNegativo(timer.minutos) &&
 		(value.sonido === undefined || esBoolean(value.sonido)) &&
 		(value.vibracion === undefined || esBoolean(value.vibracion)) &&
 		(value.descansoPantallaCompleta === undefined || esBoolean(value.descansoPantallaCompleta)) &&
 		(value.metricaPr === undefined || value.metricaPr === 'peso' || value.metricaPr === 'e1rm') &&
-		(value.pasoPeso === undefined || esNumero(value.pasoPeso)) &&
+		(value.pasoPeso === undefined || esNumeroNoNegativo(value.pasoPeso)) &&
 		(value.ultimoBackup === undefined || esString(value.ultimoBackup)) &&
 		(value.seedInicialHecho === undefined || esBoolean(value.seedInicialHecho))
 	);
@@ -328,7 +381,7 @@ export function parseBackup(texto: string): Backup {
 	if (!esRecord(data) || data.app !== 'gym-brot') {
 		throw new Error('No parece un backup de gym-brot');
 	}
-	if (data.version !== undefined && !esNumero(data.version)) {
+	if (data.version !== undefined && (!esNumero(data.version) || data.version > 1)) {
 		throw new Error('Backup inválido: version');
 	}
 	if (data.exportado !== undefined && !esString(data.exportado)) {
@@ -349,6 +402,15 @@ function normalizarDiaBackup(dia: Dia & { diaSemana?: number }): Dia {
 }
 
 const FECHA_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function fechaValida(fecha: string): boolean {
+	if (!FECHA_RE.test(fecha)) return false;
+	const [ano, mes, dia] = fecha.split('-').map(Number);
+	const valor = new Date(Date.UTC(ano!, mes! - 1, dia!));
+	return (
+		valor.getUTCFullYear() === ano && valor.getUTCMonth() === mes! - 1 && valor.getUTCDate() === dia
+	);
+}
 
 export interface ImportPreparado {
 	datos: Required<Pick<Backup, 'dias' | 'sesiones' | 'notas' | 'ajustes'>>;
@@ -386,7 +448,7 @@ export function prepararImport(data: Backup): ImportPreparado {
 	let colision = 0;
 	let sinDia = 0;
 	for (const sesion of data.sesiones ?? []) {
-		if (!FECHA_RE.test(sesion.fecha)) {
+		if (!fechaValida(sesion.fecha)) {
 			fechaInvalida++;
 			continue;
 		}
@@ -425,7 +487,7 @@ export async function importarBackup(data: Backup): Promise<ImportPreparado['avi
 	await db.transaction('rw', db.dias, db.sesiones, db.notas, db.ajustes, async () => {
 		await Promise.all([db.dias.clear(), db.sesiones.clear(), db.notas.clear(), db.ajustes.clear()]);
 		if (datos.dias.length) await db.dias.bulkPut(datos.dias);
-		if (datos.sesiones.length) await db.sesiones.bulkPut(datos.sesiones);
+		if (datos.sesiones.length) await db.sesiones.bulkPut(datos.sesiones.map(conIndice));
 		if (datos.notas.length) await db.notas.bulkPut(datos.notas);
 		if (datos.ajustes.length) await db.ajustes.bulkPut(datos.ajustes);
 	});

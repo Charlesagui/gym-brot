@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-	completaEjercicioAlMarcar,
+	etiquetaProximaSerie,
 	metricaEfectivaEjercicio,
 	metricaLabelEjercicio,
 	modoEjercicioActivo,
@@ -24,11 +24,31 @@ describe('modoEjercicioActivo', () => {
 	});
 });
 
-describe('completaEjercicioAlMarcar', () => {
-	it('detecta la ultima serie pendiente antes de marcarla', () => {
-		expect(completaEjercicioAlMarcar([{ hecha: true }, { hecha: false }], 1)).toBe(true);
-		expect(completaEjercicioAlMarcar([{ hecha: false }, { hecha: false }], 0)).toBe(false);
-		expect(completaEjercicioAlMarcar([{ hecha: true }], 0)).toBe(false);
+describe('etiquetaProximaSerie', () => {
+	const press = (sets: { hecha: boolean }[], reciente: number) =>
+		etiquetaProximaSerie(sets, reciente, 'Press pecho');
+
+	it('apunta a la siguiente pendiente despues de la recien marcada', () => {
+		expect(press([{ hecha: true }, { hecha: false }, { hecha: false }], 0)).toBe(
+			'Press pecho · serie 2/3'
+		);
+	});
+
+	it('saltea las que ya estan hechas', () => {
+		expect(press([{ hecha: true }, { hecha: true }, { hecha: false }], 0)).toBe(
+			'Press pecho · serie 3/3'
+		);
+	});
+
+	it('si la recien marcada era la ultima, vuelve a la primera pendiente', () => {
+		expect(press([{ hecha: false }, { hecha: true }, { hecha: true }], 2)).toBe(
+			'Press pecho · serie 1/3'
+		);
+	});
+
+	it('queda vacia cuando no falta ninguna', () => {
+		expect(press([{ hecha: true }, { hecha: true }], 1)).toBe('');
+		expect(press([], 0)).toBe('');
 	});
 });
 

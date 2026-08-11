@@ -16,6 +16,7 @@
 	import { actualizarSetHistorial, borrarSetHistorial } from '$lib/sesion';
 	import { dur } from '$lib/motion';
 	import { formatoNumero, fechaCorta } from '$lib/formato';
+	import { leerPeso, leerReps, sumarPeso, sumarReps } from '$lib/numeros';
 	import Stepper from './Stepper.svelte';
 
 	let {
@@ -51,41 +52,30 @@
 	const NO_ENCONTRADA =
 		'No se encontró esta serie: puede haberse editado en otra pestaña o restaurado un backup. Volvé atrás y abrila de nuevo.';
 
-	/** Redondea a 1 decimal para evitar arrastre de flotantes con pasos de 2.5. */
-	function redondear(n: number): number {
-		return Math.round(n * 10) / 10;
-	}
-
 	function ajustarPeso(delta: number) {
-		const siguiente = redondear(Math.max(0, (peso ?? 0) + delta));
-		peso = siguiente === 0 ? undefined : siguiente;
+		peso = sumarPeso(peso, delta);
 	}
 
 	function escribirPeso(el: HTMLInputElement) {
-		const n = Number.parseFloat(el.value.replace(',', '.'));
-		peso = Number.isFinite(n) && n > 0 ? redondear(n) : undefined;
+		peso = leerPeso(el.value);
 		el.value = peso != null ? formatoNumero(peso) : '';
 	}
 
 	function ajustarReps(delta: number) {
-		const siguiente = Math.max(0, (reps ?? 0) + delta);
-		reps = siguiente === 0 ? undefined : siguiente;
+		reps = sumarReps(reps, delta);
 	}
 
 	function escribirReps(el: HTMLInputElement) {
-		const n = Number.parseInt(el.value, 10);
-		reps = Number.isFinite(n) && n > 0 ? n : undefined;
+		reps = leerReps(el.value);
 		el.value = reps != null ? String(reps) : '';
 	}
 
 	function ajustarExtra(delta: number) {
-		const siguiente = redondear(Math.max(0, (extraKg ?? 0) + delta));
-		extraKg = siguiente === 0 ? undefined : siguiente;
+		extraKg = sumarPeso(extraKg, delta);
 	}
 
 	function escribirExtra(el: HTMLInputElement) {
-		const n = Number.parseFloat(el.value.replace(',', '.'));
-		extraKg = Number.isFinite(n) && n > 0 ? redondear(n) : undefined;
+		extraKg = leerPeso(el.value);
 		el.value = extraKg != null ? formatoNumero(extraKg) : '';
 	}
 

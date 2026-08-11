@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { db } from './db';
+import { conIndice, db } from './db';
 import {
 	addSet,
 	actualizarSetHistorial,
@@ -14,14 +14,15 @@ import {
 	reanudarEjercicio,
 	recordsGlobalesObs,
 	removeSet,
+	setSerieHecha,
 	saltarEjercicio,
 	sesionHoyObs,
+	sesionesDe,
 	sesionId,
 	setExtra,
 	setPeso,
 	setReps,
 	toggleMax,
-	toggleSet,
 	ultimaSesion
 } from './sesion';
 import { resumenDiaSesion } from './historial';
@@ -58,7 +59,7 @@ describe('sesion con IndexedDB', () => {
 		await setReps('push', 'press', 0, 10, '2026-01-05');
 		await toggleMax('push', 'press', 0, '2026-01-05');
 		await setExtra('push', 'press', 0, 2.5, '2026-01-05');
-		await toggleSet('push', 'press', 0, '2026-01-05');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-05');
 		await addSet('push', 'press', '2026-01-05');
 		await removeSet('push', 'press', 2, '2026-01-05');
 
@@ -68,6 +69,31 @@ describe('sesion con IndexedDB', () => {
 			{ peso: 80, reps: 10, hecha: true, esMax: true, extraKg: 2.5 },
 			{ peso: undefined, reps: undefined, hecha: false }
 		]);
+	});
+
+	it('el indice por ejercicio se mantiene al sumar ejercicios a la sesion', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-05');
+		expect((await db.sesiones.get('2026-01-05__push'))?.exerciseIds).toEqual(['press']);
+
+		await ensureEjercicio('push', 'fondos', 1, '2026-01-05');
+
+		expect((await db.sesiones.get('2026-01-05__push'))?.exerciseIds).toEqual(['press', 'fondos']);
+		// La consulta por índice, que es lo que realmente usan historial y PR.
+		expect((await sesionesDe('fondos')).map((s) => s.id)).toEqual(['2026-01-05__push']);
+		expect(await sesionesDe('sentadilla')).toEqual([]);
+	});
+
+	it('una serie marcada aparece en el historial del ejercicio recien agregado', async () => {
+		// Sin índice al día, este ejercicio quedaría fuera del historial y del PR.
+		await ensureEjercicio('push', 'press', 1, '2026-01-05');
+		await ensureEjercicio('push', 'fondos', 1, '2026-01-05');
+		await setPeso('push', 'fondos', 0, 60, '2026-01-05');
+		await setSerieHecha('push', 'fondos', 0, true, '2026-01-05');
+
+		expect(await primerValor(historialObs('fondos', 'peso'))).toMatchObject([{ valor: 60 }]);
+		expect(await registrarPrSiSupera('push', 'fondos', 0, 'peso', '2026-01-05')).toMatchObject({
+			valor: 60
+		});
 	});
 
 	it('prefill de ensureEjercicio viene de la ultima sesion distinta de la actual', async () => {
@@ -90,13 +116,13 @@ describe('sesion con IndexedDB', () => {
 
 	it('destildar una serie reabre el dia terminado', async () => {
 		await ensureEjercicio('push', 'press', 1, '2026-01-05');
-		await toggleSet('push', 'press', 0, '2026-01-05');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-05');
 		await db.sesiones.update('2026-01-05__push', {
 			diaTerminado: true,
 			diaTerminadoAt: '2026-01-05T20:00:00.000Z'
 		});
 
-		await toggleSet('push', 'press', 0, '2026-01-05');
+		await setSerieHecha('push', 'press', 0, false, '2026-01-05');
 
 		expect(await db.sesiones.get('2026-01-05__push')).toMatchObject({
 			diaTerminado: false,
@@ -104,11 +130,35 @@ describe('sesion con IndexedDB', () => {
 		});
 	});
 
+	it('fija una serie de forma idempotente ante dobles toques', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-05');
+
+		const resultados = await Promise.all([
+			setSerieHecha('push', 'press', 0, true, '2026-01-05'),
+			setSerieHecha('push', 'press', 0, true, '2026-01-05')
+		]);
+
+		expect((await db.sesiones.get('2026-01-05__push'))?.ejercicios[0]?.sets[0]?.hecha).toBe(true);
+		expect(resultados.filter((resultado) => resultado.cambio)).toHaveLength(1);
+		expect(resultados.every((resultado) => resultado.hecha === true)).toBe(true);
+	});
+
+	it('marcar una serie reanuda automáticamente un ejercicio saltado', async () => {
+		await saltarEjercicio('push', 'press', 1, '2026-01-05');
+
+		await setSerieHecha('push', 'press', 0, true, '2026-01-05');
+
+		expect((await db.sesiones.get('2026-01-05__push'))?.ejercicios[0]).toMatchObject({
+			saltado: false,
+			sets: [{ hecha: true }]
+		});
+	});
+
 	it('registra el PR solo cuando la serie supera lo previo y lo ya celebrado', async () => {
 		await ensureEjercicio('push', 'press', 2, '2026-01-05');
 		await setPeso('push', 'press', 0, 100, '2026-01-05');
 		await setReps('push', 'press', 0, 1, '2026-01-05');
-		await toggleSet('push', 'press', 0, '2026-01-05');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-05');
 
 		expect(await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-05')).toMatchObject({
 			valor: 100,
@@ -126,7 +176,7 @@ describe('sesion con IndexedDB', () => {
 		// Una serie más liviana no vuelve a celebrar (el flash duplicado del bug viejo).
 		await setPeso('push', 'press', 1, 95, '2026-01-05');
 		await setReps('push', 'press', 1, 20, '2026-01-05');
-		await toggleSet('push', 'press', 1, '2026-01-05');
+		await setSerieHecha('push', 'press', 1, true, '2026-01-05');
 		expect(await registrarPrSiSupera('push', 'press', 1, 'peso', '2026-01-05')).toBeNull();
 
 		// Bajo 1RM estimado, 95 × 20 sí supera a 100 × 1.
@@ -142,17 +192,21 @@ describe('sesion con IndexedDB', () => {
 	});
 
 	it('no registra PR de una serie sin marcar ni cuando el historial previo es mayor', async () => {
-		await db.sesiones.add({
-			id: '2026-01-01__push',
-			fecha: '2026-01-01',
-			diaId: 'push',
-			ejercicios: [{ exerciseId: 'press', sets: [{ peso: 120, reps: 5, hecha: true }] }]
-		});
+		// Por `conIndice`, como toda escritura real: sin el índice por ejercicio esta
+		// sesión sería invisible para las consultas y el PR se celebraría de más.
+		await db.sesiones.add(
+			conIndice({
+				id: '2026-01-01__push',
+				fecha: '2026-01-01',
+				diaId: 'push',
+				ejercicios: [{ exerciseId: 'press', sets: [{ peso: 120, reps: 5, hecha: true }] }]
+			})
+		);
 		await ensureEjercicio('push', 'press', 1, '2026-01-05');
 		await setPeso('push', 'press', 0, 110, '2026-01-05');
 		// Sin ✓ no hay récord posible.
 		expect(await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-05')).toBeNull();
-		await toggleSet('push', 'press', 0, '2026-01-05');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-05');
 		// Marcada, pero 110 < 120 del historial.
 		expect(await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-05')).toBeNull();
 		expect((await db.sesiones.get('2026-01-05__push'))?.ejercicios[0]?.prCelebrado).toBeUndefined();
@@ -180,8 +234,8 @@ describe('sesion con IndexedDB', () => {
 		await setPeso('push', 'press', 1, 90, '2026-01-01');
 		await setReps('push', 'press', 0, 12, '2026-01-01');
 		await setReps('push', 'press', 1, 5, '2026-01-01');
-		await toggleSet('push', 'press', 0, '2026-01-01');
-		await toggleSet('push', 'press', 1, '2026-01-01');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01');
+		await setSerieHecha('push', 'press', 1, true, '2026-01-01');
 
 		const puntos = await primerValor(historialObs('press', 'peso'));
 		expect(puntos).toEqual([
@@ -204,13 +258,13 @@ describe('sesion con IndexedDB', () => {
 		await setReps('push', 'press', 0, 10, '2026-01-01');
 		await setPeso('push', 'press', 1, 90, '2026-01-01');
 		await setReps('push', 'press', 1, 3, '2026-01-01');
-		await toggleSet('push', 'press', 0, '2026-01-01', 'e1rm');
-		await toggleSet('push', 'press', 1, '2026-01-01', 'e1rm');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01', 'e1rm');
+		await setSerieHecha('push', 'press', 1, true, '2026-01-01', 'e1rm');
 
 		await ensureEjercicio('pull', 'remo', 1, '2026-01-02');
 		await setPeso('pull', 'remo', 0, 70, '2026-01-02');
 		await setReps('pull', 'remo', 0, 8, '2026-01-02');
-		await toggleSet('pull', 'remo', 0, '2026-01-02', 'e1rm');
+		await setSerieHecha('pull', 'remo', 0, true, '2026-01-02', 'e1rm');
 
 		// Récord más reciente primero: el remo (2/1) aparece antes que el press (1/1).
 		expect(await primerValor(recordsGlobalesObs('e1rm'))).toEqual([
@@ -245,8 +299,8 @@ describe('sesion con IndexedDB', () => {
 		await ensureEjercicio('pull', 'dominadas', 2, '2026-01-01');
 		await setReps('pull', 'dominadas', 0, 8, '2026-01-01');
 		await setReps('pull', 'dominadas', 1, 10, '2026-01-01');
-		await toggleSet('pull', 'dominadas', 0, '2026-01-01');
-		await toggleSet('pull', 'dominadas', 1, '2026-01-01');
+		await setSerieHecha('pull', 'dominadas', 0, true, '2026-01-01');
+		await setSerieHecha('pull', 'dominadas', 1, true, '2026-01-01');
 
 		// La metrica de ajustes (peso/e1rm) no cambia el valor: son reps.
 		for (const metrica of ['peso', 'e1rm'] as const) {
@@ -284,13 +338,13 @@ describe('sesion con IndexedDB', () => {
 	it('historial mixto: con algun set con peso, las series sin peso no puntuan', async () => {
 		await ensureEjercicio('pull', 'dominadas', 1, '2026-01-01');
 		await setReps('pull', 'dominadas', 0, 12, '2026-01-01');
-		await toggleSet('pull', 'dominadas', 0, '2026-01-01');
+		await setSerieHecha('pull', 'dominadas', 0, true, '2026-01-01');
 
 		// Aparece el lastre: el ejercicio pasa a modo peso en todo su historial.
 		await ensureEjercicio('pull', 'dominadas', 1, '2026-01-02');
 		await setPeso('pull', 'dominadas', 0, 10, '2026-01-02');
 		await setReps('pull', 'dominadas', 0, 6, '2026-01-02');
-		await toggleSet('pull', 'dominadas', 0, '2026-01-02');
+		await setSerieHecha('pull', 'dominadas', 0, true, '2026-01-02');
 
 		const puntos = await primerValor(historialObs('dominadas', 'peso'));
 		expect(puntos).toEqual([
@@ -311,7 +365,7 @@ describe('sesion con IndexedDB', () => {
 		await ensureEjercicio('push', 'press', 1, '2026-01-01');
 		await setPeso('push', 'press', 0, 100, '2026-01-01');
 		await setReps('push', 'press', 0, 5, '2026-01-01');
-		await toggleSet('push', 'press', 0, '2026-01-01', 'peso');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01', 'peso');
 		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-01');
 
 		await actualizarSetHistorial(
@@ -338,14 +392,131 @@ describe('sesion con IndexedDB', () => {
 		expect((await db.sesiones.get('2026-01-01__push'))?.ejercicios[0]?.prCelebrado).toBeUndefined();
 	});
 
-	it('editar una serie activa recalcula el PR celebrado de la sesion', async () => {
+	it('borrar una serie histórica reabre un día que estaba terminado', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-01');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01');
+		await marcarDiaTerminado('push', '2026-01-01');
+
+		await borrarSetHistorial('2026-01-01__push', 'press', 0);
+
+		expect(await db.sesiones.get('2026-01-01__push')).toMatchObject({
+			diaTerminado: false,
+			diaTerminadoAt: undefined,
+			ejercicios: [{ sets: [{ hecha: false }] }]
+		});
+	});
+
+	it('conserva un PR histórico aunque exista un récord mayor en el futuro', async () => {
 		await ensureEjercicio('push', 'press', 1, '2026-01-01');
 		await setPeso('push', 'press', 0, 100, '2026-01-01');
-		await toggleSet('push', 'press', 0, '2026-01-01', 'peso');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01');
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-01');
 
 		await ensureEjercicio('push', 'press', 1, '2026-01-02');
 		await setPeso('push', 'press', 0, 110, '2026-01-02');
-		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-02');
+
+		await actualizarSetHistorial(
+			'2026-01-01__push',
+			'press',
+			0,
+			{ peso: 105, reps: undefined, esMax: false },
+			'peso'
+		);
+
+		expect((await db.sesiones.get('2026-01-01__push'))?.ejercicios[0]?.prCelebrado).toMatchObject({
+			peso: 105
+		});
+	});
+
+	it('subir una serie vieja degrada el PR de la sesion posterior que tapa', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-01');
+		await setPeso('push', 'press', 0, 100, '2026-01-01');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01');
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-01');
+
+		await ensureEjercicio('push', 'press', 1, '2026-01-02');
+		await setPeso('push', 'press', 0, 110, '2026-01-02');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-02');
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-02');
+
+		// El 1 de enero en realidad habían sido 120: con 120 antes, los 110 del día 2
+		// dejan de ser récord y no pueden seguir mostrándose como PR de ese día.
+		await actualizarSetHistorial(
+			'2026-01-01__push',
+			'press',
+			0,
+			{ peso: 120, reps: undefined, esMax: false },
+			'peso'
+		);
+
+		const enero1 = await db.sesiones.get('2026-01-01__push');
+		const enero2 = await db.sesiones.get('2026-01-02__push');
+		expect(enero1?.ejercicios[0]?.prCelebrado).toMatchObject({ peso: 120 });
+		expect(enero2?.ejercicios[0]?.prCelebrado).toBeUndefined();
+		expect(resumenDiaSesion(enero2).prs).toHaveLength(0);
+		// El récord vigente se deriva de los sets crudos y sigue siendo correcto.
+		expect(await primerValor(recordsGlobalesObs('peso'))).toMatchObject([{ valor: 120 }]);
+	});
+
+	it('no degrada una sesion posterior que sigue siendo record', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-01');
+		await setPeso('push', 'press', 0, 100, '2026-01-01');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01');
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-01');
+
+		await ensureEjercicio('push', 'press', 1, '2026-01-02');
+		await setPeso('push', 'press', 0, 110, '2026-01-02');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-02');
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-02');
+
+		await actualizarSetHistorial(
+			'2026-01-01__push',
+			'press',
+			0,
+			{ peso: 105, reps: undefined, esMax: false },
+			'peso'
+		);
+
+		expect((await db.sesiones.get('2026-01-02__push'))?.ejercicios[0]?.prCelebrado).toMatchObject({
+			peso: 110
+		});
+	});
+
+	it('bajar una serie vieja no inventa un PR en una sesion posterior', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-01');
+		await setPeso('push', 'press', 0, 100, '2026-01-01');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01');
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-01');
+
+		// Nunca fue récord (90 < 100), así que ese día no celebró nada.
+		await ensureEjercicio('push', 'press', 1, '2026-01-02');
+		await setPeso('push', 'press', 0, 90, '2026-01-02');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-02');
+		expect(await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-02')).toBeNull();
+
+		await actualizarSetHistorial(
+			'2026-01-01__push',
+			'press',
+			0,
+			{ peso: 80, reps: undefined, esMax: false },
+			'peso'
+		);
+
+		// Retroactivamente los 90 pasan a ser el mayor, pero la app no fabrica una
+		// celebración que el usuario nunca vio: solo degrada, nunca promueve.
+		expect((await db.sesiones.get('2026-01-02__push'))?.ejercicios[0]?.prCelebrado).toBeUndefined();
+		expect(await primerValor(recordsGlobalesObs('peso'))).toMatchObject([{ valor: 90 }]);
+	});
+
+	it('editar una serie activa recalcula el PR celebrado de la sesion', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-01');
+		await setPeso('push', 'press', 0, 100, '2026-01-01');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01', 'peso');
+
+		await ensureEjercicio('push', 'press', 1, '2026-01-02');
+		await setPeso('push', 'press', 0, 110, '2026-01-02');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-02', 'peso');
 		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-02');
 
 		await setPeso('push', 'press', 0, 95, '2026-01-02', 'peso');
@@ -415,15 +586,15 @@ describe('sesion con IndexedDB', () => {
 		await ensureEjercicio('push', 'press', 1, '2026-01-01');
 		await setPeso('push', 'press', 0, 100, '2026-01-01');
 		await setReps('push', 'press', 0, 5, '2026-01-01');
-		await toggleSet('push', 'press', 0, '2026-01-01', 'peso');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01', 'peso');
 
 		await ensureEjercicio('push', 'press', 1, '2026-01-02');
 		await setPeso('push', 'press', 0, 110, '2026-01-02');
 		await setReps('push', 'press', 0, 5, '2026-01-02');
-		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-02', 'peso');
 		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-02');
 
-		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
+		await setSerieHecha('push', 'press', 0, false, '2026-01-02', 'peso');
 
 		const actual = await db.sesiones.get('2026-01-02__push');
 		expect(actual?.ejercicios[0]?.prCelebrado).toBeUndefined();
@@ -445,16 +616,16 @@ describe('sesion con IndexedDB', () => {
 	it('destildar el set del PR recalcula el umbral con otra serie hecha que supera el historial previo', async () => {
 		await ensureEjercicio('push', 'press', 1, '2026-01-01');
 		await setPeso('push', 'press', 0, 100, '2026-01-01');
-		await toggleSet('push', 'press', 0, '2026-01-01', 'peso');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01', 'peso');
 
 		await ensureEjercicio('push', 'press', 2, '2026-01-02');
 		await setPeso('push', 'press', 0, 110, '2026-01-02');
 		await setPeso('push', 'press', 1, 105, '2026-01-02');
-		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
-		await toggleSet('push', 'press', 1, '2026-01-02', 'peso');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-02', 'peso');
+		await setSerieHecha('push', 'press', 1, true, '2026-01-02', 'peso');
 		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-02');
 
-		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
+		await setSerieHecha('push', 'press', 0, false, '2026-01-02', 'peso');
 
 		expect((await db.sesiones.get('2026-01-02__push'))?.ejercicios[0]?.prCelebrado).toEqual({
 			peso: 105,
@@ -469,16 +640,16 @@ describe('sesion con IndexedDB', () => {
 	it('destildar un empate no borra el PR si otra serie hecha lo respalda', async () => {
 		await ensureEjercicio('push', 'press', 1, '2026-01-01');
 		await setPeso('push', 'press', 0, 100, '2026-01-01');
-		await toggleSet('push', 'press', 0, '2026-01-01', 'peso');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01', 'peso');
 
 		await ensureEjercicio('push', 'press', 2, '2026-01-02');
 		await setPeso('push', 'press', 0, 110, '2026-01-02');
 		await setPeso('push', 'press', 1, 110, '2026-01-02');
-		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
-		await toggleSet('push', 'press', 1, '2026-01-02', 'peso');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-02', 'peso');
+		await setSerieHecha('push', 'press', 1, true, '2026-01-02', 'peso');
 		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-02');
 
-		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
+		await setSerieHecha('push', 'press', 0, false, '2026-01-02', 'peso');
 
 		expect((await db.sesiones.get('2026-01-02__push'))?.ejercicios[0]?.prCelebrado).toEqual({
 			peso: 110,

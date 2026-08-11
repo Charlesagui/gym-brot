@@ -17,7 +17,15 @@ export default defineConfig({
 				// quedaban fuera del informe: es donde más caro sale un bug silencioso.
 				'src/lib/extras.ts',
 				'src/lib/dias.ts',
-				'src/lib/ejercicio-activo.ts'
+				'src/lib/ejercicio-activo.ts',
+				// El descanso es el módulo más sensible al tiempo y el único que se sincroniza
+				// entre instancias: quedaba sin tests y fuera del informe justo donde más
+				// barato salía un bug (ver descanso.test.ts).
+				'src/lib/descanso.svelte.ts',
+				// Entrada numérica y búsqueda del catálogo: lógica pura que antes vivía
+				// duplicada dentro de los componentes, sin forma de testearla.
+				'src/lib/numeros.ts',
+				'src/lib/catalog.ts'
 			],
 			thresholds: {
 				lines: 80,
@@ -82,9 +90,9 @@ export default defineConfig({
 						handler: 'CacheFirst',
 						options: {
 							cacheName: 'gb-videos',
-							// Los mp4 son inmutables (el nombre es el id del ejercicio): una vez
-							// bajados no hay motivo para volver a pedirlos.
-							expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 365 },
+							// El catálogo completo tiene 962 videos. El límite debe cubrir la
+							// promesa de "Descargar todos" sin expulsar parte del historial LRU.
+							expiration: { maxEntries: 1000, maxAgeSeconds: 60 * 60 * 24 * 365 },
 							cacheableResponse: { statuses: [0, 200] },
 							rangeRequests: true
 						}

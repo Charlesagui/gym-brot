@@ -1,5 +1,13 @@
 import { liveQuery } from 'dexie';
-import { db, type MetricaPr, type PrCelebrado, type Sesion, type SetSesion } from './db';
+import {
+	conIndice,
+	db,
+	guardarSesion,
+	type MetricaPr,
+	type PrCelebrado,
+	type Sesion,
+	type SetSesion
+} from './db';
 
 /** Peso "efectivo" de un set: el peso ingresado + lo que haya encima de la placa si es MAX. */
 export function pesoEfectivo(s: {
@@ -73,7 +81,7 @@ async function ensureSesion(diaId: string, fecha = hoyStr()): Promise<Sesion> {
 	let s = await db.sesiones.get(id);
 	if (!s) {
 		s = { id, fecha, diaId, ejercicios: [] };
-		await db.sesiones.add(s);
+		await db.sesiones.add(conIndice(s));
 	}
 	return s;
 }
@@ -157,10 +165,23 @@ function snapPr(set: MejorSet, metrica: MetricaPr, modo: ModoPr): PrCelebrado {
 	};
 }
 
+/**
+ * Sesiones que registraron este ejercicio, por fecha ascendente (id como desempate,
+ * igual que el orden con el que se decide un récord).
+ *
+ * Va por el índice multiEntry `exerciseIds` en vez de deserializar toda la tabla: como
+ * cualquier escritura invalida los liveQuery, ese escaneo se pagaba en CADA toque de peso
+ * y crecía sin techo con los años de historial.
+ */
+export async function sesionesDe(exerciseId: string): Promise<Sesion[]> {
+	const sesiones = await db.sesiones.where('exerciseIds').equals(exerciseId).toArray();
+	return sesiones.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.id.localeCompare(b.id));
+}
+
 /** Mejor set hecho por sesión, ordenado por fecha — PR bajo la métrica elegida (o reps). */
 export function historialObs(exerciseId: string, metrica: MetricaPr = 'peso') {
 	return liveQuery(async () => {
-		const todas = await db.sesiones.orderBy('fecha').toArray();
+		const todas = await sesionesDe(exerciseId);
 		const modo = modoEjercicio(todas, exerciseId);
 		const puntos: MejorSet[] = [];
 		for (const s of todas) {
@@ -250,7 +271,7 @@ export async function ensureEjercicio(
 			hecha: false
 		}));
 		s.ejercicios.push({ exerciseId, sets });
-		await db.sesiones.put(s);
+		await guardarSesion(s);
 	});
 }
 
@@ -273,32 +294,70 @@ async function mutar(
 		if (!s || !e) return;
 		fn(e.sets, s);
 		if (recalcularPr) await recalcularPrCelebrado(s, exerciseId, metrica);
-		await db.sesiones.put(s);
+		await guardarSesion(s);
 	});
 }
 
-async function recalcularPrCelebrado(sesion: Sesion, exerciseId: string, metrica: MetricaPr) {
+/**
+ * Revalida el PR celebrado de `sesion` después de editarla.
+ *
+ * Con `revalidarPosteriores` además DEGRADA el PR de las sesiones siguientes que hayan
+ * dejado de serlo: subir una serie vieja puede tapar un récord que se celebró después, y
+ * sin este barrido "PRs del día" seguía mostrando un 🏆 que el historial ya no sostiene.
+ *
+ * Solo degrada, nunca promueve. Un día que retroactivamente pasa a ser récord no gana una
+ * celebración que el usuario nunca vio: la UI puede callar, no puede mentir. El récord
+ * vigente se deriva siempre de los sets crudos (`recordsGlobalesObs`), así que la pantalla
+ * de récords no depende de este campo.
+ *
+ * Queda apagado en el camino de entrenamiento: ahí se edita la sesión de hoy, que es la
+ * última, no hay posteriores que revalidar, y el barrido costaría un escaneo completo de
+ * la tabla en cada toque de peso.
+ */
+async function recalcularPrCelebrado(
+	sesion: Sesion,
+	exerciseId: string,
+	metrica: MetricaPr,
+	revalidarPosteriores = false
+) {
 	const ejercicio = sesion.ejercicios.find((x) => x.exerciseId === exerciseId);
-	if (!ejercicio?.prCelebrado) return;
+	if (!ejercicio?.prCelebrado && !revalidarPosteriores) return;
 
-	const todas = await db.sesiones.toArray();
-	// `todas` trae la versión ya persistida de esta sesión: el modo se decide con la copia editada.
-	const modo = modoEjercicio([...todas.filter((s) => s.id !== sesion.id), sesion], exerciseId);
-	const mejorPrevio = todas.reduce<MejorSet | null>((best, s) => {
-		if (s.id === sesion.id) return best;
+	const todas = await sesionesDe(exerciseId);
+	// `todas` trae la versión ya persistida de esta sesión: manda la copia editada.
+	// El orden (fecha, id) es el mismo con el que se decide un récord al celebrarlo.
+	const orden = [...todas.filter((s) => s.id !== sesion.id), sesion].sort(
+		(a, b) => a.fecha.localeCompare(b.fecha) || a.id.localeCompare(b.id)
+	);
+	const modo = modoEjercicio(orden, exerciseId);
+	const metricaDeHoy = metricaEfectiva(metrica, modo);
+
+	let valorPrevio: number | null = null;
+	for (const s of orden) {
 		const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
-		if (!e) return best;
-		const mejor = mejorSetDeSeries(e.sets, s.fecha, metrica, s.id, modo);
-		return mejor ? mejorSet(best, mejor) : best;
-	}, null);
-	const valorPrevio = mejorPrevio?.valor ?? null;
+		const mejor = e ? mejorSetDeSeries(e.sets, s.fecha, metrica, s.id, modo) : null;
+		// Un PR se juzga solo contra lo que existía ANTES. Incluir sesiones futuras hacía
+		// desaparecer un récord válido del pasado al corregir una serie vieja.
+		const esRecord = mejor != null && (valorPrevio == null || mejor.valor > valorPrevio);
 
-	const mejorRestante = mejorSetDeSeries(ejercicio.sets, sesion.fecha, metrica, sesion.id, modo);
-	if (!mejorRestante || (valorPrevio != null && mejorRestante.valor <= valorPrevio)) {
-		ejercicio.prCelebrado = undefined;
-		return;
+		if (s.id === sesion.id) {
+			if (ejercicio?.prCelebrado) {
+				ejercicio.prCelebrado = esRecord && mejor ? snapPr(mejor, metrica, modo) : undefined;
+			}
+		} else if (
+			revalidarPosteriores &&
+			e?.prCelebrado &&
+			!esRecord &&
+			// Un PR solo se juzga con la métrica con la que se celebró: degradar uno de otra
+			// época bajo una métrica distinta borraría historia legítima.
+			(e.prCelebrado.metrica ?? 'peso') === metricaDeHoy
+		) {
+			e.prCelebrado = undefined;
+			await guardarSesion(s);
+		}
+
+		if (mejor && (valorPrevio == null || mejor.valor > valorPrevio)) valorPrevio = mejor.valor;
 	}
-	ejercicio.prCelebrado = snapPr(mejorRestante, metrica, modo);
 }
 
 export interface CambiosSetHistorial {
@@ -329,8 +388,9 @@ export function actualizarSetHistorial(
 		set.reps = cambios.reps;
 		set.esMax = cambios.esMax;
 		set.extraKg = cambios.extraKg;
-		await recalcularPrCelebrado(s, exerciseId, metrica);
-		await db.sesiones.put(s);
+		// Editar el historial puede invalidar el PR de sesiones POSTERIORES a esta.
+		await recalcularPrCelebrado(s, exerciseId, metrica, true);
+		await guardarSesion(s);
 		return true;
 	});
 }
@@ -347,32 +407,66 @@ export function borrarSetHistorial(
 		const set = e?.sets[setIndex];
 		if (!s || !set?.hecha) return false;
 		set.hecha = false;
-		await recalcularPrCelebrado(s, exerciseId, metrica);
-		await db.sesiones.put(s);
+		reabrirSesion(s);
+		await recalcularPrCelebrado(s, exerciseId, metrica, true);
+		await guardarSesion(s);
 		return true;
 	});
 }
 
-export async function toggleSet(
+export interface ResultadoSet {
+	encontrada: boolean;
+	hecha?: boolean;
+	cambio: boolean;
+	ejercicioCompleto?: boolean;
+}
+
+function reabrirSesion(sesion: Sesion) {
+	sesion.diaTerminado = false;
+	sesion.diaTerminadoAt = undefined;
+}
+
+/**
+ * Fija el estado de una serie de manera idempotente. La UI usa esta operación en
+ * lugar de alternar el valor que tenía renderizado: dos toques con la misma
+ * intención ya no pueden terminar desmarcando una serie recién hecha.
+ */
+export function setSerieHecha(
 	diaId: string,
 	exerciseId: string,
 	i: number,
+	hecha: boolean,
 	fecha = hoyStr(),
 	metrica: MetricaPr = 'peso'
-) {
-	await db.transaction('rw', db.sesiones, async () => {
+): Promise<ResultadoSet> {
+	return db.transaction('rw', db.sesiones, async (): Promise<ResultadoSet> => {
 		const s = await db.sesiones.get(sesionId(diaId, fecha));
 		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
-		if (!s || !e?.sets[i]) return;
-		e.sets[i].hecha = !e.sets[i].hecha;
-		if (!e.sets[i].hecha) {
-			s.diaTerminado = false;
-			s.diaTerminadoAt = undefined;
-			await recalcularPrCelebrado(s, exerciseId, metrica);
+		const set = e?.sets[i];
+		if (!s || !e || !set) return { encontrada: false, cambio: false };
+
+		let cambio = set.hecha !== hecha;
+		set.hecha = hecha;
+		// Entrenar una serie reanuda implícitamente un ejercicio que se había saltado.
+		if (hecha && e.saltado) {
+			e.saltado = false;
+			cambio = true;
+			reabrirSesion(s);
 		}
-		await db.sesiones.put(s);
+		if (!hecha) {
+			reabrirSesion(s);
+			if (cambio) await recalcularPrCelebrado(s, exerciseId, metrica);
+		}
+		if (cambio) await guardarSesion(s);
+		return {
+			encontrada: true,
+			hecha: set.hecha,
+			cambio,
+			ejercicioCompleto: e.sets.every((serie) => serie.hecha)
+		};
 	});
 }
+
 export function toggleMax(
 	diaId: string,
 	exerciseId: string,
@@ -539,7 +633,7 @@ export function registrarPrSiSupera(
 		const set = e?.sets[setIndex];
 		if (!s || !e || !set?.hecha) return null;
 
-		const todas = await db.sesiones.toArray();
+		const todas = await sesionesDe(exerciseId);
 		const modo = modoEjercicio(todas, exerciseId);
 		const valor = valorSet(set, metrica, modo);
 		if (valor == null) return null;
@@ -570,7 +664,7 @@ export function registrarPrSiSupera(
 			setIndex
 		};
 		e.prCelebrado = snapPr(ganador, metrica, modo);
-		await db.sesiones.put(s);
+		await guardarSesion(s);
 		return ganador;
 	});
 }
@@ -585,7 +679,7 @@ export async function marcarDiaTerminado(diaId: string, fecha = hoyStr()) {
 		const s = await ensureSesion(diaId, fecha);
 		s.diaTerminado = true;
 		s.diaTerminadoAt = new Date().toISOString();
-		await db.sesiones.put(s);
+		await guardarSesion(s);
 	});
 }
 

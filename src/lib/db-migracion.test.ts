@@ -4,10 +4,11 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * Simula la base REAL de un usuario existente (creada con el esquema v1/v2,
- * días con diaSemana único) y la abre con el módulo actual: la migración v3
- * tiene que completarse y convertir diaSemana → diasSemana[] sin colgarse.
+ * días con diaSemana único) y la abre con el módulo actual: las migraciones
+ * tienen que completarse sin colgarse — v3 convierte diaSemana → diasSemana[]
+ * y v4 rellena el índice `exerciseIds` de las sesiones que ya existían.
  */
-describe('migración de esquema a v3', () => {
+describe('migración de esquema', () => {
 	it('abre una base v2 existente y migra diaSemana a diasSemana[]', async () => {
 		const legacy = new Dexie('gym-brot');
 		legacy.version(1).stores({
@@ -43,6 +44,13 @@ describe('migración de esquema a v3', () => {
 		// El resto de los datos sobrevive intacto.
 		expect((await db.sesiones.get('2026-06-10__d1'))?.ejercicios[0]?.sets[0]?.peso).toBe(80);
 		expect(await db.dias.orderBy('orden').toArray()).toHaveLength(2);
+
+		// v4: la sesión vieja quedó indexada por ejercicio. Se comprueba el campo Y la
+		// consulta: si el índice no se hubiera poblado, esa sesión sería invisible para
+		// el historial y para el cálculo de PR, que es el peor fallo posible acá.
+		expect((await db.sesiones.get('2026-06-10__d1'))?.exerciseIds).toEqual(['press']);
+		const { sesionesDe } = await import('./sesion');
+		expect((await sesionesDe('press')).map((s) => s.id)).toEqual(['2026-06-10__d1']);
 		db.close();
 	});
 });

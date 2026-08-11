@@ -3,7 +3,14 @@
 	import { fly } from 'svelte/transition';
 	import { liveQuery } from 'dexie';
 	import { db } from '$lib/db';
-	import { catalogo, ejercicioPorId, grupos, type Grupo, type Ejercicio } from '$lib/catalog';
+	import {
+		buscarEjercicios,
+		catalogo,
+		ejercicioPorId,
+		grupos,
+		type Grupo,
+		type Ejercicio
+	} from '$lib/catalog';
 	import { agregarEjercicio, quitarEjercicio } from '$lib/dias';
 	import { reproducirEnVista } from '$lib/video';
 	import { dur } from '$lib/motion';
@@ -31,14 +38,6 @@
 		confirmarTexto: string;
 		onConfirm: () => void | Promise<void>;
 	} | null>(null);
-
-	// Quita acentos y pasa a minúsculas: en el teclado del gym se escribe sin tildes.
-	function normalizar(s: string): string {
-		return s
-			.normalize('NFD')
-			.replace(/[\u0300-\u036f]/g, '')
-			.toLowerCase();
-	}
 
 	const grupoSugerido = $derived.by<Grupo | 'todos'>(() => {
 		const dia = $diaActual;
@@ -72,15 +71,15 @@
 	const buscando = $derived(q.trim() !== '');
 	const filtroVisible = $derived<Grupo | 'todos'>(buscando ? 'todos' : filtro);
 
-	const filtrados = $derived.by(() => {
-		const term = normalizar(q.trim());
-		return catalogo.filter(
-			(e) =>
-				(term !== '' || filtro === 'todos' || e.grupo === filtro) &&
-				// También busca por músculo: la premisa es guiarse sin depender del nombre.
-				(term === '' || normalizar(e.nombre).includes(term) || normalizar(e.musculo).includes(term))
-		);
-	});
+	// Con término buscamos en todo el catálogo (por índice normalizado, ver catalog.ts);
+	// sin término manda el filtro de grupo.
+	const filtrados = $derived.by(() =>
+		buscando
+			? buscarEjercicios(q)
+			: filtro === 'todos'
+				? catalogo
+				: catalogo.filter((e) => e.grupo === filtro)
+	);
 
 	// El catálogo tiene 962 ejercicios: montarlos todos es un <video> y un
 	// IntersectionObserver por fila. Se renderiza de a tandas y el contador vuelve a
