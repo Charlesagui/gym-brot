@@ -9,6 +9,7 @@
 	import { ejercicioPorId } from '$lib/catalog';
 	import { fromLiveQuery } from '$lib/live';
 	import { hoyStr, recordsGlobalesObs, type RecordEjercicio } from '$lib/sesion';
+	import { onMount } from 'svelte';
 
 	const VACIO: HistorialResumen = crearHistorialResumen([], []);
 
@@ -28,8 +29,20 @@
 	let recordsVisibles = $state(10);
 
 	// Calendario mensual navegable: todo el historial es alcanzable, mes a mes.
-	const hoy = hoyStr();
+	// `hoy` se refresca al volver a la vista: con la app abierta al cruzar la
+	// medianoche, el recuadro del día quedaba marcando ayer.
+	let hoy = $state(hoyStr());
 	let mesOffset = $state(0);
+
+	onMount(() => {
+		const refrescarHoy = () => (hoy = hoyStr());
+		document.addEventListener('visibilitychange', refrescarHoy);
+		window.addEventListener('focus', refrescarHoy);
+		return () => {
+			document.removeEventListener('visibilitychange', refrescarHoy);
+			window.removeEventListener('focus', refrescarHoy);
+		};
+	});
 
 	interface Mes {
 		label: string;
@@ -37,8 +50,8 @@
 		celdas: (string | null)[];
 	}
 
-	function mesGrid(offset: number): Mes {
-		const ahora = new Date();
+	function mesGrid(offset: number, referencia: string): Mes {
+		const ahora = new Date(`${referencia}T00:00:00`);
 		const base = new Date(ahora.getFullYear(), ahora.getMonth() + offset, 1);
 		const label = base.toLocaleDateString('es', { month: 'long', year: 'numeric' });
 		// Semana arranca lunes: celdas vacías hasta el día 1.
@@ -51,7 +64,7 @@
 		return { label, ym: celdas[pad]!.slice(0, 7), celdas };
 	}
 
-	const mes = $derived(mesGrid(mesOffset));
+	const mes = $derived(mesGrid(mesOffset, hoy));
 	const primeraFecha = $derived(historial.dias.at(-1)?.fecha ?? null);
 	// Atrás solo hasta el mes del primer entrenamiento; adelante solo hasta hoy.
 	const sinMesAnterior = $derived(!primeraFecha || mes.ym <= primeraFecha.slice(0, 7));

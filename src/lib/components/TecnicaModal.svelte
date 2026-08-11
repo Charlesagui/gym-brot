@@ -166,10 +166,7 @@
 		tabindex="-1"
 		onclick={onClose}
 	></button>
-	<div
-		in:fly={{ y: 40, duration: dur(240) }}
-		class="relative mx-auto w-full max-w-2xl"
-	>
+	<div in:fly={{ y: 40, duration: dur(240) }} class="relative mx-auto w-full max-w-2xl">
 		<div
 			bind:this={panelEl}
 			tabindex="-1"
@@ -205,7 +202,7 @@
 					src={embedUrl}
 					title={`Video de técnica para ${nombre}`}
 					class="aspect-video w-full border-0"
-					allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+					allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
 					referrerpolicy="strict-origin-when-cross-origin"
 					allowfullscreen
 				></iframe>
@@ -224,7 +221,7 @@
 				<a
 					href={videoUrl}
 					target="_blank"
-					rel="noreferrer"
+					rel="noopener noreferrer"
 					class="mt-4 inline-flex w-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-bold"
 					style="color: rgb({glow})">Abrir en YouTube</a
 				>

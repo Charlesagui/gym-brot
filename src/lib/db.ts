@@ -28,6 +28,11 @@ export interface PrCelebrado {
 	reps?: number;
 	esMax?: boolean;
 	extraKg?: number;
+	/**
+	 * Índice de la serie que logró el récord. Ausente en sesiones viejas: ahí el set
+	 * se ubica comparando valores, que con dos series idénticas puede marcar la otra.
+	 */
+	setIndex?: number;
 	/** Métrica usada al celebrar/recalcular el PR; ausente en sesiones viejas. */
 	metrica?: MetricaPr | 'reps';
 }
@@ -63,7 +68,6 @@ export type MetricaPr = 'peso' | 'e1rm';
 /** Ajustes globales (única fila, id = 'app'). */
 export interface Ajustes {
 	id: string;
-	darkMode: boolean;
 	unidad: 'kg' | 'lb';
 	timer: { activo: boolean; minutos: number };
 	sonido: boolean;

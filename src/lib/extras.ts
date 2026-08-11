@@ -16,7 +16,6 @@ export async function setNota(exerciseId: string, texto: string): Promise<void> 
 
 export const AJUSTES_DEFAULT: Ajustes = {
 	id: 'app',
-	darkMode: true,
 	unidad: 'kg',
 	timer: { activo: true, minutos: 2 },
 	sonido: true,
@@ -61,7 +60,9 @@ export async function setVibracion(vibracion: boolean): Promise<void> {
 	await db.ajustes.put({ ...a, vibracion });
 }
 
-export async function setDescansoPantallaCompleta(descansoPantallaCompleta: boolean): Promise<void> {
+export async function setDescansoPantallaCompleta(
+	descansoPantallaCompleta: boolean
+): Promise<void> {
 	const a = normalizarAjustes(await db.ajustes.get('app'));
 	await db.ajustes.put({ ...a, descansoPantallaCompleta });
 }
@@ -248,6 +249,7 @@ function esPrCelebrado(value: unknown): boolean {
 		(value.reps === undefined || esNumero(value.reps)) &&
 		(value.esMax === undefined || esBoolean(value.esMax)) &&
 		(value.extraKg === undefined || esNumero(value.extraKg)) &&
+		(value.setIndex === undefined || esNumero(value.setIndex)) &&
 		(value.metrica === undefined ||
 			value.metrica === 'peso' ||
 			value.metrica === 'e1rm' ||
@@ -293,16 +295,15 @@ function esNota(value: unknown): value is Nota {
 function esAjustes(value: unknown): value is Ajustes {
 	if (!esRecord(value) || value.id !== 'app') return false;
 	const timer = value.timer;
+	// `darkMode` existió en backups viejos y no lo lee nadie: se tolera y se ignora.
 	return (
-		esBoolean(value.darkMode) &&
 		(value.unidad === 'kg' || value.unidad === 'lb') &&
 		esRecord(timer) &&
 		esBoolean(timer.activo) &&
 		esNumero(timer.minutos) &&
 		(value.sonido === undefined || esBoolean(value.sonido)) &&
 		(value.vibracion === undefined || esBoolean(value.vibracion)) &&
-		(value.descansoPantallaCompleta === undefined ||
-			esBoolean(value.descansoPantallaCompleta)) &&
+		(value.descansoPantallaCompleta === undefined || esBoolean(value.descansoPantallaCompleta)) &&
 		(value.metricaPr === undefined || value.metricaPr === 'peso' || value.metricaPr === 'e1rm') &&
 		(value.pasoPeso === undefined || esNumero(value.pasoPeso)) &&
 		(value.ultimoBackup === undefined || esString(value.ultimoBackup)) &&
@@ -347,13 +348,93 @@ function normalizarDiaBackup(dia: Dia & { diaSemana?: number }): Dia {
 	return resto;
 }
 
+const FECHA_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+export interface ImportPreparado {
+	datos: Required<Pick<Backup, 'dias' | 'sesiones' | 'notas' | 'ajustes'>>;
+	/** Qué se reparó o se descartó, para decírselo al usuario antes de confirmar. */
+	avisos: string[];
+}
+
+/**
+ * Los type guards de `parseBackup` validan formas, no coherencia. Un backup editado
+ * a mano (o de otra app) puede traer una sesión cuyo `id` no sea `${fecha}__${diaId}`:
+ * la app la mostraría en el historial pero nunca podría volver a escribirla, porque
+ * `sesionId()` arma otro id. Acá se repara lo reparable y se descarta lo imposible,
+ * dejando dicho qué pasó.
+ */
+export function prepararImport(data: Backup): ImportPreparado {
+	const avisos: string[] = [];
+
+	const dias: Dia[] = [];
+	const idsDia = new Set<string>();
+	let diasDuplicados = 0;
+	for (const dia of data.dias ?? []) {
+		if (idsDia.has(dia.id)) {
+			diasDuplicados++;
+			continue;
+		}
+		idsDia.add(dia.id);
+		dias.push(normalizarDiaBackup(dia));
+	}
+	if (diasDuplicados) avisos.push(`${diasDuplicados} día(s) con id repetido: se ignoraron`);
+
+	const sesiones: Sesion[] = [];
+	const idsSesion = new Set<string>();
+	let fechaInvalida = 0;
+	let idReparado = 0;
+	let colision = 0;
+	let sinDia = 0;
+	for (const sesion of data.sesiones ?? []) {
+		if (!FECHA_RE.test(sesion.fecha)) {
+			fechaInvalida++;
+			continue;
+		}
+		const idEsperado = `${sesion.fecha}__${sesion.diaId}`;
+		if (sesion.id !== idEsperado) idReparado++;
+		if (idsSesion.has(idEsperado)) {
+			colision++;
+			continue;
+		}
+		idsSesion.add(idEsperado);
+		if (!idsDia.has(sesion.diaId)) sinDia++;
+		sesiones.push({ ...sesion, id: idEsperado });
+	}
+	if (fechaInvalida) avisos.push(`${fechaInvalida} sesión(es) con fecha inválida: se descartaron`);
+	if (idReparado) avisos.push(`${idReparado} sesión(es) con id inconsistente: se corrigieron`);
+	if (colision) avisos.push(`${colision} sesión(es) duplicadas: se conservó la primera`);
+	if (sinDia) avisos.push(`${sinDia} sesión(es) apuntan a una rutina que no está en el backup`);
+
+	const notas: Nota[] = [];
+	const idsNota = new Set<string>();
+	for (const nota of data.notas ?? []) {
+		if (idsNota.has(nota.exerciseId)) continue;
+		idsNota.add(nota.exerciseId);
+		notas.push(nota);
+	}
+
+	return {
+		datos: { dias, sesiones, notas, ajustes: (data.ajustes ?? []).map(normalizarAjustes) },
+		avisos
+	};
+}
+
 /** Reemplaza TODOS los datos locales por los del backup (destructivo). */
-export async function importarBackup(data: Backup): Promise<void> {
+export async function importarBackup(data: Backup): Promise<ImportPreparado['avisos']> {
+	const { datos, avisos } = prepararImport(data);
 	await db.transaction('rw', db.dias, db.sesiones, db.notas, db.ajustes, async () => {
 		await Promise.all([db.dias.clear(), db.sesiones.clear(), db.notas.clear(), db.ajustes.clear()]);
-		if (data.dias?.length) await db.dias.bulkPut(data.dias.map(normalizarDiaBackup));
-		if (data.sesiones?.length) await db.sesiones.bulkPut(data.sesiones);
-		if (data.notas?.length) await db.notas.bulkPut(data.notas);
-		if (data.ajustes?.length) await db.ajustes.bulkPut(data.ajustes.map(normalizarAjustes));
+		if (datos.dias.length) await db.dias.bulkPut(datos.dias);
+		if (datos.sesiones.length) await db.sesiones.bulkPut(datos.sesiones);
+		if (datos.notas.length) await db.notas.bulkPut(datos.notas);
+		if (datos.ajustes.length) await db.ajustes.bulkPut(datos.ajustes);
+	});
+	return avisos;
+}
+
+/** Borra todos los datos locales y deja la app como recién instalada. */
+export async function borrarTodo(): Promise<void> {
+	await db.transaction('rw', db.dias, db.sesiones, db.notas, db.ajustes, async () => {
+		await Promise.all([db.dias.clear(), db.sesiones.clear(), db.notas.clear(), db.ajustes.clear()]);
 	});
 }

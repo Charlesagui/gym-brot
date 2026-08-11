@@ -56,6 +56,64 @@ function beep(
 	gain.connect(getMaster(ctx));
 	osc.start(start);
 	osc.stop(start + duracion + 0.03);
+	// La alarma suena en loop hasta 10 min: sin esto quedan cientos de nodos colgando
+	// del master esperando que el recolector se dé cuenta.
+	osc.onended = () => {
+		osc.disconnect();
+		gain.disconnect();
+	};
+}
+
+let keepAlive: AudioBufferSourceNode | null = null;
+
+/**
+ * Crea y reanuda el contexto. iOS solo permite `resume()` dentro de un gesto del
+ * usuario, así que esto se llama desde el handler del toque, antes de cualquier await.
+ */
+export function desbloquearAudio(): void {
+	const ctx = getAudioContext();
+	if (ctx && ctx.state === 'suspended') void ctx.resume().catch(() => {});
+}
+
+/**
+ * Mantiene el contexto activo con una fuente muda en loop mientras corre un descanso.
+ * En iOS el contexto se suspende al pasar a background y `resume()` fuera de un gesto
+ * queda rechazado: sin esto, la alarma podía volver muda justo cuando hace falta.
+ * Contrapartida aceptada: mientras dura el descanso la sesión de audio queda tomada.
+ */
+export function mantenerAudioDespierto(): void {
+	const ctx = getAudioContext();
+	if (!ctx || keepAlive) return;
+	if (ctx.state === 'suspended') void ctx.resume().catch(() => {});
+	try {
+		const source = ctx.createBufferSource();
+		source.buffer = ctx.createBuffer(
+			1,
+			Math.max(1, Math.round(ctx.sampleRate / 2)),
+			ctx.sampleRate
+		);
+		source.loop = true;
+		const silencio = ctx.createGain();
+		silencio.gain.setValueAtTime(0, ctx.currentTime);
+		source.connect(silencio);
+		silencio.connect(ctx.destination);
+		source.start();
+		keepAlive = source;
+	} catch {
+		// Sin soporte: el timer visual y la vibración siguen funcionando igual.
+	}
+}
+
+/** Suelta la sesión de audio al terminar el descanso (devuelve el control a la música). */
+export function soltarAudioDespierto(): void {
+	if (!keepAlive) return;
+	try {
+		keepAlive.stop();
+	} catch {
+		// Ya estaba detenida.
+	}
+	keepAlive.disconnect();
+	keepAlive = null;
 }
 
 async function conContexto(tocar: (ctx: AudioContext, now: number) => void): Promise<void> {

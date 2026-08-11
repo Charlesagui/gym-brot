@@ -17,7 +17,7 @@
 		setExtra,
 		addSet,
 		removeSet,
-		marcarPrCelebrado,
+		registrarPrSiSupera,
 		pesoEfectivo,
 		valorMetrica,
 		valorSet,
@@ -43,11 +43,18 @@
 		modoEjercicioActivo,
 		unidadValorEjercicio
 	} from '$lib/ejercicio-activo';
+	import {
+		debeMostrarHintMax,
+		debeMostrarHintTimer,
+		demoGrande,
+		ocultarHintMax,
+		ocultarHintTimer,
+		setDemoGrande
+	} from '$lib/preferencias-ui';
 	import SetRow from '$lib/components/SetRow.svelte';
 	import MiniChart from '$lib/components/MiniChart.svelte';
 	import CelebracionOverlay from '$lib/components/CelebracionOverlay.svelte';
 	import TecnicaModal from '$lib/components/TecnicaModal.svelte';
-	import ProgresoEjercicio from '$lib/components/ProgresoEjercicio.svelte';
 	import EditarSerieSheet, { type SerieEditable } from '$lib/components/EditarSerieSheet.svelte';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
 
@@ -59,6 +66,23 @@
 	const volver = $derived(
 		diaId ? `/dia/${diaId}` : desde ? `/ejercicio/${$page.params.id}?dia=${desde}` : '/historial'
 	);
+
+	// El progreso completo arrastra layerchart + d3 (el chunk más grande de la app) y
+	// solo se ve en modo consulta (sin ?dia=): entrenar no tiene por qué pagar esa
+	// descarga ni ese parseo en el camino crítico.
+	let Progreso = $state<typeof import('$lib/components/ProgresoEjercicio.svelte').default | null>(
+		null
+	);
+	$effect(() => {
+		if (diaId || Progreso) return;
+		let vivo = true;
+		void import('$lib/components/ProgresoEjercicio.svelte').then((m) => {
+			if (vivo) Progreso = m.default;
+		});
+		return () => {
+			vivo = false;
+		};
+	});
 
 	let sets = $state<SetSesion[]>([]);
 	let anteriores = $state<SetSesion[]>([]);
@@ -80,6 +104,8 @@
 	let videoGrande = $state(true);
 	let tecnicaAbierta = $state(false);
 	let tecnicaHistoryActiva = false;
+	// Una escritura que falla no puede pasar desapercibida: los datos viven solo acá.
+	let errorGuardado = $state<string | null>(null);
 	let confirmacion = $state<{
 		titulo: string;
 		mensaje: string;
@@ -89,12 +115,12 @@
 
 	$effect(() => {
 		$page.params.id; // dep: reinicia "grande" al cambiar de ejercicio
-		videoGrande = localStorage.getItem('gb-demo-grande') !== '0';
+		videoGrande = demoGrande();
 	});
 
 	function setVideoGrande(valor: boolean) {
 		videoGrande = valor;
-		localStorage.setItem('gb-demo-grande', valor ? '1' : '0');
+		setDemoGrande(valor);
 	}
 
 	// Hint de MAX: solo en máquinas de placas, las primeras 3 visitas o hasta "Entendido".
@@ -103,17 +129,11 @@
 	let mostrarHintTimer = $state(false);
 
 	$effect(() => {
-		if (!ej?.maquinaPlacas || localStorage.getItem('gb-hint-max-ok')) {
-			mostrarHintMax = false;
-			return;
-		}
-		const vistas = Number(localStorage.getItem('gb-hint-max-vistas') ?? '0');
-		mostrarHintMax = vistas < 3;
-		localStorage.setItem('gb-hint-max-vistas', String(vistas + 1));
+		mostrarHintMax = !!ej?.maquinaPlacas && debeMostrarHintMax();
 	});
 
 	function entendidoHintMax() {
-		localStorage.setItem('gb-hint-max-ok', '1');
+		ocultarHintMax();
 		mostrarHintMax = false;
 	}
 
@@ -164,9 +184,14 @@
 			sub = sesionHoyObs(dId, fecha).subscribe((s) => {
 				if (cancelado) return;
 				const e = s?.ejercicios.find((x) => x.exerciseId === exId);
-				sets = e ? e.sets : [];
 				prCelebrado = e?.prCelebrado ?? null;
 				cargandoSeries = false;
+				// Con escrituras en vuelo el resultado que llega puede ser anterior al
+				// último toque: pisar `sets` acá hacía saltar el número hacia atrás y el
+				// toque siguiente componía desde el valor viejo. Mientras haya toques sin
+				// confirmar manda lo local; al drenar, la base vuelve a ser la verdad.
+				if (escriturasEnVuelo > 0) return;
+				sets = e ? e.sets : [];
 			});
 		})().catch(() => {
 			if (!cancelado) {
@@ -239,7 +264,7 @@
 	const sinHistorial = $derived(!cargandoSeries && puntos.length === 0 && anteriores.length === 0);
 
 	function mejorSetLocal(localSets: SetSesion[], soloHechas: boolean): MejorSet | null {
-		return localSets.reduce<MejorSet | null>((best, s) => {
+		return localSets.reduce<MejorSet | null>((best, s, setIndex) => {
 			if (soloHechas && !s.hecha) return best;
 			const valor = valorSet(s, metrica, modo);
 			if (valor == null) return best;
@@ -249,7 +274,8 @@
 				esMax: !!s.esMax,
 				extraKg: s.extraKg,
 				fecha: fechaSesion,
-				valor
+				valor,
+				setIndex
 			});
 		}, null);
 	}
@@ -263,7 +289,7 @@
 				history.pushState({ ...estadoActual, gbTecnica: true }, '', window.location.href);
 				tecnicaHistoryActiva = true;
 			}
-		} else if (ej?.videoUrl) window.open(ej.videoUrl, '_blank', 'noreferrer');
+		} else if (ej?.videoUrl) window.open(ej.videoUrl, '_blank', 'noopener,noreferrer');
 	}
 
 	function cerrarTecnica() {
@@ -280,12 +306,29 @@
 		return Math.round(n * 10) / 10;
 	}
 
+	/**
+	 * Toques pendientes de confirmar en la base. Mientras haya alguno, la suscripción
+	 * no pisa `sets` (ver el comentario en el subscribe).
+	 */
+	let escriturasEnVuelo = 0;
+
+	function escribir(operacion: Promise<unknown>) {
+		escriturasEnVuelo++;
+		void operacion
+			.catch((e: unknown) => {
+				errorGuardado = e instanceof Error ? e.message : 'No se pudo guardar la serie.';
+			})
+			.finally(() => {
+				escriturasEnVuelo--;
+			});
+	}
+
 	function ajustarPeso(i: number, delta: number) {
 		const actual = sets[i]?.peso ?? 0;
 		const siguiente = redondear(Math.max(0, actual + delta));
 		const peso = siguiente === 0 ? undefined : siguiente;
 		if (sets[i]) sets[i].peso = peso;
-		setPeso(diaId!, $page.params.id!, i, peso, fechaSesion, metrica);
+		escribir(setPeso(diaId!, $page.params.id!, i, peso, fechaSesion, metrica));
 	}
 
 	function ajustarReps(i: number, delta: number) {
@@ -293,7 +336,7 @@
 		const siguiente = Math.max(0, actual + delta);
 		const reps = siguiente === 0 ? undefined : siguiente;
 		if (sets[i]) sets[i].reps = reps;
-		setReps(diaId!, $page.params.id!, i, reps, fechaSesion, metrica);
+		escribir(setReps(diaId!, $page.params.id!, i, reps, fechaSesion, metrica));
 	}
 
 	function ajustarExtra(i: number, delta: number) {
@@ -301,14 +344,14 @@
 		const siguiente = redondear(Math.max(0, actual + delta));
 		const extra = siguiente === 0 ? undefined : siguiente;
 		if (sets[i]) sets[i].extraKg = extra;
-		setExtra(diaId!, $page.params.id!, i, extra, fechaSesion, metrica);
+		escribir(setExtra(diaId!, $page.params.id!, i, extra, fechaSesion, metrica));
 	}
 
 	function escribirPeso(i: number, el: HTMLInputElement) {
 		const n = Number.parseFloat(el.value.replace(',', '.'));
 		const peso = Number.isFinite(n) && n > 0 ? redondear(n) : undefined;
 		if (sets[i]) sets[i].peso = peso;
-		setPeso(diaId!, $page.params.id!, i, peso, fechaSesion, metrica);
+		escribir(setPeso(diaId!, $page.params.id!, i, peso, fechaSesion, metrica));
 		el.value = peso != null ? formatoNumero(peso) : '';
 	}
 
@@ -328,38 +371,45 @@
 			};
 			return;
 		}
-		removeSet(diaId, $page.params.id!, sets.length - 1, fechaSesion, metrica);
+		escribir(removeSet(diaId, $page.params.id!, sets.length - 1, fechaSesion, metrica));
 	}
 
 	function escribirReps(i: number, el: HTMLInputElement) {
 		const n = Number.parseInt(el.value, 10);
 		const reps = Number.isFinite(n) && n > 0 ? n : undefined;
 		if (sets[i]) sets[i].reps = reps;
-		setReps(diaId!, $page.params.id!, i, reps, fechaSesion, metrica);
+		escribir(setReps(diaId!, $page.params.id!, i, reps, fechaSesion, metrica));
 		el.value = reps != null ? String(reps) : '';
 	}
 
 	async function onToggle(i: number) {
 		const yaEstaba = sets[i]?.hecha;
 		const seCompletanTodas = completaEjercicioAlMarcar(sets, i);
-		await toggleSet(diaId!, $page.params.id!, i, fechaSesion, metrica);
+		// Antes de cualquier await: iOS exige gesto vivo para desbloquear el audio y
+		// para pedir el permiso de notificaciones.
+		if (!yaEstaba && ajustes.timer.activo) descanso.prepararDesdeGesto();
+		try {
+			await toggleSet(diaId!, $page.params.id!, i, fechaSesion, metrica);
+		} catch (e) {
+			errorGuardado = e instanceof Error ? e.message : 'No se pudo guardar la serie.';
+			return;
+		}
 		if (yaEstaba) {
 			descanso.saltar();
 			return;
 		}
 
-		// ¿Esta serie acaba de marcar un PR? Lo celebramos y persistimos en el acto,
-		// para que el récord no se pierda si salís con ← antes de "Terminar".
-		const nuevoPr = prDeSet(sets[i]);
+		// ¿Esta serie acaba de marcar un PR? La decisión la toma la base adentro de la
+		// transacción: acá los derivados pueden venir de un liveQuery que todavía no
+		// emitió, y con el dato viejo el mismo récord se celebraba dos veces.
+		const nuevoPr = await registrarPrSiSupera(
+			diaId!,
+			$page.params.id!,
+			i,
+			metrica,
+			fechaSesion
+		).catch(() => null);
 		if (nuevoPr) {
-			void marcarPrCelebrado(
-				diaId!,
-				$page.params.id!,
-				{ peso: nuevoPr.peso, reps: nuevoPr.reps, esMax: nuevoPr.esMax, extraKg: nuevoPr.extraKg },
-				metrica,
-				fechaSesion,
-				modo
-			);
 			celebrarPrFlash(nuevoPr);
 		} else {
 			if (sonidoActivo) void sonarSetHecho().catch(() => {});
@@ -373,7 +423,7 @@
 		} else if (ajustes.timer.activo) {
 			// recién hecha → arranca descanso, con la próxima serie como recordatorio
 			descanso.iniciar(ajustes.timer.minutos, g?.glow ?? '124 92 255', proximaSerie(i));
-		} else if (!ajustes.timer.activo && !localStorage.getItem('gb-hint-timer-ok')) {
+		} else if (debeMostrarHintTimer()) {
 			// Timer apagado: sugerir activarlo (una sola vez) para que avise cuándo volver.
 			mostrarHintTimer = true;
 		}
@@ -385,7 +435,7 @@
 	}
 
 	function descartarHintTimer() {
-		localStorage.setItem('gb-hint-timer-ok', '1');
+		ocultarHintTimer();
 		mostrarHintTimer = false;
 	}
 
@@ -396,25 +446,6 @@
 			.filter((p) => p.idx !== reciente && !p.hecha);
 		const prox = pendientes.find((p) => p.idx > reciente) ?? pendientes[0];
 		return prox ? `${ej?.nombre ?? ''} · serie ${prox.idx + 1}/${sets.length}` : '';
-	}
-
-	/** Devuelve el set como MejorSet si supera al PR vigente; si no, null. */
-	function prDeSet(s: SetSesion | undefined): MejorSet | null {
-		if (!s) return null;
-		const valor = valorSet(s, metrica, modo);
-		if (valor == null) return null;
-		const esNuevoPr =
-			(mejorPrevio == null || valor > mejorPrevio) &&
-			(valorCelebrado == null || valor > valorCelebrado);
-		if (!esNuevoPr) return null;
-		return {
-			peso: s.peso,
-			reps: s.reps,
-			esMax: !!s.esMax,
-			extraKg: s.extraKg,
-			fecha: fechaSesion,
-			valor
-		};
 	}
 
 	// Serie histórica en edición (long-press en un punto del chart) → bottom sheet.
@@ -452,25 +483,20 @@
 			return;
 		}
 		// PR honesto: solo cuentan las series realmente marcadas ✓ (no fabrica nada).
+		// Igual que al marcar, quien decide es la transacción; acá solo se elige qué
+		// serie proponer (la mejor hecha bajo la métrica vigente).
 		const mejor = mejorSetLocal(sets, true);
-		const valor = mejor ? mejor.valor : null;
-		const esPr =
-			valor != null &&
-			(mejorPrevio == null || valor > mejorPrevio) &&
-			(valorCelebrado == null || valor > valorCelebrado);
-		if (esPr && mejor) {
-			await marcarPrCelebrado(
-				diaId,
-				$page.params.id!,
-				{ peso: mejor.peso, reps: mejor.reps, esMax: mejor.esMax, extraKg: mejor.extraKg },
-				metrica,
-				fechaSesion,
-				modo
-			);
-		}
+		const candidato = mejor?.setIndex;
+		const ganado =
+			candidato != null
+				? await registrarPrSiSupera(diaId, $page.params.id!, candidato, metrica, fechaSesion).catch(
+						() => null
+					)
+				: null;
+		const esPr = ganado != null;
 		// La fanfarria es para el ejercicio completo (o PR); cierre parcial = sobrio.
 		exito = esPr ? 'pr' : completo ? 'normal' : 'parcial';
-		prExito = esPr ? mejor : null;
+		prExito = ganado;
 		if (exito !== 'parcial') {
 			if (sonidoActivo) void sonarExito(esPr).catch(() => {});
 			if (vibracionActiva && 'vibrate' in navigator) navigator.vibrate(esPr ? [120, 70, 180] : 80);
@@ -567,14 +593,18 @@
 
 			{#if !diaId}
 				<!-- Sin ?dia= no se entrena: vista de consulta con el progreso completo. -->
-				<ProgresoEjercicio
-					exerciseId={$page.params.id!}
-					glow={g.glow}
-					unidad={ajustes.unidad}
-					metrica={ajustes.metricaPr}
-					{pasoPeso}
-					maquinaPlacas={!!ej.maquinaPlacas}
-				/>
+				{#if Progreso}
+					<Progreso
+						exerciseId={$page.params.id!}
+						glow={g.glow}
+						unidad={ajustes.unidad}
+						metrica={ajustes.metricaPr}
+						{pasoPeso}
+						maquinaPlacas={!!ej.maquinaPlacas}
+					/>
+				{:else}
+					<p class="mt-6 text-center text-sm" style="color: var(--muted)">Cargando progreso…</p>
+				{/if}
 			{:else}
 				<div class="gb-exercise-work">
 					<section
@@ -628,7 +658,7 @@
 										>{hechas}/{sets.length}</span
 									>
 									<button
-										onclick={() => addSet(diaId, $page.params.id!, fechaSesion)}
+										onclick={() => escribir(addSet(diaId, $page.params.id!, fechaSesion))}
 										class="grid size-10 touch-manipulation place-items-center rounded-full text-sm font-bold"
 										style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
 										aria-label="Agregar serie de hoy">+</button
@@ -656,7 +686,8 @@
 										{unidad}
 										{pasoPeso}
 										onToggle={() => onToggle(i)}
-										onToggleMax={() => toggleMax(diaId, $page.params.id!, i, fechaSesion, metrica)}
+										onToggleMax={() =>
+											escribir(toggleMax(diaId, $page.params.id!, i, fechaSesion, metrica))}
 										onAjustarPeso={(d) => ajustarPeso(i, d)}
 										onEscribirPeso={(el) => escribirPeso(i, el)}
 										onAjustarReps={(d) => ajustarReps(i, d)}
@@ -918,6 +949,31 @@
 				<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
 					{metricaLabel} · {formatoSet(prFlash, unidad)}
 				</p>
+			</div>
+		</div>
+	{/if}
+
+	{#if errorGuardado}
+		<div
+			class="fixed inset-x-0 bottom-0 z-[90] mx-auto max-w-md px-5"
+			style="padding-bottom: calc(1rem + env(safe-area-inset-bottom))"
+			role="alert"
+		>
+			<div
+				class="flex items-center gap-3 rounded-2xl border p-3.5"
+				style="background: var(--surface); border-color: rgba(255,107,107,.5)"
+			>
+				<span class="text-lg" aria-hidden="true">⚠️</span>
+				<p class="min-w-0 flex-1 text-xs leading-relaxed" style="color: var(--muted)">
+					No se pudo guardar. Revisá el espacio del teléfono y probá de nuevo.
+					<span class="block opacity-70">{errorGuardado}</span>
+				</p>
+				<button
+					onclick={() => (errorGuardado = null)}
+					class="grid size-10 shrink-0 place-items-center rounded-full text-sm font-bold"
+					style="background: rgba(255,255,255,.08)"
+					aria-label="Cerrar aviso">✕</button
+				>
 			</div>
 		</div>
 	{/if}

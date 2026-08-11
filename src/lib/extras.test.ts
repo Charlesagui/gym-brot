@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { db, type Ajustes, type Dia, type Nota, type Sesion } from './db';
 import {
 	AJUSTES_DEFAULT,
+	borrarTodo,
 	exportarJSON,
 	importarBackup,
 	necesitaBackup,
 	normalizarAjustes,
 	parseBackup,
+	prepararImport,
 	setUnidad
 } from './extras';
 
@@ -56,13 +58,11 @@ describe('normalizarAjustes', () => {
 		expect(
 			normalizarAjustes({
 				id: 'app',
-				darkMode: false,
 				unidad: 'kg',
 				timer: { activo: false, minutos: 1 }
 			} as Ajustes)
 		).toEqual({
 			...AJUSTES_DEFAULT,
-			darkMode: false,
 			unidad: 'kg',
 			timer: { activo: false, minutos: 1 }
 		});
@@ -142,6 +142,97 @@ describe('backup', () => {
 				})
 			)
 		).not.toThrow();
+	});
+});
+
+/**
+ * `parseBackup` valida formas; esto valida coherencia. Una sesión cuyo id no sea
+ * `${fecha}__${diaId}` se ve bien en el historial pero la app nunca puede volver a
+ * escribirla, porque `sesionId()` arma otro id.
+ */
+describe('prepararImport', () => {
+	beforeEach(limpiarDb);
+
+	function sesionCon(id: string, fecha: string, diaId: string): Sesion {
+		return { id, fecha, diaId, ejercicios: [] };
+	}
+
+	it('corrige el id de sesiones inconsistentes y lo avisa', () => {
+		const { datos, avisos } = prepararImport({
+			sesiones: [sesionCon('cualquier-cosa', '2026-01-05', 'push')],
+			dias: [dia],
+			notas: [],
+			ajustes: []
+		});
+		expect(datos.sesiones[0]?.id).toBe('2026-01-05__push');
+		expect(avisos.join(' ')).toContain('id inconsistente');
+	});
+
+	it('descarta fechas inválidas y sesiones duplicadas', () => {
+		const { datos, avisos } = prepararImport({
+			sesiones: [
+				sesionCon('a', 'ayer', 'push'),
+				sesionCon('2026-01-05__push', '2026-01-05', 'push'),
+				sesionCon('otro', '2026-01-05', 'push')
+			],
+			dias: [dia],
+			notas: [],
+			ajustes: []
+		});
+		expect(datos.sesiones).toHaveLength(1);
+		expect(avisos.join(' ')).toContain('fecha inválida');
+		expect(avisos.join(' ')).toContain('duplicadas');
+	});
+
+	it('avisa cuando una sesión apunta a una rutina que no vino en el backup', () => {
+		const { avisos } = prepararImport({
+			sesiones: [sesionCon('2026-01-05__fantasma', '2026-01-05', 'fantasma')],
+			dias: [],
+			notas: [],
+			ajustes: []
+		});
+		expect(avisos.join(' ')).toContain('no está en el backup');
+	});
+
+	it('ignora días y notas con id repetido', () => {
+		const { datos, avisos } = prepararImport({
+			dias: [dia, { ...dia, nombre: 'Otro' }],
+			sesiones: [],
+			notas: [nota, { ...nota, texto: 'otra' }],
+			ajustes: []
+		});
+		expect(datos.dias).toHaveLength(1);
+		expect(datos.dias[0]?.nombre).toBe('Push');
+		expect(datos.notas).toHaveLength(1);
+		expect(avisos.join(' ')).toContain('id repetido');
+	});
+
+	it('un backup sano no genera ningún aviso', () => {
+		const { avisos } = prepararImport({
+			dias: [dia],
+			sesiones: [sesion],
+			notas: [nota],
+			ajustes: [ajustes]
+		});
+		expect(avisos).toEqual([]);
+	});
+});
+
+describe('borrarTodo', () => {
+	beforeEach(limpiarDb);
+
+	it('deja las cuatro tablas vacías', async () => {
+		await db.dias.put(dia);
+		await db.sesiones.put(sesion);
+		await db.notas.put(nota);
+		await db.ajustes.put(ajustes);
+
+		await borrarTodo();
+
+		expect(await db.dias.count()).toBe(0);
+		expect(await db.sesiones.count()).toBe(0);
+		expect(await db.notas.count()).toBe(0);
+		expect(await db.ajustes.count()).toBe(0);
 	});
 });
 

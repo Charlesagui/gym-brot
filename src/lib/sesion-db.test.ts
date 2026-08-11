@@ -9,7 +9,7 @@ import {
 	historialObs,
 	hoyStr,
 	marcarDiaTerminado,
-	marcarPrCelebrado,
+	registrarPrSiSupera,
 	reabrirDia,
 	reanudarEjercicio,
 	recordsGlobalesObs,
@@ -104,26 +104,74 @@ describe('sesion con IndexedDB', () => {
 		});
 	});
 
-	it('marca, conserva y reemplaza PR celebrado segun la metrica', async () => {
-		await ensureEjercicio('push', 'press', 1, '2026-01-05');
-		await marcarPrCelebrado('push', 'press', { peso: 100, reps: 1 }, 'peso', '2026-01-05');
-		await marcarPrCelebrado('push', 'press', { peso: 95, reps: 20 }, 'peso', '2026-01-05');
+	it('registra el PR solo cuando la serie supera lo previo y lo ya celebrado', async () => {
+		await ensureEjercicio('push', 'press', 2, '2026-01-05');
+		await setPeso('push', 'press', 0, 100, '2026-01-05');
+		await setReps('push', 'press', 0, 1, '2026-01-05');
+		await toggleSet('push', 'press', 0, '2026-01-05');
+
+		expect(await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-05')).toMatchObject({
+			valor: 100,
+			setIndex: 0
+		});
 		expect((await db.sesiones.get('2026-01-05__push'))?.ejercicios[0]?.prCelebrado).toEqual({
 			peso: 100,
 			reps: 1,
-			esMax: undefined,
+			esMax: false,
 			extraKg: undefined,
+			setIndex: 0,
 			metrica: 'peso'
 		});
 
-		await marcarPrCelebrado('push', 'press', { peso: 95, reps: 20 }, 'e1rm', '2026-01-05');
-		expect((await db.sesiones.get('2026-01-05__push'))?.ejercicios[0]?.prCelebrado).toEqual({
+		// Una serie más liviana no vuelve a celebrar (el flash duplicado del bug viejo).
+		await setPeso('push', 'press', 1, 95, '2026-01-05');
+		await setReps('push', 'press', 1, 20, '2026-01-05');
+		await toggleSet('push', 'press', 1, '2026-01-05');
+		expect(await registrarPrSiSupera('push', 'press', 1, 'peso', '2026-01-05')).toBeNull();
+
+		// Bajo 1RM estimado, 95 × 20 sí supera a 100 × 1.
+		expect(await registrarPrSiSupera('push', 'press', 1, 'e1rm', '2026-01-05')).toMatchObject({
+			setIndex: 1
+		});
+		expect((await db.sesiones.get('2026-01-05__push'))?.ejercicios[0]?.prCelebrado).toMatchObject({
 			peso: 95,
 			reps: 20,
-			esMax: undefined,
-			extraKg: undefined,
+			setIndex: 1,
 			metrica: 'e1rm'
 		});
+	});
+
+	it('no registra PR de una serie sin marcar ni cuando el historial previo es mayor', async () => {
+		await db.sesiones.add({
+			id: '2026-01-01__push',
+			fecha: '2026-01-01',
+			diaId: 'push',
+			ejercicios: [{ exerciseId: 'press', sets: [{ peso: 120, reps: 5, hecha: true }] }]
+		});
+		await ensureEjercicio('push', 'press', 1, '2026-01-05');
+		await setPeso('push', 'press', 0, 110, '2026-01-05');
+		// Sin ✓ no hay récord posible.
+		expect(await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-05')).toBeNull();
+		await toggleSet('push', 'press', 0, '2026-01-05');
+		// Marcada, pero 110 < 120 del historial.
+		expect(await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-05')).toBeNull();
+		expect((await db.sesiones.get('2026-01-05__push'))?.ejercicios[0]?.prCelebrado).toBeUndefined();
+	});
+
+	it('terminar el dia usa la fecha de la sesion, no el reloj', async () => {
+		vi.setSystemTime(new Date('2026-01-07T23:59:30'));
+		await ensureEjercicio('push', 'press', 1, '2026-01-07');
+		// Cruzamos la medianoche con la pantalla todavía apuntando al 07.
+		vi.setSystemTime(new Date('2026-01-08T00:00:30'));
+		await marcarDiaTerminado('push', '2026-01-07');
+
+		expect((await db.sesiones.get('2026-01-07__push'))?.diaTerminado).toBe(true);
+		// Sin sesión fantasma del día nuevo.
+		expect(await db.sesiones.get('2026-01-08__push')).toBeUndefined();
+
+		await reabrirDia('push', '2026-01-07');
+		expect((await db.sesiones.get('2026-01-07__push'))?.diaTerminado).toBe(false);
+		vi.useRealTimers();
 	});
 
 	it('historialObs devuelve el mejor set hecho por fecha', async () => {
@@ -264,7 +312,7 @@ describe('sesion con IndexedDB', () => {
 		await setPeso('push', 'press', 0, 100, '2026-01-01');
 		await setReps('push', 'press', 0, 5, '2026-01-01');
 		await toggleSet('push', 'press', 0, '2026-01-01', 'peso');
-		await marcarPrCelebrado('push', 'press', { peso: 100, reps: 5 }, 'peso', '2026-01-01');
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-01');
 
 		await actualizarSetHistorial(
 			'2026-01-01__push',
@@ -298,7 +346,7 @@ describe('sesion con IndexedDB', () => {
 		await ensureEjercicio('push', 'press', 1, '2026-01-02');
 		await setPeso('push', 'press', 0, 110, '2026-01-02');
 		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
-		await marcarPrCelebrado('push', 'press', { peso: 110 }, 'peso', '2026-01-02');
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-02');
 
 		await setPeso('push', 'press', 0, 95, '2026-01-02', 'peso');
 
@@ -373,7 +421,7 @@ describe('sesion con IndexedDB', () => {
 		await setPeso('push', 'press', 0, 110, '2026-01-02');
 		await setReps('push', 'press', 0, 5, '2026-01-02');
 		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
-		await marcarPrCelebrado('push', 'press', { peso: 110, reps: 5 }, 'peso', '2026-01-02');
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-02');
 
 		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
 
@@ -404,7 +452,7 @@ describe('sesion con IndexedDB', () => {
 		await setPeso('push', 'press', 1, 105, '2026-01-02');
 		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
 		await toggleSet('push', 'press', 1, '2026-01-02', 'peso');
-		await marcarPrCelebrado('push', 'press', { peso: 110 }, 'peso', '2026-01-02');
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-02');
 
 		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
 
@@ -413,6 +461,7 @@ describe('sesion con IndexedDB', () => {
 			reps: undefined,
 			esMax: false,
 			extraKg: undefined,
+			setIndex: 1,
 			metrica: 'peso'
 		});
 	});
@@ -427,7 +476,7 @@ describe('sesion con IndexedDB', () => {
 		await setPeso('push', 'press', 1, 110, '2026-01-02');
 		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
 		await toggleSet('push', 'press', 1, '2026-01-02', 'peso');
-		await marcarPrCelebrado('push', 'press', { peso: 110 }, 'peso', '2026-01-02');
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-02');
 
 		await toggleSet('push', 'press', 0, '2026-01-02', 'peso');
 
@@ -436,6 +485,8 @@ describe('sesion con IndexedDB', () => {
 			reps: undefined,
 			esMax: false,
 			extraKg: undefined,
+			// El recálculo reapunta el trofeo a la serie que quedó marcada.
+			setIndex: 1,
 			metrica: 'peso'
 		});
 	});

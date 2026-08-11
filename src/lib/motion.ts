@@ -1,8 +1,7 @@
 /** true si el sistema pide menos movimiento (prefers-reduced-motion). */
 export function menosMovimiento(): boolean {
 	return (
-		typeof window !== 'undefined' &&
-		window.matchMedia('(prefers-reduced-motion: reduce)').matches
+		typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 	);
 }
 

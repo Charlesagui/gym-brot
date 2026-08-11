@@ -67,6 +67,11 @@
 		filtroInicialAplicado = true;
 	});
 
+	// Buscar mira todo el catálogo: el filtro de grupo queda en suspenso mientras hay
+	// término, y los chips lo muestran así en vez de mentir con uno resaltado.
+	const buscando = $derived(q.trim() !== '');
+	const filtroVisible = $derived<Grupo | 'todos'>(buscando ? 'todos' : filtro);
+
 	const filtrados = $derived.by(() => {
 		const term = normalizar(q.trim());
 		return catalogo.filter(
@@ -76,6 +81,18 @@
 				(term === '' || normalizar(e.nombre).includes(term) || normalizar(e.musculo).includes(term))
 		);
 	});
+
+	// El catálogo tiene 962 ejercicios: montarlos todos es un <video> y un
+	// IntersectionObserver por fila. Se renderiza de a tandas y el contador vuelve a
+	// cero cada vez que cambia lo que se está mirando.
+	const POR_TANDA = 40;
+	let visibles = $state(POR_TANDA);
+	$effect(() => {
+		q;
+		filtro;
+		visibles = POR_TANDA;
+	});
+	const mostrados = $derived(filtrados.slice(0, visibles));
 
 	function toggle(e: Ejercicio, cerrarDespues = false) {
 		if (yaEn.has(e.id)) {
@@ -170,26 +187,34 @@
 
 	<div class="gb-filter-row mb-4 flex flex-wrap gap-2">
 		<button
-			onclick={() => (filtro = 'todos')}
+			onclick={() => ((filtro = 'todos'), (q = ''))}
 			class="min-h-10 rounded-full px-3.5 py-2 text-xs font-semibold"
-			style={filtro === 'todos'
+			aria-pressed={filtroVisible === 'todos'}
+			style={filtroVisible === 'todos'
 				? 'background: var(--accent); color: white'
 				: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Todos</button
 		>
 		{#each gruposList as gKey (gKey)}
 			{@const g = grupos[gKey]}
 			<button
-				onclick={() => (filtro = gKey)}
+				onclick={() => ((filtro = gKey), (q = ''))}
 				class="min-h-10 rounded-full px-3.5 py-2 text-xs font-semibold"
-				style={filtro === gKey
+				aria-pressed={filtroVisible === gKey}
+				style={filtroVisible === gKey
 					? `background: rgb(${g.glow}); color: #000`
 					: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{g.emoji} {g.label}</button
 			>
 		{/each}
 	</div>
+	{#if buscando}
+		<p class="-mt-2 mb-3 px-1 text-[11px]" style="color: var(--muted)">
+			Buscando en todos los grupos · {filtrados.length}
+			{filtrados.length === 1 ? 'resultado' : 'resultados'}
+		</p>
+	{/if}
 
 	<div class="gb-landscape-catalog space-y-2.5">
-		{#each filtrados as e (e.id)}
+		{#each mostrados as e (e.id)}
 			{@const g = grupos[e.grupo]}
 			{@const added = yaEn.has(e.id)}
 			<div
@@ -231,6 +256,16 @@
 				>
 			</div>
 		{/each}
+
+		{#if filtrados.length > visibles}
+			<button
+				onclick={() => (visibles += POR_TANDA)}
+				class="min-h-12 w-full rounded-2xl border border-white/10 py-3 text-sm font-semibold"
+				style="background: var(--surface); color: var(--muted)"
+			>
+				Ver más ({filtrados.length - visibles} restantes)
+			</button>
+		{/if}
 
 		{#if filtrados.length === 0}
 			<p class="py-8 text-center text-sm" style="color: var(--muted)">

@@ -10,9 +10,10 @@
 	import { ejercicioPorId, grupos } from '$lib/catalog';
 	import {
 		actualizarDia,
+		ajustarSeries,
 		borrarDia,
 		quitarEjercicio,
-		setSeries,
+		toggleDiaSemana,
 		coloresDia,
 		reordenarEjercicios
 	} from '$lib/dias';
@@ -62,15 +63,6 @@
 
 	const abrevDia = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 	const grupoArchivado = { label: 'Archivado', glow: '148 163 184', emoji: '·' };
-
-	/** Agenda multi-día: cada chip suma o quita ese día de la semana. */
-	function toggleDiaSemana(i: number) {
-		const actual = dia?.diasSemana ?? [];
-		const nuevo = actual.includes(i)
-			? actual.filter((x) => x !== i)
-			: [...actual, i].sort((a, b) => a - b);
-		actualizarDia(diaId, { diasSemana: nuevo.length ? nuevo : undefined });
-	}
 
 	// El día gestiona su propio flag de carga; la sesión y los ajustes son stores legibles con `$`.
 	$effect(() => {
@@ -160,7 +152,9 @@
 
 	async function terminarDia() {
 		if (!diaListo || diaTerminado) return;
-		await marcarDiaTerminado(diaId);
+		// La fecha va explícita: con `hoyStr()` adentro, terminar el día pasada la
+		// medianoche marcaba una sesión nueva y vacía y dejaba abierta la real.
+		await marcarDiaTerminado(diaId, fechaHoy);
 		premioDia = true;
 		if (sonidoActivo) void sonarDiaTerminado().catch(() => {});
 		if ((ajustes.vibracion ?? true) && 'vibrate' in navigator)
@@ -170,9 +164,14 @@
 	}
 
 	async function reabrir() {
+		cerrarPremio();
+		await reabrirDia(diaId, fechaHoy);
+	}
+
+	function cerrarPremio() {
 		premioDia = false;
 		if (premioId) clearTimeout(premioId);
-		await reabrirDia(diaId);
+		premioId = null;
 	}
 
 	function entrarReordenar() {
@@ -322,8 +321,8 @@
 			<div class="mb-4 flex gap-1.5">
 				{#each abrevDia as d, i (i)}
 					<button
-						onclick={() => toggleDiaSemana(i)}
-						class="flex-1 rounded-lg py-2 text-xs font-semibold"
+						onclick={() => toggleDiaSemana(diaId, i)}
+						class="min-h-11 flex-1 rounded-lg py-2 text-xs font-semibold"
 						aria-pressed={dia.diasSemana?.includes(i) ?? false}
 						aria-label={`Entrenar los días ${d}`}
 						style={dia.diasSemana?.includes(i)
@@ -389,19 +388,21 @@
 									ID guardado: {item.exerciseId}
 								</p>
 							{/if}
-							<div class="mt-1.5 flex items-center gap-2">
+							<!-- Deltas, no totales: con el total calculado acá, dos toques rápidos
+							     escribían dos veces el mismo número y uno se perdía. -->
+							<div class="mt-1.5 flex items-center gap-1.5">
 								<button
-									onclick={() => setSeries(diaId, item.exerciseId, item.seriesObjetivo - 1)}
-									class="grid size-6 place-items-center rounded-full bg-white/10 text-sm"
-									aria-label="Menos series">−</button
+									onclick={() => ajustarSeries(diaId, item.exerciseId, -1)}
+									class="grid size-10 shrink-0 touch-manipulation place-items-center rounded-full bg-white/10 text-sm"
+									aria-label={`Menos series de ${nombre}`}>−</button
 								>
 								<span class="text-sm font-semibold tabular-nums"
 									>{item.seriesObjetivo} series objetivo</span
 								>
 								<button
-									onclick={() => setSeries(diaId, item.exerciseId, item.seriesObjetivo + 1)}
-									class="grid size-6 place-items-center rounded-full bg-white/10 text-sm"
-									aria-label="Más series">+</button
+									onclick={() => ajustarSeries(diaId, item.exerciseId, 1)}
+									class="grid size-10 shrink-0 touch-manipulation place-items-center rounded-full bg-white/10 text-sm"
+									aria-label={`Más series de ${nombre}`}>+</button
 								>
 							</div>
 						</div>
@@ -582,8 +583,11 @@
 </main>
 
 {#if premioDia}
-	<div
-		class="fixed inset-0 z-[60] grid place-items-center px-8"
+	<!-- Celebratorio pero no carcelero: un toque en cualquier lado lo cierra. -->
+	<button
+		onclick={cerrarPremio}
+		aria-label="Cerrar resumen del día"
+		class="fixed inset-0 z-[60] grid w-full cursor-default place-items-center px-8"
 		style="background: radial-gradient(72% 50% at 50% 42%, rgb(var(--exito) / .22), transparent 72%), rgb(var(--scrim) / .84); backdrop-filter: blur(8px)"
 	>
 		<div transition:fly={{ y: 18, duration: dur(260) }} class="text-center" aria-live="polite">
@@ -629,8 +633,9 @@
 					{/if}
 				</div>
 			{/if}
+			<p class="mt-5 text-[11px] font-semibold" style="color: var(--muted)">Tocá para cerrar</p>
 		</div>
-	</div>
+	</button>
 {/if}
 
 {#if confirmacion}

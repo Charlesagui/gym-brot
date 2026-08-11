@@ -25,7 +25,21 @@
 		ariaUp: string;
 		ariaInput: string;
 	} = $props();
+
+	let campo: HTMLInputElement | undefined;
+
+	/**
+	 * El valor se confirma con `change` (blur o Enter). Si la app se va a background
+	 * con el teclado abierto, ese evento no llega y el peso recién tipeado se pierde:
+	 * al ocultarse la página forzamos el blur, que dispara el commit.
+	 */
+	function commitSiEstaEditando() {
+		if (document.visibilityState !== 'hidden') return;
+		if (document.activeElement === campo) campo?.blur();
+	}
 </script>
+
+<svelte:document onvisibilitychange={commitSiEstaEditando} />
 
 <div class="flex min-h-12 items-stretch rounded-xl bg-white/5 p-1">
 	<button
@@ -35,6 +49,7 @@
 		aria-label={ariaDown}>−</button
 	>
 	<input
+		bind:this={campo}
 		type="text"
 		{inputmode}
 		value={value != null ? format(value) : ''}
