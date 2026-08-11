@@ -13,14 +13,20 @@
 		parseBackup,
 		importarBackup,
 		registrarBackup,
+		borrarTodo,
 		AJUSTES_DEFAULT
 	} from '$lib/extras';
+	import { reiniciarAyudas } from '$lib/preferencias-ui';
 	import { fromLiveQuery } from '$lib/live';
+	import { onMount } from 'svelte';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
 
 	const ajustesStore = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
 	const ajustes = $derived<Ajustes>($ajustesStore);
 	let msg = $state('');
+	let msgId: ReturnType<typeof setTimeout> | null = null;
+	let avisosImport = $state<string[]>([]);
+	let persistido = $state<boolean | null>(null);
 	let confirmacion = $state<{
 		titulo: string;
 		mensaje: string;
@@ -29,23 +35,46 @@
 		onCancel?: () => void;
 	} | null>(null);
 
+	onMount(() => {
+		void navigator.storage?.persisted?.().then((v) => (persistido = v));
+		return () => {
+			if (msgId) clearTimeout(msgId);
+		};
+	});
+
+	function avisar(texto: string) {
+		msg = texto;
+		if (msgId) clearTimeout(msgId);
+		msgId = setTimeout(() => (msg = ''), 6000);
+	}
+
 	async function exportar() {
-		const json = await exportarJSON();
-		const blob = new Blob([json], { type: 'application/json' });
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = `gym-brot-backup-${new Date().toLocaleDateString('sv')}.json`;
-		a.click();
-		URL.revokeObjectURL(url);
-		await registrarBackup();
-		msg = '✅ Backup descargado';
+		try {
+			const json = await exportarJSON();
+			const blob = new Blob([json], { type: 'application/json' });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `gym-brot-backup-${new Date().toLocaleDateString('sv')}.json`;
+			a.rel = 'noopener';
+			// El anchor tiene que estar en el documento y la URL no puede revocarse en el
+			// mismo tick: así fallaba la descarga, en silencio, en varios navegadores móviles.
+			document.body.appendChild(a);
+			a.click();
+			a.remove();
+			setTimeout(() => URL.revokeObjectURL(url), 60_000);
+			await registrarBackup();
+			avisar('✅ Backup descargado');
+		} catch (e) {
+			avisar(`❌ No se pudo generar el backup: ${e instanceof Error ? e.message : 'error'}`);
+		}
 	}
 
 	async function importar(e: Event) {
 		const input = e.currentTarget as HTMLInputElement;
 		const file = input.files?.[0];
 		if (!file) return;
+		avisosImport = [];
 		try {
 			const data = parseBackup(await file.text());
 			const nDias = data.dias?.length ?? 0;
@@ -56,18 +85,18 @@
 					`(${nDias} ${nDias === 1 ? 'día' : 'días'}). No se puede deshacer.`,
 				confirmarTexto: 'Restaurar',
 				onConfirm: async () => {
-					await importarBackup(data);
-					msg = '✅ Datos restaurados';
+					avisosImport = await importarBackup(data);
+					avisar('✅ Datos restaurados');
 					input.value = '';
 					confirmacion = null;
 				},
 				onCancel: () => {
-					msg = 'Importación cancelada';
+					avisar('Importación cancelada');
 					input.value = '';
 				}
 			};
-		} catch {
-			msg = '❌ Archivo inválido';
+		} catch (error) {
+			avisar(`❌ ${error instanceof Error ? error.message : 'Archivo inválido'}`);
 			input.value = '';
 		} finally {
 			if (!confirmacion) input.value = '';
@@ -77,6 +106,72 @@
 	function cancelarConfirmacion() {
 		confirmacion?.onCancel?.();
 		confirmacion = null;
+	}
+
+	function confirmarBorrarTodo() {
+		confirmacion = {
+			titulo: 'Borrar todos mis datos',
+			mensaje:
+				'Se borran rutinas, historial, notas y ajustes de este dispositivo. ' +
+				'No se puede deshacer: si no exportaste un backup, se pierde todo.',
+			confirmarTexto: 'Borrar todo',
+			onConfirm: async () => {
+				await borrarTodo();
+				confirmacion = null;
+				avisar('Datos borrados');
+			}
+		};
+	}
+
+	function confirmarReiniciarAyudas() {
+		reiniciarAyudas();
+		avisar('✅ Vas a volver a ver los carteles de ayuda');
+	}
+
+	// --- Descarga de videos para uso sin señal ---
+	// El service worker ya no precachea los 962 videos (eran 22 MB en la primera
+	// visita): se guardan al verlos. Esto es para quien quiera dejarlos listos antes
+	// de ir a un gym sin datos.
+	let bajando = $state(false);
+	let bajados = $state(0);
+	let totalVideos = $state(0);
+	let cancelarDescarga: AbortController | null = null;
+
+	async function descargarVideos() {
+		if (bajando) return;
+		bajando = true;
+		bajados = 0;
+		const control = new AbortController();
+		cancelarDescarga = control;
+		try {
+			const { catalogo } = await import('$lib/catalog');
+			const urls = [...new Set(catalogo.map((e) => e.demoVideo))];
+			totalVideos = urls.length;
+			// De a 6: saturar la conexión del gym con 962 requests no acelera nada.
+			const cola = [...urls];
+			const obreros = Array.from({ length: 6 }, async () => {
+				while (cola.length && !control.signal.aborted) {
+					const url = cola.pop()!;
+					try {
+						await fetch(url, { signal: control.signal, cache: 'force-cache' });
+					} catch {
+						// Un video que falla no corta la descarga del resto.
+					}
+					bajados++;
+				}
+			});
+			await Promise.all(obreros);
+			avisar(control.signal.aborted ? 'Descarga cancelada' : '✅ Videos guardados para offline');
+		} catch (e) {
+			avisar(`❌ No se pudieron descargar: ${e instanceof Error ? e.message : 'error'}`);
+		} finally {
+			bajando = false;
+			cancelarDescarga = null;
+		}
+	}
+
+	function pararDescarga() {
+		cancelarDescarga?.abort();
 	}
 </script>
 
@@ -98,7 +193,7 @@
 			{#each ['kg', 'lb'] as u (u)}
 				<button
 					onclick={() => setUnidad(u as 'kg' | 'lb')}
-					class="flex-1 rounded-xl py-2.5 font-semibold"
+					class="min-h-11 flex-1 rounded-xl py-2.5 font-semibold"
 					aria-pressed={ajustes.unidad === u}
 					aria-label={`Seleccionar unidad ${u}`}
 					style={ajustes.unidad === u
@@ -117,7 +212,7 @@
 			{#each [1, 2.5, 5] as paso (paso)}
 				<button
 					onclick={() => setPasoPeso(paso)}
-					class="flex-1 rounded-xl py-2.5 font-semibold tabular-nums"
+					class="min-h-11 flex-1 rounded-xl py-2.5 font-semibold tabular-nums"
 					aria-pressed={ajustes.pasoPeso === paso}
 					aria-label={`Paso de ${paso} ${ajustes.unidad}`}
 					style={ajustes.pasoPeso === paso
@@ -177,6 +272,11 @@
 				>{ajustes.sonido ? 'On' : 'Off'}</button
 			>
 		</div>
+		<p class="mt-2 text-xs leading-relaxed" style="color: var(--muted)">
+			Mientras corre un descanso, la app mantiene tomada la salida de audio para que la alarma suene
+			sí o sí al volver de la pantalla bloqueada. En iPhone eso puede pausar la música durante el
+			descanso.
+		</p>
 	</section>
 
 	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
@@ -220,23 +320,93 @@
 	</section>
 
 	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+		<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+			Videos sin señal
+		</p>
+		<p class="mt-1 text-xs leading-relaxed" style="color: var(--muted)">
+			Los videos se guardan solos la primera vez que los ves, así la app no baja la videoteca entera
+			al instalarse. Si vas a un gym sin datos, podés dejarlos todos listos ahora (~22 MB).
+		</p>
+		{#if bajando}
+			<div class="mt-3">
+				<div class="h-2 overflow-hidden rounded-full bg-white/5">
+					<div
+						class="h-full rounded-full transition-all"
+						style="width: {totalVideos
+							? (bajados / totalVideos) * 100
+							: 0}%; background: var(--accent)"
+					></div>
+				</div>
+				<div class="mt-2 flex items-center justify-between gap-3">
+					<p class="text-xs tabular-nums" style="color: var(--muted)">
+						{bajados}/{totalVideos} videos
+					</p>
+					<button
+						onclick={pararDescarga}
+						class="min-h-10 rounded-xl px-4 text-sm font-bold"
+						style="background: rgba(255,255,255,.08); color: var(--muted)">Cancelar</button
+					>
+				</div>
+			</div>
+		{:else}
+			<button
+				onclick={descargarVideos}
+				class="mt-3 min-h-12 w-full rounded-xl py-3 font-semibold"
+				style="background: rgba(255,255,255,.08)">⬇️ Descargar todos los videos</button
+			>
+		{/if}
+	</section>
+
+	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
 		<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">Backup</p>
 		<p class="mt-1 text-xs" style="color: var(--muted)">
 			Guardá una copia de tus rutinas y progreso (importante en iPhone, que puede borrar datos
 			locales).
 		</p>
+		{#if persistido === false}
+			<p class="mt-2 text-xs leading-relaxed" style="color: rgb(var(--max))">
+				⚠️ El navegador no marcó tus datos como persistentes: puede borrarlos si necesita espacio.
+				Exportá seguido.
+			</p>
+		{/if}
 		<button
 			onclick={exportar}
-			class="mt-3 w-full rounded-xl py-3 font-semibold"
+			class="mt-3 min-h-12 w-full rounded-xl py-3 font-semibold"
 			style="background: var(--accent); color: white">⬇️ Guardar copia de seguridad</button
 		>
 		<label
-			class="mt-2 block w-full cursor-pointer rounded-xl border border-white/15 py-3 text-center font-semibold"
+			class="mt-2 block min-h-12 w-full cursor-pointer rounded-xl border border-white/15 py-3 text-center font-semibold"
 		>
 			⬆️ Restaurar copia de seguridad
 			<input type="file" accept="application/json" onchange={importar} class="hidden" />
 		</label>
 		{#if msg}<p class="mt-3 text-center text-sm font-medium">{msg}</p>{/if}
+		{#if avisosImport.length}
+			<ul
+				class="mt-3 space-y-1 rounded-xl p-3 text-xs leading-relaxed"
+				style="background: rgb(var(--max) / .1); color: var(--muted)"
+			>
+				{#each avisosImport as aviso (aviso)}
+					<li>· {aviso}</li>
+				{/each}
+			</ul>
+		{/if}
+	</section>
+
+	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+		<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+			Mantenimiento
+		</p>
+		<button
+			onclick={confirmarReiniciarAyudas}
+			class="mt-3 min-h-12 w-full rounded-xl border border-white/10 py-3 text-sm font-semibold"
+			style="color: var(--muted)">💡 Volver a mostrar los carteles de ayuda</button
+		>
+		<button
+			onclick={confirmarBorrarTodo}
+			class="mt-2 min-h-12 w-full rounded-xl border border-white/10 py-3 text-sm font-semibold"
+			style="color: #ff6b6b">🗑 Borrar todos mis datos</button
+		>
 	</section>
 
 	<p class="mt-8 text-center text-xs" style="color: var(--muted)">
@@ -249,7 +419,7 @@
 		titulo={confirmacion.titulo}
 		mensaje={confirmacion.mensaje}
 		confirmarTexto={confirmacion.confirmarTexto}
-		tono="accent"
+		tono={confirmacion.confirmarTexto === 'Restaurar' ? 'accent' : 'danger'}
 		onConfirm={confirmacion.onConfirm}
 		onCancel={cancelarConfirmacion}
 	/>

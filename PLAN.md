@@ -24,17 +24,17 @@ Principios: botones grandes, una sola mano, dark mode, mínimos toques, animacio
 
 ## 2. Decisiones tomadas ✅
 
-| Tema | Decisión |
-|---|---|
-| Framework | **SvelteKit + Svelte 5** (runes) |
-| Distribución | **PWA** instalable (base). Capacitor = upgrade futuro |
-| Plataformas | **Android + iPhone** |
-| Imágenes | ✅ **MP4 compactados** desde GIFs de ExerciseDB vía [JahelCuadrado/ExerciseGymGifsDB](https://github.com/JahelCuadrado/ExerciseGymGifsDB) — movimiento + músculo en rojo |
-| Mapa muscular SVG | ❌ Descartado (la animación ya marca el músculo) |
-| Almacenamiento | **Dexie.js** (IndexedDB) — local, offline |
-| Unidad | **kg** por defecto, cambiable a **lb** en ajustes |
-| Estilo visual | **Oscuro minimalista** + brillos sutiles de color (color a definir — no atado a azul/índigo), acento vivo (§7) |
-| Backend | **Ninguno** |
+| Tema              | Decisión                                                                                                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Framework         | **SvelteKit + Svelte 5** (runes)                                                                                                                                         |
+| Distribución      | **PWA** instalable (base). Capacitor = upgrade futuro                                                                                                                    |
+| Plataformas       | **Android + iPhone**                                                                                                                                                     |
+| Imágenes          | ✅ **MP4 compactados** desde GIFs de ExerciseDB vía [JahelCuadrado/ExerciseGymGifsDB](https://github.com/JahelCuadrado/ExerciseGymGifsDB) — movimiento + músculo en rojo |
+| Mapa muscular SVG | ❌ Descartado (la animación ya marca el músculo)                                                                                                                         |
+| Almacenamiento    | **Dexie.js** (IndexedDB) — local, offline                                                                                                                                |
+| Unidad            | **kg** por defecto, cambiable a **lb** en ajustes                                                                                                                        |
+| Estilo visual     | **Oscuro minimalista** + brillos sutiles de color (color a definir — no atado a azul/índigo), acento vivo (§7)                                                           |
+| Backend           | **Ninguno**                                                                                                                                                              |
 
 ---
 
@@ -66,11 +66,13 @@ Catálogo (JSON estático: ejercicios · nombre_es · grupo · demoVideo)
 ## 5. Modelo de datos (conceptual)
 
 **Catálogo (estático — ver `EJERCICIOS-INICIALES.md`):**
+
 ```
 Ejercicio: id · nombre_es · grupo_muscular · demoVideo · instrucciones_es? (opcional)
 ```
 
 **Datos del usuario (Dexie):**
+
 ```
 Dia:      id · nombre · color? · diaSemana? · ejercicios[ { exerciseId, seriesObjetivo, orden } ]
 Sesion:   id · fecha · diaId · ejercicios[ { exerciseId, sets[ { peso?, reps?, hecha, esMax? } ] } ]
@@ -78,6 +80,7 @@ Sesion:   id · fecha · diaId · ejercicios[ { exerciseId, sets[ { peso?, reps?
 Nota:     exerciseId · texto        (colapsada en la UI)
 Ajustes:  darkMode · unidad(kg|lb) · timer{ activo, minutos }
 ```
+
 > El **PR** se deriva del historial de sesiones, **solo de las series marcadas hechas ✓** (no se fabrica nada).
 > Métrica **configurable** (Ajustes): `peso` = serie más pesada · `e1rm` = 1RM estimado (Epley `peso·(1+reps/30)`),
 > que sí tiene en cuenta las reps. El número y el mini-gráfico siempre rotulan qué métrica usan.
@@ -138,11 +141,11 @@ Ajustes:  darkMode · unidad(kg|lb) · timer{ activo, minutos }
 
 ## 10. Fuentes
 
-| Recurso | Uso | Licencia |
-|---|---|---|
+| Recurso                                                                               | Uso                                         | Licencia             |
+| ------------------------------------------------------------------------------------- | ------------------------------------------- | -------------------- |
 | [JahelCuadrado/ExerciseGymGifsDB](https://github.com/JahelCuadrado/ExerciseGymGifsDB) | **GIFs animados fuente, convertidos a MP4** | none (de ExerciseDB) |
-| [vite-pwa/sveltekit](https://github.com/vite-pwa/sveltekit) | PWA plugin | MIT |
-| [jessedelira/gym-tracker](https://github.com/jessedelira/gym-tracker) | Referencia (PWA gym) | — |
+| [vite-pwa/sveltekit](https://github.com/vite-pwa/sveltekit)                           | PWA plugin                                  | MIT                  |
+| [jessedelira/gym-tracker](https://github.com/jessedelira/gym-tracker)                 | Referencia (PWA gym)                        | —                    |
 
 ---
 
@@ -162,6 +165,7 @@ Ajustes:  darkMode · unidad(kg|lb) · timer{ activo, minutos }
 Refinamiento del PR para cumplir el manifiesto ("Datos y verdad").
 
 **✅ Hecho (fases A–C + pulido UI):**
+
 - **A1 · PR honesto** — el PR sale **solo de series marcadas hechas ✓**. "Terminar ejercicio" ya **no auto-completa**
   series no tocadas (no fabrica récords ni progreso). El badge en vivo y la celebración al terminar usan el mismo criterio.
 - **A2 · Umbral robusto** — "PR ya celebrado" guarda el **set** (`{peso, reps, esMax, extraKg}`), no un escalar →
@@ -174,6 +178,7 @@ Refinamiento del PR para cumplir el manifiesto ("Datos y verdad").
 - **UI** — estado vacío "Todavía sin PR"; mini-gráfico con 1 sola sesión.
 
 **⏳ Pendiente (mayor esfuerzo / riesgo — pedir antes de hacer):**
+
 - **D3 · Corrección de dato** — long-press en un punto del gráfico para quitar/editar una serie del historial
   (salida de emergencia ante un dato malo). Menos urgente ahora que A1–A3 cierran las fuentes de datos falsos.
 - **D4 · Vista global de récords** — pantalla que liste todos los PRs (pantalla nueva).

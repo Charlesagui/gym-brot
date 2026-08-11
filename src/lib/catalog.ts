@@ -16,7 +16,7 @@ export interface Ejercicio {
 /** Catálogo estático de ejercicios, empaquetado con la app. */
 export const catalogo: Ejercicio[] = exercises as Ejercicio[];
 
-/** Índice id → ejercicio: lookup O(1) (se llama en loops de render sobre 629 ítems). */
+/** Índice id → ejercicio: lookup O(1) (se llama en loops de render sobre ~960 ítems). */
 const porId = new Map(catalogo.map((e) => [e.id, e]));
 
 export function ejercicioPorId(id: string): Ejercicio | undefined {

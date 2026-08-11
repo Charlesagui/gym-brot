@@ -16,22 +16,13 @@
 	function expandir() {
 		descanso.expandirFocus();
 	}
-
-	function expandirConTeclado(event: KeyboardEvent) {
-		if (event.key !== 'Enter' && event.key !== ' ') return;
-		event.preventDefault();
-		expandir();
-	}
 </script>
 
 {#if descanso.restoSeg > 0 || descanso.vencido}
+	<!-- Contenedor no interactivo: antes era un role="button" con botones adentro, que
+	     para un lector de pantalla es un botón dentro de otro. -->
 	<div
 		transition:fly={{ y: 80, duration: dur(220) }}
-		onclick={expandir}
-		onkeydown={expandirConTeclado}
-		role="button"
-		tabindex="0"
-		aria-label="Abrir descanso"
 		class="rest-bar fixed inset-x-0 z-50 mx-auto flex max-w-md items-center justify-between gap-3 border-t border-white/10 px-5 pt-3 {descanso.vencido
 			? 'rest-vencido'
 			: ''}"
@@ -44,43 +35,51 @@
 			: 'color-mix(in oklab, var(--surface) 94%, transparent)'}; backdrop-filter: blur(10px)"
 	>
 		{#if descanso.restoSeg > 0}
-			<div class="min-w-0 flex-1">
-				<p class="text-sm font-semibold" style="color: var(--muted)">⏱️ Descanso</p>
-				{#if descanso.siguiente}
-					<p class="truncate text-[11px] font-medium" style="color: var(--muted)">
-						Sig: {descanso.siguiente}
-					</p>
-				{/if}
-			</div>
-			<span class="text-3xl font-extrabold tabular-nums" style="color: rgb({descanso.glow})"
-				>{mmss(descanso.restoSeg)}</span
-			>
 			<button
-				onclick={(event) => {
-					event.stopPropagation();
-					descanso.saltar();
-				}}
+				onclick={expandir}
+				class="flex min-h-11 min-w-0 flex-1 items-center gap-3 text-left"
+				aria-label="Abrir descanso en pantalla completa"
+			>
+				<span class="min-w-0 flex-1">
+					<span class="block text-sm font-semibold" style="color: var(--muted)">⏱️ Descanso</span>
+					{#if descanso.siguiente}
+						<span class="block truncate text-[11px] font-medium" style="color: var(--muted)">
+							Sig: {descanso.siguiente}
+						</span>
+					{/if}
+				</span>
+				<span class="text-3xl font-extrabold tabular-nums" style="color: rgb({descanso.glow})"
+					>{mmss(descanso.restoSeg)}</span
+				>
+			</button>
+			<button
+				onclick={() => descanso.saltar()}
 				class="min-h-10 shrink-0 rounded-full px-5 text-sm font-semibold"
 				style="background: rgba(255,255,255,.12)">Saltar</button
 			>
 		{:else}
 			<!-- Vencido: queda hasta que se atienda; el excedido dice cuánto te pasaste. -->
-			<div class="min-w-0 flex-1" aria-live="polite">
-				<p class="text-base font-extrabold" style="color: rgb({descanso.glow})">⏰ ¡A la serie!</p>
-				{#if descanso.siguiente}
-					<p class="truncate text-[11px] font-medium" style="color: var(--muted)">
-						{descanso.siguiente}
-					</p>
-				{/if}
-			</div>
-			<span class="text-2xl font-extrabold tabular-nums" style="color: rgb({descanso.glow})"
-				>+{mmss(descanso.vencidoSeg)}</span
-			>
 			<button
-				onclick={(event) => {
-					event.stopPropagation();
-					descanso.atender();
-				}}
+				onclick={expandir}
+				class="flex min-h-11 min-w-0 flex-1 items-center gap-3 text-left"
+				aria-label="Abrir descanso en pantalla completa"
+			>
+				<span class="min-w-0 flex-1" aria-live="polite">
+					<span class="block text-base font-extrabold" style="color: rgb({descanso.glow})"
+						>⏰ ¡A la serie!</span
+					>
+					{#if descanso.siguiente}
+						<span class="block truncate text-[11px] font-medium" style="color: var(--muted)">
+							{descanso.siguiente}
+						</span>
+					{/if}
+				</span>
+				<span class="text-2xl font-extrabold tabular-nums" style="color: rgb({descanso.glow})"
+					>+{mmss(descanso.vencidoSeg)}</span
+				>
+			</button>
+			<button
+				onclick={() => descanso.atender()}
 				class="min-h-10 shrink-0 rounded-full px-5 text-sm font-bold"
 				style="background: rgb({descanso.glow}); color: white">✓ Listo</button
 			>

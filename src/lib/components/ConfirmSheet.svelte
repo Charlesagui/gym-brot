@@ -21,11 +21,21 @@
 	} = $props();
 
 	let ocupado = $state(false);
+	let error = $state<string | null>(null);
 
 	async function confirmar() {
 		if (ocupado) return;
 		ocupado = true;
-		await onConfirm();
+		error = null;
+		try {
+			await onConfirm();
+		} catch (e) {
+			// Sin esto el sheet quedaba trabado en "Procesando…" con el cancelar
+			// deshabilitado: la única salida era recargar la app.
+			error = e instanceof Error ? e.message : 'No se pudo completar la acción.';
+		} finally {
+			ocupado = false;
+		}
 	}
 </script>
 
@@ -50,6 +60,15 @@
 		<div class="mx-auto h-1 w-10 rounded-full bg-white/15"></div>
 		<p class="mt-4 text-lg font-extrabold leading-tight">{titulo}</p>
 		<p class="mt-2 text-sm leading-relaxed" style="color: var(--muted)">{mensaje}</p>
+		{#if error}
+			<p
+				class="mt-3 rounded-xl p-3 text-xs leading-relaxed"
+				style="background: rgb(255 107 107 / .1); color: #ff6b6b"
+				role="alert"
+			>
+				{error}
+			</p>
+		{/if}
 		<div class="mt-5 grid grid-cols-2 gap-2">
 			<button
 				onclick={onCancel}

@@ -10,7 +10,12 @@
  * atiende (con tope de 10 min). Si venció con la app fuera de vista, al volver
  * el loop arranca solo y el excedido siempre se ve.
  */
-import { sonarDescansoTerminado } from './audio';
+import {
+	desbloquearAudio,
+	mantenerAudioDespierto,
+	soltarAudioDespierto,
+	sonarDescansoTerminado
+} from './audio';
 import { ajustesObs } from './extras';
 
 const DESCANSO_KEY = 'gb-descanso';
@@ -73,12 +78,40 @@ class Descanso {
 			// Si hay un vencido sin atender, el loop de alarma se retoma solo en #recalc.
 			this.#recalc();
 			if (document.visibilityState !== 'visible') return;
+			if (this.#hasta != null) desbloquearAudio();
 			if (this.#hasta != null && !this.vencido) void this.#pedirWakeLock();
 			void this.#cerrarNotificacion();
 		};
 		document.addEventListener('visibilitychange', refrescar);
 		window.addEventListener('focus', refrescar);
+		// Red de seguridad para iOS: si el contexto quedó suspendido tras el background,
+		// el primer toque en cualquier parte de la app lo reanuda.
+		window.addEventListener(
+			'pointerdown',
+			() => {
+				if (this.#hasta != null) desbloquearAudio();
+			},
+			{ capture: true }
+		);
+		// Otra pestaña (o la app instalada) arrancó, ajustó o cortó el descanso:
+		// sin esto las dos corren timers distintos y una sigue sonando sola.
+		window.addEventListener('storage', (e) => {
+			if (e.key !== DESCANSO_KEY) return;
+			if (e.newValue == null) this.#limpiar();
+			else this.#restaurar(false);
+		});
 		this.#restaurar();
+	}
+
+	/**
+	 * Prepara audio y permisos desde el gesto del usuario, antes de cualquier `await`.
+	 * `iniciar()` corre después de escribir en la base, y para entonces el navegador
+	 * ya puede considerar vencida la activación por gesto.
+	 */
+	prepararDesdeGesto() {
+		if (typeof window === 'undefined') return;
+		desbloquearAudio();
+		this.#pedirPermisoNotificacion();
 	}
 
 	/** Arranca un descanso de `minutos`, teñido con `glow`. */
@@ -99,6 +132,7 @@ class Descanso {
 		this.#guardar();
 		void this.#pedirWakeLock();
 		this.#pedirPermisoNotificacion();
+		mantenerAudioDespierto();
 	}
 
 	/** Si hay un descanso en curso, mueve su fin a inicio + minutos (no reinicia). */
@@ -131,7 +165,7 @@ class Descanso {
 		if (this.restoSeg > 0 || this.vencido) this.focusAbierto = true;
 	}
 
-	#restaurar() {
+	#restaurar(abrirFocus = true) {
 		const crudo = localStorage.getItem(DESCANSO_KEY);
 		if (!crudo) return;
 		try {
@@ -154,7 +188,10 @@ class Descanso {
 				this.restoSeg = Math.ceil((this.#hasta - Date.now()) / 1000);
 				void this.#pedirWakeLock();
 			}
-			this.focusAbierto = this.#focusHabilitado && (this.restoSeg > 0 || this.vencido);
+			mantenerAudioDespierto();
+			if (abrirFocus) {
+				this.focusAbierto = this.#focusHabilitado && (this.restoSeg > 0 || this.vencido);
+			}
 		} catch {
 			localStorage.removeItem(DESCANSO_KEY);
 		}
@@ -174,6 +211,8 @@ class Descanso {
 	}
 
 	async #pedirWakeLock() {
+		// Ya hay uno vivo: pedir otro deja el anterior tomado sin referencia para soltarlo.
+		if (this.#wakeLock && !this.#wakeLock.released) return;
 		try {
 			if ('wakeLock' in navigator) this.#wakeLock = await navigator.wakeLock.request('screen');
 		} catch {
@@ -289,6 +328,7 @@ class Descanso {
 		this.#ultimaAlarma = 0;
 		localStorage.removeItem(DESCANSO_KEY);
 		this.#soltarWakeLock();
+		soltarAudioDespierto();
 		void this.#cerrarNotificacion();
 	}
 }

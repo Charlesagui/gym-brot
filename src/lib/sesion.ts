@@ -152,6 +152,7 @@ function snapPr(set: MejorSet, metrica: MetricaPr, modo: ModoPr): PrCelebrado {
 		reps: set.reps,
 		esMax: set.esMax,
 		extraKg: set.extraKg,
+		setIndex: set.setIndex,
 		metrica: metricaEfectiva(metrica, modo)
 	};
 }
@@ -198,20 +199,29 @@ export function recordsGlobalesObs(metrica: MetricaPr = 'peso') {
 	});
 }
 
-/** Última sesión (distinta de la actual) en que se hizo este ejercicio. */
+/**
+ * Última sesión (distinta de la actual) en que se hizo este ejercicio.
+ * Recorre el índice `fecha` hacia atrás y corta en la primera coincidencia: se entra
+ * a esta función al abrir cada ejercicio, y deserializar todo el historial para
+ * quedarse con una fila se paga en cada entrada.
+ */
 export async function ultimaSesion(
 	diaId: string,
 	exerciseId: string,
 	fecha = hoyStr()
 ): Promise<{ sets: SetSesion[]; fecha: string } | undefined> {
 	const exceptoId = sesionId(diaId, fecha);
-	const todas = await db.sesiones.orderBy('fecha').reverse().toArray();
-	for (const s of todas) {
-		if (s.id === exceptoId) continue;
-		const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
-		if (e && e.sets.length) return { sets: e.sets, fecha: s.fecha };
-	}
-	return undefined;
+	let encontrada: { sets: SetSesion[]; fecha: string } | undefined;
+	await db.sesiones
+		.orderBy('fecha')
+		.reverse()
+		.until(() => encontrada != null, true)
+		.each((s) => {
+			if (s.id === exceptoId || encontrada) return;
+			const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
+			if (e && e.sets.length) encontrada = { sets: e.sets, fecha: s.fecha };
+		});
+	return encontrada;
 }
 
 /** Sets de la última vez que se hizo este ejercicio (para pre-llenar pesos). */
@@ -298,41 +308,48 @@ export interface CambiosSetHistorial {
 	extraKg?: number;
 }
 
-export async function actualizarSetHistorial(
+/**
+ * Las ediciones del historial devuelven si encontraron la serie: la pantalla no puede
+ * cerrar el sheet como si hubiera guardado cuando la serie ya no existe (editada en
+ * otra pestaña, backup restaurado en el medio).
+ */
+export function actualizarSetHistorial(
 	idSesion: string,
 	exerciseId: string,
 	setIndex: number,
 	cambios: CambiosSetHistorial,
 	metrica: MetricaPr = 'peso'
-) {
-	await db.transaction('rw', db.sesiones, async () => {
+): Promise<boolean> {
+	return db.transaction('rw', db.sesiones, async () => {
 		const s = await db.sesiones.get(idSesion);
 		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
 		const set = e?.sets[setIndex];
-		if (!s || !set?.hecha) return;
+		if (!s || !set?.hecha) return false;
 		set.peso = cambios.peso;
 		set.reps = cambios.reps;
 		set.esMax = cambios.esMax;
 		set.extraKg = cambios.extraKg;
 		await recalcularPrCelebrado(s, exerciseId, metrica);
 		await db.sesiones.put(s);
+		return true;
 	});
 }
 
-export async function borrarSetHistorial(
+export function borrarSetHistorial(
 	idSesion: string,
 	exerciseId: string,
 	setIndex: number,
 	metrica: MetricaPr = 'peso'
-) {
-	await db.transaction('rw', db.sesiones, async () => {
+): Promise<boolean> {
+	return db.transaction('rw', db.sesiones, async () => {
 		const s = await db.sesiones.get(idSesion);
 		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
 		const set = e?.sets[setIndex];
-		if (!s || !set?.hecha) return;
+		if (!s || !set?.hecha) return false;
 		set.hecha = false;
 		await recalcularPrCelebrado(s, exerciseId, metrica);
 		await db.sesiones.put(s);
+		return true;
 	});
 }
 
@@ -498,52 +515,84 @@ export function reanudarEjercicio(diaId: string, exerciseId: string, fecha = hoy
 }
 
 /**
- * Marca como ya celebrado el set que disparó el PR en esta sesión (anti-repetición).
- * Guarda el set (no un escalar) y conserva el de mayor valor bajo la métrica vigente.
+ * Registra el PR de una serie recién marcada, decidiendo DENTRO de la transacción.
+ *
+ * La pantalla no puede decidir esto sola: sus derivados vienen de un liveQuery
+ * asíncrono que puede no haber emitido todavía, y con el dato viejo el mismo récord
+ * se celebraba dos veces (destildar y volver a tildar) o se comparaba contra un
+ * umbral que ya había cambiado. Acá se lee el estado persistido y se compara contra
+ * el mejor de las otras sesiones y contra lo ya celebrado hoy.
+ *
+ * Devuelve el set ganador si hubo récord nuevo, o null. Quien llama celebra solo si
+ * devolvió algo, así que la celebración y lo persistido nunca pueden discrepar.
  */
-export function marcarPrCelebrado(
+export function registrarPrSiSupera(
 	diaId: string,
 	exerciseId: string,
-	snap: PrCelebrado,
+	setIndex: number,
 	metrica: MetricaPr = 'peso',
-	fecha = hoyStr(),
-	modo: ModoPr = 'peso'
-) {
-	return db.sesiones
-		.where('id')
-		.equals(sesionId(diaId, fecha))
-		.modify((s) => {
-			const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
-			if (!e) return;
-			const prevVal = e.prCelebrado
-				? (valorSet(e.prCelebrado, metrica, modo) ?? -Infinity)
-				: -Infinity;
-			const nuevoVal = valorSet(snap, metrica, modo) ?? -Infinity;
-			if (nuevoVal >= prevVal) {
-				e.prCelebrado = {
-					peso: snap.peso,
-					reps: snap.reps,
-					esMax: snap.esMax,
-					extraKg: snap.extraKg,
-					metrica: metricaEfectiva(metrica, modo)
-				};
-			}
-		});
+	fecha = hoyStr()
+): Promise<MejorSet | null> {
+	return db.transaction('rw', db.sesiones, async (): Promise<MejorSet | null> => {
+		const s = await db.sesiones.get(sesionId(diaId, fecha));
+		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
+		const set = e?.sets[setIndex];
+		if (!s || !e || !set?.hecha) return null;
+
+		const todas = await db.sesiones.toArray();
+		const modo = modoEjercicio(todas, exerciseId);
+		const valor = valorSet(set, metrica, modo);
+		if (valor == null) return null;
+
+		// "Previo" = todas las demás sesiones, incluida otra rutina del mismo día.
+		const mejorPrevio = todas.reduce<number | null>((best, otra) => {
+			if (otra.id === s.id) return best;
+			const eo = otra.ejercicios.find((x) => x.exerciseId === exerciseId);
+			if (!eo) return best;
+			const mejor = mejorSetDeSeries(eo.sets, otra.fecha, metrica, otra.id, modo);
+			if (!mejor) return best;
+			return best == null || mejor.valor > best ? mejor.valor : best;
+		}, null);
+		const yaCelebrado = e.prCelebrado ? valorSet(e.prCelebrado, metrica, modo) : null;
+
+		const supera =
+			(mejorPrevio == null || valor > mejorPrevio) && (yaCelebrado == null || valor > yaCelebrado);
+		if (!supera) return null;
+
+		const ganador: MejorSet = {
+			peso: set.peso,
+			reps: set.reps,
+			esMax: !!set.esMax,
+			extraKg: set.extraKg,
+			fecha: s.fecha,
+			valor,
+			sesionId: s.id,
+			setIndex
+		};
+		e.prCelebrado = snapPr(ganador, metrica, modo);
+		await db.sesiones.put(s);
+		return ganador;
+	});
 }
 
-export async function marcarDiaTerminado(diaId: string) {
+/**
+ * `fecha` es explícita por el mismo motivo que en el resto de las mutaciones: sin
+ * ella, terminar el día justo después de la medianoche creaba una sesión nueva y
+ * vacía marcada como terminada, y dejaba la sesión real del entrenamiento abierta.
+ */
+export async function marcarDiaTerminado(diaId: string, fecha = hoyStr()) {
 	await db.transaction('rw', db.sesiones, async () => {
-		const s = await ensureSesion(diaId);
+		const s = await ensureSesion(diaId, fecha);
 		s.diaTerminado = true;
 		s.diaTerminadoAt = new Date().toISOString();
 		await db.sesiones.put(s);
 	});
 }
 
-export function reabrirDia(diaId: string) {
+export function reabrirDia(diaId: string, fecha = hoyStr()) {
 	return db.sesiones
 		.where('id')
-		.equals(sesionId(diaId))
+		.equals(sesionId(diaId, fecha))
 		.modify((s) => {
 			s.diaTerminado = false;
 			s.diaTerminadoAt = undefined;

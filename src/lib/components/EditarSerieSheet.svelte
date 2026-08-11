@@ -46,6 +46,10 @@
 	let extraKg = $state(serie.set.extraKg);
 	let confirmandoBorrado = $state(false);
 	let ocupado = $state(false);
+	let error = $state<string | null>(null);
+
+	const NO_ENCONTRADA =
+		'No se encontró esta serie: puede haberse editado en otra pestaña o restaurado un backup. Volvé atrás y abrila de nuevo.';
 
 	/** Redondea a 1 decimal para evitar arrastre de flotantes con pasos de 2.5. */
 	function redondear(n: number): number {
@@ -85,30 +89,47 @@
 		el.value = extraKg != null ? formatoNumero(extraKg) : '';
 	}
 
-	async function guardar() {
+	/**
+	 * Cerrar el sheet es decirle al usuario "guardado". Si la escritura no encontró la
+	 * serie o falló, se queda abierto con el motivo: antes cerraba igual y el cambio
+	 * se perdía en silencio.
+	 */
+	async function conResultado(accion: () => Promise<boolean>) {
 		if (ocupado) return;
 		ocupado = true;
-		// actualizarSetHistorial recalcula el prCelebrado de la sesión.
-		await actualizarSetHistorial(
-			serie.sesionId,
-			serie.exerciseId,
-			serie.setIndex,
-			{
-				peso,
-				reps,
-				esMax: esMax || undefined,
-				extraKg: esMax ? extraKg : undefined
-			},
-			metrica
-		);
-		onClose();
+		error = null;
+		try {
+			if (await accion()) onClose();
+			else error = NO_ENCONTRADA;
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'No se pudo guardar el cambio.';
+		} finally {
+			ocupado = false;
+		}
 	}
 
-	async function borrar() {
-		if (ocupado) return;
-		ocupado = true;
-		await borrarSetHistorial(serie.sesionId, serie.exerciseId, serie.setIndex, metrica);
-		onClose();
+	function guardar() {
+		// actualizarSetHistorial recalcula el prCelebrado de la sesión.
+		return conResultado(() =>
+			actualizarSetHistorial(
+				serie.sesionId,
+				serie.exerciseId,
+				serie.setIndex,
+				{
+					peso,
+					reps,
+					esMax: esMax || undefined,
+					extraKg: esMax ? extraKg : undefined
+				},
+				metrica
+			)
+		);
+	}
+
+	function borrar() {
+		return conResultado(() =>
+			borrarSetHistorial(serie.sesionId, serie.exerciseId, serie.setIndex, metrica)
+		);
 	}
 </script>
 
@@ -204,11 +225,22 @@
 			</div>
 		{/if}
 
+		{#if error}
+			<p
+				class="mt-3 rounded-xl p-3 text-xs leading-relaxed"
+				style="background: rgb(255 107 107 / .1); color: #ff6b6b"
+				role="alert"
+			>
+				{error}
+			</p>
+		{/if}
+
 		<button
 			onclick={guardar}
 			disabled={ocupado}
 			class="mt-4 block w-full rounded-2xl py-3.5 text-center font-bold disabled:opacity-60"
-			style="background: rgb({glow}); color: white">Guardar cambios</button
+			style="background: rgb({glow}); color: white"
+			>{ocupado ? 'Guardando…' : 'Guardar cambios'}</button
 		>
 
 		{#if confirmandoBorrado}

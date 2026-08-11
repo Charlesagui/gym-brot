@@ -65,7 +65,15 @@
 	const maximo = $derived(
 		datos.length ? datos.reduce((m, p) => (p.valor > m ? p.valor : m), -Infinity) : null
 	);
-	const sinMovimiento = menosMovimiento();
+	// Reactivo: el usuario puede cambiar la preferencia del sistema con la app abierta.
+	let sinMovimiento = $state(menosMovimiento());
+	$effect(() => {
+		const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+		const actualizar = () => (sinMovimiento = mq.matches);
+		actualizar();
+		mq.addEventListener('change', actualizar);
+		return () => mq.removeEventListener('change', actualizar);
+	});
 
 	function fechaTick(d: Date): string {
 		return d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
@@ -137,7 +145,14 @@
 						motion={sinMovimiento ? 'none' : undefined}
 					/>
 				</Svg>
-				<Tooltip.Root variant="none" fadeDuration={dur(100)} x="data" y="data" anchor="bottom" yOffset={10}>
+				<Tooltip.Root
+					variant="none"
+					fadeDuration={dur(100)}
+					x="data"
+					y="data"
+					anchor="bottom"
+					yOffset={10}
+				>
 					{#snippet children({ data }: { data: PuntoChart })}
 						<div
 							class="rounded-xl border border-white/15 px-3 py-2 text-xs shadow-lg"

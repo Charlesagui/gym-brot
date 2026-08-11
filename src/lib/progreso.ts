@@ -36,9 +36,14 @@ export interface ProgresoEjercicio {
 	totalSeries: number;
 }
 
-/** Índice de la serie ✓ que celebró el PR de la sesión (la primera que coincide); -1 si ninguna. */
+/**
+ * Índice de la serie ✓ que celebró el PR de la sesión; -1 si ninguna.
+ * Los PR nuevos guardan su `setIndex`. Para los viejos se busca por valor, que con
+ * dos series idénticas puede marcar la otra: es lo mejor disponible sin el índice.
+ */
 export function indexSetPr(sets: SetSesion[], pr: PrCelebrado | undefined): number {
 	if (!pr) return -1;
+	if (pr.setIndex != null && sets[pr.setIndex]?.hecha) return pr.setIndex;
 	return sets.findIndex(
 		(s) =>
 			s.hecha &&

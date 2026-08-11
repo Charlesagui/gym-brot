@@ -10,7 +10,10 @@
 	import { formatoSet, formatoVolumen } from '$lib/formato';
 	import EditarSerieSheet, { type SerieEditable } from '$lib/components/EditarSerieSheet.svelte';
 
+	// La fecha viene de la URL: si no tiene forma de YYYY-MM-DD no se consulta nada y
+	// el título no muestra "Invalid Date".
 	const fecha = $derived($page.params.fecha!);
+	const fechaValida = $derived(/^\d{4}-\d{2}-\d{2}$/.test(fecha));
 
 	const ajustesStore = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
 	const ajustes = $derived($ajustesStore);
@@ -23,6 +26,7 @@
 	const sesionesStore = $derived(
 		fromLiveQuery(
 			liveQuery(async () => {
+				if (!fechaValida) return { sesiones: [] as Sesion[], dias: [] as Dia[] };
 				const [sesiones, dias] = await Promise.all([
 					db.sesiones.where('fecha').equals(fecha).toArray(),
 					db.dias.toArray()
@@ -44,12 +48,14 @@
 	const totalPrs = $derived(resumenes.reduce((n, r) => n + r.prs.length, 0));
 
 	const fechaLarga = $derived(
-		new Date(`${fecha}T00:00:00`).toLocaleDateString('es', {
-			weekday: 'long',
-			day: 'numeric',
-			month: 'long',
-			year: 'numeric'
-		})
+		fechaValida
+			? new Date(`${fecha}T00:00:00`).toLocaleDateString('es', {
+					weekday: 'long',
+					day: 'numeric',
+					month: 'long',
+					year: 'numeric'
+				})
+			: 'fecha desconocida'
 	);
 	const fechaTitulo = $derived(
 		(fechaLarga[0]?.toLocaleUpperCase('es') ?? '') + fechaLarga.slice(1)

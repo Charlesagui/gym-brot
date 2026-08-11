@@ -2,6 +2,7 @@
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import { useRegisterSW } from 'virtual:pwa-register/svelte';
 	import { db } from '$lib/db';
 	import { seedSiVacio } from '$lib/seed';
 	import BottomNav from '$lib/components/BottomNav.svelte';
@@ -14,6 +15,18 @@
 	// Mid-entrenamiento el nav no aporta y ocupa la mejor zona del pulgar:
 	// en la pantalla de ejercicio ese espacio es para la barra de descanso.
 	const sinNav = $derived($page.url.pathname.startsWith('/ejercicio/'));
+
+	// Actualización de la app: el service worker nuevo queda esperando y avisamos acá.
+	// Nunca durante el entrenamiento — recargar a mitad de una serie es justo lo que
+	// el manifiesto pide no hacer; el aviso espera a que salgas del ejercicio.
+	const { needRefresh, updateServiceWorker } = useRegisterSW();
+	const entrenando = $derived(sinNav || descanso.restoSeg > 0 || descanso.vencido);
+	let actualizando = $state(false);
+
+	async function actualizar() {
+		actualizando = true;
+		await updateServiceWorker();
+	}
 	let dbError = $state<string | null>(null);
 	// La base abrió y sembró: recién acá montamos las pantallas. Así toda la carga
 	// pasa por un único estado recuperable y ninguna pantalla puede quedar colgada
@@ -159,4 +172,29 @@
 {#if dbLista && !dbError}
 	<RestFocusOverlay />
 	<RestBar offsetNav={!sinNav} />
+{/if}
+
+{#if $needRefresh && !entrenando && dbLista}
+	<div
+		class="fixed inset-x-0 z-[85] mx-auto max-w-md px-5"
+		style="bottom: calc(72px + env(safe-area-inset-bottom))"
+		role="status"
+	>
+		<div
+			class="flex items-center gap-3 rounded-2xl border border-white/10 p-3"
+			style="background: var(--surface)"
+		>
+			<span class="text-lg" aria-hidden="true">✨</span>
+			<p class="min-w-0 flex-1 text-xs leading-relaxed" style="color: var(--muted)">
+				Hay una versión nueva de Gym-brot.
+			</p>
+			<button
+				onclick={actualizar}
+				disabled={actualizando}
+				class="min-h-10 shrink-0 rounded-full px-4 text-sm font-bold disabled:opacity-60"
+				style="background: var(--accent); color: white"
+				>{actualizando ? 'Actualizando…' : 'Actualizar'}</button
+			>
+		</div>
+	</div>
 {/if}

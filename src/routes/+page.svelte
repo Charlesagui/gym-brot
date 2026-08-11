@@ -10,6 +10,7 @@
 	import { hoyStr } from '$lib/sesion';
 	import { dur } from '$lib/motion';
 	import { mantener } from '$lib/mantener';
+	import { bienvenidaVisible, cerrarBienvenida } from '$lib/preferencias-ui';
 
 	const dias = liveQuery(() => db.dias.orderBy('orden').toArray());
 	let fechaHoy = $state(hoyStr());
@@ -99,7 +100,7 @@
 		}
 
 		refrescarHoy();
-		mostrarWelcome = !localStorage.getItem('gym-brot-welcome-closed');
+		mostrarWelcome = bienvenidaVisible();
 		document.addEventListener('visibilitychange', refrescarHoy);
 		window.addEventListener('focus', refrescarHoy);
 		return () => {
@@ -108,7 +109,7 @@
 		};
 	});
 	function cerrarWelcome() {
-		localStorage.setItem('gym-brot-welcome-closed', 'true');
+		cerrarBienvenida();
 		mostrarWelcome = false;
 	}
 </script>
@@ -128,7 +129,7 @@
 		>
 			<button
 				onclick={cerrarWelcome}
-				class="absolute right-3 top-3 text-sm font-bold"
+				class="absolute right-1 top-1 grid size-10 place-items-center text-sm font-bold"
 				style="color: var(--muted)"
 				aria-label="Cerrar bienvenida"
 			>
