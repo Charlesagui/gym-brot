@@ -3,7 +3,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { useRegisterSW } from 'virtual:pwa-register/svelte';
-	import { db } from '$lib/db';
+	import { db, onDbBloqueada } from '$lib/db';
 	import { seedSiVacio } from '$lib/seed';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import RestBar from '$lib/components/RestBar.svelte';
@@ -25,7 +25,11 @@
 
 	async function actualizar() {
 		actualizando = true;
-		await updateServiceWorker();
+		try {
+			await updateServiceWorker();
+		} finally {
+			actualizando = false;
+		}
 	}
 	let dbError = $state<string | null>(null);
 	// La base abrió y sembró: recién acá montamos las pantallas. Así toda la carga
@@ -38,9 +42,29 @@
 	// conexión (o iOS no despierta IndexedDB tras background). Sin esto, el
 	// `await db.open()` espera para siempre y deja un "Cargando…" mudo y sin salida.
 	let dbBloqueada = $state(false);
+	let confirmarReinicioDatos = $state(false);
+	let reiniciandoDatos = $state(false);
 
 	function recargar() {
 		location.reload();
+	}
+
+	async function reiniciarDatosLocales() {
+		if (!confirmarReinicioDatos) {
+			confirmarReinicioDatos = true;
+			return;
+		}
+		reiniciandoDatos = true;
+		try {
+			db.close();
+			await db.delete();
+			location.reload();
+		} catch (error) {
+			dbError = `No pude reiniciar el almacenamiento: ${
+				error instanceof Error ? error.message : 'error desconocido'
+			}`;
+			reiniciandoDatos = false;
+		}
 	}
 
 	onMount(() => {
@@ -51,8 +75,7 @@
 			if (!dbLista && !dbError) dbBloqueada = true;
 		}, 10000);
 
-		// Dexie avisa explícitamente cuando otra conexión impide abrir/migrar.
-		db.on('blocked', () => {
+		onDbBloqueada(() => {
 			if (!dbLista && !dbError) dbBloqueada = true;
 		});
 
@@ -114,11 +137,22 @@
 					class="mt-4 block w-full rounded-2xl py-3 text-center text-sm font-bold"
 					style="background: var(--accent); color: white">Recargar</button
 				>
-				<a
-					href="/ajustes"
-					class="mt-2 block rounded-2xl border border-white/10 py-3 text-center text-sm font-bold"
-					style="color: var(--muted)">Ir a Ajustes</a
+				<button
+					onclick={() => void reiniciarDatosLocales()}
+					disabled={reiniciandoDatos}
+					class="mt-2 block w-full rounded-2xl border border-white/10 py-3 text-center text-sm font-bold disabled:opacity-50"
+					style="color: #ff6b6b"
+					>{confirmarReinicioDatos
+						? reiniciandoDatos
+							? 'Reiniciando…'
+							: 'Confirmar: borrar datos locales'
+						: 'Reiniciar almacenamiento local'}</button
 				>
+				{#if confirmarReinicioDatos}
+					<p class="mt-2 text-center text-xs leading-relaxed" style="color: var(--muted)">
+						Esto borra los datos de este navegador. Después podés restaurar un backup desde Ajustes.
+					</p>
+				{/if}
 			</section>
 		</main>
 	{:else if dbBloqueada}

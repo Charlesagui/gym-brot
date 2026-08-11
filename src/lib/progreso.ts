@@ -1,6 +1,13 @@
 import { liveQuery } from 'dexie';
-import { db, type PrCelebrado, type Sesion, type SetSesion } from './db';
-import { mejorSet, modoEjercicio, valorSet, type MejorSet, type ModoPr } from './sesion';
+import type { PrCelebrado, Sesion, SetSesion } from './db';
+import {
+	mejorSet,
+	modoEjercicio,
+	sesionesDe,
+	valorSet,
+	type MejorSet,
+	type ModoPr
+} from './sesion';
 
 export interface SerieDeSesion {
 	set: SetSesion;
@@ -113,8 +120,5 @@ export function crearProgresoEjercicio(sesiones: Sesion[], exerciseId: string): 
 }
 
 export function progresoEjercicioObs(exerciseId: string) {
-	return liveQuery(async () => {
-		const todas = await db.sesiones.orderBy('fecha').toArray();
-		return crearProgresoEjercicio(todas, exerciseId);
-	});
+	return liveQuery(async () => crearProgresoEjercicio(await sesionesDe(exerciseId), exerciseId));
 }

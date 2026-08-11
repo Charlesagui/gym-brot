@@ -10,7 +10,9 @@ import {
 	normalizarAjustes,
 	parseBackup,
 	prepararImport,
-	setUnidad
+	setSonido,
+	setUnidad,
+	setVibracion
 } from './extras';
 
 const dia: Dia = {
@@ -85,9 +87,13 @@ describe('backup', () => {
 		await importarBackup(backup);
 
 		expect(await db.dias.toArray()).toEqual([dia]);
-		expect(await db.sesiones.toArray()).toEqual([sesion]);
 		expect(await db.notas.toArray()).toEqual([nota]);
 		expect(await db.ajustes.toArray()).toEqual([ajustes]);
+		// El backup no guarda `exerciseIds` (es índice derivado): se reconstruye al importar.
+		expect(JSON.parse(await exportarJSON()).sesiones[0].exerciseIds).toBeUndefined();
+		expect(await db.sesiones.toArray()).toEqual([
+			{ ...sesion, exerciseIds: sesion.ejercicios.map((e) => e.exerciseId) }
+		]);
 	});
 
 	it('setUnidad lb -> kg conserva pesos con redondeo a 1 decimal', async () => {
@@ -103,6 +109,32 @@ describe('backup', () => {
 		expect(vuelta?.ejercicios[0]?.sets[1]?.extraKg).toBeCloseTo(5, 1);
 		expect(vuelta?.ejercicios[0]?.prCelebrado?.peso).toBeCloseTo(100, 1);
 		expect(vuelta?.ejercicios[0]?.prCelebrado?.extraKg).toBeCloseTo(5, 1);
+	});
+
+	it('serializa cambios de unidad concurrentes para no convertir dos veces el historial', async () => {
+		await db.sesiones.put(structuredClone(sesion));
+		await db.ajustes.put(ajustes);
+
+		await Promise.all([setUnidad('lb'), setUnidad('lb')]);
+
+		const vuelta = await db.sesiones.get(sesion.id);
+		expect((await db.ajustes.get('app'))?.unidad).toBe('lb');
+		expect(vuelta?.ejercicios[0]?.sets[1]?.peso).toBeCloseTo(220.5, 1);
+		expect(vuelta?.ejercicios[0]?.prCelebrado?.peso).toBeCloseTo(220.5, 1);
+	});
+
+	it('no pierde ajustes concurrentes mientras cambia la unidad', async () => {
+		await db.sesiones.put(structuredClone(sesion));
+		await db.ajustes.put(ajustes);
+
+		await Promise.all([setUnidad('lb'), setSonido(false), setVibracion(false)]);
+
+		expect(await db.ajustes.get('app')).toMatchObject({
+			unidad: 'lb',
+			sonido: false,
+			vibracion: false
+		});
+		expect((await db.sesiones.get(sesion.id))?.ejercicios[0]?.sets[1]?.peso).toBeCloseTo(220.5, 1);
 	});
 
 	it('importarBackup migra el diaSemana único de backups viejos a diasSemana[]', async () => {
@@ -143,6 +175,37 @@ describe('backup', () => {
 			)
 		).not.toThrow();
 	});
+
+	it('rechaza versiones futuras y valores negativos antes de restaurar', () => {
+		expect(() =>
+			parseBackup(
+				JSON.stringify({
+					app: 'gym-brot',
+					version: 999,
+					dias: [],
+					sesiones: [],
+					notas: [],
+					ajustes: []
+				})
+			)
+		).toThrow('version');
+		expect(() =>
+			parseBackup(
+				JSON.stringify({
+					app: 'gym-brot',
+					dias: [dia],
+					sesiones: [
+						{
+							...sesion,
+							ejercicios: [{ ...sesion.ejercicios[0], sets: [{ hecha: true, peso: -1 }] }]
+						}
+					],
+					notas: [],
+					ajustes: []
+				})
+			)
+		).toThrow('sesiones');
+	});
 });
 
 /**
@@ -182,6 +245,17 @@ describe('prepararImport', () => {
 		expect(datos.sesiones).toHaveLength(1);
 		expect(avisos.join(' ')).toContain('fecha inválida');
 		expect(avisos.join(' ')).toContain('duplicadas');
+	});
+
+	it('descarta fechas imposibles aunque cumplan el formato', () => {
+		const { datos, avisos } = prepararImport({
+			sesiones: [sesionCon('2026-99-99__push', '2026-99-99', 'push')],
+			dias: [dia],
+			notas: [],
+			ajustes: []
+		});
+		expect(datos.sesiones).toEqual([]);
+		expect(avisos.join(' ')).toContain('fecha inválida');
 	});
 
 	it('avisa cuando una sesión apunta a una rutina que no vino en el backup', () => {

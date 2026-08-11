@@ -34,6 +34,32 @@ interface Persistido {
 	siguiente?: string;
 }
 
+/** El descanso sigue funcionando sin persistencia si el navegador bloquea Storage. */
+function leerStorage(clave: string): string | null {
+	try {
+		return localStorage.getItem(clave);
+	} catch {
+		return null;
+	}
+}
+
+function guardarStorage(clave: string, valor: string): boolean {
+	try {
+		localStorage.setItem(clave, valor);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+function borrarStorage(clave: string): void {
+	try {
+		localStorage.removeItem(clave);
+	} catch {
+		// Sin persistencia, el contador de esta pestaña sigue siendo usable.
+	}
+}
+
 class Descanso {
 	/** Segundos restantes (0 = sin descanso corriendo). */
 	restoSeg = $state(0);
@@ -57,9 +83,13 @@ class Descanso {
 	#intId: ReturnType<typeof setInterval> | null = null;
 	#finId: ReturnType<typeof setTimeout> | null = null;
 	#wakeLock: WakeLockSentinel | null = null;
-	#sonido = true;
-	#vibracion = true;
-	#focusHabilitado = true;
+	#wakeLockSolicitando = false;
+	// Valores seguros hasta que IndexedDB entrega las preferencias reales: nunca
+	// queremos sorprender al usuario con audio, vibración o fullscreen al restaurar.
+	#sonido = false;
+	#vibracion = false;
+	#focusHabilitado = false;
+	#ajustesCargados = false;
 	#iniciado = false;
 	#notificado = false;
 
@@ -68,17 +98,24 @@ class Descanso {
 		if (this.#iniciado || typeof window === 'undefined') return;
 		this.#iniciado = true;
 		ajustesObs().subscribe((a) => {
+			const sonidoAnterior = this.#sonido;
 			this.#sonido = a.sonido;
 			this.#vibracion = a.vibracion ?? true;
 			this.#focusHabilitado = a.descansoPantallaCompleta ?? true;
+			if (this.#hasta != null && this.#sonido && !sonidoAnterior) mantenerAudioDespierto();
+			if (!this.#sonido && sonidoAnterior) soltarAudioDespierto();
 			if (!this.#focusHabilitado) this.focusAbierto = false;
+			if (!this.#ajustesCargados) {
+				this.#ajustesCargados = true;
+				this.#restaurar();
+			}
 		});
 		// Al volver del background o del bloqueo de pantalla, recalcular al instante.
 		const refrescar = () => {
 			// Si hay un vencido sin atender, el loop de alarma se retoma solo en #recalc.
 			this.#recalc();
 			if (document.visibilityState !== 'visible') return;
-			if (this.#hasta != null) desbloquearAudio();
+			if (this.#hasta != null && this.#sonido) desbloquearAudio();
 			if (this.#hasta != null && !this.vencido) void this.#pedirWakeLock();
 			void this.#cerrarNotificacion();
 		};
@@ -89,7 +126,7 @@ class Descanso {
 		window.addEventListener(
 			'pointerdown',
 			() => {
-				if (this.#hasta != null) desbloquearAudio();
+				if (this.#hasta != null && this.#sonido) desbloquearAudio();
 			},
 			{ capture: true }
 		);
@@ -100,7 +137,6 @@ class Descanso {
 			if (e.newValue == null) this.#limpiar();
 			else this.#restaurar(false);
 		});
-		this.#restaurar();
 	}
 
 	/**
@@ -110,7 +146,7 @@ class Descanso {
 	 */
 	prepararDesdeGesto() {
 		if (typeof window === 'undefined') return;
-		desbloquearAudio();
+		if (this.#sonido) desbloquearAudio();
 		this.#pedirPermisoNotificacion();
 	}
 
@@ -132,7 +168,7 @@ class Descanso {
 		this.#guardar();
 		void this.#pedirWakeLock();
 		this.#pedirPermisoNotificacion();
-		mantenerAudioDespierto();
+		if (this.#sonido) mantenerAudioDespierto();
 	}
 
 	/** Si hay un descanso en curso, mueve su fin a inicio + minutos (no reinicia). */
@@ -166,15 +202,21 @@ class Descanso {
 	}
 
 	#restaurar(abrirFocus = true) {
-		const crudo = localStorage.getItem(DESCANSO_KEY);
+		const crudo = leerStorage(DESCANSO_KEY);
 		if (!crudo) return;
 		try {
 			const d = JSON.parse(crudo) as Partial<Persistido>;
 			const valido = typeof d.inicio === 'number' && typeof d.hasta === 'number';
 			// Vencido hace mucho: ya no es accionable, se descarta en silencio.
 			if (!valido || Date.now() - d.hasta! >= MAX_VENCIDO_MS) {
-				localStorage.removeItem(DESCANSO_KEY);
+				borrarStorage(DESCANSO_KEY);
 				return;
+			}
+			// Es otro descanso, no el que ya venía siguiendo esta pestaña: el aviso del
+			// sistema y la cadencia de la alarma tienen que poder dispararse de nuevo.
+			if (this.#inicio !== d.inicio || this.#hasta !== d.hasta) {
+				this.#notificado = false;
+				this.#ultimaAlarma = 0;
 			}
 			this.#inicio = d.inicio!;
 			this.#hasta = d.hasta!;
@@ -188,18 +230,18 @@ class Descanso {
 				this.restoSeg = Math.ceil((this.#hasta - Date.now()) / 1000);
 				void this.#pedirWakeLock();
 			}
-			mantenerAudioDespierto();
+			if (this.#sonido) mantenerAudioDespierto();
 			if (abrirFocus) {
 				this.focusAbierto = this.#focusHabilitado && (this.restoSeg > 0 || this.vencido);
 			}
 		} catch {
-			localStorage.removeItem(DESCANSO_KEY);
+			borrarStorage(DESCANSO_KEY);
 		}
 	}
 
 	#guardar() {
 		if (this.#inicio == null || this.#hasta == null) return;
-		localStorage.setItem(
+		guardarStorage(
 			DESCANSO_KEY,
 			JSON.stringify({
 				inicio: this.#inicio,
@@ -212,11 +254,21 @@ class Descanso {
 
 	async #pedirWakeLock() {
 		// Ya hay uno vivo: pedir otro deja el anterior tomado sin referencia para soltarlo.
-		if (this.#wakeLock && !this.#wakeLock.released) return;
+		if ((this.#wakeLock && !this.#wakeLock.released) || this.#wakeLockSolicitando) return;
+		this.#wakeLockSolicitando = true;
 		try {
-			if ('wakeLock' in navigator) this.#wakeLock = await navigator.wakeLock.request('screen');
+			if (!('wakeLock' in navigator)) return;
+			const sentinel = await navigator.wakeLock.request('screen');
+			// Saltar/cerrar pudo ocurrir mientras el navegador resolvía la promesa.
+			if (this.#hasta == null || this.vencido) {
+				void sentinel.release().catch(() => {});
+				return;
+			}
+			this.#wakeLock = sentinel;
 		} catch {
 			// Denegado o sin soporte: el timer por timestamps sigue siendo correcto igual.
+		} finally {
+			this.#wakeLockSolicitando = false;
 		}
 	}
 
@@ -247,6 +299,13 @@ class Descanso {
 		const ahora = Date.now();
 		const resto = Math.ceil((this.#hasta - ahora) / 1000);
 		if (resto > 0) {
+			// El estado se DERIVA de los timestamps, no se acumula. Sin apagar acá el
+			// vencido, restaurar un descanso nuevo (otra instancia lo arrancó) dejaba la
+			// pantalla en "¡A la serie!" mientras corría el contador, y al vencer ese
+			// descanso nuevo el `if (!this.vencido)` de abajo no entraba: `restoSeg` nunca
+			// llegaba a 0 y la barra quedaba clavada en "0:01" con la alarma en loop.
+			this.vencido = false;
+			this.vencidoSeg = 0;
 			this.restoSeg = resto;
 			return;
 		}
@@ -283,8 +342,8 @@ class Descanso {
 	 */
 	#pedirPermisoNotificacion() {
 		if (!('Notification' in window) || Notification.permission !== 'default') return;
-		if (localStorage.getItem(NOTIF_PEDIDA_KEY)) return;
-		localStorage.setItem(NOTIF_PEDIDA_KEY, '1');
+		if (leerStorage(NOTIF_PEDIDA_KEY)) return;
+		guardarStorage(NOTIF_PEDIDA_KEY, '1');
 		void Notification.requestPermission().catch(() => {});
 	}
 
@@ -298,7 +357,11 @@ class Descanso {
 				body: '¡A la serie! 💪',
 				tag: NOTIF_TAG,
 				icon: '/icons/icon-192.png',
-				badge: '/icons/icon-192.png'
+				badge: '/icons/icon-192.png',
+				// La API web no permite separar de forma portable sonido y vibración de
+				// una notificación. Si cualquiera de las dos preferencias está apagada,
+				// se prioriza no sorprender al usuario con una señal del sistema.
+				silent: !this.#sonido || !this.#vibracion
 			});
 		} catch {
 			// Sin service worker (dev) o sin permiso: la señal visual/sonora sigue.
@@ -326,7 +389,7 @@ class Descanso {
 		this.focusAbierto = false;
 		this.siguiente = '';
 		this.#ultimaAlarma = 0;
-		localStorage.removeItem(DESCANSO_KEY);
+		borrarStorage(DESCANSO_KEY);
 		this.#soltarWakeLock();
 		soltarAudioDespierto();
 		void this.#cerrarNotificacion();

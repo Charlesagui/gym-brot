@@ -23,6 +23,34 @@ export function ejercicioPorId(id: string): Ejercicio | undefined {
 	return porId.get(id);
 }
 
+/** Quita acentos y pasa a minúsculas: en el teclado del gym se escribe sin tildes. */
+function normalizar(s: string): string {
+	return s
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.toLowerCase();
+}
+
+/**
+ * Índice de búsqueda normalizado, armado una sola vez y recién cuando se busca.
+ * Antes cada tecla normalizaba nombre y músculo de los 962 ejercicios (dos `normalize`
+ * + dos regex por fila, ~2.000 por pulsación); armarlo al importar el módulo tampoco
+ * servía, porque el catálogo lo importa toda la app y esa pantalla casi no se abre.
+ */
+let indiceBusqueda: { ejercicio: Ejercicio; texto: string }[] | null = null;
+
+/** Ejercicios cuyo nombre o músculo contiene `termino` (sin distinguir tildes). */
+export function buscarEjercicios(termino: string): Ejercicio[] {
+	const t = normalizar(termino.trim());
+	if (!t) return catalogo;
+	indiceBusqueda ??= catalogo.map((ejercicio) => ({
+		ejercicio,
+		// Se busca también por músculo: la premisa es guiarse sin depender del nombre.
+		texto: `${normalizar(ejercicio.nombre)} ${normalizar(ejercicio.musculo)}`
+	}));
+	return indiceBusqueda.filter((e) => e.texto.includes(t)).map((e) => e.ejercicio);
+}
+
 /** Color/identidad de cada grupo muscular (glow = rgb sin coma, para usar en rgb(... / a)). */
 export const grupos: Record<Grupo, { label: string; glow: string; emoji: string }> = {
 	piernas: { label: 'Piernas', glow: '255 111 174', emoji: '🦵' },

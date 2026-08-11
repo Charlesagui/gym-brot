@@ -11,12 +11,14 @@
 		setPasoPeso,
 		exportarJSON,
 		parseBackup,
+		prepararImport,
 		importarBackup,
 		registrarBackup,
 		borrarTodo,
 		AJUSTES_DEFAULT
 	} from '$lib/extras';
 	import { reiniciarAyudas } from '$lib/preferencias-ui';
+	import { cachearVideoCompleto } from '$lib/video';
 	import { fromLiveQuery } from '$lib/live';
 	import { onMount } from 'svelte';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
@@ -25,6 +27,8 @@
 	const ajustes = $derived<Ajustes>($ajustesStore);
 	let msg = $state('');
 	let msgId: ReturnType<typeof setTimeout> | null = null;
+	let guardandoUnidad = $state(false);
+	let backupPendienteConfirmacion = $state(false);
 	let avisosImport = $state<string[]>([]);
 	let persistido = $state<boolean | null>(null);
 	let confirmacion = $state<{
@@ -39,6 +43,7 @@
 		void navigator.storage?.persisted?.().then((v) => (persistido = v));
 		return () => {
 			if (msgId) clearTimeout(msgId);
+			cancelarDescarga?.abort();
 		};
 	});
 
@@ -46,6 +51,18 @@
 		msg = texto;
 		if (msgId) clearTimeout(msgId);
 		msgId = setTimeout(() => (msg = ''), 6000);
+	}
+
+	async function cambiarUnidad(unidad: 'kg' | 'lb') {
+		if (guardandoUnidad || ajustes.unidad === unidad) return;
+		guardandoUnidad = true;
+		try {
+			await setUnidad(unidad);
+		} catch (e) {
+			avisar(`❌ No se pudo cambiar la unidad: ${e instanceof Error ? e.message : 'error'}`);
+		} finally {
+			guardandoUnidad = false;
+		}
 	}
 
 	async function exportar() {
@@ -63,10 +80,23 @@
 			a.click();
 			a.remove();
 			setTimeout(() => URL.revokeObjectURL(url), 60_000);
-			await registrarBackup();
-			avisar('✅ Backup descargado');
+			// Un click sobre un anchor no confirma que el navegador haya guardado el
+			// archivo (puede cancelarse o bloquearse). El usuario lo confirma después
+			// de verlo en Descargas; recién ahí se apaga el recordatorio.
+			backupPendienteConfirmacion = true;
+			avisar('⬇️ Descarga iniciada. Confirmá que el archivo aparezca en Descargas.');
 		} catch (e) {
 			avisar(`❌ No se pudo generar el backup: ${e instanceof Error ? e.message : 'error'}`);
+		}
+	}
+
+	async function confirmarBackupGuardado() {
+		try {
+			await registrarBackup();
+			backupPendienteConfirmacion = false;
+			avisar('✅ Backup confirmado');
+		} catch (e) {
+			avisar(`❌ No se pudo registrar el backup: ${e instanceof Error ? e.message : 'error'}`);
 		}
 	}
 
@@ -77,12 +107,17 @@
 		avisosImport = [];
 		try {
 			const data = parseBackup(await file.text());
+			const preparado = prepararImport(data);
 			const nDias = data.dias?.length ?? 0;
+			const detalleAvisos = preparado.avisos.length
+				? `\n\nAntes de restaurar: ${preparado.avisos.join('. ')}.`
+				: '';
 			confirmacion = {
 				titulo: 'Restaurar backup',
 				mensaje:
 					`Esto reemplaza todos tus datos actuales por los del backup ` +
-					`(${nDias} ${nDias === 1 ? 'día' : 'días'}). No se puede deshacer.`,
+					`(${nDias} ${nDias === 1 ? 'día' : 'días'}). No se puede deshacer.` +
+					detalleAvisos,
 				confirmarTexto: 'Restaurar',
 				onConfirm: async () => {
 					avisosImport = await importarBackup(data);
@@ -134,6 +169,7 @@
 	// de ir a un gym sin datos.
 	let bajando = $state(false);
 	let bajados = $state(0);
+	let fallidos = $state(0);
 	let totalVideos = $state(0);
 	let cancelarDescarga: AbortController | null = null;
 
@@ -141,6 +177,7 @@
 		if (bajando) return;
 		bajando = true;
 		bajados = 0;
+		fallidos = 0;
 		const control = new AbortController();
 		cancelarDescarga = control;
 		try {
@@ -153,15 +190,21 @@
 				while (cola.length && !control.signal.aborted) {
 					const url = cola.pop()!;
 					try {
-						await fetch(url, { signal: control.signal, cache: 'force-cache' });
+						await cachearVideoCompleto(url, control.signal);
+						bajados++;
 					} catch {
-						// Un video que falla no corta la descarga del resto.
+						if (!control.signal.aborted) fallidos++;
 					}
-					bajados++;
 				}
 			});
 			await Promise.all(obreros);
-			avisar(control.signal.aborted ? 'Descarga cancelada' : '✅ Videos guardados para offline');
+			if (control.signal.aborted) {
+				avisar(`Descarga cancelada: ${bajados} listos${fallidos ? `, ${fallidos} fallidos` : ''}`);
+			} else if (fallidos) {
+				avisar(`⚠️ ${bajados} videos listos; ${fallidos} no se pudieron guardar.`);
+			} else {
+				avisar(`✅ ${bajados} videos guardados para offline`);
+			}
 		} catch (e) {
 			avisar(`❌ No se pudieron descargar: ${e instanceof Error ? e.message : 'error'}`);
 		} finally {
@@ -192,9 +235,11 @@
 		<div class="mt-3 flex gap-2">
 			{#each ['kg', 'lb'] as u (u)}
 				<button
-					onclick={() => setUnidad(u as 'kg' | 'lb')}
+					onclick={() => void cambiarUnidad(u as 'kg' | 'lb')}
+					disabled={guardandoUnidad}
 					class="min-h-11 flex-1 rounded-xl py-2.5 font-semibold"
 					aria-pressed={ajustes.unidad === u}
+					aria-busy={guardandoUnidad}
 					aria-label={`Seleccionar unidad ${u}`}
 					style={ajustes.unidad === u
 						? 'background: var(--accent); color: white'
@@ -339,7 +384,7 @@
 				</div>
 				<div class="mt-2 flex items-center justify-between gap-3">
 					<p class="text-xs tabular-nums" style="color: var(--muted)">
-						{bajados}/{totalVideos} videos
+						{bajados + fallidos}/{totalVideos} videos{fallidos ? ` · ${fallidos} fallidos` : ''}
 					</p>
 					<button
 						onclick={pararDescarga}
@@ -374,6 +419,13 @@
 			class="mt-3 min-h-12 w-full rounded-xl py-3 font-semibold"
 			style="background: var(--accent); color: white">⬇️ Guardar copia de seguridad</button
 		>
+		{#if backupPendienteConfirmacion}
+			<button
+				onclick={() => void confirmarBackupGuardado()}
+				class="mt-2 min-h-11 w-full rounded-xl border border-white/15 py-2 text-sm font-semibold"
+				style="color: var(--muted)">✅ Ya guardé el archivo</button
+			>
+		{/if}
 		<label
 			class="mt-2 block min-h-12 w-full cursor-pointer rounded-xl border border-white/15 py-3 text-center font-semibold"
 		>

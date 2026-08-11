@@ -10,7 +10,7 @@
 		historialObs,
 		ensureEjercicio,
 		ultimaSesion,
-		toggleSet,
+		setSerieHecha,
 		toggleMax,
 		setPeso,
 		setReps,
@@ -37,12 +37,13 @@
 	import { formatoNumero, formatoSet, fechaCorta } from '$lib/formato';
 	import { youtubeEmbedUrl } from '$lib/youtube';
 	import {
-		completaEjercicioAlMarcar,
+		etiquetaProximaSerie,
 		metricaEfectivaEjercicio,
 		metricaLabelEjercicio,
 		modoEjercicioActivo,
 		unidadValorEjercicio
 	} from '$lib/ejercicio-activo';
+	import { leerPeso, leerReps, sumarPeso, sumarReps } from '$lib/numeros';
 	import {
 		debeMostrarHintMax,
 		debeMostrarHintTimer,
@@ -106,6 +107,9 @@
 	let tecnicaHistoryActiva = false;
 	// Una escritura que falla no puede pasar desapercibida: los datos viven solo acá.
 	let errorGuardado = $state<string | null>(null);
+	// Cada serie acepta una sola intención mientras IndexedDB confirma el resultado.
+	// Esto evita que un doble toque convierta un "marcar" en "desmarcar".
+	let seriesPendientes = $state<Set<number>>(new Set());
 	let confirmacion = $state<{
 		titulo: string;
 		mensaje: string;
@@ -301,55 +305,68 @@
 		}
 	}
 
-	/** Redondea a 1 decimal para evitar arrastre de flotantes con pasos de 2.5. */
-	function redondear(n: number): number {
-		return Math.round(n * 10) / 10;
-	}
-
 	/**
 	 * Toques pendientes de confirmar en la base. Mientras haya alguno, la suscripción
 	 * no pisa `sets` (ver el comentario en el subscribe).
 	 */
 	let escriturasEnVuelo = 0;
 
+	/**
+	 * Vuelve a poner en pantalla lo que realmente hay en la base. Si una escritura falla,
+	 * el valor optimista queda visible y el liveQuery no emite nada (en la base no cambió
+	 * nada): sin esto la pantalla muestra para siempre un peso que nunca se guardó.
+	 */
+	async function resincronizar() {
+		const dId = diaId;
+		const exId = $page.params.id!;
+		if (!dId) return;
+		try {
+			const s = await db.sesiones.get(sesionId(dId, fechaSesion));
+			// Mientras leíamos pudo entrar otro toque o haberse cambiado de pantalla: en
+			// cualquiera de los dos casos esta lectura ya quedó vieja y pisar sería peor.
+			if (escriturasEnVuelo > 0 || diaId !== dId || $page.params.id !== exId) return;
+			sets = s?.ejercicios.find((x) => x.exerciseId === exId)?.sets ?? [];
+		} catch {
+			// Si tampoco se puede leer, el banner de error ya está en pantalla.
+		}
+	}
+
 	function escribir(operacion: Promise<unknown>) {
 		escriturasEnVuelo++;
+		let fallo = false;
 		void operacion
 			.catch((e: unknown) => {
 				errorGuardado = e instanceof Error ? e.message : 'No se pudo guardar la serie.';
+				fallo = true;
 			})
 			.finally(() => {
 				escriturasEnVuelo--;
+				// Con toques todavía en vuelo, resincronizar pisaría un cambio que sí se va a
+				// guardar: el último en drenar se hace cargo.
+				if (fallo && escriturasEnVuelo === 0) void resincronizar();
 			});
 	}
 
 	function ajustarPeso(i: number, delta: number) {
-		const actual = sets[i]?.peso ?? 0;
-		const siguiente = redondear(Math.max(0, actual + delta));
-		const peso = siguiente === 0 ? undefined : siguiente;
+		const peso = sumarPeso(sets[i]?.peso, delta);
 		if (sets[i]) sets[i].peso = peso;
 		escribir(setPeso(diaId!, $page.params.id!, i, peso, fechaSesion, metrica));
 	}
 
 	function ajustarReps(i: number, delta: number) {
-		const actual = sets[i]?.reps ?? 0;
-		const siguiente = Math.max(0, actual + delta);
-		const reps = siguiente === 0 ? undefined : siguiente;
+		const reps = sumarReps(sets[i]?.reps, delta);
 		if (sets[i]) sets[i].reps = reps;
 		escribir(setReps(diaId!, $page.params.id!, i, reps, fechaSesion, metrica));
 	}
 
 	function ajustarExtra(i: number, delta: number) {
-		const actual = sets[i]?.extraKg ?? 0;
-		const siguiente = redondear(Math.max(0, actual + delta));
-		const extra = siguiente === 0 ? undefined : siguiente;
+		const extra = sumarPeso(sets[i]?.extraKg, delta);
 		if (sets[i]) sets[i].extraKg = extra;
 		escribir(setExtra(diaId!, $page.params.id!, i, extra, fechaSesion, metrica));
 	}
 
 	function escribirPeso(i: number, el: HTMLInputElement) {
-		const n = Number.parseFloat(el.value.replace(',', '.'));
-		const peso = Number.isFinite(n) && n > 0 ? redondear(n) : undefined;
+		const peso = leerPeso(el.value);
 		if (sets[i]) sets[i].peso = peso;
 		escribir(setPeso(diaId!, $page.params.id!, i, peso, fechaSesion, metrica));
 		el.value = peso != null ? formatoNumero(peso) : '';
@@ -375,26 +392,38 @@
 	}
 
 	function escribirReps(i: number, el: HTMLInputElement) {
-		const n = Number.parseInt(el.value, 10);
-		const reps = Number.isFinite(n) && n > 0 ? n : undefined;
+		const reps = leerReps(el.value);
 		if (sets[i]) sets[i].reps = reps;
 		escribir(setReps(diaId!, $page.params.id!, i, reps, fechaSesion, metrica));
 		el.value = reps != null ? String(reps) : '';
 	}
 
 	async function onToggle(i: number) {
-		const yaEstaba = sets[i]?.hecha;
-		const seCompletanTodas = completaEjercicioAlMarcar(sets, i);
+		if (seriesPendientes.has(i)) return;
+		const actual = sets[i];
+		if (!actual) return;
+		const objetivo = !actual.hecha;
 		// Antes de cualquier await: iOS exige gesto vivo para desbloquear el audio y
 		// para pedir el permiso de notificaciones.
-		if (!yaEstaba && ajustes.timer.activo) descanso.prepararDesdeGesto();
+		if (objetivo && ajustes.timer.activo) descanso.prepararDesdeGesto();
+		seriesPendientes = new Set(seriesPendientes).add(i);
+		let resultado: Awaited<ReturnType<typeof setSerieHecha>> | undefined;
 		try {
-			await toggleSet(diaId!, $page.params.id!, i, fechaSesion, metrica);
+			resultado = await setSerieHecha(diaId!, $page.params.id!, i, objetivo, fechaSesion, metrica);
 		} catch (e) {
 			errorGuardado = e instanceof Error ? e.message : 'No se pudo guardar la serie.';
 			return;
+		} finally {
+			const pendientes = new Set(seriesPendientes);
+			pendientes.delete(i);
+			seriesPendientes = pendientes;
 		}
-		if (yaEstaba) {
+		if (!resultado?.encontrada) {
+			errorGuardado = 'La serie ya no existe. Se actualizó la pantalla.';
+			return;
+		}
+		if (!resultado.cambio) return;
+		if (!resultado.hecha) {
 			descanso.saltar();
 			return;
 		}
@@ -417,12 +446,16 @@
 			if (vibracionActiva && 'vibrate' in navigator) navigator.vibrate(20);
 		}
 
-		if (seCompletanTodas) {
+		if (resultado.ejercicioCompleto) {
 			mostrarHintTimer = false;
 			descanso.saltar();
 		} else if (ajustes.timer.activo) {
 			// recién hecha → arranca descanso, con la próxima serie como recordatorio
-			descanso.iniciar(ajustes.timer.minutos, g?.glow ?? '124 92 255', proximaSerie(i));
+			descanso.iniciar(
+				ajustes.timer.minutos,
+				g?.glow ?? '124 92 255',
+				etiquetaProximaSerie(sets, i, ej?.nombre ?? '')
+			);
 		} else if (debeMostrarHintTimer()) {
 			// Timer apagado: sugerir activarlo (una sola vez) para que avise cuándo volver.
 			mostrarHintTimer = true;
@@ -437,15 +470,6 @@
 	function descartarHintTimer() {
 		ocultarHintTimer();
 		mostrarHintTimer = false;
-	}
-
-	/** Etiqueta de lo que sigue tras el descanso: la próxima serie pendiente. */
-	function proximaSerie(reciente: number): string {
-		const pendientes = sets
-			.map((s, idx) => ({ hecha: s.hecha, idx }))
-			.filter((p) => p.idx !== reciente && !p.hecha);
-		const prox = pendientes.find((p) => p.idx > reciente) ?? pendientes[0];
-		return prox ? `${ej?.nombre ?? ''} · serie ${prox.idx + 1}/${sets.length}` : '';
 	}
 
 	// Serie histórica en edición (long-press en un punto del chart) → bottom sheet.
@@ -685,6 +709,7 @@
 										glow={g.glow}
 										{unidad}
 										{pasoPeso}
+										pendiente={seriesPendientes.has(i)}
 										onToggle={() => onToggle(i)}
 										onToggleMax={() =>
 											escribir(toggleMax(diaId, $page.params.id!, i, fechaSesion, metrica))}

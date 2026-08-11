@@ -54,6 +54,12 @@ export interface Sesion {
 	ejercicios: EjercicioSesion[];
 	diaTerminado?: boolean;
 	diaTerminadoAt?: string;
+	/**
+	 * Índice multiEntry derivado de `ejercicios`: permite traer solo las sesiones de un
+	 * ejercicio en vez de deserializar toda la tabla. NUNCA se escribe a mano — lo
+	 * recalcula `conIndice()` justo antes de cada persistencia (ver más abajo).
+	 */
+	exerciseIds?: string[];
 }
 
 /** Nota personal por ejercicio (colapsada en la UI). */
@@ -118,6 +124,38 @@ db.version(3)
 			});
 	});
 
+// v4: leer el historial de UN ejercicio no puede costar toda la tabla. Como cualquier
+// escritura invalida los liveQuery, ese escaneo se pagaba en cada toque de peso y crecía
+// sin techo con los años. `*exerciseIds` es un índice multiEntry derivado.
+db.version(4)
+	.stores({
+		sesiones: 'id, diaId, fecha, *exerciseIds'
+	})
+	.upgrade(async (tx) => {
+		await tx
+			.table('sesiones')
+			.toCollection()
+			.modify((s: Sesion) => {
+				s.exerciseIds = [...new Set(s.ejercicios.map((e) => e.exerciseId))];
+			});
+	});
+
+/**
+ * Recalcula el índice por ejercicio a partir de `ejercicios`, que es la única fuente de
+ * verdad. Se aplica SIEMPRE justo antes de persistir: si el índice quedara desfasado, las
+ * consultas dejarían de ver una sesión y un PR podría desaparecer del historial o
+ * celebrarse de más. Por eso nadie debería llamar a `db.sesiones.put` directamente.
+ */
+export function conIndice(sesion: Sesion): Sesion {
+	sesion.exerciseIds = [...new Set(sesion.ejercicios.map((e) => e.exerciseId))];
+	return sesion;
+}
+
+/** Único camino para persistir una sesión: deja el índice por ejercicio al día. */
+export function guardarSesion(sesion: Sesion): Promise<string> {
+	return db.sesiones.put(conIndice(sesion));
+}
+
 // Multi-pestaña: cuando otra instancia migra el esquema, soltar la conexión y
 // recargar para tomar el código nuevo; si no, esta pestaña vieja bloquea la
 // migración y la otra queda esperando en "Cargando…" para siempre.
@@ -125,6 +163,21 @@ db.on('versionchange', () => {
 	db.close();
 	if (typeof location !== 'undefined') location.reload();
 });
+
+let avisarBloqueo: (() => void) | undefined;
+
+// Dexie avisa explícitamente cuando otra conexión impide abrir o migrar. Se registra
+// a nivel de módulo (una sola vez): hacerlo dentro de `onMount` acumulaba un handler
+// por cada montaje del layout.
+db.on('blocked', () => avisarBloqueo?.());
+
+/**
+ * La pantalla de carga usa esto para ofrecer una salida en vez de esperar para siempre.
+ * Reemplaza el callback anterior en vez de sumar otro.
+ */
+export function onDbBloqueada(fn: () => void): void {
+	avisarBloqueo = fn;
+}
 
 // Atajo solo-desarrollo para inspeccionar/sembrar datos desde la consola.
 if (import.meta.env.DEV) (globalThis as Record<string, unknown>).gdb = db;

@@ -1,4 +1,4 @@
-import { db, type Dia } from './db';
+import { db, guardarSesion, type Dia } from './db';
 
 /** Paleta de colores para los días. */
 export const coloresDia: { nombre: string; rgb: string }[] = [
@@ -82,11 +82,25 @@ export async function reordenarDias(idsEnOrden: string[]): Promise<void> {
 }
 
 export async function agregarEjercicio(diaId: string, exerciseId: string): Promise<void> {
-	await modificarDia(diaId, (dia) => {
+	await db.transaction('rw', db.dias, db.sesiones, async () => {
+		const dia = await db.dias.get(diaId);
+		if (!dia) return;
 		if (dia.ejercicios.some((e) => e.exerciseId === exerciseId)) return;
 		// orden = max(orden)+1, no length: tras quitar+agregar, length puede duplicar un orden vigente.
 		const orden = dia.ejercicios.reduce((m, e) => Math.max(m, e.orden), -1) + 1;
 		dia.ejercicios.push({ exerciseId, seriesObjetivo: 3, orden });
+		await db.dias.put(dia);
+
+		// La rutina puede cambiar durante el mismo día. Si esa sesión ya se había
+		// terminado, el nuevo ejercicio debe volverla a abrir en vez de esconder una
+		// tarea pendiente bajo el estado "Terminado".
+		const fecha = new Date().toLocaleDateString('sv');
+		const sesion = await db.sesiones.get(`${fecha}__${diaId}`);
+		if (sesion?.diaTerminado) {
+			sesion.diaTerminado = false;
+			sesion.diaTerminadoAt = undefined;
+			await guardarSesion(sesion);
+		}
 	});
 }
 
