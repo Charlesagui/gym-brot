@@ -150,6 +150,17 @@
 		container-type: inline-size;
 	}
 
+	/*
+	 * El ancho fisico no alcanza para inferir el espacio que ocupa el texto: Android
+	 * permite aumentarlo sin achicar el viewport CSS. En vertical priorizamos siempre
+	 * el valor completo; en horizontal conservamos la version compacta si entra.
+	 */
+	@media (orientation: portrait) {
+		.gb-set-grid {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+
 	@container (max-width: 19.5rem) {
 		.gb-set-grid {
 			grid-template-columns: minmax(0, 1fr);
