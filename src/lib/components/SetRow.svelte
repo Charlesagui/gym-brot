@@ -139,3 +139,20 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	/*
+	 * Los steppers conservan blancos tactiles grandes. Si la tarjeta no puede darles
+	 * espacio suficiente, Peso y Reps se apilan en vez de recortar el valor central.
+	 * La consulta al contenedor tambien cubre split-screen y zoom de pantalla.
+	 */
+	.gb-set-row {
+		container-type: inline-size;
+	}
+
+	@container (max-width: 19.5rem) {
+		.gb-set-grid {
+			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+</style>
