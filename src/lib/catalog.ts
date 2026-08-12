@@ -1,6 +1,7 @@
 import exercises from './data/exercises.json';
 
 export type Grupo = 'piernas' | 'pecho' | 'espalda' | 'hombros' | 'brazos' | 'core';
+export type Equipo = 'mancuerna' | 'barra' | 'maquina' | 'peso-corporal' | 'otro';
 
 export interface Ejercicio {
 	id: string;
@@ -9,6 +10,8 @@ export interface Ejercicio {
 	musculo: string;
 	demoVideo: string;
 	videoUrl?: string;
+	/** Equipamiento principal: permite adaptar controles sin inferirlo del nombre traducido. */
+	equipo?: Equipo;
 	/** Máquina con pila de placas: habilita marcar MAX (tope de pila + kg extra encima). */
 	maquinaPlacas?: boolean;
 }

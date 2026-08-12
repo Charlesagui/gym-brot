@@ -267,8 +267,8 @@
 			{/each}
 		</div>
 		<p class="mt-2 text-xs" style="color: var(--muted)">
-			Cuánto suma o resta cada toque de − / + al cargar peso ({ajustes.unidad}). Para mancuernas
-			suele convenir 2.5.
+			Cuánto suma o resta cada toque de − / + al cargar peso ({ajustes.unidad}). Las mancuernas usan
+			{ajustes.unidad === 'kg' ? '1 kg' : '5 lb'} automáticamente y cada ejercicio puede personalizarse.
 		</p>
 	</section>
 

@@ -29,7 +29,14 @@
 		type ModoPr,
 		type MetricaEfectiva
 	} from '$lib/sesion';
-	import { notaObs, setNota, ajustesObs, setTimer, AJUSTES_DEFAULT } from '$lib/extras';
+	import {
+		notaObs,
+		setNota,
+		ajustesObs,
+		setTimer,
+		setPasoPesoEjercicio,
+		AJUSTES_DEFAULT
+	} from '$lib/extras';
 	import { sonarSetHecho, sonarExito } from '$lib/audio';
 	import { descanso } from '$lib/descanso.svelte';
 	import { dur } from '$lib/motion';
@@ -44,6 +51,7 @@
 		unidadValorEjercicio
 	} from '$lib/ejercicio-activo';
 	import { leerPeso, leerReps, sumarPeso, sumarReps } from '$lib/numeros';
+	import { pasoPesoEfectivo, pasoPesoPersonalizado } from '$lib/paso-peso';
 	import {
 		debeMostrarHintMax,
 		debeMostrarHintTimer,
@@ -263,7 +271,11 @@
 			(mejorPrevio == null || valorMejorHoy > mejorPrevio) &&
 			(valorCelebrado == null || valorMejorHoy > valorCelebrado)
 	);
-	const pasoPeso = $derived(ajustes.pasoPeso ?? AJUSTES_DEFAULT.pasoPeso);
+	const pasoPeso = $derived(
+		ej ? pasoPesoEfectivo(ej, ajustes) : (ajustes.pasoPeso ?? AJUSTES_DEFAULT.pasoPeso)
+	);
+	const pasoPersonalizado = $derived(ej ? pasoPesoPersonalizado(ej, ajustes) : undefined);
+	const opcionesPaso = $derived(unidad === 'kg' ? [1, 2.5, 5] : [1, 2.5, 5, 10]);
 	// Sin PR ni serie previa: es la primera vez con este ejercicio → hint de peso inicial.
 	const sinHistorial = $derived(!cargandoSeries && puntos.length === 0 && anteriores.length === 0);
 
@@ -539,6 +551,11 @@
 		// Si hay un descanso en curso, ajusta su fin en vez de reiniciarlo desde cero.
 		descanso.ajustarFin(minutos);
 	}
+
+	function cambiarPasoEjercicio(paso?: number) {
+		if (!ej) return;
+		void setPasoPesoEjercicio(ej.id, unidad, paso);
+	}
 </script>
 
 {#if !ej || !g}
@@ -690,6 +707,38 @@
 								</div>
 							{/if}
 						</div>
+						<details class="mt-3 rounded-xl border border-white/5 bg-white/[0.025] px-3 py-2">
+							<summary class="cursor-pointer text-xs font-semibold" style="color: var(--muted)">
+								−/+ Paso: {formatoNumero(pasoPeso)}
+								{unidad}
+								{pasoPersonalizado == null ? '· automático' : '· personalizado'}
+							</summary>
+							<div class="mt-2 flex flex-wrap gap-2" aria-label="Configurar paso del peso">
+								<button
+									onclick={() => cambiarPasoEjercicio()}
+									class="min-h-10 rounded-lg px-3 text-xs font-bold"
+									aria-pressed={pasoPersonalizado == null}
+									style={pasoPersonalizado == null
+										? 'background: var(--accent); color: white'
+										: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Automático</button
+								>
+								{#each opcionesPaso as paso (paso)}
+									<button
+										onclick={() => cambiarPasoEjercicio(paso)}
+										class="min-h-10 rounded-lg px-3 text-xs font-bold tabular-nums"
+										aria-pressed={pasoPersonalizado === paso}
+										style={pasoPersonalizado === paso
+											? 'background: var(--accent); color: white'
+											: 'background: rgba(255,255,255,.06); color: var(--muted)'}
+										>{formatoNumero(paso)} {unidad}</button
+									>
+								{/each}
+							</div>
+							<p class="mt-2 text-[11px]" style="color: var(--muted)">
+								Automático usa {unidad === 'kg' ? '1 kg' : '5 lb'} en mancuernas y el paso general en
+								los demás ejercicios.
+							</p>
+						</details>
 
 						{#if cargandoSeries}
 							<p

@@ -32,6 +32,7 @@ export const AJUSTES_DEFAULT: Ajustes = {
 	descansoPantallaCompleta: true,
 	metricaPr: 'peso',
 	pasoPeso: 5,
+	pasosPesoEjercicio: {},
 	seedInicialHecho: false
 };
 
@@ -46,6 +47,7 @@ export function normalizarAjustes(a?: Ajustes | null): Ajustes {
 			a?.descansoPantallaCompleta ?? AJUSTES_DEFAULT.descansoPantallaCompleta,
 		metricaPr: a?.metricaPr ?? AJUSTES_DEFAULT.metricaPr,
 		pasoPeso: a?.pasoPeso ?? AJUSTES_DEFAULT.pasoPeso,
+		pasosPesoEjercicio: a?.pasosPesoEjercicio ?? {},
 		seedInicialHecho: a?.seedInicialHecho ?? AJUSTES_DEFAULT.seedInicialHecho
 	};
 }
@@ -102,6 +104,23 @@ export async function setMetricaPr(metricaPr: MetricaPr): Promise<void> {
 export async function setPasoPeso(pasoPeso: number): Promise<void> {
 	await actualizarAjustes((a) => {
 		a.pasoPeso = pasoPeso;
+	});
+}
+
+/** Guarda o vuelve a automático el paso de un ejercicio, separado por kg/lb. */
+export async function setPasoPesoEjercicio(
+	exerciseId: string,
+	unidad: Ajustes['unidad'],
+	pasoPeso?: number
+): Promise<void> {
+	await actualizarAjustes((a) => {
+		const todos = { ...(a.pasosPesoEjercicio ?? {}) };
+		const ejercicio = { ...(todos[exerciseId] ?? {}) };
+		if (pasoPeso == null) delete ejercicio[unidad];
+		else ejercicio[unidad] = pasoPeso;
+		if (Object.keys(ejercicio).length) todos[exerciseId] = ejercicio;
+		else delete todos[exerciseId];
+		a.pasosPesoEjercicio = todos;
 	});
 }
 
@@ -345,6 +364,18 @@ function esNota(value: unknown): value is Nota {
 	return esRecord(value) && esString(value.exerciseId) && esString(value.texto);
 }
 
+function esPasosPesoEjercicio(value: unknown): boolean {
+	return (
+		esRecord(value) &&
+		Object.values(value).every(
+			(pasos) =>
+				esRecord(pasos) &&
+				(pasos.kg === undefined || (esNumero(pasos.kg) && pasos.kg > 0)) &&
+				(pasos.lb === undefined || (esNumero(pasos.lb) && pasos.lb > 0))
+		)
+	);
+}
+
 function esAjustes(value: unknown): value is Ajustes {
 	if (!esRecord(value) || value.id !== 'app') return false;
 	const timer = value.timer;
@@ -359,6 +390,7 @@ function esAjustes(value: unknown): value is Ajustes {
 		(value.descansoPantallaCompleta === undefined || esBoolean(value.descansoPantallaCompleta)) &&
 		(value.metricaPr === undefined || value.metricaPr === 'peso' || value.metricaPr === 'e1rm') &&
 		(value.pasoPeso === undefined || esNumeroNoNegativo(value.pasoPeso)) &&
+		(value.pasosPesoEjercicio === undefined || esPasosPesoEjercicio(value.pasosPesoEjercicio)) &&
 		(value.ultimoBackup === undefined || esString(value.ultimoBackup)) &&
 		(value.seedInicialHecho === undefined || esBoolean(value.seedInicialHecho))
 	);

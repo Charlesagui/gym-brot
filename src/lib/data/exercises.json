@@ -1480,6 +1480,7 @@
 	},
 	{
 		"id": "dumbbell-deadlift",
+		"equipo": "mancuerna",
 		"nombre": "Peso muerto con mancuernas",
 		"grupo": "piernas",
 		"musculo": "Glúteos",
@@ -1488,6 +1489,7 @@
 	},
 	{
 		"id": "dumbbell-romanian-deadlift",
+		"equipo": "mancuerna",
 		"nombre": "Peso muerto rumano con mancuernas",
 		"grupo": "piernas",
 		"musculo": "Glúteos",
@@ -1496,6 +1498,7 @@
 	},
 	{
 		"id": "dumbbell-stiff-leg-deadlift",
+		"equipo": "mancuerna",
 		"nombre": "Peso muerto piernas rígidas con mancuernas",
 		"grupo": "piernas",
 		"musculo": "Glúteos",
@@ -1504,6 +1507,7 @@
 	},
 	{
 		"id": "dumbbell-single-leg-deadlift",
+		"equipo": "mancuerna",
 		"nombre": "Peso muerto a una pierna con mancuerna",
 		"grupo": "piernas",
 		"musculo": "Glúteos",
@@ -1584,6 +1588,7 @@
 	},
 	{
 		"id": "dumbbell-squat",
+		"equipo": "mancuerna",
 		"nombre": "Sentadilla con mancuernas",
 		"grupo": "piernas",
 		"musculo": "Glúteos",
@@ -1592,6 +1597,7 @@
 	},
 	{
 		"id": "dumbbell-goblet-squat",
+		"equipo": "mancuerna",
 		"nombre": "Sentadilla goblet con mancuerna",
 		"grupo": "piernas",
 		"musculo": "Cuádriceps",
@@ -1714,6 +1720,7 @@
 	},
 	{
 		"id": "dumbbell-single-leg-split-squat",
+		"equipo": "mancuerna",
 		"nombre": "Sentadilla búlgara con mancuernas",
 		"grupo": "piernas",
 		"musculo": "Cuádriceps",
@@ -1754,6 +1761,7 @@
 	},
 	{
 		"id": "dumbbell-step-up-split-squat",
+		"equipo": "mancuerna",
 		"nombre": "Split squat con step y mancuernas",
 		"grupo": "piernas",
 		"musculo": "Cuádriceps",
@@ -1762,6 +1770,7 @@
 	},
 	{
 		"id": "dumbbell-step-up-lunge",
+		"equipo": "mancuerna",
 		"nombre": "Estocada con step y mancuernas",
 		"grupo": "piernas",
 		"musculo": "Cuádriceps",
@@ -1786,6 +1795,7 @@
 	},
 	{
 		"id": "dumbbell-lunge",
+		"equipo": "mancuerna",
 		"nombre": "Estocada con mancuernas",
 		"grupo": "piernas",
 		"musculo": "Glúteos",
@@ -1794,6 +1804,7 @@
 	},
 	{
 		"id": "dumbbell-rear-lunge",
+		"equipo": "mancuerna",
 		"nombre": "Estocada posterior con mancuernas",
 		"grupo": "piernas",
 		"musculo": "Glúteos",
@@ -1834,6 +1845,7 @@
 	},
 	{
 		"id": "dumbbell-contralateral-forward-lunge",
+		"equipo": "mancuerna",
 		"nombre": "Estocada contralateral con mancuerna",
 		"grupo": "piernas",
 		"musculo": "Glúteos",
@@ -1842,6 +1854,7 @@
 	},
 	{
 		"id": "dumbbell-step-up",
+		"equipo": "mancuerna",
 		"nombre": "Step-up con mancuernas",
 		"grupo": "piernas",
 		"musculo": "Glúteos",
@@ -1951,6 +1964,7 @@
 	},
 	{
 		"id": "dumbbell-standing-calf-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación de gemelos de pie con mancuernas",
 		"grupo": "piernas",
 		"musculo": "Gemelos",
@@ -1959,6 +1973,7 @@
 	},
 	{
 		"id": "dumbbell-seated-calf-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación de gemelos sentado con mancuerna",
 		"grupo": "piernas",
 		"musculo": "Gemelos",
@@ -1967,6 +1982,7 @@
 	},
 	{
 		"id": "dumbbell-single-leg-calf-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación de gemelos a una pierna con mancuerna",
 		"grupo": "piernas",
 		"musculo": "Gemelos",
@@ -2512,6 +2528,7 @@
 	},
 	{
 		"id": "dumbbell-bench-press",
+		"equipo": "mancuerna",
 		"nombre": "Press de banca con mancuernas",
 		"grupo": "pecho",
 		"musculo": "Pectoral",
@@ -2520,6 +2537,7 @@
 	},
 	{
 		"id": "dumbbell-incline-bench-press",
+		"equipo": "mancuerna",
 		"nombre": "Press inclinado con mancuernas",
 		"grupo": "pecho",
 		"musculo": "Pectoral",
@@ -2528,6 +2546,7 @@
 	},
 	{
 		"id": "dumbbell-decline-bench-press",
+		"equipo": "mancuerna",
 		"nombre": "Press declinado con mancuernas",
 		"grupo": "pecho",
 		"musculo": "Pectoral",
@@ -2536,6 +2555,7 @@
 	},
 	{
 		"id": "dumbbell-lying-hammer-press",
+		"equipo": "mancuerna",
 		"nombre": "Press martillo con mancuernas",
 		"grupo": "pecho",
 		"musculo": "Pectoral",
@@ -2544,6 +2564,7 @@
 	},
 	{
 		"id": "dumbbell-incline-hammer-press",
+		"equipo": "mancuerna",
 		"nombre": "Press inclinado martillo con mancuernas",
 		"grupo": "pecho",
 		"musculo": "Pectoral",
@@ -2552,6 +2573,7 @@
 	},
 	{
 		"id": "dumbbell-fly",
+		"equipo": "mancuerna",
 		"nombre": "Aperturas con mancuernas",
 		"grupo": "pecho",
 		"musculo": "Pectoral",
@@ -2560,6 +2582,7 @@
 	},
 	{
 		"id": "dumbbell-incline-fly",
+		"equipo": "mancuerna",
 		"nombre": "Aperturas inclinadas con mancuernas",
 		"grupo": "pecho",
 		"musculo": "Pectoral",
@@ -2568,6 +2591,7 @@
 	},
 	{
 		"id": "dumbbell-decline-fly",
+		"equipo": "mancuerna",
 		"nombre": "Aperturas declinadas con mancuernas",
 		"grupo": "pecho",
 		"musculo": "Pectoral",
@@ -2576,6 +2600,7 @@
 	},
 	{
 		"id": "dumbbell-pullover",
+		"equipo": "mancuerna",
 		"nombre": "Pullover con mancuerna",
 		"grupo": "pecho",
 		"musculo": "Pectoral",
@@ -2584,6 +2609,7 @@
 	},
 	{
 		"id": "dumbbell-straight-arm-pullover",
+		"equipo": "mancuerna",
 		"nombre": "Pullover brazos rectos con mancuerna",
 		"grupo": "pecho",
 		"musculo": "Pectoral",
@@ -2640,6 +2666,7 @@
 	},
 	{
 		"id": "dumbbell-bent-over-row",
+		"equipo": "mancuerna",
 		"nombre": "Remo inclinado con mancuernas",
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
@@ -2648,6 +2675,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-bent-over-row",
+		"equipo": "mancuerna",
 		"nombre": "Remo a una mano con mancuerna",
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
@@ -2656,6 +2684,7 @@
 	},
 	{
 		"id": "dumbbell-incline-row",
+		"equipo": "mancuerna",
 		"nombre": "Remo inclinado con mancuernas en banco",
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
@@ -2664,6 +2693,7 @@
 	},
 	{
 		"id": "dumbbell-palm-rotational-bent-over-row",
+		"equipo": "mancuerna",
 		"nombre": "Remo inclinado rotacional con mancuerna",
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
@@ -2776,6 +2806,7 @@
 	},
 	{
 		"id": "dumbbell-arnold-press",
+		"equipo": "mancuerna",
 		"nombre": "Press Arnold con mancuernas",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -2784,6 +2815,7 @@
 	},
 	{
 		"id": "dumbbell-seated-shoulder-press",
+		"equipo": "mancuerna",
 		"nombre": "Press de hombros sentado con mancuernas",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -2792,6 +2824,7 @@
 	},
 	{
 		"id": "dumbbell-standing-overhead-press",
+		"equipo": "mancuerna",
 		"nombre": "Press sobre cabeza con mancuernas",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -2800,6 +2833,7 @@
 	},
 	{
 		"id": "dumbbell-standing-alternate-overhead-press",
+		"equipo": "mancuerna",
 		"nombre": "Press alternado sobre cabeza con mancuernas",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -2808,6 +2842,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-shoulder-press",
+		"equipo": "mancuerna",
 		"nombre": "Press de hombro a una mano con mancuerna",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -2816,6 +2851,7 @@
 	},
 	{
 		"id": "dumbbell-push-press",
+		"equipo": "mancuerna",
 		"nombre": "Push press con mancuernas",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -2824,6 +2860,7 @@
 	},
 	{
 		"id": "dumbbell-lateral-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevaciones laterales con mancuernas",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -2832,6 +2869,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-lateral-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación lateral a una mano con mancuerna",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -2840,6 +2878,7 @@
 	},
 	{
 		"id": "dumbbell-seated-lateral-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevaciones laterales sentado con mancuernas",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -2848,6 +2887,7 @@
 	},
 	{
 		"id": "dumbbell-front-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevaciones frontales con mancuernas",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -2856,6 +2896,7 @@
 	},
 	{
 		"id": "dumbbell-rear-delt-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación posterior de deltoides con mancuernas",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -2864,6 +2905,7 @@
 	},
 	{
 		"id": "dumbbell-rear-fly",
+		"equipo": "mancuerna",
 		"nombre": "Aperturas posteriores con mancuernas",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -2872,6 +2914,7 @@
 	},
 	{
 		"id": "dumbbell-reverse-fly",
+		"equipo": "mancuerna",
 		"nombre": "Aperturas inversas con mancuernas",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -2880,6 +2923,7 @@
 	},
 	{
 		"id": "dumbbell-incline-rear-lateral-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación posterior inclinada con mancuernas",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -2888,6 +2932,7 @@
 	},
 	{
 		"id": "dumbbell-upright-row",
+		"equipo": "mancuerna",
 		"nombre": "Remo al mentón con mancuernas",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -2984,6 +3029,7 @@
 	},
 	{
 		"id": "dumbbell-biceps-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -2992,6 +3038,7 @@
 	},
 	{
 		"id": "dumbbell-alternate-biceps-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl alternado con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -3000,6 +3047,7 @@
 	},
 	{
 		"id": "dumbbell-standing-biceps-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl de pie con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -3008,6 +3056,7 @@
 	},
 	{
 		"id": "dumbbell-hammer-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl martillo con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -3016,6 +3065,7 @@
 	},
 	{
 		"id": "dumbbell-cross-body-hammer-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl martillo cruzado con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -3024,6 +3074,7 @@
 	},
 	{
 		"id": "dumbbell-incline-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl inclinado con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -3032,6 +3083,7 @@
 	},
 	{
 		"id": "dumbbell-incline-hammer-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl martillo inclinado con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -3040,6 +3092,7 @@
 	},
 	{
 		"id": "dumbbell-concentration-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl concentrado con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -3048,6 +3101,7 @@
 	},
 	{
 		"id": "dumbbell-preacher-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl predicador con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -3056,6 +3110,7 @@
 	},
 	{
 		"id": "dumbbell-seated-bicep-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl sentado con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -3064,6 +3119,7 @@
 	},
 	{
 		"id": "dumbbell-seated-hammer-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl martillo sentado con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -3072,6 +3128,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-standing-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl de pie a una mano con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -3080,6 +3137,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-standing-hammer-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl martillo a una mano con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -3088,6 +3146,7 @@
 	},
 	{
 		"id": "dumbbell-revers-grip-biceps-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl invertido con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -3096,6 +3155,7 @@
 	},
 	{
 		"id": "dumbbell-zottman-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl Zottman con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -3104,6 +3164,7 @@
 	},
 	{
 		"id": "dumbbell-high-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl alto con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -3112,6 +3173,7 @@
 	},
 	{
 		"id": "dumbbell-prone-incline-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl inclinado boca abajo con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -3176,6 +3238,7 @@
 	},
 	{
 		"id": "dumbbell-close-grip-press",
+		"equipo": "mancuerna",
 		"nombre": "Press cerrado con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -3184,6 +3247,7 @@
 	},
 	{
 		"id": "dumbbell-neutral-grip-bench-press",
+		"equipo": "mancuerna",
 		"nombre": "Press agarre neutro con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -3192,6 +3256,7 @@
 	},
 	{
 		"id": "dumbbell-kickback",
+		"equipo": "mancuerna",
 		"nombre": "Patada de tríceps con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -3200,6 +3265,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-kickback",
+		"equipo": "mancuerna",
 		"nombre": "Patada de tríceps a una mano con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -3208,6 +3274,7 @@
 	},
 	{
 		"id": "dumbbell-lying-triceps-extension",
+		"equipo": "mancuerna",
 		"nombre": "Extensión de tríceps tumbado con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -3216,6 +3283,7 @@
 	},
 	{
 		"id": "dumbbell-seated-triceps-extension",
+		"equipo": "mancuerna",
 		"nombre": "Extensión de tríceps sentado con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -3224,6 +3292,7 @@
 	},
 	{
 		"id": "dumbbells-seated-triceps-extension",
+		"equipo": "mancuerna",
 		"nombre": "Extensión de tríceps sentado con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -3232,6 +3301,7 @@
 	},
 	{
 		"id": "dumbbell-standing-triceps-extension",
+		"equipo": "mancuerna",
 		"nombre": "Extensión de tríceps de pie con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -3240,6 +3310,7 @@
 	},
 	{
 		"id": "dumbbell-incline-triceps-extension",
+		"equipo": "mancuerna",
 		"nombre": "Extensión de tríceps inclinado con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -3248,6 +3319,7 @@
 	},
 	{
 		"id": "dumbbell-tate-press",
+		"equipo": "mancuerna",
 		"nombre": "Tate press con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -3256,6 +3328,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-triceps-extension-on-bench",
+		"equipo": "mancuerna",
 		"nombre": "Extensión de tríceps a una mano en banco",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -3264,6 +3337,7 @@
 	},
 	{
 		"id": "dumbbell-standing-kickback",
+		"equipo": "mancuerna",
 		"nombre": "Patada de tríceps de pie con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -3288,6 +3362,7 @@
 	},
 	{
 		"id": "dumbbell-shrug",
+		"equipo": "mancuerna",
 		"nombre": "Encogimiento con mancuernas",
 		"grupo": "espalda",
 		"musculo": "Trapecios",
@@ -3296,6 +3371,7 @@
 	},
 	{
 		"id": "dumbbell-incline-shrug",
+		"equipo": "mancuerna",
 		"nombre": "Encogimiento inclinado con mancuernas",
 		"grupo": "espalda",
 		"musculo": "Trapecios",
@@ -3344,6 +3420,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-wrist-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl de muñeca a una mano con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
@@ -3352,6 +3429,7 @@
 	},
 	{
 		"id": "dumbbell-reverse-wrist-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl de muñeca invertido con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
@@ -3360,6 +3438,7 @@
 	},
 	{
 		"id": "dumbbell-seated-palms-up-wrist-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl de muñeca sentado con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
@@ -3368,6 +3447,7 @@
 	},
 	{
 		"id": "dumbbell-finger-curls",
+		"equipo": "mancuerna",
 		"nombre": "Curl de dedos con mancuernas",
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
@@ -4192,6 +4272,7 @@
 	},
 	{
 		"id": "dumbbell-side-bend",
+		"equipo": "mancuerna",
 		"nombre": "Inclinación lateral con mancuerna",
 		"grupo": "core",
 		"musculo": "Oblicuos",
@@ -4884,6 +4965,7 @@
 	},
 	{
 		"id": "dumbbell-around-pullover",
+		"equipo": "mancuerna",
 		"nombre": "Pullover circular con mancuerna",
 		"grupo": "pecho",
 		"musculo": "Pectoral + dorsales",
@@ -4892,6 +4974,7 @@
 	},
 	{
 		"id": "dumbbell-decline-hammer-press",
+		"equipo": "mancuerna",
 		"nombre": "Press declinado martillo con mancuernas",
 		"grupo": "pecho",
 		"musculo": "Pectoral inferior",
@@ -4900,6 +4983,7 @@
 	},
 	{
 		"id": "dumbbell-decline-one-arm-fly",
+		"equipo": "mancuerna",
 		"nombre": "Apertura declinada a una mano con mancuerna",
 		"grupo": "pecho",
 		"musculo": "Pectoral inferior",
@@ -4908,6 +4992,7 @@
 	},
 	{
 		"id": "dumbbell-decline-twist-fly",
+		"equipo": "mancuerna",
 		"nombre": "Apertura declinada con giro con mancuernas",
 		"grupo": "pecho",
 		"musculo": "Pectoral inferior",
@@ -4916,6 +5001,7 @@
 	},
 	{
 		"id": "dumbbell-fly-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Apertura con mancuernas en fitball",
 		"grupo": "pecho",
 		"musculo": "Pectoral + core",
@@ -4924,6 +5010,7 @@
 	},
 	{
 		"id": "dumbbell-incline-alternate-press",
+		"equipo": "mancuerna",
 		"nombre": "Press inclinado alternado con mancuernas",
 		"grupo": "pecho",
 		"musculo": "Pectoral superior",
@@ -4932,6 +5019,7 @@
 	},
 	{
 		"id": "dumbbell-incline-breeding",
+		"equipo": "mancuerna",
 		"nombre": "Apertura inclinada profunda con mancuernas",
 		"grupo": "pecho",
 		"musculo": "Pectoral superior",
@@ -4940,6 +5028,7 @@
 	},
 	{
 		"id": "dumbbell-incline-fly-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Apertura inclinada con mancuernas en fitball",
 		"grupo": "pecho",
 		"musculo": "Pectoral superior + core",
@@ -4948,6 +5037,7 @@
 	},
 	{
 		"id": "dumbbell-incline-one-arm-fly",
+		"equipo": "mancuerna",
 		"nombre": "Apertura inclinada a una mano con mancuerna",
 		"grupo": "pecho",
 		"musculo": "Pectoral superior",
@@ -4956,6 +5046,7 @@
 	},
 	{
 		"id": "dumbbell-incline-one-arm-press",
+		"equipo": "mancuerna",
 		"nombre": "Press inclinado a una mano con mancuerna",
 		"grupo": "pecho",
 		"musculo": "Pectoral superior",
@@ -4964,6 +5055,7 @@
 	},
 	{
 		"id": "dumbbell-incline-palm-in-press",
+		"equipo": "mancuerna",
 		"nombre": "Press inclinado agarre neutro con mancuernas",
 		"grupo": "pecho",
 		"musculo": "Pectoral superior",
@@ -4972,6 +5064,7 @@
 	},
 	{
 		"id": "dumbbell-incline-press-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Press inclinado con mancuernas en fitball",
 		"grupo": "pecho",
 		"musculo": "Pectoral superior + core",
@@ -4980,6 +5073,7 @@
 	},
 	{
 		"id": "dumbbell-incline-twisted-flyes",
+		"equipo": "mancuerna",
 		"nombre": "Apertura inclinada con giro con mancuernas",
 		"grupo": "pecho",
 		"musculo": "Pectoral superior",
@@ -4988,6 +5082,7 @@
 	},
 	{
 		"id": "dumbbell-lying-one-arm-press",
+		"equipo": "mancuerna",
 		"nombre": "Press tumbado a una mano con mancuerna",
 		"grupo": "pecho",
 		"musculo": "Pectoral",
@@ -4996,6 +5091,7 @@
 	},
 	{
 		"id": "dumbbell-lying-pullover-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Pullover tumbado con mancuerna en fitball",
 		"grupo": "pecho",
 		"musculo": "Pectoral + dorsales",
@@ -5004,6 +5100,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-bench-fly",
+		"equipo": "mancuerna",
 		"nombre": "Apertura en banco a una mano con mancuerna",
 		"grupo": "pecho",
 		"musculo": "Pectoral",
@@ -5012,6 +5109,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-chest-fly-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Apertura de pecho a una mano en fitball",
 		"grupo": "pecho",
 		"musculo": "Pectoral + core",
@@ -5020,6 +5118,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-decline-chest-press",
+		"equipo": "mancuerna",
 		"nombre": "Press declinado a una mano con mancuerna",
 		"grupo": "pecho",
 		"musculo": "Pectoral inferior",
@@ -5028,6 +5127,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-fly-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Apertura a una mano con mancuerna en fitball",
 		"grupo": "pecho",
 		"musculo": "Pectoral + core",
@@ -5036,6 +5136,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-incline-chest-press",
+		"equipo": "mancuerna",
 		"nombre": "Press inclinado de pecho a una mano con mancuerna",
 		"grupo": "pecho",
 		"musculo": "Pectoral superior",
@@ -5044,6 +5145,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-press-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Press a una mano con mancuerna en fitball",
 		"grupo": "pecho",
 		"musculo": "Pectoral + core",
@@ -5052,6 +5154,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-pullover-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Pullover a una mano con mancuerna en fitball",
 		"grupo": "pecho",
 		"musculo": "Pectoral + dorsales",
@@ -5060,6 +5163,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-reverse-grip-press",
+		"equipo": "mancuerna",
 		"nombre": "Press a una mano agarre invertido con mancuerna",
 		"grupo": "pecho",
 		"musculo": "Pectoral superior",
@@ -5068,6 +5172,7 @@
 	},
 	{
 		"id": "dumbbell-one-leg-fly-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Apertura con mancuernas a una pierna en fitball",
 		"grupo": "pecho",
 		"musculo": "Pectoral + core",
@@ -5076,6 +5181,7 @@
 	},
 	{
 		"id": "dumbbell-press-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Press con mancuernas en fitball",
 		"grupo": "pecho",
 		"musculo": "Pectoral + core",
@@ -5084,6 +5190,7 @@
 	},
 	{
 		"id": "dumbbell-pullover-hip-extension-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Pullover con extensión de cadera en fitball",
 		"grupo": "pecho",
 		"musculo": "Pectoral + glúteos",
@@ -5092,6 +5199,7 @@
 	},
 	{
 		"id": "dumbbell-pullover-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Pullover con mancuerna en fitball",
 		"grupo": "pecho",
 		"musculo": "Pectoral + dorsales",
@@ -5100,6 +5208,7 @@
 	},
 	{
 		"id": "dumbbell-reverse-bench-press",
+		"equipo": "mancuerna",
 		"nombre": "Press de banca invertido con mancuernas",
 		"grupo": "pecho",
 		"musculo": "Pectoral superior",
@@ -5116,6 +5225,7 @@
 	},
 	{
 		"id": "dumbbell-incline-shoulder-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación escapular inclinada con mancuernas",
 		"grupo": "pecho",
 		"musculo": "Serrato anterior",
@@ -5780,6 +5890,7 @@
 	},
 	{
 		"id": "dumbbell-decline-shrug",
+		"equipo": "mancuerna",
 		"nombre": "Encogimiento declinado con mancuernas",
 		"grupo": "espalda",
 		"musculo": "Trapecios",
@@ -5788,6 +5899,7 @@
 	},
 	{
 		"id": "dumbbell-incline-y-raise",
+		"equipo": "mancuerna",
 		"nombre": "Y-raise inclinado con mancuernas",
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
@@ -5796,6 +5908,7 @@
 	},
 	{
 		"id": "dumbbell-lying-rear-delt-row",
+		"equipo": "mancuerna",
 		"nombre": "Remo posterior tumbado con mancuernas",
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
@@ -5804,6 +5917,7 @@
 	},
 	{
 		"id": "dumbbell-reverse-grip-incline-bench-one-arm-row",
+		"equipo": "mancuerna",
 		"nombre": "Remo inclinado supino a una mano con mancuerna",
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
@@ -5812,6 +5926,7 @@
 	},
 	{
 		"id": "dumbbell-reverse-grip-incline-bench-two-arm-row",
+		"equipo": "mancuerna",
 		"nombre": "Remo inclinado supino a dos manos con mancuernas",
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
@@ -5820,6 +5935,7 @@
 	},
 	{
 		"id": "dumbbell-reverse-grip-row-female",
+		"equipo": "mancuerna",
 		"nombre": "Remo agarre supino con mancuernas",
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
@@ -5828,6 +5944,7 @@
 	},
 	{
 		"id": "dumbbell-side-plank-with-rear-fly",
+		"equipo": "mancuerna",
 		"nombre": "Plancha lateral con apertura posterior",
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
@@ -6004,6 +6121,7 @@
 	},
 	{
 		"id": "dumbbell-alternate-side-press",
+		"equipo": "mancuerna",
 		"nombre": "Press con mancuerna, lateral, alternado",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6012,6 +6130,7 @@
 	},
 	{
 		"id": "dumbbell-bench-seated-press",
+		"equipo": "mancuerna",
 		"nombre": "Press con mancuerna, sentado, banco",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6020,6 +6139,7 @@
 	},
 	{
 		"id": "dumbbell-cuban-press",
+		"equipo": "mancuerna",
 		"nombre": "Press cubano con mancuerna",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6028,6 +6148,7 @@
 	},
 	{
 		"id": "dumbbell-full-can-lateral-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación lateral con mancuerna, estilo full can",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6036,6 +6157,7 @@
 	},
 	{
 		"id": "dumbbell-incline-one-arm-lateral-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación lateral inclinado con mancuerna, a una mano",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6044,6 +6166,7 @@
 	},
 	{
 		"id": "dumbbell-incline-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación inclinado con mancuerna",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6052,6 +6175,7 @@
 	},
 	{
 		"id": "dumbbell-incline-t-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación inclinado con mancuerna, t",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6060,6 +6184,7 @@
 	},
 	{
 		"id": "dumbbell-iron-cross",
+		"equipo": "mancuerna",
 		"nombre": "Iron cruzado con mancuerna",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6068,6 +6193,7 @@
 	},
 	{
 		"id": "dumbbell-lateral-to-front-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación lateral a frontal con mancuerna",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6076,6 +6202,7 @@
 	},
 	{
 		"id": "dumbbell-lying-external-shoulder-rotation",
+		"equipo": "mancuerna",
 		"nombre": "External hombro rotation con mancuerna, tumbado",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6084,6 +6211,7 @@
 	},
 	{
 		"id": "dumbbell-lying-on-floor-rear-delt-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación posterior de deltoides con mancuerna, tumbado, en el suelo",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6092,6 +6220,7 @@
 	},
 	{
 		"id": "dumbbell-lying-one-arm-deltoid-rear",
+		"equipo": "mancuerna",
 		"nombre": "Elevación posterior de deltoides con mancuerna, tumbado, a una mano",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6100,6 +6229,7 @@
 	},
 	{
 		"id": "dumbbell-lying-rear-lateral-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación posterior de deltoides con mancuerna, tumbado",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6108,6 +6238,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-lateral-raise-with-support",
+		"equipo": "mancuerna",
 		"nombre": "Elevación lateral con mancuerna, a una mano, con apoyo",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6116,6 +6247,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-reverse-fly-with-support",
+		"equipo": "mancuerna",
 		"nombre": "Apertura inversa con mancuerna, a una mano, con apoyo",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6124,6 +6256,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-upright-row",
+		"equipo": "mancuerna",
 		"nombre": "Remo al mentón con mancuerna, a una mano",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6132,6 +6265,7 @@
 	},
 	{
 		"id": "dumbbell-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación con mancuerna",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6140,6 +6274,7 @@
 	},
 	{
 		"id": "dumbbell-rear-delt-row-shoulder",
+		"equipo": "mancuerna",
 		"nombre": "Remo de deltoides posterior con mancuerna",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6148,6 +6283,7 @@
 	},
 	{
 		"id": "dumbbell-rear-lateral-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación posterior de deltoides con mancuerna",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6156,6 +6292,7 @@
 	},
 	{
 		"id": "dumbbell-rear-lateral-raise-support-head",
+		"equipo": "mancuerna",
 		"nombre": "Elevación lateral posterior con mancuerna, con apoyo en la cabeza",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6164,6 +6301,7 @@
 	},
 	{
 		"id": "dumbbell-rotation-reverse-fly",
+		"equipo": "mancuerna",
 		"nombre": "Apertura inversa con mancuerna, rotation",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6172,6 +6310,7 @@
 	},
 	{
 		"id": "dumbbell-scott-press",
+		"equipo": "mancuerna",
 		"nombre": "Press Scott con mancuerna",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6180,6 +6319,7 @@
 	},
 	{
 		"id": "dumbbell-seated-alternate-front-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación frontal con mancuerna, sentado, alternado",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6188,6 +6328,7 @@
 	},
 	{
 		"id": "dumbbell-seated-alternate-press",
+		"equipo": "mancuerna",
 		"nombre": "Press con mancuerna, sentado, alternado",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6196,6 +6337,7 @@
 	},
 	{
 		"id": "dumbbell-seated-alternate-shoulder",
+		"equipo": "mancuerna",
 		"nombre": "Hombro con mancuerna, sentado, alternado",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6204,6 +6346,7 @@
 	},
 	{
 		"id": "dumbbell-seated-bent-arm-lateral-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación lateral con mancuerna, sentado, con brazo doblado",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6212,6 +6355,7 @@
 	},
 	{
 		"id": "dumbbell-seated-front-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación frontal con mancuerna, sentado",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6220,6 +6364,7 @@
 	},
 	{
 		"id": "dumbbell-seated-shoulder-press-parallel-grip",
+		"equipo": "mancuerna",
 		"nombre": "Press de hombros con mancuerna, sentado, con agarre paralelo",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6228,6 +6373,7 @@
 	},
 	{
 		"id": "dumbbell-side-lying-one-hand-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación lateral con mancuerna, tumbado de lado, a una mano",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6236,6 +6382,7 @@
 	},
 	{
 		"id": "dumbbell-single-arm-overhead-carry",
+		"equipo": "mancuerna",
 		"nombre": "Carry sobre la cabeza con mancuerna, a una mano",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6244,6 +6391,7 @@
 	},
 	{
 		"id": "dumbbell-standing-alternate-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación con mancuerna, de pie, alternado",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6252,6 +6400,7 @@
 	},
 	{
 		"id": "dumbbell-standing-around-world",
+		"equipo": "mancuerna",
 		"nombre": "Círculos sobre la cabeza con mancuerna, de pie",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6260,6 +6409,7 @@
 	},
 	{
 		"id": "dumbbell-standing-front-raise-above-head",
+		"equipo": "mancuerna",
 		"nombre": "Elevación frontal con mancuerna, de pie, por encima cabeza",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6268,6 +6418,7 @@
 	},
 	{
 		"id": "dumbbell-standing-one-arm-palm-in-press",
+		"equipo": "mancuerna",
 		"nombre": "Press con mancuerna, de pie, a una mano con palma hacia dentro",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6276,6 +6427,7 @@
 	},
 	{
 		"id": "dumbbell-standing-palms-in-press",
+		"equipo": "mancuerna",
 		"nombre": "Press con mancuerna, de pie, con palmas hacia dentro",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6284,6 +6436,7 @@
 	},
 	{
 		"id": "dumbbell-upright-row-back-pov",
+		"equipo": "mancuerna",
 		"nombre": "Remo al mentón con mancuerna",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6292,6 +6445,7 @@
 	},
 	{
 		"id": "dumbbell-upright-shoulder-external-rotation",
+		"equipo": "mancuerna",
 		"nombre": "Upright hombro external rotation con mancuerna",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6300,6 +6454,7 @@
 	},
 	{
 		"id": "dumbbell-w-press",
+		"equipo": "mancuerna",
 		"nombre": "Press en W con mancuerna",
 		"grupo": "hombros",
 		"musculo": "Deltoides",
@@ -6356,6 +6511,7 @@
 	},
 	{
 		"id": "dumbbell-alternate-biceps-curl-with-arm-blaster",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps con mancuerna, alternado con arm blaster",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6364,6 +6520,7 @@
 	},
 	{
 		"id": "dumbbell-alternate-hammer-preacher-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl predicador martillo con mancuerna, alternado",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6372,6 +6529,7 @@
 	},
 	{
 		"id": "dumbbell-alternate-preacher-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl predicador con mancuerna, alternado",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6380,6 +6538,7 @@
 	},
 	{
 		"id": "dumbbell-alternate-seated-hammer-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl martillo con mancuerna, sentado, alternado",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6388,6 +6547,7 @@
 	},
 	{
 		"id": "dumbbell-alternating-bicep-curl-with-leg-raised-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps con mancuerna, alternado con pierna elevada en fitball",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6396,6 +6556,7 @@
 	},
 	{
 		"id": "dumbbell-alternating-seated-bicep-curl-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps con mancuerna, sentado, alternado en fitball",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6404,6 +6565,7 @@
 	},
 	{
 		"id": "dumbbell-bicep-curl-lunge-with-bowling-motion",
+		"equipo": "mancuerna",
 		"nombre": "Zancada con mancuerna, con movimiento de bolos, bicep-curl",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6412,6 +6574,7 @@
 	},
 	{
 		"id": "dumbbell-bicep-curl-on-exercise-ball-with-leg-raised",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps con mancuerna, en fitball con pierna elevada",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6420,6 +6583,7 @@
 	},
 	{
 		"id": "dumbbell-bicep-curl-with-stork-stance",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps con mancuerna, en postura de cigüeña",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6428,6 +6592,7 @@
 	},
 	{
 		"id": "dumbbell-biceps-curl-reverse",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps invertido con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6436,6 +6601,7 @@
 	},
 	{
 		"id": "dumbbell-biceps-curl-squat",
+		"equipo": "mancuerna",
 		"nombre": "Sentadilla con mancuerna, biceps-curl",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6444,6 +6610,7 @@
 	},
 	{
 		"id": "dumbbell-biceps-curl-v-sit-on-bosu-ball",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps con mancuerna, en bosu, sit",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6452,6 +6619,7 @@
 	},
 	{
 		"id": "dumbbell-biceps-curl-with-arm-blaster",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps con mancuerna, con arm blaster",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6460,6 +6628,7 @@
 	},
 	{
 		"id": "dumbbell-hammer-curl-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Curl martillo con mancuerna, en fitball",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6468,6 +6637,7 @@
 	},
 	{
 		"id": "dumbbell-hammer-curls-with-arm-blaster",
+		"equipo": "mancuerna",
 		"nombre": "Curl martillo con mancuerna, con arm blaster",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6476,6 +6646,7 @@
 	},
 	{
 		"id": "dumbbell-incline-biceps-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps inclinado con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6484,6 +6655,7 @@
 	},
 	{
 		"id": "dumbbell-incline-inner-biceps-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps inclinado con mancuerna, interno",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6492,6 +6664,7 @@
 	},
 	{
 		"id": "dumbbell-kneeling-bicep-curl-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps con mancuerna en fitball, de rodillas",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6500,6 +6673,7 @@
 	},
 	{
 		"id": "dumbbell-lunge-with-bicep-curl",
+		"equipo": "mancuerna",
 		"nombre": "Zancada con mancuerna, con curl de bíceps",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6508,6 +6682,7 @@
 	},
 	{
 		"id": "dumbbell-lying-supine-biceps-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps tumbado boca arriba con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6516,6 +6691,7 @@
 	},
 	{
 		"id": "dumbbell-lying-supine-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl tumbado boca arriba con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6524,6 +6700,7 @@
 	},
 	{
 		"id": "dumbbell-lying-wide-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl con mancuerna, tumbado, ancho",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6532,6 +6709,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-concentration-curl-on-stability-ball",
+		"equipo": "mancuerna",
 		"nombre": "Curl concentrado con mancuerna, a una mano en fitball",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6540,6 +6718,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-hammer-preacher-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl predicador martillo con mancuerna, a una mano",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6548,6 +6727,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-prone-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl tumbado boca abajo con mancuerna, a una mano",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6556,6 +6736,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-prone-hammer-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl martillo tumbado boca abajo con mancuerna, a una mano",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6564,6 +6745,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-reverse-preacher-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl predicador invertido con mancuerna, a una mano",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6572,6 +6754,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-reverse-spider-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl spider invertido con mancuerna, a una mano",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6580,6 +6763,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-seated-bicep-curl-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps con mancuerna, sentado, a una mano en fitball",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6588,6 +6772,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-seated-hammer-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl martillo con mancuerna, sentado, a una mano",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6596,6 +6781,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-zottman-preacher-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl predicador Zottman con mancuerna, a una mano",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6604,6 +6790,7 @@
 	},
 	{
 		"id": "dumbbell-over-bench-neutral-wrist-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl con mancuerna, con muñeca neutra, sobre banco",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6612,6 +6799,7 @@
 	},
 	{
 		"id": "dumbbell-over-bench-one-arm-neutral-wrist-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl con mancuerna, con muñeca neutra, sobre banco a una mano",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6620,6 +6808,7 @@
 	},
 	{
 		"id": "dumbbell-peacher-hammer-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl martillo con mancuerna, peacher",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6628,6 +6817,7 @@
 	},
 	{
 		"id": "dumbbell-preacher-curl-over-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Curl predicador con mancuerna, sobre fitball",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6636,6 +6826,7 @@
 	},
 	{
 		"id": "dumbbell-prone-incline-hammer-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl martillo tumbado boca abajo inclinado con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6644,6 +6835,7 @@
 	},
 	{
 		"id": "dumbbell-reverse-preacher-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl predicador invertido con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6652,6 +6844,7 @@
 	},
 	{
 		"id": "dumbbell-reverse-spider-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl spider invertido con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6660,6 +6853,7 @@
 	},
 	{
 		"id": "dumbbell-seated-alternate-hammer-curl-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Curl martillo con mancuerna, sentado, alternado en fitball",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6668,6 +6862,7 @@
 	},
 	{
 		"id": "dumbbell-seated-biceps-curl-on-stability-ball",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps con mancuerna, sentado, en fitball",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6676,6 +6871,7 @@
 	},
 	{
 		"id": "dumbbell-seated-biceps-curl-to-shoulder-press",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps con mancuerna, sentado, y press de hombros",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6684,6 +6880,7 @@
 	},
 	{
 		"id": "dumbbell-seated-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl con mancuerna, sentado",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6692,6 +6889,7 @@
 	},
 	{
 		"id": "dumbbell-seated-inner-biceps-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps con mancuerna, sentado, interno",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6700,6 +6898,7 @@
 	},
 	{
 		"id": "dumbbell-seated-neutral-wrist-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl con mancuerna, sentado, con muñeca neutra",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6708,6 +6907,7 @@
 	},
 	{
 		"id": "dumbbell-seated-one-arm-bicep-curl-on-exercise-ball-with-leg-raised",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps con mancuerna, sentado, a una mano en fitball con pierna elevada",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6716,6 +6916,7 @@
 	},
 	{
 		"id": "dumbbell-seated-preacher-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl predicador con mancuerna, sentado",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6724,6 +6925,7 @@
 	},
 	{
 		"id": "dumbbell-seated-revers-grip-concentration-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl concentrado con mancuerna, sentado, revers",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -6732,6 +6934,7 @@
 	},
 	{
 		"id": "dumbbell-decline-one-arm-hammer-press",
+		"equipo": "mancuerna",
 		"nombre": "Press declinado martillo con mancuerna, a una mano",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6740,6 +6943,7 @@
 	},
 	{
 		"id": "dumbbell-decline-triceps-extension",
+		"equipo": "mancuerna",
 		"nombre": "Extensión de tríceps declinado con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6748,6 +6952,7 @@
 	},
 	{
 		"id": "dumbbell-forward-lunge-triceps-extension",
+		"equipo": "mancuerna",
 		"nombre": "Extensión de tríceps con mancuerna, hacia adelante lunge",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6756,6 +6961,7 @@
 	},
 	{
 		"id": "dumbbell-incline-hammer-press-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Press inclinado martillo con mancuerna, en fitball",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6764,6 +6970,7 @@
 	},
 	{
 		"id": "dumbbell-incline-one-arm-hammer-press",
+		"equipo": "mancuerna",
 		"nombre": "Press inclinado martillo con mancuerna, a una mano",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6772,6 +6979,7 @@
 	},
 	{
 		"id": "dumbbell-incline-one-arm-hammer-press-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Press inclinado martillo con mancuerna, a una mano en fitball",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6780,6 +6988,7 @@
 	},
 	{
 		"id": "dumbbell-incline-two-arm-extension",
+		"equipo": "mancuerna",
 		"nombre": "Extensión inclinado con mancuerna, a dos manos",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6788,6 +6997,7 @@
 	},
 	{
 		"id": "dumbbell-kickbacks-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Patada de tríceps con mancuerna, en fitball",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6796,6 +7006,7 @@
 	},
 	{
 		"id": "dumbbell-lying-alternate-extension",
+		"equipo": "mancuerna",
 		"nombre": "Extensión con mancuerna, tumbado, alternado",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6804,6 +7015,7 @@
 	},
 	{
 		"id": "dumbbell-lying-elbow-press",
+		"equipo": "mancuerna",
 		"nombre": "Press con mancuerna, tumbado, codo",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6812,6 +7024,7 @@
 	},
 	{
 		"id": "dumbbell-lying-extension-across-face",
+		"equipo": "mancuerna",
 		"nombre": "Extensión cruzando la cara con mancuerna, tumbado",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6820,6 +7033,7 @@
 	},
 	{
 		"id": "dumbbell-lying-one-arm-pronated-triceps-extension",
+		"equipo": "mancuerna",
 		"nombre": "Extensión de tríceps con agarre prono, tumbado, a una mano, con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6828,6 +7042,7 @@
 	},
 	{
 		"id": "dumbbell-lying-one-arm-supinated-triceps-extension",
+		"equipo": "mancuerna",
 		"nombre": "Extensión de tríceps con agarre supino, tumbado, a una mano, con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6836,6 +7051,7 @@
 	},
 	{
 		"id": "dumbbell-lying-single-extension",
+		"equipo": "mancuerna",
 		"nombre": "Extensión con mancuerna, tumbado, individual",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6844,6 +7060,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-french-press-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Press francés con mancuerna, a una mano en fitball",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6852,6 +7069,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-hammer-press-on-exercise-ball",
+		"equipo": "mancuerna",
 		"nombre": "Press martillo con mancuerna, a una mano en fitball",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6860,6 +7078,7 @@
 	},
 	{
 		"id": "dumbbell-palms-in-incline-bench-press",
+		"equipo": "mancuerna",
 		"nombre": "Press con mancuerna, con palmas hacia dentro en banco inclinado",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6868,6 +7087,7 @@
 	},
 	{
 		"id": "dumbbell-pronate-grip-triceps-extension",
+		"equipo": "mancuerna",
 		"nombre": "Extensión de tríceps con mancuerna, pronate",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6876,6 +7096,7 @@
 	},
 	{
 		"id": "dumbbell-seated-bench-extension",
+		"equipo": "mancuerna",
 		"nombre": "Extensión con mancuerna, sentado, banco",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6884,6 +7105,7 @@
 	},
 	{
 		"id": "dumbbell-seated-bent-over-alternate-kickback",
+		"equipo": "mancuerna",
 		"nombre": "Patada de tríceps con mancuerna, sentado, inclinado alternado",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6892,6 +7114,7 @@
 	},
 	{
 		"id": "dumbbell-seated-bent-over-triceps-extension",
+		"equipo": "mancuerna",
 		"nombre": "Extensión de tríceps con mancuerna, sentado, inclinado",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6900,6 +7123,7 @@
 	},
 	{
 		"id": "dumbbell-seated-kickback",
+		"equipo": "mancuerna",
 		"nombre": "Patada de tríceps con mancuerna, sentado",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6908,6 +7132,7 @@
 	},
 	{
 		"id": "dumbbell-seated-one-arm-kickback",
+		"equipo": "mancuerna",
 		"nombre": "Patada de tríceps con mancuerna, sentado, a una mano",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6916,6 +7141,7 @@
 	},
 	{
 		"id": "dumbbell-seated-reverse-grip-one-arm-overhead-tricep-extension",
+		"equipo": "mancuerna",
 		"nombre": "Extensión de tríceps sobre la cabeza con mancuerna, sentado, con agarre invertido, a una mano",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6924,6 +7150,7 @@
 	},
 	{
 		"id": "dumbbell-standing-alternating-tricep-kickback",
+		"equipo": "mancuerna",
 		"nombre": "Patada de tríceps con mancuerna, de pie, alternado",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6932,6 +7159,7 @@
 	},
 	{
 		"id": "dumbbell-standing-bent-over-one-arm-triceps-extension",
+		"equipo": "mancuerna",
 		"nombre": "Extensión de tríceps con mancuerna, de pie, inclinado a una mano",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6940,6 +7168,7 @@
 	},
 	{
 		"id": "dumbbell-standing-bent-over-two-arm-triceps-extension",
+		"equipo": "mancuerna",
 		"nombre": "Extensión de tríceps con mancuerna, de pie, inclinado a dos manos",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6948,6 +7177,7 @@
 	},
 	{
 		"id": "dumbbell-standing-one-arm-extension",
+		"equipo": "mancuerna",
 		"nombre": "Extensión con mancuerna, de pie, a una mano",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6956,6 +7186,7 @@
 	},
 	{
 		"id": "dumbbell-tricep-kickback-with-stork-stance",
+		"equipo": "mancuerna",
 		"nombre": "Patada de tríceps con mancuerna, en postura de cigüeña",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -6964,6 +7195,7 @@
 	},
 	{
 		"id": "dumbbell-twisting-bench-press",
+		"equipo": "mancuerna",
 		"nombre": "Press de banca con mancuerna, con giro",
 		"grupo": "brazos",
 		"musculo": "Tríceps",
@@ -7516,6 +7748,7 @@
 	},
 	{
 		"id": "dumbbell-lying-pronation",
+		"equipo": "mancuerna",
 		"nombre": "Pronation con mancuerna, tumbado",
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
@@ -7524,6 +7757,7 @@
 	},
 	{
 		"id": "dumbbell-lying-pronation-on-floor",
+		"equipo": "mancuerna",
 		"nombre": "Pronation con mancuerna, tumbado, en el suelo",
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
@@ -7532,6 +7766,7 @@
 	},
 	{
 		"id": "dumbbell-lying-supination",
+		"equipo": "mancuerna",
 		"nombre": "Supination con mancuerna, tumbado",
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
@@ -7540,6 +7775,7 @@
 	},
 	{
 		"id": "dumbbell-lying-supination-on-floor",
+		"equipo": "mancuerna",
 		"nombre": "Supination con mancuerna, tumbado, en el suelo",
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
@@ -7548,6 +7784,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-reverse-wrist-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl de muñeca invertido con mancuerna, a una mano",
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
@@ -7556,6 +7793,7 @@
 	},
 	{
 		"id": "dumbbell-one-arm-seated-neutral-wrist-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl con mancuerna, sentado, con muñeca neutra, a una mano",
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
@@ -7564,6 +7802,7 @@
 	},
 	{
 		"id": "dumbbell-over-bench-one-arm-reverse-wrist-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl de muñeca invertido con mancuerna, sobre banco a una mano",
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
@@ -7572,6 +7811,7 @@
 	},
 	{
 		"id": "dumbbell-over-bench-one-arm-wrist-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl de muñeca con mancuerna, sobre banco a una mano",
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
@@ -7580,6 +7820,7 @@
 	},
 	{
 		"id": "dumbbell-over-bench-revers-wrist-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl de muñeca con mancuerna, sobre banco, revers",
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
@@ -7588,6 +7829,7 @@
 	},
 	{
 		"id": "dumbbell-over-bench-wrist-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl de muñeca con mancuerna, sobre banco",
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
@@ -7596,6 +7838,7 @@
 	},
 	{
 		"id": "dumbbell-seated-one-arm-rotate",
+		"equipo": "mancuerna",
 		"nombre": "Rotate con mancuerna, sentado, a una mano",
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
@@ -7604,6 +7847,7 @@
 	},
 	{
 		"id": "dumbbell-seated-one-leg-calf-raise",
+		"equipo": "mancuerna",
 		"nombre": "Elevación de talones con mancuerna, sentado, a una pierna",
 		"grupo": "piernas",
 		"musculo": "Gemelos",
@@ -7612,6 +7856,7 @@
 	},
 	{
 		"id": "dumbbell-seated-one-leg-calf-raise-hammer-grip",
+		"equipo": "mancuerna",
 		"nombre": "Elevación de talones con mancuerna, sentado, con agarre martillo, a una pierna",
 		"grupo": "piernas",
 		"musculo": "Gemelos",
@@ -7620,6 +7865,7 @@
 	},
 	{
 		"id": "dumbbell-seated-one-leg-calf-raise-palm-up",
+		"equipo": "mancuerna",
 		"nombre": "Elevación de talones con mancuerna, sentado, a una pierna con palma hacia arriba",
 		"grupo": "piernas",
 		"musculo": "Gemelos",
@@ -7628,6 +7874,7 @@
 	},
 	{
 		"id": "dumbbell-standing-alternate-hammer-curl-and-press",
+		"equipo": "mancuerna",
 		"nombre": "Curl martillo con mancuerna, de pie, alternado y press",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -7636,6 +7883,7 @@
 	},
 	{
 		"id": "dumbbell-standing-concentration-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl concentrado con mancuerna, de pie",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -7644,6 +7892,7 @@
 	},
 	{
 		"id": "dumbbell-standing-inner-biceps-curl-v-2",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps con mancuerna, de pie, interno",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -7652,6 +7901,7 @@
 	},
 	{
 		"id": "dumbbell-standing-one-arm-concentration-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl concentrado con mancuerna, de pie, a una mano",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -7660,6 +7910,7 @@
 	},
 	{
 		"id": "dumbbell-standing-one-arm-curl-over-incline-bench",
+		"equipo": "mancuerna",
 		"nombre": "Curl con mancuerna, de pie, a una mano sobre banco inclinado",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -7668,6 +7919,7 @@
 	},
 	{
 		"id": "dumbbell-standing-one-arm-reverse-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl invertido con mancuerna, de pie, a una mano",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -7676,6 +7928,7 @@
 	},
 	{
 		"id": "dumbbell-standing-preacher-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl predicador con mancuerna, de pie",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -7684,6 +7937,7 @@
 	},
 	{
 		"id": "dumbbell-standing-reverse-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl invertido con mancuerna, de pie",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -7692,6 +7946,7 @@
 	},
 	{
 		"id": "dumbbell-standing-zottman-preacher-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl predicador Zottman con mancuerna, de pie",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -7700,6 +7955,7 @@
 	},
 	{
 		"id": "dumbbell-step-up-single-leg-balance-with-bicep-curl",
+		"equipo": "mancuerna",
 		"nombre": "Step-up con mancuerna, a una pierna con curl de bíceps, equilibrio",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -7708,6 +7964,7 @@
 	},
 	{
 		"id": "dumbbell-waiter-biceps-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl de bíceps del camarero con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
@@ -7716,6 +7973,7 @@
 	},
 	{
 		"id": "dumbbell-zottman-preacher-curl",
+		"equipo": "mancuerna",
 		"nombre": "Curl predicador Zottman con mancuerna",
 		"grupo": "brazos",
 		"musculo": "Bíceps",
