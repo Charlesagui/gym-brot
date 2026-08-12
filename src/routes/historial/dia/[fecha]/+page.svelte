@@ -8,6 +8,7 @@
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
 	import { fromLiveQuery } from '$lib/live';
 	import { formatoSet, formatoVolumen } from '$lib/formato';
+	import { pasoPesoEfectivo } from '$lib/paso-peso';
 	import EditarSerieSheet, { type SerieEditable } from '$lib/components/EditarSerieSheet.svelte';
 
 	// La fecha viene de la URL: si no tiene forma de YYYY-MM-DD no se consulta nada y
@@ -21,6 +22,12 @@
 	// Serie en edición → bottom sheet; guarda también el glow del grupo del ejercicio.
 	let serieEditando = $state<SerieEditable | null>(null);
 	let glowEditando = $state('124 92 255');
+	const ejercicioEditando = $derived(
+		serieEditando ? ejercicioPorId(serieEditando.exerciseId) : undefined
+	);
+	const pasoPesoEditando = $derived(
+		ejercicioEditando ? pasoPesoEfectivo(ejercicioEditando, ajustes) : ajustes.pasoPeso
+	);
 
 	// Puede haber más de una sesión (día de rutina) en la misma fecha: se muestran agrupadas.
 	const sesionesStore = $derived(
@@ -218,7 +225,7 @@
 		serie={serieEditando}
 		glow={glowEditando}
 		unidad={ajustes.unidad}
-		pasoPeso={ajustes.pasoPeso}
+		pasoPeso={pasoPesoEditando}
 		metrica={ajustes.metricaPr}
 		onClose={() => (serieEditando = null)}
 	/>

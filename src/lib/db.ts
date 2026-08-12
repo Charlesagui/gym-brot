@@ -83,6 +83,8 @@ export interface Ajustes {
 	metricaPr: MetricaPr;
 	/** Cuánto suma/resta cada toque de −/+ al cargar peso. */
 	pasoPeso: number;
+	/** Sobrescrituras por ejercicio y unidad; no alteran los pesos ya registrados. */
+	pasosPesoEjercicio?: Record<string, Partial<Record<'kg' | 'lb', number>>>;
 	/** ISO del último export de backup: alimenta el recordatorio en /historial. */
 	ultimoBackup?: string;
 	/** Evita volver a crear rutinas de ejemplo si el usuario borró todas. */

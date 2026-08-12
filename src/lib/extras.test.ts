@@ -11,6 +11,7 @@ import {
 	parseBackup,
 	prepararImport,
 	setSonido,
+	setPasoPesoEjercicio,
 	setUnidad,
 	setVibracion
 } from './extras';
@@ -94,6 +95,17 @@ describe('backup', () => {
 		expect(await db.sesiones.toArray()).toEqual([
 			{ ...sesion, exerciseIds: sesion.ejercicios.map((e) => e.exerciseId) }
 		]);
+	});
+
+	it('personalizar el paso de un ejercicio no modifica ninguna sesión histórica', async () => {
+		await db.sesiones.put(structuredClone(sesion));
+		await db.ajustes.put(ajustes);
+		const historialAntes = structuredClone(await db.sesiones.toArray());
+
+		await setPasoPesoEjercicio('press', 'kg', 1);
+
+		expect(await db.sesiones.toArray()).toEqual(historialAntes);
+		expect((await db.ajustes.get('app'))?.pasosPesoEjercicio).toEqual({ press: { kg: 1 } });
 	});
 
 	it('setUnidad lb -> kg conserva pesos con redondeo a 1 decimal', async () => {
