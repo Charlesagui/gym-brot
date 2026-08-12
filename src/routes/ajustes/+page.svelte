@@ -461,9 +461,10 @@
 		>
 	</section>
 
-	<p class="mt-8 text-center text-xs" style="color: var(--muted)">
-		Gym-brot · todo se guarda en tu teléfono 📴
-	</p>
+	<footer class="mt-8 text-center text-xs" style="color: var(--muted)">
+		<p>Gym-brot · todo se guarda en tu teléfono 📴</p>
+		<p class="mt-1 font-mono" title="Commit de esta versión">Versión {__APP_COMMIT__}</p>
+	</footer>
 </main>
 
 {#if confirmacion}

@@ -2,8 +2,25 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vitest/config';
 import tailwindcss from '@tailwindcss/vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
+import { execFileSync } from 'node:child_process';
+
+/** Netlify expone COMMIT_REF; en desarrollo usamos el HEAD local como respaldo. */
+function commitActual(): string {
+	const commitNetlify = process.env.COMMIT_REF?.trim();
+	if (commitNetlify) return commitNetlify.slice(0, 7);
+	try {
+		return execFileSync('git', ['rev-parse', '--short=7', 'HEAD'], {
+			encoding: 'utf8'
+		}).trim();
+	} catch {
+		return 'desconocido';
+	}
+}
 
 export default defineConfig({
+	define: {
+		__APP_COMMIT__: JSON.stringify(commitActual())
+	},
 	test: {
 		environment: 'node',
 		coverage: {
