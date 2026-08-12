@@ -16,6 +16,7 @@
 	import { dur } from '$lib/motion';
 	import { fromLiveQuery } from '$lib/live';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
+	import { reportarErrorDatos } from '$lib/errores-datos';
 
 	const diaId = $derived($page.params.id!);
 	const cierrePorArrastrePx = 76;
@@ -93,7 +94,7 @@
 	});
 	const mostrados = $derived(filtrados.slice(0, visibles));
 
-	function toggle(e: Ejercicio, cerrarDespues = false) {
+	async function toggle(e: Ejercicio, cerrarDespues = false) {
 		if (yaEn.has(e.id)) {
 			// Quitar pierde las series objetivo configuradas: que no pase por un mistap.
 			confirmacion = {
@@ -107,8 +108,12 @@
 				}
 			};
 		} else {
-			agregarEjercicio(diaId, e.id);
-			if (cerrarDespues) cerrarPreview();
+			try {
+				await agregarEjercicio(diaId, e.id);
+				if (cerrarDespues) cerrarPreview();
+			} catch (error) {
+				reportarErrorDatos('No se pudo agregar el ejercicio. Intentá de nuevo.', error);
+			}
 		}
 	}
 
@@ -245,7 +250,7 @@
 					</div>
 				</button>
 				<button
-					onclick={() => toggle(e)}
+					onclick={() => void toggle(e)}
 					class="grid size-11 shrink-0 place-items-center rounded-full text-lg font-bold transition"
 					style={added
 						? `background: rgb(${g.glow}); color: #000`
@@ -342,7 +347,7 @@
 				</p>
 				<button
 					onclick={() => {
-						toggle(p, true);
+						void toggle(p, true);
 					}}
 					class="mt-5 w-full rounded-2xl py-3.5 text-base font-bold transition"
 					style={added

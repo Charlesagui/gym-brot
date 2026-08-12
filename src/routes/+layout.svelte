@@ -9,6 +9,7 @@
 	import RestBar from '$lib/components/RestBar.svelte';
 	import RestFocusOverlay from '$lib/components/RestFocusOverlay.svelte';
 	import { descanso } from '$lib/descanso.svelte';
+	import { errorDatos } from '$lib/errores-datos';
 
 	let { children } = $props();
 
@@ -206,6 +207,33 @@
 {#if dbLista && !dbError}
 	<RestFocusOverlay />
 	<RestBar offsetNav={!sinNav} />
+{/if}
+
+{#if $errorDatos}
+	<div
+		class="fixed inset-x-0 top-0 z-[90] mx-auto max-w-md px-5"
+		style="padding-top: calc(1rem + env(safe-area-inset-top))"
+		role="alert"
+	>
+		<div
+			class="flex items-start gap-3 rounded-2xl border p-3 shadow-2xl"
+			style="background: var(--surface); border-color: rgb(255 107 107 / .35)"
+		>
+			<span class="mt-0.5 text-lg" aria-hidden="true">⚠️</span>
+			<div class="min-w-0 flex-1">
+				<p class="text-sm font-bold" style="color: #ff6b6b">El cambio no se guardó</p>
+				<p class="mt-0.5 text-xs leading-relaxed" style="color: var(--muted)">
+					{$errorDatos}
+				</p>
+			</div>
+			<button
+				onclick={() => errorDatos.set(null)}
+				class="grid size-10 shrink-0 place-items-center rounded-full text-sm font-bold"
+				style="color: var(--muted)"
+				aria-label="Cerrar aviso">✕</button
+			>
+		</div>
+	</div>
 {/if}
 
 {#if $needRefresh && !entrenando && dbLista}

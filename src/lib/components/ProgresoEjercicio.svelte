@@ -50,7 +50,9 @@
 
 	const modoReps = $derived(progreso.modo === 'reps');
 	const puntos = $derived(modoReps ? $puntosRepsStore : $puntosCargaStore);
-	const hayHistorialMixto = $derived(!modoReps && $puntosCargaStore.length > 0 && $puntosRepsStore.length > 0);
+	const hayHistorialMixto = $derived(
+		!modoReps && $puntosCargaStore.length > 0 && $puntosRepsStore.length > 0
+	);
 	const metricaEfectiva = $derived<MetricaEfectiva>(modoReps ? 'reps' : metrica);
 	const metricaLabel = $derived(
 		modoReps ? 'reps máximas' : metrica === 'e1rm' ? '1RM estimado' : 'peso máximo'
@@ -61,7 +63,10 @@
 	let visibles = $state(15);
 	// Serie en edición → bottom sheet (sin prompt/confirm nativos).
 	let serieEditando = $state<SerieEditable | null>(null);
-	const diasStore = fromLiveQuery(liveQuery(() => db.dias.toArray()), []);
+	const diasStore = fromLiveQuery(
+		liveQuery(() => db.dias.toArray()),
+		[]
+	);
 	const nombreDia = $derived(new Map($diasStore.map((dia) => [dia.id, dia.nombre])));
 
 	function etiquetaPr(metricaPr: MetricaEfectiva | undefined): string {
@@ -116,7 +121,7 @@
 	</p>
 </section>
 
-	{#if progreso !== VACIO && (progreso.mejorPeso || progreso.mejorReps)}
+{#if progreso !== VACIO && (progreso.mejorPeso || progreso.mejorReps)}
 	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
 		<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
 			Récords
@@ -146,7 +151,10 @@
 							<span class="ml-1 text-sm font-semibold" style="color: var(--muted)">{unidad}</span>
 						</p>
 						<p class="mt-0.5 text-[11px]" style="color: var(--muted)">
-							{formatoSet(progreso.mejorPeso, unidad)} · {fechaCorta(progreso.mejorPeso.fecha, true)}
+							{formatoSet(progreso.mejorPeso, unidad)} · {fechaCorta(
+								progreso.mejorPeso.fecha,
+								true
+							)}
 						</p>
 					</div>
 				{/if}
@@ -160,7 +168,10 @@
 							<span class="ml-1 text-sm font-semibold" style="color: var(--muted)">{unidad}</span>
 						</p>
 						<p class="mt-0.5 text-[11px]" style="color: var(--muted)">
-							{formatoSet(progreso.mejorE1rm, unidad)} · {fechaCorta(progreso.mejorE1rm.fecha, true)}
+							{formatoSet(progreso.mejorE1rm, unidad)} · {fechaCorta(
+								progreso.mejorE1rm.fecha,
+								true
+							)}
 						</p>
 					</div>
 				{/if}
@@ -195,7 +206,10 @@
 		Historial completo
 	</p>
 	{#if progreso === VACIO}
-		<p class="rounded-2xl border border-dashed border-white/15 p-6 text-center text-sm" style="color: var(--muted)">
+		<p
+			class="rounded-2xl border border-dashed border-white/15 p-6 text-center text-sm"
+			style="color: var(--muted)"
+		>
 			Cargando historial…
 		</p>
 	{:else if progreso.sesiones.length === 0}

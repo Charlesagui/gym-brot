@@ -34,6 +34,7 @@
 	import { fromLiveQuery } from '$lib/live';
 	import { formatoVolumen } from '$lib/formato';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
+	import { guardarSinBloquear, reportarErrorDatos } from '$lib/errores-datos';
 
 	let dia = $state<Dia | undefined>(undefined);
 	let cargando = $state(true);
@@ -134,7 +135,12 @@
 		editando = true;
 	}
 	function guardarNombre() {
-		if (dia && nombreEdit.trim()) actualizarDia(diaId, { nombre: nombreEdit.trim() });
+		if (dia && nombreEdit.trim()) {
+			guardarSinBloquear(
+				actualizarDia(diaId, { nombre: nombreEdit.trim() }),
+				'No se pudo guardar el nombre de la rutina. Intentá de nuevo.'
+			);
+		}
 	}
 	async function eliminar() {
 		if (!dia) return;
@@ -154,7 +160,12 @@
 		if (!diaListo || diaTerminado) return;
 		// La fecha va explícita: con `hoyStr()` adentro, terminar el día pasada la
 		// medianoche marcaba una sesión nueva y vacía y dejaba abierta la real.
-		await marcarDiaTerminado(diaId, fechaHoy);
+		try {
+			await marcarDiaTerminado(diaId, fechaHoy);
+		} catch (error) {
+			reportarErrorDatos('No se pudo marcar la rutina como terminada. Intentá de nuevo.', error);
+			return;
+		}
 		premioDia = true;
 		if (sonidoActivo) void sonarDiaTerminado().catch(() => {});
 		if ((ajustes.vibracion ?? true) && 'vibrate' in navigator)
@@ -165,7 +176,11 @@
 
 	async function reabrir() {
 		cerrarPremio();
-		await reabrirDia(diaId, fechaHoy);
+		try {
+			await reabrirDia(diaId, fechaHoy);
+		} catch (error) {
+			reportarErrorDatos('No se pudo reabrir la rutina. Intentá de nuevo.', error);
+		}
 	}
 
 	function cerrarPremio() {
@@ -198,9 +213,12 @@
 
 	function alSoltar(e: CustomEvent<DndEvent<ItemOrden>>) {
 		ordenItems = e.detail.items;
-		void reordenarEjercicios(
-			diaId,
-			ordenItems.map((it) => it.id)
+		guardarSinBloquear(
+			reordenarEjercicios(
+				diaId,
+				ordenItems.map((it) => it.id)
+			),
+			'No se pudo guardar el orden de los ejercicios. Intentá de nuevo.'
 		);
 	}
 
@@ -321,7 +339,11 @@
 			<div class="mb-4 flex gap-1.5">
 				{#each abrevDia as d, i (i)}
 					<button
-						onclick={() => toggleDiaSemana(diaId, i)}
+						onclick={() =>
+							guardarSinBloquear(
+								toggleDiaSemana(diaId, i),
+								'No se pudo guardar el día de entrenamiento. Intentá de nuevo.'
+							)}
 						class="min-h-11 flex-1 rounded-lg py-2 text-xs font-semibold"
 						aria-pressed={dia.diasSemana?.includes(i) ?? false}
 						aria-label={`Entrenar los días ${d}`}
@@ -338,7 +360,11 @@
 			<div class="mb-6 flex gap-2.5">
 				{#each coloresDia as c (c.rgb)}
 					<button
-						onclick={() => actualizarDia(diaId, { color: c.rgb })}
+						onclick={() =>
+							guardarSinBloquear(
+								actualizarDia(diaId, { color: c.rgb }),
+								'No se pudo guardar el color de la rutina. Intentá de nuevo.'
+							)}
 						class="size-8 rounded-full transition"
 						aria-pressed={dia.color === c.rgb}
 						aria-label={`Color ${c.nombre}`}
@@ -392,7 +418,11 @@
 							     escribían dos veces el mismo número y uno se perdía. -->
 							<div class="mt-1.5 flex items-center gap-1.5">
 								<button
-									onclick={() => ajustarSeries(diaId, item.exerciseId, -1)}
+									onclick={() =>
+										guardarSinBloquear(
+											ajustarSeries(diaId, item.exerciseId, -1),
+											'No se pudo cambiar la cantidad de series. Intentá de nuevo.'
+										)}
 									class="grid size-10 shrink-0 touch-manipulation place-items-center rounded-full bg-white/10 text-sm"
 									aria-label={`Menos series de ${nombre}`}>−</button
 								>
@@ -400,7 +430,11 @@
 									>{item.seriesObjetivo} series objetivo</span
 								>
 								<button
-									onclick={() => ajustarSeries(diaId, item.exerciseId, 1)}
+									onclick={() =>
+										guardarSinBloquear(
+											ajustarSeries(diaId, item.exerciseId, 1),
+											'No se pudo cambiar la cantidad de series. Intentá de nuevo.'
+										)}
 									class="grid size-10 shrink-0 touch-manipulation place-items-center rounded-full bg-white/10 text-sm"
 									aria-label={`Más series de ${nombre}`}>+</button
 								>
@@ -476,14 +510,22 @@
 						</a>
 						{#if saltado}
 							<button
-								onclick={() => reanudarEjercicio(diaId, item.exerciseId)}
+								onclick={() =>
+									guardarSinBloquear(
+										reanudarEjercicio(diaId, item.exerciseId),
+										'No se pudo reanudar el ejercicio. Intentá de nuevo.'
+									)}
 								class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-sm"
 								style="color: var(--accent)"
 								aria-label={`Reanudar ${nombre} hoy`}>↩</button
 							>
 						{:else}
 							<button
-								onclick={() => saltarEjercicio(diaId, item.exerciseId, item.seriesObjetivo)}
+								onclick={() =>
+									guardarSinBloquear(
+										saltarEjercicio(diaId, item.exerciseId, item.seriesObjetivo),
+										'No se pudo guardar que saltaste el ejercicio. Intentá de nuevo.'
+									)}
 								class="min-h-11 shrink-0 rounded-full border border-white/10 px-3.5 py-2 text-xs font-bold"
 								style="color: var(--muted)"
 								aria-label={`Saltar ${nombre} hoy`}>Saltar</button

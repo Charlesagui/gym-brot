@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db, type Ajustes, type Dia, type Nota, type Sesion } from './db';
+import { seedSiVacio } from './seed';
 import {
 	AJUSTES_DEFAULT,
 	borrarTodo,
@@ -34,7 +35,7 @@ const sesion: Sesion = {
 	ejercicios: [
 		{
 			exerciseId: 'press',
-			prCelebrado: { peso: 100, reps: 6, esMax: true, extraKg: 5 },
+			prCelebrado: { peso: 100, reps: 6, esMax: true, extraKg: 5, setIndex: 1 },
 			sets: [
 				{ peso: 80, reps: 10, hecha: true },
 				{ peso: 100, reps: 6, hecha: true, esMax: true, extraKg: 5 }
@@ -301,6 +302,62 @@ describe('prepararImport', () => {
 			ajustes: [ajustes]
 		});
 		expect(avisos).toEqual([]);
+	});
+
+	it('un backup sin ajustes conserva intencionalmente una lista de rutinas vacía', async () => {
+		const avisos = await importarBackup({ dias: [], sesiones: [], notas: [], ajustes: [] });
+		await seedSiVacio();
+
+		expect(await db.dias.count()).toBe(0);
+		expect((await db.ajustes.get('app'))?.seedInicialHecho).toBe(true);
+		expect(avisos.join(' ')).toContain('no traía ajustes');
+	});
+
+	it('repara ajustes que dejarían inutilizables el timer o los controles de peso', () => {
+		const { datos, avisos } = prepararImport({
+			dias: [],
+			sesiones: [],
+			notas: [],
+			ajustes: [{ ...ajustes, timer: { activo: true, minutos: 0 }, pasoPeso: 0 }]
+		});
+
+		expect(datos.ajustes[0]?.timer.minutos).toBe(AJUSTES_DEFAULT.timer.minutos);
+		expect(datos.ajustes[0]?.pasoPeso).toBe(AJUSTES_DEFAULT.pasoPeso);
+		expect(avisos.join(' ')).toContain('ajustes inválidos');
+	});
+
+	it('reubica un PR al set que lo respalda y descarta snapshots inventados', () => {
+		const base: Sesion = {
+			...sesion,
+			ejercicios: [
+				{
+					exerciseId: 'press',
+					sets: [
+						{ peso: 80, reps: 10, hecha: true },
+						{ peso: 100, reps: 6, hecha: true }
+					],
+					prCelebrado: { peso: 100, reps: 6, setIndex: 0 }
+				}
+			]
+		};
+		const falso: Sesion = {
+			...base,
+			id: '2026-01-06__push',
+			fecha: '2026-01-06',
+			ejercicios: [{ ...base.ejercicios[0]!, prCelebrado: { peso: 999, reps: 1 } }]
+		};
+
+		const { datos, avisos } = prepararImport({
+			dias: [dia],
+			sesiones: [base, falso],
+			notas: [],
+			ajustes: [ajustes]
+		});
+
+		expect(datos.sesiones[0]?.ejercicios[0]?.prCelebrado?.setIndex).toBe(1);
+		expect(datos.sesiones[1]?.ejercicios[0]?.prCelebrado).toBeUndefined();
+		expect(avisos.join(' ')).toContain('se reubicaron');
+		expect(avisos.join(' ')).toContain('se descartaron');
 	});
 });
 

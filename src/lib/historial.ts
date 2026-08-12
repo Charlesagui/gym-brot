@@ -135,7 +135,9 @@ function resumenSesionAgrupada(sesiones: Sesion[], dias: Dia[]): DiaEntrenado {
 
 export function crearHistorialResumen(sesiones: Sesion[], dias: Dia[]): HistorialResumen {
 	// Las sesiones cargadas para una fecha futura son planificación, no entrenamiento pasado.
-	const entrenadas = sesiones.filter((sesion) => sesion.fecha <= hoyStr() && tieneEntrenamiento(sesion));
+	const entrenadas = sesiones.filter(
+		(sesion) => sesion.fecha <= hoyStr() && tieneEntrenamiento(sesion)
+	);
 	if (entrenadas.length === 0) {
 		return { dias: [], semanas: [], rachaSemanal: 0, diasEstaSemana: 0, totalDias: 0 };
 	}

@@ -212,11 +212,13 @@
 				if (escriturasEnVuelo > 0) return;
 				sets = e ? e.sets : [];
 			});
-		})().catch(() => {
+		})().catch((error: unknown) => {
 			if (!cancelado) {
 				sets = [];
 				prCelebrado = null;
 				cargandoSeries = false;
+				errorGuardado = 'No se pudo cargar el entrenamiento. Volvé a intentarlo.';
+				console.error('No se pudo cargar el entrenamiento', error);
 			}
 		});
 		return () => {
@@ -366,6 +368,19 @@
 			});
 	}
 
+	function guardarDatoSecundario(operacion: Promise<unknown>, mensaje: string) {
+		void operacion.catch((error: unknown) => {
+			console.error(mensaje, error);
+			errorGuardado = `${mensaje} Intentá de nuevo.`;
+		});
+	}
+
+	function falloAlRegistrarPr(error: unknown): null {
+		console.error('No se pudo actualizar el PR', error);
+		errorGuardado = 'La serie quedó guardada, pero no se pudo actualizar el PR. Intentá de nuevo.';
+		return null;
+	}
+
 	function ajustarPeso(i: number, delta: number) {
 		const peso = sumarPeso(sets[i]?.peso, delta);
 		if (sets[i]) sets[i].peso = peso;
@@ -456,7 +471,7 @@
 			i,
 			metrica,
 			fechaSesion
-		).catch(() => null);
+		).catch(falloAlRegistrarPr);
 		if (nuevoPr) {
 			celebrarPrFlash(nuevoPr);
 		} else {
@@ -518,7 +533,7 @@
 		const ganado =
 			candidato != null
 				? await registrarPrSiSupera(diaId, $page.params.id!, candidato, metrica, fechaSesion).catch(
-						() => null
+						falloAlRegistrarPr
 					)
 				: null;
 		const esPr = ganado != null;
@@ -535,18 +550,24 @@
 
 	function apagarTimer() {
 		descanso.saltar();
-		void setTimer(false, ajustes.timer.minutos);
+		guardarDatoSecundario(
+			setTimer(false, ajustes.timer.minutos),
+			'No se pudo guardar el temporizador.'
+		);
 	}
 
 	function cambiarTimer(minutos: number) {
-		void setTimer(true, minutos);
+		guardarDatoSecundario(setTimer(true, minutos), 'No se pudo guardar el temporizador.');
 		// Si hay un descanso en curso, ajusta su fin en vez de reiniciarlo desde cero.
 		descanso.ajustarFin(minutos);
 	}
 
 	function cambiarPasoEjercicio(paso?: number) {
 		if (!ej) return;
-		void setPasoPesoEjercicio(ej.id, unidad, paso);
+		guardarDatoSecundario(
+			setPasoPesoEjercicio(ej.id, unidad, paso),
+			'No se pudo guardar el paso de peso del ejercicio.'
+		);
 	}
 </script>
 
@@ -636,9 +657,16 @@
 						maquinaPlacas={!!ej.maquinaPlacas}
 					/>
 				{:else if errorProgreso}
-					<div class="mt-6 rounded-2xl border border-white/10 p-4 text-center text-sm" style="color: var(--muted)">
+					<div
+						class="mt-6 rounded-2xl border border-white/10 p-4 text-center text-sm"
+						style="color: var(--muted)"
+					>
 						<p>No se pudo cargar el progreso.</p>
-						<button onclick={() => (intentoProgreso += 1)} class="mt-3 min-h-11 rounded-xl px-4 font-bold" style="background: rgb({g.glow} / .18); color: rgb({g.glow})">Reintentar</button>
+						<button
+							onclick={() => (intentoProgreso += 1)}
+							class="mt-3 min-h-11 rounded-xl px-4 font-bold"
+							style="background: rgb({g.glow} / .18); color: rgb({g.glow})">Reintentar</button
+						>
 					</div>
 				{:else}
 					<p class="mt-6 text-center text-sm" style="color: var(--muted)">Cargando progreso…</p>
@@ -885,12 +913,7 @@
 							>
 								💡 {DESCRIPCION_METRICA[metricaEfectiva]}
 							</p>
-							<MiniChart
-								{puntos}
-								glow={g.glow}
-								{metricaLabel}
-								unidad={unidadValor}
-							/>
+							<MiniChart {puntos} glow={g.glow} {metricaLabel} unidad={unidadValor} />
 							<!-- Link discreto: la operación manda, el progreso completo se consulta aparte. -->
 							<a
 								href={`/ejercicio/${$page.params.id}?desde=${diaId}`}
@@ -920,7 +943,11 @@
 						</summary>
 						<textarea
 							bind:value={notaTexto}
-							onblur={() => setNota($page.params.id!, notaTexto)}
+							onblur={() =>
+								guardarDatoSecundario(
+									setNota($page.params.id!, notaTexto),
+									'No se pudo guardar la nota.'
+								)}
 							placeholder="Ej: asiento en posición 4, agarre cerrado…"
 							rows="3"
 							class="mt-2 w-full resize-none rounded-lg bg-white/5 p-3 text-sm outline-none"

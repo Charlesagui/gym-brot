@@ -357,7 +357,11 @@ async function mutar(
  * última, no hay posteriores que revalidar, y el barrido costaría un escaneo completo de
  * la tabla en cada toque de peso.
  */
-async function recalcularPrCelebrado(sesion: Sesion, exerciseId: string, revalidarPosteriores = false) {
+async function recalcularPrCelebrado(
+	sesion: Sesion,
+	exerciseId: string,
+	revalidarPosteriores = false
+) {
 	const ejercicio = sesion.ejercicios.find((x) => x.exerciseId === exerciseId);
 	if (!ejercicio?.prCelebrado && !revalidarPosteriores) return;
 
@@ -688,8 +692,14 @@ export function registrarPrSiSupera(
 		if (!s || !e || !set?.hecha) return null;
 
 		const todas = await sesionesDe(exerciseId);
-		const metricaEfectiva: MetricaEfectiva = set.peso == null ? 'reps' : metrica;
-		const modo = modoDeMetrica(metricaEfectiva);
+		// El modo pertenece al ejercicio completo, no a la serie recién tocada. Si ya
+		// existe historial con carga, una serie incompleta con solo reps no puede mutar
+		// temporalmente a “reps” ni disparar un PR rotulado como kg en la interfaz.
+		const modo = modoEjercicio(
+			todas.filter((otra) => otra.fecha <= s.fecha),
+			exerciseId
+		);
+		const metricaEfectiva: MetricaEfectiva = modo === 'reps' ? 'reps' : metrica;
 		const valor = valorSet(set, metricaEfectiva === 'reps' ? 'peso' : metricaEfectiva, modo);
 		if (valor == null) return null;
 
