@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { db, type MetricaPr } from '$lib/db';
 	import { liveQuery } from 'dexie';
+	import { DESCRIPCION_METRICA, type MetricaEfectiva } from '$lib/sesion';
 	import {
-		historialPorModoObs,
-		DESCRIPCION_METRICA,
-		type MejorSet,
-		type MetricaEfectiva
-	} from '$lib/sesion';
-	import { progresoEjercicioObs, type ProgresoEjercicio } from '$lib/progreso';
+		progresoPantallaObs,
+		type DatosProgresoEjercicio,
+		type ProgresoEjercicio
+	} from '$lib/progreso';
 	import { fromLiveQuery } from '$lib/live';
 	import { formatoNumero, formatoSet, fechaCorta } from '$lib/formato';
 	import ChartProgreso from './ChartProgreso.svelte';
@@ -29,7 +28,7 @@
 		maquinaPlacas: boolean;
 	} = $props();
 
-	const VACIO: ProgresoEjercicio = {
+	const PROGRESO_VACIO: ProgresoEjercicio = {
 		modo: 'peso',
 		mejorPeso: null,
 		mejorE1rm: null,
@@ -38,21 +37,21 @@
 		sesiones: [],
 		totalSeries: 0
 	};
+	const VACIO: DatosProgresoEjercicio = {
+		progreso: PROGRESO_VACIO,
+		puntosCarga: [],
+		puntosReps: []
+	};
 
-	const progresoStore = $derived(fromLiveQuery(progresoEjercicioObs(exerciseId), VACIO));
-	const progreso = $derived($progresoStore);
-	const puntosCargaStore = $derived(
-		fromLiveQuery(historialPorModoObs(exerciseId, metrica, 'peso'), [] as MejorSet[])
-	);
-	const puntosRepsStore = $derived(
-		fromLiveQuery(historialPorModoObs(exerciseId, metrica, 'reps'), [] as MejorSet[])
-	);
+	const datosStore = $derived(fromLiveQuery(progresoPantallaObs(exerciseId, metrica), VACIO));
+	const datos = $derived($datosStore);
+	const progreso = $derived(datos.progreso);
+	const puntosCarga = $derived(datos.puntosCarga);
+	const puntosReps = $derived(datos.puntosReps);
 
 	const modoReps = $derived(progreso.modo === 'reps');
-	const puntos = $derived(modoReps ? $puntosRepsStore : $puntosCargaStore);
-	const hayHistorialMixto = $derived(
-		!modoReps && $puntosCargaStore.length > 0 && $puntosRepsStore.length > 0
-	);
+	const puntos = $derived(modoReps ? puntosReps : puntosCarga);
+	const hayHistorialMixto = $derived(!modoReps && puntosCarga.length > 0 && puntosReps.length > 0);
 	const metricaEfectiva = $derived<MetricaEfectiva>(modoReps ? 'reps' : metrica);
 	const metricaLabel = $derived(
 		modoReps ? 'reps máximas' : metrica === 'e1rm' ? '1RM estimado' : 'peso máximo'
@@ -92,7 +91,7 @@
 			{metricaLabel}
 			unidad={unidadValor}
 			seriesHechas={progreso.totalSeries}
-			cargando={progreso === VACIO}
+			cargando={datos === VACIO}
 		/>
 	</div>
 	{#if hayHistorialMixto}
@@ -103,12 +102,12 @@
 			</p>
 			<div class="mt-3">
 				<ChartProgreso
-					puntos={$puntosRepsStore}
+					puntos={puntosReps}
 					{glow}
 					metricaLabel="reps máximas"
 					unidad="reps"
 					seriesHechas={progreso.totalSeries}
-					cargando={progreso === VACIO}
+					cargando={datos === VACIO}
 				/>
 			</div>
 		</div>
@@ -121,7 +120,7 @@
 	</p>
 </section>
 
-{#if progreso !== VACIO && (progreso.mejorPeso || progreso.mejorReps)}
+{#if datos !== VACIO && (progreso.mejorPeso || progreso.mejorReps)}
 	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
 		<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
 			Récords
@@ -205,7 +204,7 @@
 	<p class="mb-2 px-1 text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
 		Historial completo
 	</p>
-	{#if progreso === VACIO}
+	{#if datos === VACIO}
 		<p
 			class="rounded-2xl border border-dashed border-white/15 p-6 text-center text-sm"
 			style="color: var(--muted)"

@@ -53,6 +53,7 @@
 	} from '$lib/ejercicio-activo';
 	import { leerPeso, leerReps, sumarPeso, sumarReps } from '$lib/numeros';
 	import { pasoPesoEfectivo, pasoPesoPersonalizado } from '$lib/paso-peso';
+	import { demostracionActiva } from '$lib/video';
 	import {
 		debeMostrarHintMax,
 		debeMostrarHintTimer,
@@ -609,7 +610,7 @@
 							aria-label="Ver demostración en grande"
 						>
 							<video
-								src={ej.demoVideo}
+								use:demostracionActiva={ej.demoVideo}
 								class="size-12 bg-white object-contain"
 								autoplay
 								loop
@@ -635,7 +636,7 @@
 						aria-label="Achicar demostración"
 					>
 						<video
-							src={ej.demoVideo}
+							use:demostracionActiva={ej.demoVideo}
 							class="gb-exercise-demo-video mx-auto aspect-square w-full max-w-xs rounded-2xl bg-white object-contain"
 							aria-label={ej.nombre}
 							autoplay

@@ -12,7 +12,7 @@
 		type Ejercicio
 	} from '$lib/catalog';
 	import { agregarEjercicio, quitarEjercicio } from '$lib/dias';
-	import { reproducirEnVista } from '$lib/video';
+	import { demostracionActiva, reproducirEnVista } from '$lib/video';
 	import { dur } from '$lib/motion';
 	import { fromLiveQuery } from '$lib/live';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
@@ -331,7 +331,7 @@
 					>
 				</div>
 				<video
-					src={p.demoVideo}
+					use:demostracionActiva={p.demoVideo}
 					class="mx-auto aspect-square w-full max-w-xs rounded-2xl bg-white object-contain"
 					aria-label={p.nombre}
 					autoplay
