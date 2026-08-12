@@ -18,7 +18,13 @@
 		AJUSTES_DEFAULT
 	} from '$lib/extras';
 	import { reiniciarAyudas } from '$lib/preferencias-ui';
-	import { cachearVideoCompleto } from '$lib/video';
+	import {
+		borrarVideosGuardados,
+		cachearVideoCompleto,
+		contarVideosGuardados,
+		hayEspacioParaReserva,
+		RESERVA_VIDEOTECA_COMPLETA
+	} from '$lib/video';
 	import { fromLiveQuery } from '$lib/live';
 	import { onMount } from 'svelte';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
@@ -41,6 +47,7 @@
 
 	onMount(() => {
 		void navigator.storage?.persisted?.().then((v) => (persistido = v));
+		void refrescarVideosGuardados();
 		return () => {
 			if (msgId) clearTimeout(msgId);
 			cancelarDescarga?.abort();
@@ -179,9 +186,24 @@
 	let fallidos = $state(0);
 	let totalVideos = $state(0);
 	let cancelarDescarga: AbortController | null = null;
+	let videosGuardados = $state<number | null>(null);
+
+	async function refrescarVideosGuardados() {
+		try {
+			videosGuardados = await contarVideosGuardados();
+		} catch {
+			videosGuardados = null;
+		}
+	}
 
 	async function descargarVideos() {
 		if (bajando) return;
+		if (!(await hayEspacioParaReserva(RESERVA_VIDEOTECA_COMPLETA))) {
+			avisar(
+				'⚠️ No queda espacio suficiente para la videoteca. Liberá espacio o usá los videos online.'
+			);
+			return;
+		}
 		bajando = true;
 		bajados = 0;
 		fallidos = 0;
@@ -217,11 +239,34 @@
 		} finally {
 			bajando = false;
 			cancelarDescarga = null;
+			void refrescarVideosGuardados();
 		}
 	}
 
 	function pararDescarga() {
 		cancelarDescarga?.abort();
+	}
+
+	function confirmarBorrarVideos() {
+		confirmacion = {
+			titulo: 'Eliminar videos guardados',
+			mensaje:
+				'Vas a liberar el espacio de los videos descargados. Tus rutinas, historial y ajustes no se borran.',
+			confirmarTexto: 'Eliminar videos',
+			onConfirm: async () => {
+				try {
+					const borrados = await borrarVideosGuardados();
+					videosGuardados = 0;
+					avisar(`✅ ${borrados} ${borrados === 1 ? 'video eliminado' : 'videos eliminados'}`);
+				} catch (error) {
+					avisar(
+						`❌ No se pudieron eliminar los videos: ${error instanceof Error ? error.message : 'error'}`
+					);
+				} finally {
+					confirmacion = null;
+				}
+			}
+		};
 	}
 </script>
 
@@ -380,9 +425,16 @@
 			Videos sin señal
 		</p>
 		<p class="mt-1 text-xs leading-relaxed" style="color: var(--muted)">
-			Los videos se guardan solos la primera vez que los ves, así la app no baja la videoteca entera
-			al instalarse. Si vas a un gym sin datos, podés dejarlos todos listos ahora (~22 MB).
+			Las miniaturas no ocupan espacio al verlas. Si vas a un gym sin datos, podés dejar la
+			videoteca completa lista ahora (~22 MB), sin afectar tus datos de entrenamiento.
 		</p>
+		{#if videosGuardados != null}
+			<p class="mt-2 text-xs" style="color: var(--muted)">
+				{videosGuardados
+					? `${videosGuardados} ${videosGuardados === 1 ? 'video guardado' : 'videos guardados'}`
+					: 'Todavía no guardaste videos'}
+			</p>
+		{/if}
 		{#if bajando}
 			<div class="mt-3">
 				<div class="h-2 overflow-hidden rounded-full bg-white/5">
@@ -410,6 +462,13 @@
 				class="mt-3 min-h-12 w-full rounded-xl py-3 font-semibold"
 				style="background: rgba(255,255,255,.08)">⬇️ Descargar todos los videos</button
 			>
+			{#if videosGuardados}
+				<button
+					onclick={confirmarBorrarVideos}
+					class="mt-2 min-h-11 w-full rounded-xl border border-white/15 py-2 text-sm font-semibold"
+					style="color: var(--muted)">Eliminar videos guardados</button
+				>
+			{/if}
 		{/if}
 	</section>
 

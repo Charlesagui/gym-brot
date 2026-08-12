@@ -1,6 +1,7 @@
 import { liveQuery } from 'dexie';
-import type { PrCelebrado, Sesion, SetSesion } from './db';
+import type { MetricaPr, PrCelebrado, Sesion, SetSesion } from './db';
 import {
+	historialPorModo,
 	mejorSet,
 	modoEjercicio,
 	sesionesDe,
@@ -47,6 +48,13 @@ export interface ProgresoEjercicio {
 	/** Sesiones con series ✓ de este ejercicio, descendente por fecha. */
 	sesiones: SesionDeEjercicio[];
 	totalSeries: number;
+}
+
+/** Datos de la vista de progreso: una sola consulta para los tres resúmenes. */
+export interface DatosProgresoEjercicio {
+	progreso: ProgresoEjercicio;
+	puntosCarga: MejorSet[];
+	puntosReps: MejorSet[];
 }
 
 /**
@@ -139,4 +147,22 @@ export function crearProgresoEjercicio(sesiones: Sesion[], exerciseId: string): 
 
 export function progresoEjercicioObs(exerciseId: string) {
 	return liveQuery(async () => crearProgresoEjercicio(await sesionesDe(exerciseId), exerciseId));
+}
+
+export function crearDatosProgresoEjercicio(
+	sesiones: Sesion[],
+	exerciseId: string,
+	metrica: MetricaPr
+): DatosProgresoEjercicio {
+	return {
+		progreso: crearProgresoEjercicio(sesiones, exerciseId),
+		puntosCarga: historialPorModo(sesiones, exerciseId, metrica, 'peso'),
+		puntosReps: historialPorModo(sesiones, exerciseId, metrica, 'reps')
+	};
+}
+
+export function progresoPantallaObs(exerciseId: string, metrica: MetricaPr) {
+	return liveQuery(async () =>
+		crearDatosProgresoEjercicio(await sesionesDe(exerciseId), exerciseId, metrica)
+	);
 }

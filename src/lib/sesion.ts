@@ -204,17 +204,27 @@ export async function sesionesDe(exerciseId: string): Promise<Sesion[]> {
 
 /** Mejor set hecho por sesión para una progresión homogénea: carga o reps sin carga. */
 export function historialPorModoObs(exerciseId: string, metrica: MetricaPr, modo: ModoPr) {
-	return liveQuery(async () => {
-		const todas = (await sesionesDe(exerciseId)).filter((sesion) => sesion.fecha <= hoyStr());
-		const puntos: MejorSet[] = [];
-		for (const s of todas) {
-			const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
-			if (!e) continue;
-			const mejor = mejorSetDeSeries(e.sets, s.fecha, metrica, s.id, modo);
-			if (mejor) puntos.push(mejor);
-		}
-		return puntos;
-	});
+	return liveQuery(async () =>
+		historialPorModo(await sesionesDe(exerciseId), exerciseId, metrica, modo)
+	);
+}
+
+/** Derivación pura para reutilizar una misma lectura de IndexedDB en varias vistas. */
+export function historialPorModo(
+	sesiones: Sesion[],
+	exerciseId: string,
+	metrica: MetricaPr,
+	modo: ModoPr
+): MejorSet[] {
+	const puntos: MejorSet[] = [];
+	for (const s of sesiones) {
+		if (s.fecha > hoyStr()) continue;
+		const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
+		if (!e) continue;
+		const mejor = mejorSetDeSeries(e.sets, s.fecha, metrica, s.id, modo);
+		if (mejor) puntos.push(mejor);
+	}
+	return puntos;
 }
 
 /** Serie principal: carga si ya existe una serie hecha con carga; si no, reps. */

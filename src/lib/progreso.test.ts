@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Sesion, SetSesion } from './db';
-import { crearProgresoEjercicio, indexSetPr } from './progreso';
+import { crearDatosProgresoEjercicio, crearProgresoEjercicio, indexSetPr } from './progreso';
 
 function sesion(
 	fecha: string,
@@ -123,5 +123,22 @@ describe('crearProgresoEjercicio', () => {
 		expect(progreso.sesiones).toEqual([]);
 		expect(progreso.mejorPeso).toBeNull();
 		expect(progreso.totalSeries).toBe(0);
+	});
+});
+
+describe('crearDatosProgresoEjercicio', () => {
+	it('deriva los dos gráficos desde una sola colección de sesiones', () => {
+		const datos = crearDatosProgresoEjercicio(
+			[
+				sesion('2026-01-01', [{ peso: 80, reps: 8, hecha: true }]),
+				sesion('2026-01-08', [{ reps: 12, hecha: true }])
+			],
+			'press',
+			'peso'
+		);
+
+		expect(datos.progreso.totalSeries).toBe(2);
+		expect(datos.puntosCarga).toMatchObject([{ valor: 80 }]);
+		expect(datos.puntosReps).toMatchObject([{ valor: 12 }]);
 	});
 });
