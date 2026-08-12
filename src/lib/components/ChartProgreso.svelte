@@ -268,7 +268,7 @@
 		{#each RANGOS as opcion (opcion.id)}
 			<button
 				onclick={() => (rango = opcion.id)}
-				class="min-h-10 rounded-full px-2.5 text-[11px] font-semibold"
+				class="min-h-11 rounded-full px-2.5 text-[11px] font-semibold"
 				aria-pressed={rango === opcion.id}
 				style={rango === opcion.id
 					? `background: rgb(${glow} / .2); color: rgb(${glow})`

@@ -118,6 +118,11 @@ export interface RecordEjercicio extends MejorSet {
 	modo: ModoPr;
 }
 
+/** Una serie cuenta como completa cuando fue confirmada y tiene repeticiones. */
+export function serieCompleta(set: SetSesion): boolean {
+	return set.hecha && set.reps != null;
+}
+
 /** 'reps' si el ejercicio tiene series hechas y ninguna registró peso; si no, 'peso'. */
 export function modoEjercicio(sesiones: Sesion[], exerciseId: string): ModoPr {
 	let tieneHechas = false;
@@ -520,7 +525,7 @@ export function setSerieHecha(
 			encontrada: true,
 			hecha: set.hecha,
 			cambio,
-			ejercicioCompleto: e.sets.every((serie) => serie.hecha)
+			ejercicioCompleto: e.sets.every(serieCompleta)
 		};
 	});
 }
@@ -689,7 +694,7 @@ export function registrarPrSiSupera(
 		const s = await db.sesiones.get(sesionId(diaId, fecha));
 		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
 		const set = e?.sets[setIndex];
-		if (!s || !e || !set?.hecha) return null;
+		if (!s || !e || !set || !serieCompleta(set)) return null;
 
 		const todas = await sesionesDe(exerciseId);
 		// El modo pertenece al ejercicio completo, no a la serie recién tocada. Si ya

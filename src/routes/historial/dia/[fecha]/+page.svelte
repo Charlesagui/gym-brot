@@ -84,7 +84,7 @@
 	<header class="mb-5 flex items-center gap-3">
 		<a
 			href="/historial"
-			class="grid size-10 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
+			class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
 			aria-label="Volver al historial">←</a
 		>
 		<div class="min-w-0">

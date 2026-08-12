@@ -193,7 +193,7 @@
 				<button
 					bind:this={closeButtonEl}
 					onclick={onClose}
-					class="grid size-10 shrink-0 place-items-center rounded-full border border-white/10 text-xl font-bold"
+					class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-xl font-bold"
 					aria-label="Cerrar técnica">×</button
 				>
 			</div>

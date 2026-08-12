@@ -100,7 +100,7 @@
 					? `último backup hace ${diasDesde(ajustes.ultimoBackup)} días`
 					: 'todavía sin backup'}
 			</span>
-			<span class="shrink-0 text-xs font-bold" style="color: var(--accent)">Exportar →</span>
+			<span class="shrink-0 text-xs font-bold" style="color: var(--accent-text)">Exportar →</span>
 		</a>
 	{/if}
 

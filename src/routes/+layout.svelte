@@ -136,7 +136,7 @@
 				<button
 					onclick={recargar}
 					class="mt-4 block w-full rounded-2xl py-3 text-center text-sm font-bold"
-					style="background: var(--accent); color: white">Recargar</button
+					style="background: var(--accent); color: var(--on-accent)">Recargar</button
 				>
 				<button
 					onclick={() => void reiniciarDatosLocales()}
@@ -162,7 +162,7 @@
 				class="w-full rounded-2xl border border-white/10 p-5"
 				style="background: var(--surface)"
 			>
-				<p class="text-xs font-bold uppercase tracking-[0.22em]" style="color: var(--accent)">
+				<p class="text-xs font-bold uppercase tracking-[0.22em]" style="color: var(--accent-text)">
 					Datos en uso en otro lado
 				</p>
 				<h1 class="mt-2 text-2xl font-extrabold leading-tight">Gym-brot está abierto dos veces</h1>
@@ -174,7 +174,7 @@
 				<button
 					onclick={recargar}
 					class="mt-4 block w-full rounded-2xl py-3 text-center text-sm font-bold"
-					style="background: var(--accent); color: white">Recargar</button
+					style="background: var(--accent); color: var(--on-accent)">Recargar</button
 				>
 			</section>
 		</main>
@@ -190,7 +190,7 @@
 					<button
 						onclick={recargar}
 						class="mx-auto mt-4 block rounded-2xl border border-white/10 px-5 py-2.5 text-sm font-bold"
-						style="color: var(--accent)">Recargar</button
+						style="color: var(--accent-text)">Recargar</button
 					>
 				{/if}
 			</div>
@@ -228,7 +228,7 @@
 			</div>
 			<button
 				onclick={() => errorDatos.set(null)}
-				class="grid size-10 shrink-0 place-items-center rounded-full text-sm font-bold"
+				class="grid size-11 shrink-0 place-items-center rounded-full text-sm font-bold"
 				style="color: var(--muted)"
 				aria-label="Cerrar aviso">✕</button
 			>
@@ -253,8 +253,8 @@
 			<button
 				onclick={actualizar}
 				disabled={actualizando}
-				class="min-h-10 shrink-0 rounded-full px-4 text-sm font-bold disabled:opacity-60"
-				style="background: var(--accent); color: white"
+				class="min-h-11 shrink-0 rounded-full px-4 text-sm font-bold disabled:opacity-60"
+				style="background: var(--accent); color: var(--on-accent)"
 				>{actualizando ? 'Actualizando…' : 'Actualizar'}</button
 			>
 		</div>

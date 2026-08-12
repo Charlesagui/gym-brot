@@ -6,7 +6,12 @@
 	--surface: #14141d;
 	--text: #e8e8f0;
 	--muted: #9aa0b4;
-	--accent: #7c5cff;
+	/* Fondo de acción y variante para texto: ambas cumplen AA en su contexto. */
+	--accent: #7654f4;
+	--accent-text: #8268ff;
+	--on-accent: #ffffff;
+	/* Los glows de grupo son luminosos: su texto necesita tinta oscura. */
+	--on-bright: #08080c;
 	--glow: 124 92 255; /* rgb del glow */
 	--max: 255 157 60; /* naranja MAX (tope de la pila de placas) */
 	--exito: 74 222 128; /* verde de día/ejercicio terminado */
@@ -31,6 +36,11 @@ body {
 	overscroll-behavior: none;
 }
 
+:focus-visible {
+	outline: 3px solid var(--accent-text);
+	outline-offset: 3px;
+}
+
 .gb-line-clamp-2 {
 	display: -webkit-box;
 	-webkit-box-orient: vertical;
@@ -42,6 +52,17 @@ body {
 .glow-bg {
 	background:
 		radial-gradient(70% 55% at 50% -5%, rgb(var(--glow) / 0.22), transparent 70%), var(--bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		scroll-behavior: auto !important;
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
 }
 
 @media (orientation: landscape) and (max-height: 520px) {

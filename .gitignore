@@ -3,6 +3,8 @@ node_modules/
 /.svelte-kit/
 /package
 /coverage/
+/test-results/
+/playwright-report/
 
 # Configuración local de Claude (no compartir)
 .claude/settings.local.json

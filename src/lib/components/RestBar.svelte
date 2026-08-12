@@ -54,7 +54,7 @@
 			</button>
 			<button
 				onclick={() => descanso.saltar()}
-				class="min-h-10 shrink-0 rounded-full px-5 text-sm font-semibold"
+				class="min-h-11 shrink-0 rounded-full px-5 text-sm font-semibold"
 				style="background: rgba(255,255,255,.12)">Saltar</button
 			>
 		{:else}
@@ -80,8 +80,8 @@
 			</button>
 			<button
 				onclick={() => descanso.atender()}
-				class="min-h-10 shrink-0 rounded-full px-5 text-sm font-bold"
-				style="background: rgb({descanso.glow}); color: white">✓ Listo</button
+				class="min-h-11 shrink-0 rounded-full px-5 text-sm font-bold"
+				style="background: rgb({descanso.glow}); color: var(--on-bright)">✓ Listo</button
 			>
 		{/if}
 	</div>

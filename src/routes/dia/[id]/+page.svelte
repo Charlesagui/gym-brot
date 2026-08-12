@@ -24,7 +24,8 @@
 		reabrirDia,
 		sesionHoyObs,
 		saltarEjercicio,
-		reanudarEjercicio
+		reanudarEjercicio,
+		serieCompleta
 	} from '$lib/sesion';
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
 	import { resumenDiaSesion } from '$lib/historial';
@@ -101,7 +102,7 @@
 	function progreso(exId: string): { hechas: number; total: number } | null {
 		const e = sesion?.ejercicios.find((x) => x.exerciseId === exId);
 		if (!e || e.sets.length === 0) return null;
-		return { hechas: e.sets.filter((s) => s.hecha).length, total: e.sets.length };
+		return { hechas: e.sets.filter(serieCompleta).length, total: e.sets.length };
 	}
 
 	function estaCompleto(exId: string): boolean {
@@ -211,8 +212,7 @@
 		ordenItems = e.detail.items;
 	}
 
-	function alSoltar(e: CustomEvent<DndEvent<ItemOrden>>) {
-		ordenItems = e.detail.items;
+	function guardarOrdenEjercicios() {
 		guardarSinBloquear(
 			reordenarEjercicios(
 				diaId,
@@ -220,6 +220,22 @@
 			),
 			'No se pudo guardar el orden de los ejercicios. Intentá de nuevo.'
 		);
+	}
+
+	function alSoltar(e: CustomEvent<DndEvent<ItemOrden>>) {
+		ordenItems = e.detail.items;
+		guardarOrdenEjercicios();
+	}
+
+	function moverEjercicio(id: string, delta: -1 | 1) {
+		const origen = ordenItems.findIndex((item) => item.id === id);
+		const destino = origen + delta;
+		if (origen < 0 || destino < 0 || destino >= ordenItems.length) return;
+		const nuevos = [...ordenItems];
+		const [movido] = nuevos.splice(origen, 1);
+		nuevos.splice(destino, 0, movido!);
+		ordenItems = nuevos;
+		guardarOrdenEjercicios();
 	}
 
 	async function quitarEnReorden(it: ItemOrden) {
@@ -252,7 +268,7 @@
 	<header class="mb-5 flex items-center gap-3">
 		<a
 			href="/"
-			class="grid size-10 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
+			class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
 			aria-label="Volver">←</a
 		>
 		{#if editando}
@@ -264,15 +280,15 @@
 			/>
 			<button
 				onclick={() => (editando = false)}
-				class="min-h-10 shrink-0 rounded-full px-4 py-2 text-sm font-bold"
-				style="background: var(--accent); color: white">✓ Listo</button
+				class="min-h-11 shrink-0 rounded-full px-4 py-2 text-sm font-bold"
+				style="background: var(--accent); color: var(--on-accent)">✓ Listo</button
 			>
 		{:else}
 			<h1 class="flex-1 text-xl font-bold">{dia?.nombre ?? ''}</h1>
 			{#if dia && !reordenando}
 				<button
 					onclick={abrirEdicion}
-					class="flex min-h-10 items-center gap-1.5 rounded-full border border-white/10 px-3 py-2 text-sm font-semibold"
+					class="flex min-h-11 items-center gap-1.5 rounded-full border border-white/10 px-3 py-2 text-sm font-semibold"
 					aria-label="Editar">✏️ Editar</button
 				>
 			{/if}
@@ -288,7 +304,7 @@
 			class="mb-3 text-center text-xs font-semibold uppercase tracking-wider"
 			style="color: var(--muted)"
 		>
-			Arrastrá para ordenar
+			Arrastrá o usá las flechas para ordenar
 		</p>
 		<section
 			use:dndzone={{ items: ordenItems, flipDurationMs: flipMs, dropTargetStyle: {} }}
@@ -315,11 +331,26 @@
 						preload="none"
 					></video>
 					<p class="min-w-0 flex-1 truncate text-sm font-semibold leading-tight">{it.nombre}</p>
-					<span class="shrink-0 text-base" aria-hidden="true">{it.emoji}</span>
+					<div class="flex shrink-0 gap-1">
+						<button
+							onpointerdown={(evento) => evento.stopPropagation()}
+							onclick={() => moverEjercicio(it.id, -1)}
+							disabled={ordenItems[0]?.id === it.id}
+							class="grid size-11 place-items-center rounded-full bg-white/[0.06] text-sm disabled:opacity-30"
+							aria-label={`Subir ${it.nombre}`}>↑</button
+						>
+						<button
+							onpointerdown={(evento) => evento.stopPropagation()}
+							onclick={() => moverEjercicio(it.id, 1)}
+							disabled={ordenItems.at(-1)?.id === it.id}
+							class="grid size-11 place-items-center rounded-full bg-white/[0.06] text-sm disabled:opacity-30"
+							aria-label={`Bajar ${it.nombre}`}>↓</button
+						>
+					</div>
 					<button
 						onpointerdown={(ev) => ev.stopPropagation()}
 						onclick={() => quitarEnReorden(it)}
-						class="grid size-10 shrink-0 place-items-center rounded-full text-sm"
+						class="grid size-11 shrink-0 place-items-center rounded-full text-sm"
 						style="background: rgba(255,80,80,.15); color: #ff6b6b"
 						aria-label={`Quitar ${it.nombre}`}>✕</button
 					>
@@ -329,10 +360,17 @@
 		<button
 			onclick={() => (reordenando = false)}
 			class="mt-5 w-full rounded-2xl py-3 text-sm font-bold"
-			style="background: var(--accent); color: white">✓ Listo</button
+			style="background: var(--accent); color: var(--on-accent)">✓ Listo</button
 		>
 	{:else}
 		{#if editando}
+			{#if dia.ejercicios.length > 1}
+				<button
+					onclick={entrarReordenar}
+					class="mb-4 min-h-11 w-full rounded-xl border border-white/10 px-4 text-sm font-bold"
+					style="color: var(--accent-text)">↕ Reordenar ejercicios</button
+				>
+			{/if}
 			<p class="mb-2 text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
 				Días de la semana (podés elegir varios)
 			</p>
@@ -348,7 +386,7 @@
 						aria-pressed={dia.diasSemana?.includes(i) ?? false}
 						aria-label={`Entrenar los días ${d}`}
 						style={dia.diasSemana?.includes(i)
-							? 'background: var(--accent); color: white'
+							? 'background: var(--accent); color: var(--on-accent)'
 							: 'background: rgba(255,255,255,.05); color: var(--muted)'}>{d}</button
 					>
 				{/each}
@@ -357,7 +395,7 @@
 			<p class="mb-2 text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
 				Color
 			</p>
-			<div class="mb-6 flex gap-2.5">
+			<div class="mb-6 flex flex-wrap gap-2.5">
 				{#each coloresDia as c (c.rgb)}
 					<button
 						onclick={() =>
@@ -365,7 +403,7 @@
 								actualizarDia(diaId, { color: c.rgb }),
 								'No se pudo guardar el color de la rutina. Intentá de nuevo.'
 							)}
-						class="size-8 rounded-full transition"
+						class="size-11 rounded-full transition"
 						aria-pressed={dia.color === c.rgb}
 						aria-label={`Color ${c.nombre}`}
 						style="background: rgb({c.rgb}); outline: {dia.color === c.rgb
@@ -423,7 +461,7 @@
 											ajustarSeries(diaId, item.exerciseId, -1),
 											'No se pudo cambiar la cantidad de series. Intentá de nuevo.'
 										)}
-									class="grid size-10 shrink-0 touch-manipulation place-items-center rounded-full bg-white/10 text-sm"
+									class="grid size-11 shrink-0 touch-manipulation place-items-center rounded-full bg-white/10 text-sm"
 									aria-label={`Menos series de ${nombre}`}>−</button
 								>
 								<span class="text-sm font-semibold tabular-nums"
@@ -435,14 +473,14 @@
 											ajustarSeries(diaId, item.exerciseId, 1),
 											'No se pudo cambiar la cantidad de series. Intentá de nuevo.'
 										)}
-									class="grid size-10 shrink-0 touch-manipulation place-items-center rounded-full bg-white/10 text-sm"
+									class="grid size-11 shrink-0 touch-manipulation place-items-center rounded-full bg-white/10 text-sm"
 									aria-label={`Más series de ${nombre}`}>+</button
 								>
 							</div>
 						</div>
 						<button
 							onclick={() => confirmarQuitarEjercicio(nombre, item.exerciseId)}
-							class="grid size-10 shrink-0 place-items-center rounded-full text-sm"
+							class="grid size-11 shrink-0 place-items-center rounded-full text-sm"
 							style="background: rgba(255,80,80,.15); color: #ff6b6b"
 							aria-label="Quitar">✕</button
 						>
@@ -516,7 +554,7 @@
 										'No se pudo reanudar el ejercicio. Intentá de nuevo.'
 									)}
 								class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-sm"
-								style="color: var(--accent)"
+								style="color: var(--accent-text)"
 								aria-label={`Reanudar ${nombre} hoy`}>↩</button
 							>
 						{:else}
@@ -611,7 +649,7 @@
 		<a
 			href={`/dia/${diaId}/agregar`}
 			class="mt-4 block rounded-2xl border border-dashed border-white/20 p-4 text-center text-sm font-medium"
-			style="color: var(--accent)">+ Agregar ejercicio</a
+			style="color: var(--accent-text)">+ Agregar ejercicio</a
 		>
 
 		{#if editando}

@@ -2,6 +2,7 @@
 	import { fade, fly } from 'svelte/transition';
 	import { descanso } from '$lib/descanso.svelte';
 	import { dur } from '$lib/motion';
+	import { modal } from '$lib/modal';
 
 	const RADIO = 44;
 	const CIRCUNFERENCIA = 2 * Math.PI * RADIO;
@@ -54,6 +55,10 @@
 
 {#if descanso.focusAbierto && activo}
 	<div
+		use:modal={{
+			onClose: () => descanso.minimizarFocus(),
+			focoInicial: '[data-modal-inicial]'
+		}}
 		transition:fade={{ duration: dur(140) }}
 		class="fixed inset-0 z-[70]"
 		style="background: rgb(var(--scrim) / {0.72 - Math.min(dragY / 900, 0.28)})"
@@ -153,15 +158,17 @@
 			>
 				{#if descanso.vencido}
 					<button
+						data-modal-inicial
 						onclick={() => descanso.atender()}
 						class="min-h-14 rounded-2xl px-5 text-base font-black"
-						style="background: rgb(var(--rest-glow)); color: white">Listo</button
+						style="background: rgb(var(--rest-glow)); color: var(--on-bright)">Listo</button
 					>
 				{:else}
 					<button
+						data-modal-inicial
 						onclick={() => descanso.minimizarFocus()}
 						class="min-h-14 rounded-2xl px-5 text-base font-black"
-						style="background: rgb(var(--rest-glow)); color: white">Minimizar</button
+						style="background: rgb(var(--rest-glow)); color: var(--on-bright)">Minimizar</button
 					>
 				{/if}
 				<button

@@ -50,7 +50,7 @@
 		{#if maquinaPlacas}
 			<button
 				onclick={onToggleMax}
-				class="flex min-h-9 shrink-0 touch-manipulation items-center rounded-full border px-3 text-[11px] font-bold"
+				class="flex min-h-11 shrink-0 touch-manipulation items-center rounded-full border px-3 text-[11px] font-bold"
 				style={set.esMax
 					? 'background: rgb(var(--max) / .22); color: rgb(var(--max)); border-color: rgb(var(--max) / .5)'
 					: 'color: var(--muted); border-color: rgba(255,255,255,.16); border-style: dashed'}
@@ -66,7 +66,7 @@
 			disabled={pendiente}
 			class="grid size-12 shrink-0 touch-manipulation place-items-center rounded-full border-2 text-base font-bold transition-colors"
 			style={set.hecha
-				? 'background: var(--accent); border-color: var(--accent); color: white'
+				? 'background: var(--accent); border-color: var(--accent); color: var(--on-accent)'
 				: 'border-color: rgba(255,255,255,.22); color: transparent'}
 			aria-pressed={set.hecha}
 			aria-label={`${set.hecha ? 'Desmarcar' : 'Marcar'} serie ${index + 1}`}>✓</button
@@ -119,7 +119,7 @@
 			<div class="flex items-center gap-1.5">
 				<button
 					use:pulsar={() => onAjustarExtra(-pasoPeso)}
-					class="grid size-10 touch-manipulation select-none place-items-center rounded-lg text-sm font-bold"
+					class="grid size-11 touch-manipulation select-none place-items-center rounded-lg text-sm font-bold"
 					style="background: rgba(255,255,255,.06); color: var(--muted)"
 					aria-label={`Bajar ${pasoPeso} ${unidad} encima en serie ${index + 1}`}>−</button
 				>
@@ -131,7 +131,7 @@
 				</span>
 				<button
 					use:pulsar={() => onAjustarExtra(pasoPeso)}
-					class="grid size-10 touch-manipulation select-none place-items-center rounded-lg text-sm font-bold"
+					class="grid size-11 touch-manipulation select-none place-items-center rounded-lg text-sm font-bold"
 					style="background: rgb(var(--max) / .18); color: rgb(var(--max))"
 					aria-label={`Subir ${pasoPeso} ${unidad} encima en serie ${index + 1}`}>+</button
 				>

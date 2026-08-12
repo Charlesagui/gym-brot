@@ -1,17 +1,36 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+
+	const ruta = $derived($page.url.pathname);
+	const rutinasActivas = $derived(ruta === '/' || ruta.startsWith('/dia/'));
+	const historialActivo = $derived(ruta === '/historial' || ruta.startsWith('/historial/'));
 </script>
 
 <nav class="bottom-nav">
-	<a href="/" class="nav-item" class:active={$page.url.pathname === '/'}>
+	<a
+		href="/"
+		class="nav-item"
+		class:active={rutinasActivas}
+		aria-current={rutinasActivas ? 'page' : undefined}
+	>
 		<span class="icon">🏠</span>
 		<span class="label">Rutinas</span>
 	</a>
-	<a href="/historial" class="nav-item" class:active={$page.url.pathname === '/historial'}>
+	<a
+		href="/historial"
+		class="nav-item"
+		class:active={historialActivo}
+		aria-current={historialActivo ? 'page' : undefined}
+	>
 		<span class="icon">📈</span>
 		<span class="label">Historial</span>
 	</a>
-	<a href="/ajustes" class="nav-item" class:active={$page.url.pathname === '/ajustes'}>
+	<a
+		href="/ajustes"
+		class="nav-item"
+		class:active={ruta === '/ajustes'}
+		aria-current={ruta === '/ajustes' ? 'page' : undefined}
+	>
 		<span class="icon">⚙️</span>
 		<span class="label">Ajustes</span>
 	</a>
@@ -63,7 +82,7 @@
 	}
 
 	.active {
-		color: var(--accent, rgb(99 102 241));
+		color: var(--accent-text, rgb(130 104 255));
 	}
 
 	@media (orientation: landscape) and (max-height: 520px) {

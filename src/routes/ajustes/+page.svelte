@@ -229,7 +229,7 @@
 	<header class="mb-6 flex items-center gap-3">
 		<a
 			href="/"
-			class="grid size-10 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
+			class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
 			aria-label="Volver">←</a
 		>
 		<h1 class="text-xl font-bold">Ajustes</h1>
@@ -249,7 +249,7 @@
 					aria-busy={guardandoUnidad}
 					aria-label={`Seleccionar unidad ${u}`}
 					style={ajustes.unidad === u
-						? 'background: var(--accent); color: white'
+						? 'background: var(--accent); color: var(--on-accent)'
 						: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{u}</button
 				>
 			{/each}
@@ -268,7 +268,7 @@
 					aria-pressed={ajustes.pasoPeso === paso}
 					aria-label={`Paso de ${paso} ${ajustes.unidad}`}
 					style={ajustes.pasoPeso === paso
-						? 'background: var(--accent); color: white'
+						? 'background: var(--accent); color: var(--on-accent)'
 						: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{paso}</button
 				>
 			{/each}
@@ -289,7 +289,7 @@
 				class="min-h-11 rounded-xl px-2 py-2.5 text-sm font-semibold"
 				aria-pressed={ajustes.metricaPr === 'peso'}
 				style={ajustes.metricaPr === 'peso'
-					? 'background: var(--accent); color: white'
+					? 'background: var(--accent); color: var(--on-accent)'
 					: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Peso máximo</button
 			>
 			<button
@@ -297,7 +297,7 @@
 				class="min-h-11 rounded-xl px-2 py-2.5 text-sm font-semibold"
 				aria-pressed={ajustes.metricaPr === 'e1rm'}
 				style={ajustes.metricaPr === 'e1rm'
-					? 'background: var(--accent); color: white'
+					? 'background: var(--accent); color: var(--on-accent)'
 					: 'background: rgba(255,255,255,.06); color: var(--muted)'}>1RM (1 rep. máx.)</button
 			>
 		</div>
@@ -319,7 +319,7 @@
 				aria-pressed={ajustes.sonido}
 				class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
 				style={ajustes.sonido
-					? 'background: var(--accent); color: white'
+					? 'background: var(--accent); color: var(--on-accent)'
 					: 'background: rgba(255,255,255,.06); color: var(--muted)'}
 				>{ajustes.sonido ? 'On' : 'Off'}</button
 			>
@@ -348,7 +348,7 @@
 				aria-pressed={ajustes.descansoPantallaCompleta}
 				class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
 				style={ajustes.descansoPantallaCompleta
-					? 'background: var(--accent); color: white'
+					? 'background: var(--accent); color: var(--on-accent)'
 					: 'background: rgba(255,255,255,.06); color: var(--muted)'}
 				>{ajustes.descansoPantallaCompleta ? 'On' : 'Off'}</button
 			>
@@ -368,7 +368,7 @@
 				aria-pressed={ajustes.vibracion}
 				class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
 				style={ajustes.vibracion
-					? 'background: var(--accent); color: white'
+					? 'background: var(--accent); color: var(--on-accent)'
 					: 'background: rgba(255,255,255,.06); color: var(--muted)'}
 				>{ajustes.vibracion ? 'On' : 'Off'}</button
 			>
@@ -399,7 +399,7 @@
 					</p>
 					<button
 						onclick={pararDescarga}
-						class="min-h-10 rounded-xl px-4 text-sm font-bold"
+						class="min-h-11 rounded-xl px-4 text-sm font-bold"
 						style="background: rgba(255,255,255,.08); color: var(--muted)">Cancelar</button
 					>
 				</div>
@@ -428,7 +428,8 @@
 		<button
 			onclick={exportar}
 			class="mt-3 min-h-12 w-full rounded-xl py-3 font-semibold"
-			style="background: var(--accent); color: white">⬇️ Guardar copia de seguridad</button
+			style="background: var(--accent); color: var(--on-accent)"
+			>⬇️ Guardar copia de seguridad</button
 		>
 		{#if backupPendienteConfirmacion}
 			<button
@@ -443,7 +444,9 @@
 			⬆️ Restaurar copia de seguridad
 			<input type="file" accept="application/json" onchange={importar} class="hidden" />
 		</label>
-		{#if msg}<p class="mt-3 text-center text-sm font-medium">{msg}</p>{/if}
+		{#if msg}
+			<p class="mt-3 text-center text-sm font-medium" role="status" aria-live="polite">{msg}</p>
+		{/if}
 		{#if avisosImport.length}
 			<ul
 				class="mt-3 space-y-1 rounded-xl p-3 text-xs leading-relaxed"
