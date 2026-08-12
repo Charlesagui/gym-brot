@@ -1,5 +1,5 @@
 import type { Ajustes, MetricaPr, SetSesion } from './db';
-import type { MejorSet, MetricaEfectiva, ModoPr } from './sesion';
+import type { MejorSet, MetricaEfectiva, ModoPr } from './sesion-reglas';
 
 type PuntoConPeso = Pick<MejorSet, 'peso'>;
 type SetActivo = Pick<SetSesion, 'peso' | 'reps' | 'hecha'>;

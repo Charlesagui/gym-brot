@@ -8,7 +8,8 @@
 	} from '$lib/historial';
 	import { ejercicioPorId } from '$lib/catalog';
 	import { fromLiveQuery } from '$lib/live';
-	import { hoyStr, recordsGlobalesObs, type RecordEjercicio } from '$lib/sesion';
+	import { hoyStr, recordsGlobalesObs } from '$lib/sesion';
+	import type { RecordEjercicio } from '$lib/sesion-reglas';
 	import { onMount } from 'svelte';
 
 	const VACIO: HistorialResumen = crearHistorialResumen([], []);

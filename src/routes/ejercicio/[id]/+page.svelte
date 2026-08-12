@@ -3,13 +3,13 @@
 	import { goto } from '$app/navigation';
 	import { onDestroy, onMount } from 'svelte';
 	import { fly } from 'svelte/transition';
-	import { db, type SetSesion, type PrCelebrado } from '$lib/db';
+	import { type SetSesion, type PrCelebrado } from '$lib/db';
 	import { ejercicioPorId, grupos } from '$lib/catalog';
 	import {
-		sesionHoyObs,
 		historialObs,
-		ensureEjercicio,
-		ultimaSesion,
+		ejercicioSesionObs,
+		prepararEjercicioSesion,
+		setsEjercicioSesion,
 		setSerieHecha,
 		toggleMax,
 		setPeso,
@@ -25,11 +25,14 @@
 		DESCRIPCION_METRICA,
 		hoyStr,
 		sesionId,
-		serieCompleta,
-		type MejorSet,
-		type ModoPr,
-		type MetricaEfectiva
+		type MejorSet
 	} from '$lib/sesion';
+	import {
+		mejorSetDeSeries,
+		serieCompleta,
+		type MetricaEfectiva,
+		type ModoPr
+	} from '$lib/sesion-reglas';
 	import {
 		notaObs,
 		setNota,
@@ -195,25 +198,20 @@
 		anteriores = [];
 		anterioresFecha = null;
 		(async () => {
-			const dia = await db.dias.get(dId);
-			const item = dia?.ejercicios.find((e) => e.exerciseId === exId);
-			await ensureEjercicio(dId, exId, item?.seriesObjetivo ?? 4, fecha);
+			const preparacion = await prepararEjercicioSesion(dId, exId, fecha);
 			if (cancelado) return;
-			const prev = await ultimaSesion(dId, exId, fecha);
-			if (cancelado) return;
-			anteriores = prev?.sets ?? [];
-			anterioresFecha = prev?.fecha ?? null;
-			sub = sesionHoyObs(dId, fecha).subscribe((s) => {
+			anteriores = preparacion.anteriores;
+			anterioresFecha = preparacion.anterioresFecha;
+			sub = ejercicioSesionObs(dId, exId, fecha).subscribe((estado) => {
 				if (cancelado) return;
-				const e = s?.ejercicios.find((x) => x.exerciseId === exId);
-				prCelebrado = e?.prCelebrado ?? null;
+				prCelebrado = estado.prCelebrado;
 				cargandoSeries = false;
 				// Con escrituras en vuelo el resultado que llega puede ser anterior al
 				// último toque: pisar `sets` acá hacía saltar el número hacia atrás y el
 				// toque siguiente componía desde el valor viejo. Mientras haya toques sin
 				// confirmar manda lo local; al drenar, la base vuelve a ser la verdad.
 				if (escriturasEnVuelo > 0) return;
-				sets = e ? e.sets : [];
+				sets = estado.sets;
 			});
 		})().catch((error: unknown) => {
 			if (!cancelado) {
@@ -268,7 +266,7 @@
 			? valorMetrica(pesoEfectivo(pr)!, pr.reps, otraMetrica)
 			: null
 	);
-	const mejorHoy = $derived(mejorSetLocal(sets, true));
+	const mejorHoy = $derived(mejorSetDeSeries(sets, fechaSesion, metrica, undefined, modo));
 	// "Previo" = todo menos la sesión actual: si hiciste este ejercicio hoy en otra
 	// rutina, ese valor también cuenta (mismo criterio que recalcularPrCelebrado).
 	const mejorPrevio = $derived(
@@ -290,23 +288,6 @@
 	const opcionesPaso = $derived(unidad === 'kg' ? [1, 2.5, 5] : [1, 2.5, 5, 10]);
 	// Sin PR ni serie previa: es la primera vez con este ejercicio → hint de peso inicial.
 	const sinHistorial = $derived(!cargandoSeries && puntos.length === 0 && anteriores.length === 0);
-
-	function mejorSetLocal(localSets: SetSesion[], soloHechas: boolean): MejorSet | null {
-		return localSets.reduce<MejorSet | null>((best, s, setIndex) => {
-			if (soloHechas && !serieCompleta(s)) return best;
-			const valor = valorSet(s, metrica, modo);
-			if (valor == null) return best;
-			return mejorSet(best, {
-				peso: s.peso,
-				reps: s.reps,
-				esMax: !!s.esMax,
-				extraKg: s.extraKg,
-				fecha: fechaSesion,
-				valor,
-				setIndex
-			});
-		}, null);
-	}
 
 	function abrirTecnica() {
 		if (tecnicaEmbedUrl) {
@@ -345,11 +326,11 @@
 		const exId = $page.params.id!;
 		if (!dId) return;
 		try {
-			const s = await db.sesiones.get(sesionId(dId, fechaSesion));
+			const setsPersistidos = await setsEjercicioSesion(dId, exId, fechaSesion);
 			// Mientras leíamos pudo entrar otro toque o haberse cambiado de pantalla: en
 			// cualquiera de los dos casos esta lectura ya quedó vieja y pisar sería peor.
 			if (escriturasEnVuelo > 0 || diaId !== dId || $page.params.id !== exId) return;
-			sets = s?.ejercicios.find((x) => x.exerciseId === exId)?.sets ?? [];
+			sets = setsPersistidos;
 		} catch {
 			// Si tampoco se puede leer, el banner de error ya está en pantalla.
 		}
@@ -543,7 +524,7 @@
 		// PR honesto: solo cuentan las series realmente marcadas ✓ (no fabrica nada).
 		// Igual que al marcar, quien decide es la transacción; acá solo se elige qué
 		// serie proponer (la mejor hecha bajo la métrica vigente).
-		const mejor = mejorSetLocal(sets, true);
+		const mejor = mejorHoy;
 		const candidato = mejor?.setIndex;
 		const ganado =
 			candidato != null

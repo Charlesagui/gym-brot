@@ -45,10 +45,9 @@ La app es 100% estática → entra en el plan gratis de **Netlify**, Vercel o Cl
 ## Offline y videos
 
 La app (pantallas, lógica y datos) funciona **100% offline** desde la instalación: el service
-worker precachea el shell (~1 MB). Los **videos** no se precachean —serían 22 MB de golpe en la
-primera visita— sino que se guardan **la primera vez que los ves** y quedan cacheados para
-siempre. Si vas a un gym sin señal y querés dejarlos listos, hay un botón
-**Ajustes → Descargar todos los videos** (~22 MB, cancelable).
+worker precachea el shell (~1 MB). Los **videos** no se descargan ni se guardan al verlos: así
+una búsqueda larga no consume el almacenamiento del teléfono. Si vas a un gym sin señal y querés
+dejarlos listos, usá **Ajustes → Descargar todos los videos** (~22 MB, cancelable y reversible).
 
 Cuando hay una versión nueva, la app **avisa y espera**: nunca se actualiza sola en medio de un
 ejercicio o de un descanso.

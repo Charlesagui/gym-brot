@@ -7,7 +7,8 @@
 	import { onMount } from 'svelte';
 	import { db, type Dia, type Sesion } from '$lib/db';
 	import { crearDia, reordenarDias } from '$lib/dias';
-	import { hoyStr, serieCompleta } from '$lib/sesion';
+	import { hoyStr } from '$lib/sesion';
+	import { serieCompleta } from '$lib/sesion-reglas';
 	import { dur } from '$lib/motion';
 	import { mantener } from '$lib/mantener';
 	import { bienvenidaVisible, cerrarBienvenida } from '$lib/preferencias-ui';

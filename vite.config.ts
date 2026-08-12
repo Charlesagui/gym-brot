@@ -28,6 +28,7 @@ export default defineConfig({
 			provider: 'v8',
 			include: [
 				'src/lib/sesion.ts',
+				'src/lib/sesion-reglas.ts',
 				'src/lib/historial.ts',
 				'src/lib/formato.ts',
 				'src/lib/progreso.ts',
@@ -104,7 +105,7 @@ export default defineConfig({
 			workbox: {
 				// Los 962 mp4 del catálogo pesan ~22 MB: precachearlos hacía que la primera
 				// visita se bajara la videoteca entera (y la revalidara en cada deploy).
-				// El shell precacheado queda en ~1 MB y los videos se cachean al verlos.
+				// El shell precacheado queda en ~1 MB; la videoteca se descarga solo desde Ajustes.
 				globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}'],
 				modifyURLPrefix: { 'client/': '' },
 				maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
@@ -114,10 +115,12 @@ export default defineConfig({
 						handler: 'CacheFirst',
 						options: {
 							cacheName: 'gb-videos',
+							// CacheFirst sigue atendiendo lo guardado explícitamente por la app, pero
+							// esta lista vacía impide que Workbox persista previews vistos por accidente.
+							cacheableResponse: { statuses: [] },
 							// El catálogo completo tiene 962 videos. El límite debe cubrir la
 							// promesa de "Descargar todos" sin expulsar parte del historial LRU.
 							expiration: { maxEntries: 1000, maxAgeSeconds: 60 * 60 * 24 * 365 },
-							cacheableResponse: { statuses: [0, 200] },
 							rangeRequests: true
 						}
 					}

@@ -1,7 +1,8 @@
 import { liveQuery } from 'dexie';
 import { db, type Dia, type Sesion } from './db';
 import { ejercicioPorId } from './catalog';
-import { hoyStr, pesoEfectivo, type MetricaEfectiva } from './sesion';
+import { hoyStr } from './sesion';
+import { pesoEfectivo, type MetricaEfectiva } from './sesion-reglas';
 
 export interface DiaEntrenado {
 	fecha: string;

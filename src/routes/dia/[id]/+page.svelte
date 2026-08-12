@@ -24,21 +24,19 @@
 		reabrirDia,
 		sesionHoyObs,
 		saltarEjercicio,
-		reanudarEjercicio,
-		serieCompleta
+		reanudarEjercicio
 	} from '$lib/sesion';
+	import { serieCompleta } from '$lib/sesion-reglas';
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
 	import { resumenDiaSesion } from '$lib/historial';
 	import { sonarDiaTerminado } from '$lib/audio';
 	import { reproducirEnVista } from '$lib/video';
 	import { dur } from '$lib/motion';
-	import { fromLiveQuery } from '$lib/live';
+	import { estadoLiveQuery, fromLiveQuery } from '$lib/live';
 	import { formatoVolumen } from '$lib/formato';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
 	import { guardarSinBloquear, reportarErrorDatos } from '$lib/errores-datos';
 
-	let dia = $state<Dia | undefined>(undefined);
-	let cargando = $state(true);
 	let editando = $state(false);
 	let nombreEdit = $state('');
 	let premioDia = $state(false);
@@ -66,16 +64,15 @@
 	const abrevDia = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 	const grupoArchivado = { label: 'Archivado', glow: '148 163 184', emoji: '·' };
 
-	// El día gestiona su propio flag de carga; la sesión y los ajustes son stores legibles con `$`.
-	$effect(() => {
-		const id = diaId;
-		cargando = true;
-		const sub = liveQuery(() => db.dias.get(id)).subscribe((d) => {
-			dia = d;
-			cargando = false;
-		});
-		return () => sub.unsubscribe();
-	});
+	const diaStore = $derived(
+		estadoLiveQuery(
+			liveQuery(() => db.dias.get(diaId)),
+			undefined
+		)
+	);
+	const consultaDia = $derived($diaStore);
+	const dia = $derived<Dia | undefined>(consultaDia.valor);
+	const cargando = $derived(consultaDia.estado === 'cargando');
 
 	// Fecha reactiva: si la app queda abierta y cruza la medianoche, al volver
 	// a la vista la pantalla apunta a la sesión del día nuevo (no a la de ayer).
@@ -297,6 +294,15 @@
 
 	{#if cargando}
 		<p class="text-center text-sm" style="color: var(--muted)">Cargando…</p>
+	{:else if consultaDia.estado === 'error'}
+		<div class="rounded-2xl border border-red-400/25 bg-red-400/10 p-4 text-center" role="alert">
+			<p class="text-sm font-semibold" style="color: #ff9b9b">No se pudo cargar esta rutina.</p>
+			<button
+				onclick={() => location.reload()}
+				class="mt-3 min-h-11 rounded-xl px-4 text-sm font-bold"
+				style="background: rgba(255,255,255,.1); color: white">Reintentar</button
+			>
+		</div>
 	{:else if !dia}
 		<p class="text-center text-sm" style="color: var(--muted)">Día no encontrado.</p>
 	{:else if reordenando}
