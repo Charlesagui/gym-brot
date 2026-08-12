@@ -11,6 +11,7 @@
 	import { dur } from '$lib/motion';
 	import { mantener } from '$lib/mantener';
 	import { bienvenidaVisible, cerrarBienvenida } from '$lib/preferencias-ui';
+	import { guardarSinBloquear, reportarErrorDatos } from '$lib/errores-datos';
 
 	const dias = liveQuery(() => db.dias.orderBy('orden').toArray());
 	let fechaHoy = $state(hoyStr());
@@ -49,7 +50,10 @@
 
 	function alSoltar(e: CustomEvent<DndEvent<ItemDia>>) {
 		ordenItems = e.detail.items;
-		void reordenarDias(ordenItems.map((it) => it.id));
+		guardarSinBloquear(
+			reordenarDias(ordenItems.map((it) => it.id)),
+			'No se pudo guardar el nuevo orden de las rutinas. Intentá de nuevo.'
+		);
 	}
 
 	interface ProgresoDia {
@@ -81,8 +85,12 @@
 	}
 
 	async function nuevoDia() {
-		const id = await crearDia();
-		goto(`/dia/${id}`);
+		try {
+			const id = await crearDia();
+			await goto(`/dia/${id}`);
+		} catch (error) {
+			reportarErrorDatos('No se pudo crear la rutina. Intentá de nuevo.', error);
+		}
 	}
 	const nombresDia = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 	const abrevDia = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];

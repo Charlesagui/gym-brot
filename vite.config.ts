@@ -56,6 +56,12 @@ export default defineConfig({
 		tailwindcss(),
 		sveltekit(),
 		SvelteKitPWA({
+			// SvelteKit usa un `base` relativo para que el build estatico sea portable.
+			// Para el service worker eso es peligroso: abierto desde /dia/... convertia
+			// `./sw.js` en /dia/.../sw.js y dejaba esa entrada sin cobertura offline.
+			// Gym-brot se publica en la raiz, asi que registro y alcance son absolutos.
+			base: '/',
+			scope: '/',
 			// 'prompt' en vez de 'autoUpdate': con autoUpdate el service worker nuevo
 			// tomaba el control solo y podía recargar la app a mitad de una serie. Ahora
 			// espera, y la app avisa cuando no estás entrenando (ver +layout.svelte).

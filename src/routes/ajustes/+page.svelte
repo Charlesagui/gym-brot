@@ -53,6 +53,13 @@
 		msgId = setTimeout(() => (msg = ''), 6000);
 	}
 
+	function guardarAjuste(operacion: Promise<unknown>, nombre: string) {
+		void operacion.catch((error: unknown) => {
+			console.error(`No se pudo guardar ${nombre}`, error);
+			avisar(`❌ No se pudo guardar ${nombre}. Intentá de nuevo.`);
+		});
+	}
+
 	async function cambiarUnidad(unidad: 'kg' | 'lb') {
 		if (guardandoUnidad || ajustes.unidad === unidad) return;
 		guardandoUnidad = true;
@@ -256,7 +263,7 @@
 		<div class="mt-3 flex gap-2">
 			{#each [1, 2.5, 5] as paso (paso)}
 				<button
-					onclick={() => setPasoPeso(paso)}
+					onclick={() => guardarAjuste(setPasoPeso(paso), 'el paso del peso')}
 					class="min-h-11 flex-1 rounded-xl py-2.5 font-semibold tabular-nums"
 					aria-pressed={ajustes.pasoPeso === paso}
 					aria-label={`Paso de ${paso} ${ajustes.unidad}`}
@@ -278,7 +285,7 @@
 		</p>
 		<div class="mt-3 grid grid-cols-2 gap-2">
 			<button
-				onclick={() => setMetricaPr('peso')}
+				onclick={() => guardarAjuste(setMetricaPr('peso'), 'la métrica de PR')}
 				class="min-h-11 rounded-xl px-2 py-2.5 text-sm font-semibold"
 				aria-pressed={ajustes.metricaPr === 'peso'}
 				style={ajustes.metricaPr === 'peso'
@@ -286,7 +293,7 @@
 					: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Peso máximo</button
 			>
 			<button
-				onclick={() => setMetricaPr('e1rm')}
+				onclick={() => guardarAjuste(setMetricaPr('e1rm'), 'la métrica de PR')}
 				class="min-h-11 rounded-xl px-2 py-2.5 text-sm font-semibold"
 				aria-pressed={ajustes.metricaPr === 'e1rm'}
 				style={ajustes.metricaPr === 'e1rm'
@@ -308,7 +315,7 @@
 				<p class="mt-1 text-xs" style="color: var(--muted)">Sets, PR y descansos</p>
 			</div>
 			<button
-				onclick={() => setSonido(!ajustes.sonido)}
+				onclick={() => guardarAjuste(setSonido(!ajustes.sonido), 'el sonido')}
 				aria-pressed={ajustes.sonido}
 				class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
 				style={ajustes.sonido
@@ -333,7 +340,11 @@
 				<p class="mt-1 text-xs" style="color: var(--muted)">Pantalla completa al marcar serie</p>
 			</div>
 			<button
-				onclick={() => setDescansoPantallaCompleta(!ajustes.descansoPantallaCompleta)}
+				onclick={() =>
+					guardarAjuste(
+						setDescansoPantallaCompleta(!ajustes.descansoPantallaCompleta),
+						'el descanso grande'
+					)}
 				aria-pressed={ajustes.descansoPantallaCompleta}
 				class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
 				style={ajustes.descansoPantallaCompleta
@@ -353,7 +364,7 @@
 				<p class="mt-1 text-xs" style="color: var(--muted)">Logros y fin de descanso</p>
 			</div>
 			<button
-				onclick={() => setVibracion(!ajustes.vibracion)}
+				onclick={() => guardarAjuste(setVibracion(!ajustes.vibracion), 'la vibración')}
 				aria-pressed={ajustes.vibracion}
 				class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
 				style={ajustes.vibracion

@@ -127,9 +127,11 @@
 
 	function mantenerFoco(evento: KeyboardEvent) {
 		if (evento.key !== 'Tab') return;
-		const elementos = [...dialogo.querySelectorAll<HTMLElement>(
-			'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
-		)].filter((elemento) => !elemento.hidden);
+		const elementos = [
+			...dialogo.querySelectorAll<HTMLElement>(
+				'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+			)
+		].filter((elemento) => !elemento.hidden);
 		if (!elementos.length) return;
 		const primero = elementos[0]!;
 		const ultimo = elementos[elementos.length - 1]!;
@@ -144,7 +146,9 @@
 
 	onMount(() => {
 		focoAnterior = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-		void tick().then(() => dialogo.querySelector<HTMLElement>('input, button:not([disabled])')?.focus());
+		void tick().then(() =>
+			dialogo.querySelector<HTMLElement>('input, button:not([disabled])')?.focus()
+		);
 		return () => focoAnterior?.focus();
 	});
 </script>
@@ -173,7 +177,9 @@
 		<div class="mt-3 flex items-center justify-between gap-3">
 			<p class="text-sm font-bold">Editar serie</p>
 			{#if serie.fecha}
-				<p class="text-xs font-semibold" style="color: var(--muted)">{fechaCorta(serie.fecha, true)}</p>
+				<p class="text-xs font-semibold" style="color: var(--muted)">
+					{fechaCorta(serie.fecha, true)}
+				</p>
 			{/if}
 		</div>
 

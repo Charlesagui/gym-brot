@@ -450,6 +450,19 @@ export interface ImportPreparado {
 	avisos: string[];
 }
 
+function coincidePr(
+	set: Sesion['ejercicios'][number]['sets'][number] | undefined,
+	pr: NonNullable<Sesion['ejercicios'][number]['prCelebrado']>
+): boolean {
+	return (
+		!!set?.hecha &&
+		set.peso === pr.peso &&
+		set.reps === pr.reps &&
+		!!set.esMax === !!pr.esMax &&
+		(set.extraKg ?? 0) === (pr.extraKg ?? 0)
+	);
+}
+
 /**
  * Los type guards de `parseBackup` validan formas, no coherencia. Un backup editado
  * a mano (o de otra app) puede traer una sesión cuyo `id` no sea `${fecha}__${diaId}`:
@@ -479,6 +492,8 @@ export function prepararImport(data: Backup): ImportPreparado {
 	let idReparado = 0;
 	let colision = 0;
 	let sinDia = 0;
+	let prsReubicados = 0;
+	let prsDescartados = 0;
 	for (const sesion of data.sesiones ?? []) {
 		if (!fechaValida(sesion.fecha)) {
 			fechaInvalida++;
@@ -492,12 +507,38 @@ export function prepararImport(data: Backup): ImportPreparado {
 		}
 		idsSesion.add(idEsperado);
 		if (!idsDia.has(sesion.diaId)) sinDia++;
-		sesiones.push({ ...sesion, id: idEsperado });
+		const ejercicios = sesion.ejercicios.map((ejercicio) => {
+			// `prPesoCelebrado` existió antes del snapshot completo. Se acepta al parsear
+			// backups viejos, pero nunca vuelve a entrar a la base actual.
+			const { prPesoCelebrado: _legacy, ...actual } = ejercicio as typeof ejercicio & {
+				prPesoCelebrado?: number;
+			};
+			if (!actual.prCelebrado) return actual;
+
+			const indiceGuardado = actual.prCelebrado.setIndex;
+			const indice =
+				indiceGuardado != null && coincidePr(actual.sets[indiceGuardado], actual.prCelebrado)
+					? indiceGuardado
+					: actual.sets.findIndex((set) => coincidePr(set, actual.prCelebrado!));
+			if (indice < 0) {
+				prsDescartados++;
+				return { ...actual, prCelebrado: undefined };
+			}
+			if (indiceGuardado !== indice) {
+				prsReubicados++;
+				return { ...actual, prCelebrado: { ...actual.prCelebrado, setIndex: indice } };
+			}
+			return actual;
+		});
+		sesiones.push({ ...sesion, id: idEsperado, ejercicios });
 	}
 	if (fechaInvalida) avisos.push(`${fechaInvalida} sesión(es) con fecha inválida: se descartaron`);
 	if (idReparado) avisos.push(`${idReparado} sesión(es) con id inconsistente: se corrigieron`);
 	if (colision) avisos.push(`${colision} sesión(es) duplicadas: se conservó la primera`);
 	if (sinDia) avisos.push(`${sinDia} sesión(es) apuntan a una rutina que no está en el backup`);
+	if (prsReubicados) avisos.push(`${prsReubicados} PR(s) con índice antiguo: se reubicaron`);
+	if (prsDescartados)
+		avisos.push(`${prsDescartados} PR(s) sin una serie hecha que los respalde: se descartaron`);
 
 	const notas: Nota[] = [];
 	const idsNota = new Set<string>();
@@ -507,8 +548,34 @@ export function prepararImport(data: Backup): ImportPreparado {
 		notas.push(nota);
 	}
 
+	const ajustesRecibidos = data.ajustes ?? [];
+	if (ajustesRecibidos.length > 1)
+		avisos.push(`${ajustesRecibidos.length - 1} ajuste(s) duplicados: se conservó el primero`);
+	const ajustes = normalizarAjustes(ajustesRecibidos[0]);
+	let ajustesReparados = false;
+	if (!(ajustes.timer.minutos > 0)) {
+		ajustes.timer.minutos = AJUSTES_DEFAULT.timer.minutos;
+		ajustesReparados = true;
+	}
+	if (!(ajustes.pasoPeso > 0)) {
+		ajustes.pasoPeso = AJUSTES_DEFAULT.pasoPeso;
+		ajustesReparados = true;
+	}
+	if (ajustes.ultimoBackup && !Number.isFinite(Date.parse(ajustes.ultimoBackup))) {
+		ajustes.ultimoBackup = undefined;
+		ajustesReparados = true;
+	}
+	// Restaurar una lista de rutinas vacía es deliberado. Sin este flag, un backup
+	// vacío y antiguo recibía las rutinas de ejemplo al recargar. Si sí trae días,
+	// conservamos el valor original para que el ida y vuelta no altere datos sanos.
+	if (dias.length === 0) ajustes.seedInicialHecho = true;
+	if (ajustesRecibidos.length === 0)
+		avisos.push('El backup no traía ajustes: se usaron los valores predeterminados');
+	else if (ajustesReparados)
+		avisos.push('Había ajustes inválidos: se repararon con valores seguros');
+
 	return {
-		datos: { dias, sesiones, notas, ajustes: (data.ajustes ?? []).map(normalizarAjustes) },
+		datos: { dias, sesiones, notas, ajustes: [ajustes] },
 		avisos
 	};
 }
