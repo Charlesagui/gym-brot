@@ -6,10 +6,12 @@ import {
 	actualizarSetHistorial,
 	borrarSetHistorial,
 	ensureEjercicio,
+	ejercicioSesionObs,
 	historialObs,
-	historialPorModoObs,
+	historialPorModo,
 	hoyStr,
 	marcarDiaTerminado,
+	prepararEjercicioSesion,
 	registrarPrSiSupera,
 	reabrirDia,
 	reanudarEjercicio,
@@ -64,12 +66,30 @@ describe('sesion con IndexedDB', () => {
 		await addSet('push', 'press', '2026-01-05');
 		await removeSet('push', 'press', 2, '2026-01-05');
 
-		const sesion = await primerValor(sesionHoyObs('push', '2026-01-05'));
-		const sets = sesion?.ejercicios[0]?.sets;
+		const sesion = await primerValor(ejercicioSesionObs('push', 'press', '2026-01-05'));
+		const sets = sesion.sets;
 		expect(sets).toEqual([
 			{ peso: 80, reps: 10, hecha: true, esMax: true, extraKg: 2.5 },
 			{ peso: undefined, reps: undefined, hecha: false }
 		]);
+	});
+
+	it('prepara el ejercicio desde la rutina y expone solo el estado que consume la UI', async () => {
+		await db.dias.add({
+			id: 'push',
+			nombre: 'Push',
+			orden: 0,
+			ejercicios: [{ exerciseId: 'press', seriesObjetivo: 2, orden: 0 }]
+		});
+
+		const preparacion = await prepararEjercicioSesion('push', 'press', '2026-01-05');
+		const estado = await primerValor(ejercicioSesionObs('push', 'press', '2026-01-05'));
+
+		expect(preparacion).toEqual({ anteriores: [], anterioresFecha: null });
+		expect(estado).toEqual({
+			sets: [{ hecha: false }, { hecha: false }],
+			prCelebrado: null
+		});
 	});
 
 	it('el indice por ejercicio se mantiene al sumar ejercicios a la sesion', async () => {
@@ -142,10 +162,11 @@ describe('sesion con IndexedDB', () => {
 		await setReps('push', 'dominadas', 0, 8, '2026-01-02');
 		await setSerieHecha('push', 'dominadas', 0, true, '2026-01-02');
 
-		expect(await primerValor(historialPorModoObs('dominadas', 'peso', 'reps'))).toMatchObject([
+		const sesiones = await sesionesDe('dominadas');
+		expect(historialPorModo(sesiones, 'dominadas', 'peso', 'reps')).toMatchObject([
 			{ fecha: '2026-01-01', valor: 12 }
 		]);
-		expect(await primerValor(historialPorModoObs('dominadas', 'peso', 'peso'))).toMatchObject([
+		expect(historialPorModo(sesiones, 'dominadas', 'peso', 'peso')).toMatchObject([
 			{ fecha: '2026-01-02', valor: 10 }
 		]);
 	});

@@ -178,9 +178,8 @@
 	}
 
 	// --- Descarga de videos para uso sin señal ---
-	// El service worker ya no precachea los 962 videos (eran 22 MB en la primera
-	// visita): se guardan al verlos. Esto es para quien quiera dejarlos listos antes
-	// de ir a un gym sin datos.
+	// El service worker no precachea ni guarda automáticamente los 962 videos (22 MB).
+	// Esta es la única acción que los deja listos antes de ir a un gym sin datos.
 	let bajando = $state(false);
 	let bajados = $state(0);
 	let fallidos = $state(0);

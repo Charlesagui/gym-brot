@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { db, type MetricaPr } from '$lib/db';
 	import { liveQuery } from 'dexie';
-	import { DESCRIPCION_METRICA, type MetricaEfectiva } from '$lib/sesion';
+	import { DESCRIPCION_METRICA, type MetricaEfectiva } from '$lib/sesion-reglas';
 	import {
 		progresoPantallaObs,
 		type DatosProgresoEjercicio,

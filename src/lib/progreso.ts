@@ -1,16 +1,14 @@
 import { liveQuery } from 'dexie';
 import type { MetricaPr, PrCelebrado, Sesion, SetSesion } from './db';
+import { historialPorModo, sesionesDe, hoyStr } from './sesion';
 import {
-	historialPorModo,
 	mejorSet,
 	modoEjercicio,
-	sesionesDe,
-	hoyStr,
 	valorSet,
 	type MejorSet,
 	type MetricaEfectiva,
 	type ModoPr
-} from './sesion';
+} from './sesion-reglas';
 
 export interface SerieDeSesion {
 	set: SetSesion;
@@ -143,10 +141,6 @@ export function crearProgresoEjercicio(sesiones: Sesion[], exerciseId: string): 
 		.map(({ efectivo: _efectivo, ...r }) => r);
 
 	return { modo, mejorPeso, mejorE1rm, mejorReps, setRecords, sesiones: porSesion, totalSeries };
-}
-
-export function progresoEjercicioObs(exerciseId: string) {
-	return liveQuery(async () => crearProgresoEjercicio(await sesionesDe(exerciseId), exerciseId));
 }
 
 export function crearDatosProgresoEjercicio(

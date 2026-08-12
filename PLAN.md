@@ -44,7 +44,8 @@ Principios: botones grandes, una sola mano, dark mode, mínimos toques, animacio
 - **vite-pwa/sveltekit** → service worker, instalable, cache offline.
 - **Tailwind CSS** (touch targets grandes, dark mode, glows).
 - **Dexie.js** para datos del usuario.
-- **MP4 empaquetados** en la app (offline real) — no depender del CDN.
+- **MP4 locales** en `/videos`: se reproducen online bajo demanda y se descargan de forma
+  explícita desde Ajustes para uso offline, sin depender de un CDN.
 - Catálogo = **JSON estático** empaquetado (read-only).
 
 ---
@@ -58,7 +59,7 @@ Catálogo (JSON estático: ejercicios · nombre_es · grupo · demoVideo)
                               │
    Dexie.js (en el teléfono)  ──►  Días · sesiones · pesos/PR · notas · ajustes
                               │
-                          Todo offline · backup export/import a archivo
+                 Shell offline · videoteca offline opcional · backup a archivo
 ```
 
 ---
@@ -133,7 +134,8 @@ Ajustes:  darkMode · unidad(kg|lb) · timer{ activo, minutos }
 ## 9. Riesgos / a verificar
 
 - **Cobertura de TU gym**: los 30 son máquinas genéricas; confirmar que coinciden. (Agregar máquinas propias = diferido, §11.)
-- **Offline real**: MP4 empaquetados en la app para andar sin señal.
+- **Offline real**: shell y datos disponibles al instalar; videoteca offline opcional mediante
+  descarga explícita desde Ajustes.
 - **iOS**: puede borrar datos locales tras semanas sin abrir → mitigado con backup.
 - **Licencia animaciones** (ExerciseDB): uso personal OK; si se publica → licencia oficial (§11).
 

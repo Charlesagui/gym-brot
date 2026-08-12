@@ -7,7 +7,7 @@ import {
 	valorMetrica,
 	valorSet,
 	type MejorSet
-} from './sesion';
+} from './sesion-reglas';
 import type { Sesion } from './db';
 
 describe('serieCompleta', () => {
