@@ -185,7 +185,7 @@
 			<div class="mt-2 space-y-1">
 				{#each progreso.setRecords as record (record.reps)}
 					<div
-						class="flex min-h-10 items-center justify-between gap-2 rounded-lg bg-white/[0.025] px-3 py-2 text-xs"
+						class="flex min-h-11 items-center justify-between gap-2 rounded-lg bg-white/[0.025] px-3 py-2 text-xs"
 					>
 						<span class="font-bold tabular-nums" style="color: rgb({glow})"
 							>{record.reps} {record.reps === 1 ? 'rep' : 'reps'}</span

@@ -3,11 +3,21 @@ import {
 	mejorSet,
 	modoEjercicio,
 	pesoEfectivo,
+	serieCompleta,
 	valorMetrica,
 	valorSet,
 	type MejorSet
 } from './sesion';
 import type { Sesion } from './db';
+
+describe('serieCompleta', () => {
+	it('exige confirmación y repeticiones, pero permite ejercicios sin peso', () => {
+		expect(serieCompleta({ hecha: true, reps: 10 })).toBe(true);
+		expect(serieCompleta({ hecha: true, peso: 80, reps: 8 })).toBe(true);
+		expect(serieCompleta({ hecha: true, peso: 80 })).toBe(false);
+		expect(serieCompleta({ hecha: false, reps: 10 })).toBe(false);
+	});
+});
 
 describe('pesoEfectivo', () => {
 	it('devuelve null si el peso no esta cargado', () => {

@@ -25,6 +25,7 @@
 		DESCRIPCION_METRICA,
 		hoyStr,
 		sesionId,
+		serieCompleta,
 		type MejorSet,
 		type ModoPr,
 		type MetricaEfectiva
@@ -122,6 +123,7 @@
 	let tecnicaHistoryActiva = false;
 	// Una escritura que falla no puede pasar desapercibida: los datos viven solo acá.
 	let errorGuardado = $state<string | null>(null);
+	let avisoSerie = $state<string | null>(null);
 	// Cada serie acepta una sola intención mientras IndexedDB confirma el resultado.
 	// Esto evita que un doble toque convierta un "marcar" en "desmarcar".
 	let seriesPendientes = $state<Set<number>>(new Set());
@@ -243,8 +245,8 @@
 		if (prFlashId) clearTimeout(prFlashId);
 	});
 
-	const hechas = $derived(sets.filter((s) => s.hecha).length);
-	const completo = $derived(sets.length > 0 && hechas === sets.length);
+	const hechas = $derived(sets.filter(serieCompleta).length);
+	const completo = $derived(sets.length > 0 && sets.every(serieCompleta));
 	const unidad = $derived(ajustes.unidad);
 	const sonidoActivo = $derived(ajustes.sonido);
 	const vibracionActiva = $derived(ajustes.vibracion ?? true);
@@ -290,7 +292,7 @@
 
 	function mejorSetLocal(localSets: SetSesion[], soloHechas: boolean): MejorSet | null {
 		return localSets.reduce<MejorSet | null>((best, s, setIndex) => {
-			if (soloHechas && !s.hecha) return best;
+			if (soloHechas && !serieCompleta(s)) return best;
 			const valor = valorSet(s, metrica, modo);
 			if (valor == null) return best;
 			return mejorSet(best, {
@@ -390,6 +392,7 @@
 	function ajustarReps(i: number, delta: number) {
 		const reps = sumarReps(sets[i]?.reps, delta);
 		if (sets[i]) sets[i].reps = reps;
+		if (reps != null) avisoSerie = null;
 		escribir(setReps(diaId!, $page.params.id!, i, reps, fechaSesion, metrica));
 	}
 
@@ -428,6 +431,7 @@
 	function escribirReps(i: number, el: HTMLInputElement) {
 		const reps = leerReps(el.value);
 		if (sets[i]) sets[i].reps = reps;
+		if (reps != null) avisoSerie = null;
 		escribir(setReps(diaId!, $page.params.id!, i, reps, fechaSesion, metrica));
 		el.value = reps != null ? String(reps) : '';
 	}
@@ -437,6 +441,16 @@
 		const actual = sets[i];
 		if (!actual) return;
 		const objetivo = !actual.hecha;
+		if (objetivo && actual.reps == null) {
+			avisoSerie = `Ingresá las repeticiones de la serie ${i + 1} antes de marcarla.`;
+			requestAnimationFrame(() =>
+				document
+					.querySelector<HTMLInputElement>(`[aria-label="Reps de la serie ${i + 1}"]`)
+					?.focus({ preventScroll: true })
+			);
+			return;
+		}
+		avisoSerie = null;
 		// Antes de cualquier await: iOS exige gesto vivo para desbloquear el audio y
 		// para pedir el permiso de notificaciones.
 		if (objetivo && ajustes.timer.activo) descanso.prepararDesdeGesto();
@@ -585,7 +599,7 @@
 				<header class="gb-exercise-header mb-4 flex items-center gap-3">
 					<a
 						href={volver}
-						class="grid size-10 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
+						class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
 						aria-label="Volver">←</a
 					>
 					{#if !videoGrande}
@@ -687,7 +701,7 @@
 									{#if ej.maquinaPlacas && !mostrarHintMax}
 										<button
 											onclick={() => (mostrarHintMax = true)}
-											class="ml-1 inline-grid size-8 place-items-center align-middle text-[11px] font-bold normal-case"
+											class="ml-1 inline-grid size-11 place-items-center align-middle text-[11px] font-bold normal-case"
 											style="color: var(--muted)"
 											aria-label="Qué es MAX">ⓘ</button
 										>
@@ -713,7 +727,7 @@
 									<button
 										onclick={quitarSerie}
 										disabled={sets.length <= 1}
-										class="grid size-10 touch-manipulation place-items-center rounded-full text-sm font-bold disabled:opacity-35"
+										class="grid size-11 touch-manipulation place-items-center rounded-full text-sm font-bold disabled:opacity-35"
 										style="color: var(--muted)"
 										aria-label="Quitar serie de hoy">−</button
 									>
@@ -725,7 +739,7 @@
 									>
 									<button
 										onclick={() => escribir(addSet(diaId, $page.params.id!, fechaSesion))}
-										class="grid size-10 touch-manipulation place-items-center rounded-full text-sm font-bold"
+										class="grid size-11 touch-manipulation place-items-center rounded-full text-sm font-bold"
 										style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
 										aria-label="Agregar serie de hoy">+</button
 									>
@@ -741,19 +755,19 @@
 							<div class="mt-2 flex flex-wrap gap-2" aria-label="Configurar paso del peso">
 								<button
 									onclick={() => cambiarPasoEjercicio()}
-									class="min-h-10 rounded-lg px-3 text-xs font-bold"
+									class="min-h-11 rounded-lg px-3 text-xs font-bold"
 									aria-pressed={pasoPersonalizado == null}
 									style={pasoPersonalizado == null
-										? 'background: var(--accent); color: white'
+										? 'background: var(--accent); color: var(--on-accent)'
 										: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Automático</button
 								>
 								{#each opcionesPaso as paso (paso)}
 									<button
 										onclick={() => cambiarPasoEjercicio(paso)}
-										class="min-h-10 rounded-lg px-3 text-xs font-bold tabular-nums"
+										class="min-h-11 rounded-lg px-3 text-xs font-bold tabular-nums"
 										aria-pressed={pasoPersonalizado === paso}
 										style={pasoPersonalizado === paso
-											? 'background: var(--accent); color: white'
+											? 'background: var(--accent); color: var(--on-accent)'
 											: 'background: rgba(255,255,255,.06); color: var(--muted)'}
 										>{formatoNumero(paso)} {unidad}</button
 									>
@@ -773,6 +787,15 @@
 								Preparando series…
 							</p>
 						{:else}
+							{#if avisoSerie}
+								<p
+									class="mt-3 rounded-xl px-3 py-2.5 text-xs font-semibold leading-relaxed"
+									style="background: rgb(var(--max) / .1); color: rgb(var(--max))"
+									role="alert"
+								>
+									{avisoSerie}
+								</p>
+							{/if}
 							<div class="mt-3 space-y-2">
 								{#each sets as s, i (i)}
 									<SetRow
@@ -818,7 +841,7 @@
 									</p>
 									<button
 										onclick={entendidoHintMax}
-										class="shrink-0 text-xs font-bold"
+										class="min-h-11 shrink-0 px-2 text-xs font-bold"
 										style="color: rgb(var(--max))">Entendido</button
 									>
 								</div>
@@ -832,19 +855,19 @@
 							>
 							<button
 								onclick={apagarTimer}
-								class="min-h-10 rounded-full px-3.5 py-2 text-xs font-semibold"
+								class="min-h-11 rounded-full px-3.5 py-2 text-xs font-semibold"
 								aria-label="Apagar descanso"
 								style={!ajustes.timer.activo
-									? 'background: var(--accent); color: white'
+									? 'background: var(--accent); color: var(--on-accent)'
 									: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Off</button
 							>
 							{#each [1, 2, 3, 4, 5] as m (m)}
 								<button
 									onclick={() => cambiarTimer(m)}
-									class="min-h-10 rounded-full px-3.5 py-2 text-xs font-semibold"
+									class="min-h-11 rounded-full px-3.5 py-2 text-xs font-semibold"
 									aria-label={`Descanso ${m} ${m === 1 ? 'minuto' : 'minutos'}`}
 									style={ajustes.timer.activo && ajustes.timer.minutos === m
-										? 'background: var(--accent); color: white'
+										? 'background: var(--accent); color: var(--on-accent)'
 										: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{m}'</button
 								>
 							{/each}
@@ -859,12 +882,12 @@
 								</p>
 								<button
 									onclick={activarDescansoDesdeHint}
-									class="shrink-0 rounded-full px-3 py-1 text-xs font-bold"
-									style="background: var(--accent); color: white">Activar</button
+									class="min-h-11 shrink-0 rounded-full px-3 text-xs font-bold"
+									style="background: var(--accent); color: var(--on-accent)">Activar</button
 								>
 								<button
 									onclick={descartarHintTimer}
-									class="shrink-0 text-xs font-bold"
+									class="min-h-11 shrink-0 px-2 text-xs font-bold"
 									style="color: var(--muted)">Ahora no</button
 								>
 							</div>
@@ -965,7 +988,7 @@
 								onclick={terminarEjercicio}
 								disabled={!!exito}
 								class="block w-full rounded-2xl py-4 text-center font-bold"
-								style="background: rgb({g.glow}); color: white"
+								style="background: rgb({g.glow}); color: var(--on-bright)"
 								>{exito ? 'Cerrando…' : '✓ Volver al día'}</button
 							>
 						</div>
@@ -974,7 +997,7 @@
 							onclick={terminarEjercicio}
 							disabled={!!exito}
 							class="mt-4 block w-full rounded-2xl py-4 text-center font-bold"
-							style="background: var(--accent); color: white"
+							style="background: var(--accent); color: var(--on-accent)"
 							>{exito ? 'Cerrando…' : 'Terminar ejercicio'}</button
 						>
 					{/if}
@@ -1056,7 +1079,7 @@
 				</p>
 				<button
 					onclick={() => (errorGuardado = null)}
-					class="grid size-10 shrink-0 place-items-center rounded-full text-sm font-bold"
+					class="grid size-11 shrink-0 place-items-center rounded-full text-sm font-bold"
 					style="background: rgba(255,255,255,.08)"
 					aria-label="Cerrar aviso">✕</button
 				>

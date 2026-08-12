@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { fade, fly } from 'svelte/transition';
 	import { dur } from '$lib/motion';
+	import { modal } from '$lib/modal';
 
 	let {
 		titulo,
@@ -39,15 +40,17 @@
 	}
 </script>
 
-<svelte:window onkeydown={(e) => e.key === 'Escape' && !ocupado && onCancel()} />
-
-<div class="fixed inset-0 z-[80]">
+<div
+	use:modal={{ onClose: () => !ocupado && onCancel(), focoInicial: '[data-modal-inicial]' }}
+	class="fixed inset-0 z-[80]"
+>
 	<button
 		transition:fade={{ duration: dur(140) }}
 		onclick={() => !ocupado && onCancel()}
 		class="absolute inset-0 w-full"
 		style="background: rgb(var(--scrim) / .72)"
 		aria-label={cancelarTexto}
+		tabindex="-1"
 	></button>
 	<div
 		transition:fly={{ y: 220, duration: dur(220) }}
@@ -71,6 +74,7 @@
 		{/if}
 		<div class="mt-5 grid grid-cols-2 gap-2">
 			<button
+				data-modal-inicial
 				onclick={onCancel}
 				disabled={ocupado}
 				class="min-h-12 rounded-2xl px-4 text-sm font-bold disabled:opacity-60"
@@ -83,8 +87,8 @@
 				disabled={ocupado}
 				class="min-h-12 rounded-2xl px-4 text-sm font-bold disabled:opacity-60"
 				style={tono === 'danger'
-					? 'background: #ff6b6b; color: white'
-					: 'background: var(--accent); color: white'}
+					? 'background: #ff6b6b; color: var(--on-bright)'
+					: 'background: var(--accent); color: var(--on-accent)'}
 			>
 				{ocupado ? 'Procesando…' : confirmarTexto}
 			</button>

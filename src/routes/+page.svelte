@@ -7,7 +7,7 @@
 	import { onMount } from 'svelte';
 	import { db, type Dia, type Sesion } from '$lib/db';
 	import { crearDia, reordenarDias } from '$lib/dias';
-	import { hoyStr } from '$lib/sesion';
+	import { hoyStr, serieCompleta } from '$lib/sesion';
 	import { dur } from '$lib/motion';
 	import { mantener } from '$lib/mantener';
 	import { bienvenidaVisible, cerrarBienvenida } from '$lib/preferencias-ui';
@@ -48,12 +48,27 @@
 		ordenItems = e.detail.items;
 	}
 
-	function alSoltar(e: CustomEvent<DndEvent<ItemDia>>) {
-		ordenItems = e.detail.items;
+	function guardarOrdenDias() {
 		guardarSinBloquear(
 			reordenarDias(ordenItems.map((it) => it.id)),
 			'No se pudo guardar el nuevo orden de las rutinas. Intentá de nuevo.'
 		);
+	}
+
+	function alSoltar(e: CustomEvent<DndEvent<ItemDia>>) {
+		ordenItems = e.detail.items;
+		guardarOrdenDias();
+	}
+
+	function moverDia(id: string, delta: -1 | 1) {
+		const origen = ordenItems.findIndex((item) => item.id === id);
+		const destino = origen + delta;
+		if (origen < 0 || destino < 0 || destino >= ordenItems.length) return;
+		const nuevos = [...ordenItems];
+		const [movido] = nuevos.splice(origen, 1);
+		nuevos.splice(destino, 0, movido!);
+		ordenItems = nuevos;
+		guardarOrdenDias();
 	}
 
 	interface ProgresoDia {
@@ -77,8 +92,8 @@
 				completos++;
 				continue;
 			}
-			if (e.sets.some((s) => s.hecha)) conActividad++;
-			if (e.sets.every((s) => s.hecha)) completos++;
+			if (e.sets.some(serieCompleta)) conActividad++;
+			if (e.sets.every(serieCompleta)) completos++;
 		}
 		if (conActividad === 0 && !sesion.diaTerminado) return null;
 		return { completos, total: dia.ejercicios.length, terminado: !!sesion.diaTerminado };
@@ -125,7 +140,7 @@
 <main class="gb-page glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-12 pt-10">
 	<header class="mb-7 text-center">
 		<h1 class="text-3xl font-extrabold tracking-tight">
-			GYM<span style="color: var(--accent)">·</span>BROT
+			GYM<span style="color: var(--accent-text)">·</span>BROT
 		</h1>
 		<p class="mt-1 text-xs capitalize" style="color: var(--muted)">{nombresDia[hoy]}</p>
 	</header>
@@ -137,13 +152,15 @@
 		>
 			<button
 				onclick={cerrarWelcome}
-				class="absolute right-1 top-1 grid size-10 place-items-center text-sm font-bold"
+				class="absolute right-1 top-1 grid size-11 place-items-center text-sm font-bold"
 				style="color: var(--muted)"
 				aria-label="Cerrar bienvenida"
 			>
 				✕
 			</button>
-			<h2 class="text-sm font-bold" style="color: var(--accent)">👋 ¡Te damos la bienvenida!</h2>
+			<h2 class="text-sm font-bold" style="color: var(--accent-text)">
+				👋 ¡Te damos la bienvenida!
+			</h2>
 			<p class="mt-1.5 text-xs leading-relaxed" style="color: var(--muted)">
 				Agregamos rutinas de ejemplo para que explores la app. Podés editarlas o eliminarlas en
 				cualquier momento. ¡Comenzá tocando una rutina!
@@ -157,7 +174,7 @@
 				class="mb-3 text-center text-xs font-semibold uppercase tracking-wider"
 				style="color: var(--muted)"
 			>
-				Arrastrá para ordenar
+				Arrastrá o usá las flechas para ordenar
 			</p>
 			<section
 				use:dndzone={{ items: ordenItems, flipDurationMs: flipMs, dropTargetStyle: {} }}
@@ -182,13 +199,29 @@
 							<p class="truncate font-semibold leading-tight">{it.nombre}</p>
 							<p class="truncate text-xs" style="color: var(--muted)">{it.sub}</p>
 						</div>
+						<div class="flex shrink-0 gap-1">
+							<button
+								onpointerdown={(evento) => evento.stopPropagation()}
+								onclick={() => moverDia(it.id, -1)}
+								disabled={ordenItems[0]?.id === it.id}
+								class="grid size-11 place-items-center rounded-full bg-white/[0.06] text-sm disabled:opacity-30"
+								aria-label={`Subir ${it.nombre}`}>↑</button
+							>
+							<button
+								onpointerdown={(evento) => evento.stopPropagation()}
+								onclick={() => moverDia(it.id, 1)}
+								disabled={ordenItems.at(-1)?.id === it.id}
+								class="grid size-11 place-items-center rounded-full bg-white/[0.06] text-sm disabled:opacity-30"
+								aria-label={`Bajar ${it.nombre}`}>↓</button
+							>
+						</div>
 					</div>
 				{/each}
 			</section>
 			<button
 				onclick={() => (reordenando = false)}
 				class="mt-5 w-full rounded-2xl py-3 text-sm font-bold"
-				style="background: var(--accent); color: white">✓ Listo</button
+				style="background: var(--accent); color: var(--on-accent)">✓ Listo</button
 			>
 		{:else}
 			{@const hoyDias = $dias.filter((d) => d.diasSemana?.includes(hoy))}
@@ -243,12 +276,19 @@
 				</div>
 			{/if}
 
-			<p
-				class="mb-2 px-1 text-xs font-semibold uppercase tracking-wider"
-				style="color: var(--muted)"
-			>
-				Tus días
-			</p>
+			<div class="mb-2 flex min-h-11 items-center justify-between gap-3 px-1">
+				<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+					Tus días
+				</p>
+				{#if $dias.length > 1}
+					<button
+						onclick={entrarReordenar}
+						class="min-h-11 rounded-full px-3 text-xs font-bold"
+						style="color: var(--accent-text)"
+						aria-label="Reordenar rutinas">↕ Reordenar</button
+					>
+				{/if}
+			</div>
 			<div class="gb-landscape-cards space-y-3">
 				{#each $dias as d, i (d.id)}
 					{@const prog = progresoDia(d, $sesionesHoy)}
@@ -285,7 +325,7 @@
 			<button
 				onclick={nuevoDia}
 				class="mt-4 w-full rounded-2xl border border-dashed border-white/20 p-4 text-sm font-medium"
-				style="color: var(--accent)"
+				style="color: var(--accent-text)"
 			>
 				+ Nuevo día
 			</button>

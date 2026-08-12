@@ -224,7 +224,7 @@
 			<div class="mt-2 flex items-center gap-2">
 				<button
 					onclick={() => (esMax = !esMax)}
-					class="flex h-10 shrink-0 touch-manipulation items-center rounded-full border px-3 text-[11px] font-bold"
+					class="flex min-h-11 shrink-0 touch-manipulation items-center rounded-full border px-3 text-[11px] font-bold"
 					style={esMax
 						? 'background: rgb(var(--max) / .22); color: rgb(var(--max)); border-color: rgb(var(--max) / .5)'
 						: 'color: var(--muted); border-color: rgba(255,255,255,.16); border-style: dashed'}
@@ -263,7 +263,7 @@
 			onclick={guardar}
 			disabled={ocupado}
 			class="mt-4 block w-full rounded-2xl py-3.5 text-center font-bold disabled:opacity-60"
-			style="background: rgb({glow}); color: white"
+			style="background: rgb({glow}); color: var(--on-bright)"
 			>{ocupado ? 'Guardando…' : 'Guardar cambios'}</button
 		>
 
@@ -285,7 +285,7 @@
 					onclick={borrar}
 					disabled={ocupado}
 					class="rounded-xl px-3 py-2 text-xs font-bold disabled:opacity-60"
-					style="background: #ff6b6b; color: white">Borrar</button
+					style="background: #ff6b6b; color: var(--on-bright)">Borrar</button
 				>
 			</div>
 		{:else}

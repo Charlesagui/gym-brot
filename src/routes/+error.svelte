@@ -34,7 +34,7 @@
 		<a
 			href="/"
 			class="mt-4 block rounded-2xl py-3 text-center text-sm font-bold"
-			style="background: var(--accent); color: white">Volver al inicio</a
+			style="background: var(--accent); color: var(--on-accent)">Volver al inicio</a
 		>
 		<button
 			onclick={recargar}

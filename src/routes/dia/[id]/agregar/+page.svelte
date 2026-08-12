@@ -17,6 +17,7 @@
 	import { fromLiveQuery } from '$lib/live';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
 	import { reportarErrorDatos } from '$lib/errores-datos';
+	import { modal } from '$lib/modal';
 
 	const diaId = $derived($page.params.id!);
 	const cierrePorArrastrePx = 76;
@@ -177,7 +178,7 @@
 	<header class="mb-4 flex items-center gap-3">
 		<a
 			href={`/dia/${diaId}`}
-			class="grid size-10 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
+			class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
 			aria-label="Volver">←</a
 		>
 		<h1 class="flex-1 text-xl font-bold">Agregar ejercicio</h1>
@@ -192,17 +193,17 @@
 	<div class="gb-filter-row mb-4 flex flex-wrap gap-2">
 		<button
 			onclick={() => ((filtro = 'todos'), (q = ''))}
-			class="min-h-10 rounded-full px-3.5 py-2 text-xs font-semibold"
+			class="min-h-11 rounded-full px-3.5 py-2 text-xs font-semibold"
 			aria-pressed={filtroVisible === 'todos'}
 			style={filtroVisible === 'todos'
-				? 'background: var(--accent); color: white'
+				? 'background: var(--accent); color: var(--on-accent)'
 				: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Todos</button
 		>
 		{#each gruposList as gKey (gKey)}
 			{@const g = grupos[gKey]}
 			<button
 				onclick={() => ((filtro = gKey), (q = ''))}
-				class="min-h-10 rounded-full px-3.5 py-2 text-xs font-semibold"
+				class="min-h-11 rounded-full px-3.5 py-2 text-xs font-semibold"
 				aria-pressed={filtroVisible === gKey}
 				style={filtroVisible === gKey
 					? `background: rgb(${g.glow}); color: #000`
@@ -284,6 +285,7 @@
 	{@const g = grupos[p.grupo]}
 	{@const added = yaEn.has(p.id)}
 	<div
+		use:modal={{ onClose: cerrarPreview, focoInicial: '[data-modal-inicial]' }}
 		class="fixed inset-0 z-[60] flex items-center justify-center px-4"
 		style="padding-top: calc(1.5rem + env(safe-area-inset-top)); padding-bottom: calc(1.5rem + env(safe-area-inset-bottom))"
 		role="dialog"
@@ -322,8 +324,9 @@
 						<p class="truncate text-lg font-bold leading-tight">{p.nombre}</p>
 					</div>
 					<button
+						data-modal-inicial
 						onclick={cerrarPreview}
-						class="grid size-10 shrink-0 place-items-center rounded-full border border-white/10 text-xl font-bold"
+						class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-xl font-bold"
 						aria-label="Cerrar vista previa">×</button
 					>
 				</div>

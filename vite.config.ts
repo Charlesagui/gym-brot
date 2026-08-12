@@ -1,5 +1,5 @@
 import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import tailwindcss from '@tailwindcss/vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import { execFileSync } from 'node:child_process';
@@ -23,6 +23,7 @@ export default defineConfig({
 	},
 	test: {
 		environment: 'node',
+		exclude: [...configDefaults.exclude, 'e2e/**'],
 		coverage: {
 			provider: 'v8',
 			include: [
