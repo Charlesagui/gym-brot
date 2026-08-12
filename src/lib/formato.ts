@@ -25,7 +25,8 @@ interface SetDescribible {
 /** Resumen de un set (peso + extra MAX + reps + etiqueta MAX). La unidad solo aplica con peso. */
 export function formatoSet(set: SetDescribible, unidad: string): string {
 	// Modo reps (ejercicio sin peso): el set se describe solo por sus repeticiones.
-	if (set.peso == null) return set.reps != null ? `${set.reps} reps` : '—';
+	if (set.peso == null)
+		return set.reps != null ? `${set.reps} ${set.reps === 1 ? 'rep' : 'reps'}` : '—';
 	const extra = set.esMax && set.extraKg ? ` +${formatoNumero(set.extraKg)}` : '';
 	return `${formatoNumero(set.peso)}${extra} ${unidad}${set.reps ? ` × ${set.reps}` : ''}${set.esMax ? ' · MAX' : ''}`;
 }
@@ -39,8 +40,12 @@ export function formatoAnterior(set: SetSesion | undefined, unidad: Unidad): str
 }
 
 /** Fecha YYYY-MM-DD → "5 jun" (local, es). */
-export function fechaCorta(f: string | null): string {
+export function fechaCorta(f: string | null, incluirAno = false): string {
 	if (!f) return '';
 	const d = new Date(`${f}T00:00:00`);
-	return d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
+	return d.toLocaleDateString('es', {
+		day: 'numeric',
+		month: 'short',
+		...(incluirAno ? { year: 'numeric' } : {})
+	});
 }

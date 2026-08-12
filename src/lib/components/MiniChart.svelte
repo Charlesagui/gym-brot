@@ -1,21 +1,18 @@
 <script lang="ts">
 	import type { MejorSet } from '$lib/sesion';
 	import { formatoNumero } from '$lib/formato';
-	import { mantener } from '$lib/mantener';
 
 	let {
 		puntos,
 		glow,
 		metricaLabel,
-		unidad,
-		onEditarPunto
+		unidad
 	}: {
 		puntos: MejorSet[];
 		glow: string;
 		metricaLabel: string;
 		/** Unidad del valor: kg/lb, o "reps" en ejercicios sin peso. */
 		unidad: string;
-		onEditarPunto?: (punto: MejorSet) => void;
 	} = $props();
 
 	interface ChartPoint {
@@ -109,7 +106,6 @@
 			/>
 			{#each chart as p, i (`${p.x}-${p.y}`)}
 				<circle
-					use:mantener={() => onEditarPunto?.(p.source)}
 					cx={p.x}
 					cy={p.y}
 					r={i === chart.length - 1 ? 2.4 : 1.7}

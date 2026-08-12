@@ -64,7 +64,6 @@
 	import MiniChart from '$lib/components/MiniChart.svelte';
 	import CelebracionOverlay from '$lib/components/CelebracionOverlay.svelte';
 	import TecnicaModal from '$lib/components/TecnicaModal.svelte';
-	import EditarSerieSheet, { type SerieEditable } from '$lib/components/EditarSerieSheet.svelte';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
 
 	const ej = $derived(ejercicioPorId($page.params.id!));
@@ -82,12 +81,20 @@
 	let Progreso = $state<typeof import('$lib/components/ProgresoEjercicio.svelte').default | null>(
 		null
 	);
+	let errorProgreso = $state(false);
+	let intentoProgreso = $state(0);
 	$effect(() => {
+		intentoProgreso;
 		if (diaId || Progreso) return;
 		let vivo = true;
-		void import('$lib/components/ProgresoEjercicio.svelte').then((m) => {
-			if (vivo) Progreso = m.default;
-		});
+		errorProgreso = false;
+		void import('$lib/components/ProgresoEjercicio.svelte')
+			.then((m) => {
+				if (vivo) Progreso = m.default;
+			})
+			.catch(() => {
+				if (vivo) errorProgreso = true;
+			});
 		return () => {
 			vivo = false;
 		};
@@ -484,21 +491,6 @@
 		mostrarHintTimer = false;
 	}
 
-	// Serie histórica en edición (long-press en un punto del chart) → bottom sheet.
-	let serieEditando = $state<SerieEditable | null>(null);
-
-	function editarPuntoHistorial(punto: MejorSet) {
-		if (!punto.sesionId || punto.setIndex == null) return;
-		serieEditando = {
-			sesionId: punto.sesionId,
-			exerciseId: $page.params.id!,
-			setIndex: punto.setIndex,
-			set: { peso: punto.peso, reps: punto.reps, esMax: punto.esMax, extraKg: punto.extraKg },
-			fecha: punto.fecha,
-			maquinaPlacas: !!ej?.maquinaPlacas
-		};
-	}
-
 	/** Recompensa especial inmediata por PR: no bloquea el registro (pointer-events-none). */
 	function celebrarPrFlash(mejor: MejorSet) {
 		prFlash = mejor;
@@ -643,6 +635,11 @@
 						{pasoPeso}
 						maquinaPlacas={!!ej.maquinaPlacas}
 					/>
+				{:else if errorProgreso}
+					<div class="mt-6 rounded-2xl border border-white/10 p-4 text-center text-sm" style="color: var(--muted)">
+						<p>No se pudo cargar el progreso.</p>
+						<button onclick={() => (intentoProgreso += 1)} class="mt-3 min-h-11 rounded-xl px-4 font-bold" style="background: rgb({g.glow} / .18); color: rgb({g.glow})">Reintentar</button>
+					</div>
 				{:else}
 					<p class="mt-6 text-center text-sm" style="color: var(--muted)">Cargando progreso…</p>
 				{/if}
@@ -878,8 +875,8 @@
 							</p>
 							{#if valorOtraPr != null}
 								<p class="mt-0.5 text-[11px] font-medium" style="color: var(--muted)">
-									≈ {formatoNumero(valorOtraPr)}
-									{unidad} en {otraLabel}
+									Ese mismo set equivale a ≈ {formatoNumero(valorOtraPr)}
+									{unidad} como {otraLabel}
 								</p>
 							{/if}
 							<p
@@ -893,7 +890,6 @@
 								glow={g.glow}
 								{metricaLabel}
 								unidad={unidadValor}
-								onEditarPunto={editarPuntoHistorial}
 							/>
 							<!-- Link discreto: la operación manda, el progreso completo se consulta aparte. -->
 							<a
@@ -979,17 +975,6 @@
 			{metricaLabel}
 			{hechas}
 			total={sets.length}
-		/>
-	{/if}
-
-	{#if serieEditando && g}
-		<EditarSerieSheet
-			serie={serieEditando}
-			glow={g.glow}
-			{unidad}
-			{pasoPeso}
-			{metrica}
-			onClose={() => (serieEditando = null)}
 		/>
 	{/if}
 

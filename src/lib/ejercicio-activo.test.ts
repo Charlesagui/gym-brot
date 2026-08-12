@@ -15,7 +15,9 @@ describe('modoEjercicioActivo', () => {
 
 	it('usa peso cuando el historial o la sesion actual tienen peso', () => {
 		expect(modoEjercicioActivo([{ peso: 80 }], [{ hecha: false }])).toBe('peso');
-		expect(modoEjercicioActivo([], [{ peso: 40, reps: 10, hecha: false }])).toBe('peso');
+		// Escribir lastre pendiente no debe relabelar por un instante el historial de reps como kg.
+		expect(modoEjercicioActivo([], [{ peso: 40, reps: 10, hecha: false }])).toBe('reps');
+		expect(modoEjercicioActivo([], [{ peso: 40, reps: 10, hecha: true }])).toBe('peso');
 	});
 
 	it('usa reps cuando la sesion activa ya muestra trabajo sin peso', () => {

@@ -69,6 +69,13 @@ describe('crearHistorialResumen', () => {
 
 		expect(resumen.rachaSemanal).toBe(0);
 	});
+
+	it('no cuenta sesiones futuras como entrenamiento realizado', () => {
+		vi.setSystemTime(new Date('2026-01-07T12:00:00'));
+		const resumen = crearHistorialResumen([sesion('2026-01-06'), sesion('2026-01-08')], [dia]);
+		expect(resumen.totalDias).toBe(1);
+		expect(resumen.dias.map((d) => d.fecha)).toEqual(['2026-01-06']);
+	});
 });
 
 describe('resumenDiaSesion', () => {
