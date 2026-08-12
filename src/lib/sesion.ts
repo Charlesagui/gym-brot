@@ -28,15 +28,28 @@ export type MetricaEfectiva = MetricaPr | 'reps';
 /** Epley sobreestima fuerte con reps altas → tope en 12 (por encima puntúa como 12). */
 const TOPE_REPS_E1RM = 12;
 
+/** La interfaz muestra un decimal: comparar el mismo valor evita PRs fantasma por IEEE-754. */
+function normalizarValorPr(valor: number): number {
+	return Math.round(valor * 10) / 10;
+}
+
+const METRICAS_EFECTIVAS: MetricaEfectiva[] = ['peso', 'e1rm', 'reps'];
+
 /**
  * Valor de un set bajo la métrica elegida.
  * - `peso`: el peso efectivo tal cual.
  * - `e1rm`: 1RM estimado con Epley = peso × (1 + reps/30). reps se trata como ≥1 y ≤12.
  */
-export function valorMetrica(peso: number, reps: number | undefined, metrica: MetricaPr): number {
+export function valorMetrica(
+	peso: number,
+	reps: number | undefined,
+	metrica: MetricaPr
+): number | null {
 	if (metrica === 'e1rm') {
-		const r = Math.min(TOPE_REPS_E1RM, Math.max(1, reps ?? 1));
-		return peso * (1 + r / 30);
+		// Sin reps no hay una estimación honesta; volumen también considera incompleto ese set.
+		if (reps == null || reps <= 0) return null;
+		const r = Math.min(TOPE_REPS_E1RM, reps);
+		return normalizarValorPr(peso * (1 + r / 30));
 	}
 	return peso;
 }
@@ -50,7 +63,8 @@ export function valorSet(
 	metrica: MetricaPr,
 	modo: ModoPr = 'peso'
 ): number | null {
-	if (modo === 'reps') return set.reps ?? null;
+	// Reps sin carga y carga son progresiones distintas; nunca se convierten entre sí.
+	if (modo === 'reps') return set.peso == null ? (set.reps ?? null) : null;
 	const ef = pesoEfectivo(set);
 	return ef == null ? null : valorMetrica(ef, set.reps, metrica);
 }
@@ -58,7 +72,7 @@ export function valorSet(
 /** Explicación corta de cada métrica de PR — única fuente para toda la UI. */
 export const DESCRIPCION_METRICA: Record<MetricaEfectiva, string> = {
 	e1rm: 'El 1RM estimado (1 Repetición Máxima, fórmula de Epley) calcula tu fuerza máxima teórica a partir de peso y reps: 95 × 12 supera a 100 × 1. Premia la sobrecarga por repeticiones. Es fiable hasta ~12 reps: por encima se calcula como 12.',
-	peso: 'El récord es la serie de mayor peso, sin importar las reps. Simple y directo.',
+	peso: 'El récord es la serie de mayor peso, sin importar las reps. Si el peso se repite, mostramos la que tuvo más reps.',
 	reps: 'Este ejercicio se hace sin peso: el récord es la serie hecha con más repeticiones. La métrica de PR de Ajustes (peso/1RM) no aplica acá.'
 };
 
@@ -126,6 +140,15 @@ export function mejorSet(a: MejorSet | null, b: MejorSet): MejorSet {
 	return a;
 }
 
+function metricaDeSnapshot(pr: PrCelebrado): MetricaEfectiva {
+	// En datos viejos sin métrica se infiere sólo para recalcular; la UI los llama “PR registrado”.
+	return pr.metrica ?? (pr.peso == null ? 'reps' : 'peso');
+}
+
+function modoDeMetrica(metrica: MetricaEfectiva): ModoPr {
+	return metrica === 'reps' ? 'reps' : 'peso';
+}
+
 function mejorSetDeSeries(
 	sets: SetSesion[],
 	fecha: string,
@@ -150,18 +173,14 @@ function mejorSetDeSeries(
 	}, null);
 }
 
-function metricaEfectiva(metrica: MetricaPr, modo: ModoPr): MetricaPr | 'reps' {
-	return modo === 'reps' ? 'reps' : metrica;
-}
-
-function snapPr(set: MejorSet, metrica: MetricaPr, modo: ModoPr): PrCelebrado {
+function snapPr(set: MejorSet, metrica: MetricaEfectiva): PrCelebrado {
 	return {
 		peso: set.peso,
 		reps: set.reps,
 		esMax: set.esMax,
 		extraKg: set.extraKg,
 		setIndex: set.setIndex,
-		metrica: metricaEfectiva(metrica, modo)
+		metrica
 	};
 }
 
@@ -178,10 +197,25 @@ export async function sesionesDe(exerciseId: string): Promise<Sesion[]> {
 	return sesiones.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.id.localeCompare(b.id));
 }
 
-/** Mejor set hecho por sesión, ordenado por fecha — PR bajo la métrica elegida (o reps). */
+/** Mejor set hecho por sesión para una progresión homogénea: carga o reps sin carga. */
+export function historialPorModoObs(exerciseId: string, metrica: MetricaPr, modo: ModoPr) {
+	return liveQuery(async () => {
+		const todas = (await sesionesDe(exerciseId)).filter((sesion) => sesion.fecha <= hoyStr());
+		const puntos: MejorSet[] = [];
+		for (const s of todas) {
+			const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
+			if (!e) continue;
+			const mejor = mejorSetDeSeries(e.sets, s.fecha, metrica, s.id, modo);
+			if (mejor) puntos.push(mejor);
+		}
+		return puntos;
+	});
+}
+
+/** Serie principal: carga si ya existe una serie hecha con carga; si no, reps. */
 export function historialObs(exerciseId: string, metrica: MetricaPr = 'peso') {
 	return liveQuery(async () => {
-		const todas = await sesionesDe(exerciseId);
+		const todas = (await sesionesDe(exerciseId)).filter((sesion) => sesion.fecha <= hoyStr());
 		const modo = modoEjercicio(todas, exerciseId);
 		const puntos: MejorSet[] = [];
 		for (const s of todas) {
@@ -196,7 +230,9 @@ export function historialObs(exerciseId: string, metrica: MetricaPr = 'peso') {
 
 export function recordsGlobalesObs(metrica: MetricaPr = 'peso') {
 	return liveQuery(async () => {
-		const todas = await db.sesiones.orderBy('fecha').toArray();
+		const todas = (await db.sesiones.orderBy('fecha').toArray()).filter(
+			(sesion) => sesion.fecha <= hoyStr()
+		);
 		// Modo por ejercicio en una pasada: con algún set ✓ con peso puntúa por peso.
 		const conPeso = new Set<string>();
 		for (const s of todas)
@@ -238,9 +274,16 @@ export async function ultimaSesion(
 		.reverse()
 		.until(() => encontrada != null, true)
 		.each((s) => {
-			if (s.id === exceptoId || encontrada) return;
+			// No hay hora de inicio: otra rutina del mismo día no es un “anterior” confiable.
+			if (s.id === exceptoId || s.fecha >= fecha || encontrada) return;
 			const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
-			if (e && e.sets.length) encontrada = { sets: e.sets, fecha: s.fecha };
+			if (e?.sets.some((set) => set.hecha)) {
+				encontrada = {
+					// Conserva índices, pero no prellena datos de sets abandonados o borrados.
+					sets: e.sets.map((set) => (set.hecha ? set : { hecha: false })),
+					fecha: s.fecha
+				};
+			}
 		});
 	return encontrada;
 }
@@ -293,7 +336,7 @@ async function mutar(
 		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
 		if (!s || !e) return;
 		fn(e.sets, s);
-		if (recalcularPr) await recalcularPrCelebrado(s, exerciseId, metrica);
+		if (recalcularPr) await recalcularPrCelebrado(s, exerciseId);
 		await guardarSesion(s);
 	});
 }
@@ -314,12 +357,7 @@ async function mutar(
  * última, no hay posteriores que revalidar, y el barrido costaría un escaneo completo de
  * la tabla en cada toque de peso.
  */
-async function recalcularPrCelebrado(
-	sesion: Sesion,
-	exerciseId: string,
-	metrica: MetricaPr,
-	revalidarPosteriores = false
-) {
+async function recalcularPrCelebrado(sesion: Sesion, exerciseId: string, revalidarPosteriores = false) {
 	const ejercicio = sesion.ejercicios.find((x) => x.exerciseId === exerciseId);
 	if (!ejercicio?.prCelebrado && !revalidarPosteriores) return;
 
@@ -329,34 +367,50 @@ async function recalcularPrCelebrado(
 	const orden = [...todas.filter((s) => s.id !== sesion.id), sesion].sort(
 		(a, b) => a.fecha.localeCompare(b.fecha) || a.id.localeCompare(b.id)
 	);
-	const modo = modoEjercicio(orden, exerciseId);
-	const metricaDeHoy = metricaEfectiva(metrica, modo);
-
-	let valorPrevio: number | null = null;
+	const previos = new Map<MetricaEfectiva, number | null>(
+		METRICAS_EFECTIVAS.map((metrica) => [metrica, null])
+	);
 	for (const s of orden) {
 		const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
-		const mejor = e ? mejorSetDeSeries(e.sets, s.fecha, metrica, s.id, modo) : null;
-		// Un PR se juzga solo contra lo que existía ANTES. Incluir sesiones futuras hacía
-		// desaparecer un récord válido del pasado al corregir una serie vieja.
-		const esRecord = mejor != null && (valorPrevio == null || mejor.valor > valorPrevio);
-
-		if (s.id === sesion.id) {
-			if (ejercicio?.prCelebrado) {
-				ejercicio.prCelebrado = esRecord && mejor ? snapPr(mejor, metrica, modo) : undefined;
-			}
-		} else if (
-			revalidarPosteriores &&
-			e?.prCelebrado &&
-			!esRecord &&
-			// Un PR solo se juzga con la métrica con la que se celebró: degradar uno de otra
-			// época bajo una métrica distinta borraría historia legítima.
-			(e.prCelebrado.metrica ?? 'peso') === metricaDeHoy
-		) {
-			e.prCelebrado = undefined;
-			await guardarSesion(s);
+		const mejores = new Map<MetricaEfectiva, MejorSet | null>();
+		for (const metrica of METRICAS_EFECTIVAS) {
+			mejores.set(
+				metrica,
+				e
+					? mejorSetDeSeries(
+							e.sets,
+							s.fecha,
+							metrica === 'reps' ? 'peso' : metrica,
+							s.id,
+							modoDeMetrica(metrica)
+						)
+					: null
+			);
 		}
 
-		if (mejor && (valorPrevio == null || mejor.valor > valorPrevio)) valorPrevio = mejor.valor;
+		if (e?.prCelebrado) {
+			const metricaPr = metricaDeSnapshot(e.prCelebrado);
+			const mejor = mejores.get(metricaPr) ?? null;
+			const previo = previos.get(metricaPr) ?? null;
+			// Cada celebración se juzga contra el pasado con SU métrica, no con Ajustes actuales.
+			if (!mejor || (previo != null && mejor.valor <= previo)) {
+				e.prCelebrado = undefined;
+				if (s.id !== sesion.id && revalidarPosteriores) await guardarSesion(s);
+			} else {
+				// No inventamos una etiqueta de métrica en PRs heredados: sólo se usa internamente
+				// para comprobarlos. La interfaz los presenta como “PR registrado”.
+				e.prCelebrado = e.prCelebrado.metrica
+					? snapPr(mejor, metricaPr)
+					: { ...snapPr(mejor, metricaPr), metrica: undefined };
+				if (s.id !== sesion.id && revalidarPosteriores) await guardarSesion(s);
+			}
+		}
+
+		for (const metrica of METRICAS_EFECTIVAS) {
+			const mejor = mejores.get(metrica);
+			const previo = previos.get(metrica) ?? null;
+			if (mejor && (previo == null || mejor.valor > previo)) previos.set(metrica, mejor.valor);
+		}
 	}
 }
 
@@ -389,7 +443,7 @@ export function actualizarSetHistorial(
 		set.esMax = cambios.esMax;
 		set.extraKg = cambios.extraKg;
 		// Editar el historial puede invalidar el PR de sesiones POSTERIORES a esta.
-		await recalcularPrCelebrado(s, exerciseId, metrica, true);
+		await recalcularPrCelebrado(s, exerciseId, true);
 		await guardarSesion(s);
 		return true;
 	});
@@ -408,7 +462,7 @@ export function borrarSetHistorial(
 		if (!s || !set?.hecha) return false;
 		set.hecha = false;
 		reabrirSesion(s);
-		await recalcularPrCelebrado(s, exerciseId, metrica, true);
+		await recalcularPrCelebrado(s, exerciseId, true);
 		await guardarSesion(s);
 		return true;
 	});
@@ -455,7 +509,7 @@ export function setSerieHecha(
 		}
 		if (!hecha) {
 			reabrirSesion(s);
-			if (cambio) await recalcularPrCelebrado(s, exerciseId, metrica);
+			if (cambio) await recalcularPrCelebrado(s, exerciseId);
 		}
 		if (cambio) await guardarSesion(s);
 		return {
@@ -634,20 +688,33 @@ export function registrarPrSiSupera(
 		if (!s || !e || !set?.hecha) return null;
 
 		const todas = await sesionesDe(exerciseId);
-		const modo = modoEjercicio(todas, exerciseId);
-		const valor = valorSet(set, metrica, modo);
+		const metricaEfectiva: MetricaEfectiva = set.peso == null ? 'reps' : metrica;
+		const modo = modoDeMetrica(metricaEfectiva);
+		const valor = valorSet(set, metricaEfectiva === 'reps' ? 'peso' : metricaEfectiva, modo);
 		if (valor == null) return null;
 
-		// "Previo" = todas las demás sesiones, incluida otra rutina del mismo día.
+		// “Previo” es sólo lo que existía cronológicamente antes de esta sesión. Mirar
+		// sesiones futuras hacía negar récords históricos válidos al cargar/editar datos.
 		const mejorPrevio = todas.reduce<number | null>((best, otra) => {
-			if (otra.id === s.id) return best;
+			if (otra.id === s.id || otra.fecha > s.fecha || (otra.fecha === s.fecha && otra.id > s.id)) {
+				return best;
+			}
 			const eo = otra.ejercicios.find((x) => x.exerciseId === exerciseId);
 			if (!eo) return best;
-			const mejor = mejorSetDeSeries(eo.sets, otra.fecha, metrica, otra.id, modo);
+			const mejor = mejorSetDeSeries(
+				eo.sets,
+				otra.fecha,
+				metricaEfectiva === 'reps' ? 'peso' : metricaEfectiva,
+				otra.id,
+				modo
+			);
 			if (!mejor) return best;
 			return best == null || mejor.valor > best ? mejor.valor : best;
 		}, null);
-		const yaCelebrado = e.prCelebrado ? valorSet(e.prCelebrado, metrica, modo) : null;
+		const yaCelebrado =
+			e.prCelebrado && metricaDeSnapshot(e.prCelebrado) === metricaEfectiva
+				? valorSet(e.prCelebrado, metricaEfectiva === 'reps' ? 'peso' : metricaEfectiva, modo)
+				: null;
 
 		const supera =
 			(mejorPrevio == null || valor > mejorPrevio) && (yaCelebrado == null || valor > yaCelebrado);
@@ -663,7 +730,7 @@ export function registrarPrSiSupera(
 			sesionId: s.id,
 			setIndex
 		};
-		e.prCelebrado = snapPr(ganador, metrica, modo);
+		e.prCelebrado = snapPr(ganador, metricaEfectiva);
 		await guardarSesion(s);
 		return ganador;
 	});

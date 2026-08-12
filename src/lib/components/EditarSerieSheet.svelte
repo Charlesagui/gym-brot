@@ -11,6 +11,7 @@
 </script>
 
 <script lang="ts">
+	import { onMount, tick } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
 	import type { MetricaPr } from '$lib/db';
 	import { actualizarSetHistorial, borrarSetHistorial } from '$lib/sesion';
@@ -48,6 +49,8 @@
 	let confirmandoBorrado = $state(false);
 	let ocupado = $state(false);
 	let error = $state<string | null>(null);
+	let dialogo: HTMLDivElement;
+	let focoAnterior: HTMLElement | null = null;
 
 	const NO_ENCONTRADA =
 		'No se encontró esta serie: puede haberse editado en otra pestaña o restaurado un backup. Volvé atrás y abrila de nuevo.';
@@ -121,9 +124,32 @@
 			borrarSetHistorial(serie.sesionId, serie.exerciseId, serie.setIndex, metrica)
 		);
 	}
+
+	function mantenerFoco(evento: KeyboardEvent) {
+		if (evento.key !== 'Tab') return;
+		const elementos = [...dialogo.querySelectorAll<HTMLElement>(
+			'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+		)].filter((elemento) => !elemento.hidden);
+		if (!elementos.length) return;
+		const primero = elementos[0]!;
+		const ultimo = elementos[elementos.length - 1]!;
+		if (evento.shiftKey && document.activeElement === primero) {
+			evento.preventDefault();
+			ultimo.focus();
+		} else if (!evento.shiftKey && document.activeElement === ultimo) {
+			evento.preventDefault();
+			primero.focus();
+		}
+	}
+
+	onMount(() => {
+		focoAnterior = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+		void tick().then(() => dialogo.querySelector<HTMLElement>('input, button:not([disabled])')?.focus());
+		return () => focoAnterior?.focus();
+	});
 </script>
 
-<svelte:window onkeydown={(e) => e.key === 'Escape' && onClose()} />
+<svelte:window onkeydown={(e) => (e.key === 'Escape' && !ocupado ? onClose() : mantenerFoco(e))} />
 
 <div class="fixed inset-0 z-[70]">
 	<button
@@ -132,12 +158,14 @@
 		class="absolute inset-0 w-full"
 		style="background: rgb(var(--scrim) / .72)"
 		aria-label="Cerrar sin guardar"
+		tabindex="-1"
 	></button>
 	<div
 		transition:fly={{ y: 220, duration: dur(220) }}
 		role="dialog"
 		aria-modal="true"
 		aria-label="Editar serie histórica"
+		bind:this={dialogo}
 		class="absolute inset-x-0 bottom-0 mx-auto max-w-md rounded-t-3xl border-t border-white/10 px-5 pt-3"
 		style="background: var(--surface); padding-bottom: calc(1.25rem + env(safe-area-inset-bottom))"
 	>
@@ -145,7 +173,7 @@
 		<div class="mt-3 flex items-center justify-between gap-3">
 			<p class="text-sm font-bold">Editar serie</p>
 			{#if serie.fecha}
-				<p class="text-xs font-semibold" style="color: var(--muted)">{fechaCorta(serie.fecha)}</p>
+				<p class="text-xs font-semibold" style="color: var(--muted)">{fechaCorta(serie.fecha, true)}</p>
 			{/if}
 		</div>
 

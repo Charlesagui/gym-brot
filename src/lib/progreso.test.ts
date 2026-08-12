@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Sesion, SetSesion } from './db';
 import { crearProgresoEjercicio, indexSetPr } from './progreso';
 
@@ -37,6 +37,21 @@ describe('indexSetPr', () => {
 });
 
 describe('crearProgresoEjercicio', () => {
+	afterEach(() => vi.useRealTimers());
+
+	it('no presenta sesiones futuras como progreso realizado', () => {
+		vi.setSystemTime(new Date('2026-01-07T12:00:00'));
+		const progreso = crearProgresoEjercicio(
+			[
+				sesion('2026-01-06', [{ peso: 80, reps: 8, hecha: true }]),
+				sesion('2026-01-08', [{ peso: 120, reps: 8, hecha: true }])
+			],
+			'press'
+		);
+		expect(progreso.mejorPeso).toMatchObject({ valor: 80 });
+		expect(progreso.sesiones.map((sesion) => sesion.fecha)).toEqual(['2026-01-06']);
+	});
+
 	it('deriva records, set records por reps e historial descendente en una pasada', () => {
 		const progreso = crearProgresoEjercicio(
 			[
@@ -59,7 +74,7 @@ describe('crearProgresoEjercicio', () => {
 		// Peso maximo: el set MAX con extra (efectivo 102.5).
 		expect(progreso.mejorPeso).toMatchObject({ peso: 100, extraKg: 2.5, valor: 102.5 });
 		// e1RM: 102.5 × (1 + 5/30).
-		expect(progreso.mejorE1rm?.valor).toBeCloseTo(119.583, 3);
+		expect(progreso.mejorE1rm?.valor).toBe(119.6);
 		// Set records: mejor peso efectivo por cantidad de reps, ordenado por reps.
 		expect(progreso.setRecords).toHaveLength(2);
 		expect(progreso.setRecords[0]).toMatchObject({ reps: 5, fecha: '2026-01-08' });

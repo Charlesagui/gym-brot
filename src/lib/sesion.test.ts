@@ -27,10 +27,12 @@ describe('valorMetrica', () => {
 		expect(valorMetrica(100, 12, 'peso')).toBe(100);
 	});
 
-	it('calcula Epley tratando reps undefined o 0 como al menos 1', () => {
-		expect(valorMetrica(100, undefined, 'e1rm')).toBeCloseTo(103.333, 3);
-		expect(valorMetrica(100, 0, 'e1rm')).toBeCloseTo(103.333, 3);
+	it('calcula Epley sólo con reps válidas y redondea al valor visible', () => {
+		expect(valorMetrica(100, undefined, 'e1rm')).toBeNull();
+		expect(valorMetrica(100, 0, 'e1rm')).toBeNull();
 		expect(valorMetrica(100, 12, 'e1rm')).toBe(140);
+		expect(valorMetrica(70, 10, 'e1rm')).toBe(93.3);
+		expect(valorMetrica(80, 5, 'e1rm')).toBe(93.3);
 	});
 
 	it('Epley con tope: por encima de 12 reps puntua igual que 12', () => {
@@ -50,6 +52,7 @@ describe('valorSet', () => {
 		expect(valorSet({ reps: 14 }, 'peso', 'reps')).toBe(14);
 		expect(valorSet({ reps: 14 }, 'e1rm', 'reps')).toBe(14);
 		expect(valorSet({}, 'peso', 'reps')).toBeNull();
+		expect(valorSet({ peso: 5, reps: 8 }, 'peso', 'reps')).toBeNull();
 	});
 });
 

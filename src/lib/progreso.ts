@@ -4,8 +4,10 @@ import {
 	mejorSet,
 	modoEjercicio,
 	sesionesDe,
+	hoyStr,
 	valorSet,
 	type MejorSet,
+	type MetricaEfectiva,
 	type ModoPr
 } from './sesion';
 
@@ -14,13 +16,17 @@ export interface SerieDeSesion {
 	setIndex: number;
 	sesionId: string;
 	fecha: string;
+	diaId: string;
 	/** Esta serie es la que celebró el PR de su sesión. */
 	esPr: boolean;
+	/** Métrica guardada al celebrar este PR. Indefinida en registros antiguos. */
+	metricaPr?: MetricaEfectiva;
 }
 
 export interface SesionDeEjercicio {
 	sesionId: string;
 	fecha: string;
+	diaId: string;
 	series: SerieDeSesion[];
 }
 
@@ -66,7 +72,9 @@ export function indexSetPr(sets: SetSesion[], pr: PrCelebrado | undefined): numb
  * sobre las sesiones (escala personal: ~300 sesiones/año).
  */
 export function crearProgresoEjercicio(sesiones: Sesion[], exerciseId: string): ProgresoEjercicio {
-	const modo = modoEjercicio(sesiones, exerciseId);
+	// Una sesión marcada para una fecha futura sigue siendo planificación, no un récord histórico.
+	const sesionesPasadas = sesiones.filter((sesion) => sesion.fecha <= hoyStr());
+	const modo = modoEjercicio(sesionesPasadas, exerciseId);
 	let mejorPeso: MejorSet | null = null;
 	let mejorE1rm: MejorSet | null = null;
 	let mejorReps: MejorSet | null = null;
@@ -74,14 +82,23 @@ export function crearProgresoEjercicio(sesiones: Sesion[], exerciseId: string): 
 	const porSesion: SesionDeEjercicio[] = [];
 	let totalSeries = 0;
 
-	for (const s of sesiones) {
+	for (const s of sesionesPasadas) {
 		const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
 		if (!e) continue;
 		const iPr = indexSetPr(e.sets, e.prCelebrado);
+		const metricaPr = e.prCelebrado?.metrica;
 		const series: SerieDeSesion[] = [];
 		e.sets.forEach((set, setIndex) => {
 			if (!set.hecha) return;
-			series.push({ set, setIndex, sesionId: s.id, fecha: s.fecha, esPr: setIndex === iPr });
+			series.push({
+				set,
+				setIndex,
+				sesionId: s.id,
+				fecha: s.fecha,
+				diaId: s.diaId,
+				esPr: setIndex === iPr,
+				metricaPr: setIndex === iPr ? metricaPr : undefined
+			});
 			totalSeries++;
 			const candidato = (valor: number): MejorSet => ({
 				peso: set.peso,
@@ -96,7 +113,8 @@ export function crearProgresoEjercicio(sesiones: Sesion[], exerciseId: string): 
 			const vPeso = valorSet(set, 'peso');
 			if (vPeso != null) {
 				mejorPeso = mejorSet(mejorPeso, candidato(vPeso));
-				mejorE1rm = mejorSet(mejorE1rm, candidato(valorSet(set, 'e1rm')!));
+				const vE1rm = valorSet(set, 'e1rm');
+				if (vE1rm != null) mejorE1rm = mejorSet(mejorE1rm, candidato(vE1rm));
 				if (set.reps != null) {
 					const previo = records.get(set.reps);
 					// Empate de peso → se conserva la primera vez que se logró.
@@ -108,10 +126,10 @@ export function crearProgresoEjercicio(sesiones: Sesion[], exerciseId: string): 
 			const vReps = valorSet(set, 'peso', 'reps');
 			if (vReps != null) mejorReps = mejorSet(mejorReps, candidato(vReps));
 		});
-		if (series.length) porSesion.push({ sesionId: s.id, fecha: s.fecha, series });
+		if (series.length) porSesion.push({ sesionId: s.id, fecha: s.fecha, diaId: s.diaId, series });
 	}
 
-	porSesion.sort((a, b) => b.fecha.localeCompare(a.fecha));
+	porSesion.sort((a, b) => b.fecha.localeCompare(a.fecha) || b.sesionId.localeCompare(a.sesionId));
 	const setRecords = [...records.values()]
 		.sort((a, b) => a.reps - b.reps)
 		.map(({ efectivo: _efectivo, ...r }) => r);

@@ -1,7 +1,8 @@
 <script lang="ts">
-	import type { MetricaPr } from '$lib/db';
+	import { db, type MetricaPr } from '$lib/db';
+	import { liveQuery } from 'dexie';
 	import {
-		historialObs,
+		historialPorModoObs,
 		DESCRIPCION_METRICA,
 		type MejorSet,
 		type MetricaEfectiva
@@ -40,12 +41,16 @@
 
 	const progresoStore = $derived(fromLiveQuery(progresoEjercicioObs(exerciseId), VACIO));
 	const progreso = $derived($progresoStore);
-	const historialStore = $derived(
-		fromLiveQuery(historialObs(exerciseId, metrica), [] as MejorSet[])
+	const puntosCargaStore = $derived(
+		fromLiveQuery(historialPorModoObs(exerciseId, metrica, 'peso'), [] as MejorSet[])
 	);
-	const puntos = $derived($historialStore);
+	const puntosRepsStore = $derived(
+		fromLiveQuery(historialPorModoObs(exerciseId, metrica, 'reps'), [] as MejorSet[])
+	);
 
 	const modoReps = $derived(progreso.modo === 'reps');
+	const puntos = $derived(modoReps ? $puntosRepsStore : $puntosCargaStore);
+	const hayHistorialMixto = $derived(!modoReps && $puntosCargaStore.length > 0 && $puntosRepsStore.length > 0);
 	const metricaEfectiva = $derived<MetricaEfectiva>(modoReps ? 'reps' : metrica);
 	const metricaLabel = $derived(
 		modoReps ? 'reps máximas' : metrica === 'e1rm' ? '1RM estimado' : 'peso máximo'
@@ -56,6 +61,13 @@
 	let visibles = $state(15);
 	// Serie en edición → bottom sheet (sin prompt/confirm nativos).
 	let serieEditando = $state<SerieEditable | null>(null);
+	const diasStore = fromLiveQuery(liveQuery(() => db.dias.toArray()), []);
+	const nombreDia = $derived(new Map($diasStore.map((dia) => [dia.id, dia.nombre])));
+
+	function etiquetaPr(metricaPr: MetricaEfectiva | undefined): string {
+		if (!metricaPr) return 'PR registrado';
+		return `PR de ${metricaPr === 'reps' ? 'reps máximas' : metricaPr === 'e1rm' ? '1RM estimado' : 'peso máximo'}`;
+	}
 </script>
 
 <section class="mt-6 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
@@ -69,8 +81,33 @@
 		</p>
 	</div>
 	<div class="mt-3">
-		<ChartProgreso {puntos} {glow} {metricaLabel} unidad={unidadValor} />
+		<ChartProgreso
+			{puntos}
+			{glow}
+			{metricaLabel}
+			unidad={unidadValor}
+			seriesHechas={progreso.totalSeries}
+			cargando={progreso === VACIO}
+		/>
 	</div>
+	{#if hayHistorialMixto}
+		<div class="mt-5 border-t border-white/10 pt-4">
+			<p class="text-xs font-bold" style="color: var(--muted)">Progreso sin carga</p>
+			<p class="mt-1 text-[11px] leading-relaxed" style="color: var(--muted)">
+				Las reps previas se muestran aparte: no son comparables con series con peso o lastre.
+			</p>
+			<div class="mt-3">
+				<ChartProgreso
+					puntos={$puntosRepsStore}
+					{glow}
+					metricaLabel="reps máximas"
+					unidad="reps"
+					seriesHechas={progreso.totalSeries}
+					cargando={progreso === VACIO}
+				/>
+			</div>
+		</div>
+	{/if}
 	<p
 		class="mt-3 border-t border-white/5 pt-2 text-[11px] leading-relaxed"
 		style="color: var(--muted)"
@@ -79,7 +116,7 @@
 	</p>
 </section>
 
-{#if progreso.mejorPeso || progreso.mejorReps}
+	{#if progreso !== VACIO && (progreso.mejorPeso || progreso.mejorReps)}
 	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
 		<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
 			Récords
@@ -95,7 +132,7 @@
 						<span class="ml-1 text-sm font-semibold" style="color: var(--muted)">reps</span>
 					</p>
 					<p class="mt-0.5 text-[11px]" style="color: var(--muted)">
-						{fechaCorta(progreso.mejorReps.fecha)}
+						{fechaCorta(progreso.mejorReps.fecha, true)}
 					</p>
 				</div>
 			{:else}
@@ -109,7 +146,7 @@
 							<span class="ml-1 text-sm font-semibold" style="color: var(--muted)">{unidad}</span>
 						</p>
 						<p class="mt-0.5 text-[11px]" style="color: var(--muted)">
-							{formatoSet(progreso.mejorPeso, unidad)} · {fechaCorta(progreso.mejorPeso.fecha)}
+							{formatoSet(progreso.mejorPeso, unidad)} · {fechaCorta(progreso.mejorPeso.fecha, true)}
 						</p>
 					</div>
 				{/if}
@@ -123,7 +160,7 @@
 							<span class="ml-1 text-sm font-semibold" style="color: var(--muted)">{unidad}</span>
 						</p>
 						<p class="mt-0.5 text-[11px]" style="color: var(--muted)">
-							{formatoSet(progreso.mejorE1rm, unidad)} · {fechaCorta(progreso.mejorE1rm.fecha)}
+							{formatoSet(progreso.mejorE1rm, unidad)} · {fechaCorta(progreso.mejorE1rm.fecha, true)}
 						</p>
 					</div>
 				{/if}
@@ -144,7 +181,7 @@
 						>
 						<span class="font-semibold tabular-nums">{formatoSet(record.set, unidad)}</span>
 						<span class="w-14 text-right" style="color: var(--muted)"
-							>{fechaCorta(record.fecha)}</span
+							>{fechaCorta(record.fecha, true)}</span
 						>
 					</div>
 				{/each}
@@ -157,7 +194,11 @@
 	<p class="mb-2 px-1 text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
 		Historial completo
 	</p>
-	{#if progreso.sesiones.length === 0}
+	{#if progreso === VACIO}
+		<p class="rounded-2xl border border-dashed border-white/15 p-6 text-center text-sm" style="color: var(--muted)">
+			Cargando historial…
+		</p>
+	{:else if progreso.sesiones.length === 0}
 		<p
 			class="rounded-2xl border border-dashed border-white/15 p-6 text-center text-sm"
 			style="color: var(--muted)"
@@ -170,8 +211,13 @@
 				<article class="rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
 					<div class="flex items-center justify-between gap-3">
 						<a href={`/historial/dia/${sesion.fecha}`} class="text-sm font-bold">
-							{fechaCorta(sesion.fecha)}
+							{fechaCorta(sesion.fecha, true)}
 						</a>
+						{#if nombreDia.get(sesion.diaId)}
+							<span class="min-w-0 flex-1 truncate text-[11px]" style="color: var(--muted)">
+								{nombreDia.get(sesion.diaId)}
+							</span>
+						{/if}
 						<span class="text-[11px] font-medium" style="color: var(--muted)">
 							{sesion.series.length}
 							{sesion.series.length === 1 ? 'serie' : 'series'}
@@ -190,13 +236,13 @@
 										maquinaPlacas
 									})}
 								class="flex min-h-11 w-full items-center gap-2 rounded-lg bg-white/[0.025] px-3 py-2 text-left text-xs"
-								aria-label={`Editar serie ${formatoSet(serie.set, unidad)} del ${fechaCorta(serie.fecha)}`}
+								aria-label={`Editar serie ${formatoSet(serie.set, unidad)} del ${fechaCorta(serie.fecha, true)}`}
 							>
 								<span class="min-w-0 flex-1 truncate font-semibold tabular-nums">
 									{formatoSet(serie.set, unidad)}
 								</span>
 								{#if serie.esPr}
-									<span class="shrink-0" aria-label={`PR de ${metricaLabel}`}>🏆</span>
+									<span class="shrink-0" aria-label={etiquetaPr(serie.metricaPr)}>🏆</span>
 								{/if}
 								<span class="shrink-0 text-[10px]" style="color: var(--muted)">✎</span>
 							</button>
