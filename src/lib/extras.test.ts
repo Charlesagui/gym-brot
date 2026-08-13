@@ -359,6 +359,34 @@ describe('prepararImport', () => {
 		expect(avisos.join(' ')).toContain('se reubicaron');
 		expect(avisos.join(' ')).toContain('se descartaron');
 	});
+
+	it('recupera series antiguas con 0 reps sin contarlas ni conservar su PR', () => {
+		const { datos, avisos } = prepararImport({
+			dias: [dia],
+			sesiones: [
+				{
+					...sesion,
+					ejercicios: [
+						{
+							exerciseId: 'press',
+							sets: [{ peso: 110, reps: 0, hecha: true }],
+							prCelebrado: { peso: 110, reps: 0, setIndex: 0 }
+						}
+					]
+				}
+			],
+			notas: [],
+			ajustes: [ajustes]
+		});
+
+		expect(datos.sesiones[0]?.ejercicios[0]).toEqual({
+			exerciseId: 'press',
+			sets: [{ peso: 110, reps: undefined, hecha: false }],
+			prCelebrado: undefined
+		});
+		expect(avisos.join(' ')).toContain('0 reps');
+		expect(avisos.join(' ')).toContain('PR(s)');
+	});
 });
 
 describe('borrarTodo', () => {

@@ -62,10 +62,12 @@ export interface DatosProgresoEjercicio {
  */
 export function indexSetPr(sets: SetSesion[], pr: PrCelebrado | undefined): number {
 	if (!pr) return -1;
-	if (pr.setIndex != null && sets[pr.setIndex]?.hecha) return pr.setIndex;
+	if (pr.setIndex != null && sets[pr.setIndex]?.hecha && sets[pr.setIndex]?.reps !== 0)
+		return pr.setIndex;
 	return sets.findIndex(
 		(s) =>
 			s.hecha &&
+			s.reps !== 0 &&
 			s.peso === pr.peso &&
 			s.reps === pr.reps &&
 			!!s.esMax === !!pr.esMax &&
@@ -95,7 +97,7 @@ export function crearProgresoEjercicio(sesiones: Sesion[], exerciseId: string): 
 		const metricaPr = e.prCelebrado?.metrica;
 		const series: SerieDeSesion[] = [];
 		e.sets.forEach((set, setIndex) => {
-			if (!set.hecha) return;
+			if (!set.hecha || set.reps === 0) return;
 			series.push({
 				set,
 				setIndex,

@@ -14,7 +14,7 @@
 	import { agregarEjercicio, quitarEjercicio } from '$lib/dias';
 	import { demostracionActiva, reproducirEnVista } from '$lib/video';
 	import { dur } from '$lib/motion';
-	import { fromLiveQuery } from '$lib/live';
+	import { estadoLiveQuery } from '$lib/live';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
 	import { reportarErrorDatos } from '$lib/errores-datos';
 	import { modal } from '$lib/modal';
@@ -22,13 +22,15 @@
 	const diaId = $derived($page.params.id!);
 	const cierrePorArrastrePx = 76;
 
-	const diaActual = $derived(
-		fromLiveQuery(
+	const diaStore = $derived(
+		estadoLiveQuery(
 			liveQuery(() => db.dias.get(diaId)),
 			undefined
 		)
 	);
-	const yaEn = $derived(new Set($diaActual?.ejercicios.map((e) => e.exerciseId) ?? []));
+	const consultaDia = $derived($diaStore);
+	const diaActual = $derived(consultaDia.valor);
+	const yaEn = $derived(new Set(diaActual?.ejercicios.map((e) => e.exerciseId) ?? []));
 
 	let q = $state('');
 	let filtro = $state<Grupo | 'todos'>('todos');
@@ -42,7 +44,7 @@
 	} | null>(null);
 
 	const grupoSugerido = $derived.by<Grupo | 'todos'>(() => {
-		const dia = $diaActual;
+		const dia = diaActual;
 		if (!dia?.ejercicios.length) return 'todos';
 		const conteo = new Map<Grupo, number>();
 		for (const item of dia.ejercicios) {
@@ -63,7 +65,7 @@
 	});
 
 	$effect(() => {
-		if (filtroInicialAplicado || !$diaActual) return;
+		if (filtroInicialAplicado || !diaActual) return;
 		if (grupoSugerido !== 'todos') filtro = grupoSugerido;
 		filtroInicialAplicado = true;
 	});
@@ -184,100 +186,123 @@
 		<h1 class="flex-1 text-xl font-bold">Agregar ejercicio</h1>
 	</header>
 
-	<input
-		bind:value={q}
-		placeholder="Buscar…"
-		class="mb-3 w-full rounded-xl bg-white/5 px-4 py-2.5 outline-none"
-	/>
-
-	<div class="gb-filter-row mb-4 flex flex-wrap gap-2">
-		<button
-			onclick={() => ((filtro = 'todos'), (q = ''))}
-			class="min-h-11 rounded-full px-3.5 py-2 text-xs font-semibold"
-			aria-pressed={filtroVisible === 'todos'}
-			style={filtroVisible === 'todos'
-				? 'background: var(--accent); color: var(--on-accent)'
-				: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Todos</button
+	{#if consultaDia.estado === 'cargando'}
+		<p class="py-8 text-center text-sm" style="color: var(--muted)">Cargando rutina…</p>
+	{:else if consultaDia.estado === 'error'}
+		<section
+			class="rounded-2xl border border-red-400/25 bg-red-400/10 p-4 text-center"
+			role="alert"
 		>
-		{#each gruposList as gKey (gKey)}
-			{@const g = grupos[gKey]}
+			<p class="text-sm font-semibold" style="color: #ff9b9b">No se pudo cargar esta rutina.</p>
+			<p class="mt-1 text-xs leading-relaxed" style="color: var(--muted)">
+				No agregamos ni quitamos ejercicios. Recargá para volver a intentarlo.
+			</p>
 			<button
-				onclick={() => ((filtro = gKey), (q = ''))}
-				class="min-h-11 rounded-full px-3.5 py-2 text-xs font-semibold"
-				aria-pressed={filtroVisible === gKey}
-				style={filtroVisible === gKey
-					? `background: rgb(${g.glow}); color: #000`
-					: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{g.emoji} {g.label}</button
+				onclick={() => location.reload()}
+				class="mt-3 min-h-11 rounded-xl px-4 text-sm font-bold"
+				style="background: rgba(255,255,255,.1); color: white">Reintentar</button
 			>
-		{/each}
-	</div>
-	{#if buscando}
-		<p class="-mt-2 mb-3 px-1 text-[11px]" style="color: var(--muted)">
-			Buscando en todos los grupos · {filtrados.length}
-			{filtrados.length === 1 ? 'resultado' : 'resultados'}
+		</section>
+	{:else if !diaActual}
+		<p class="py-8 text-center text-sm" style="color: var(--muted)">
+			Esta rutina ya no existe. Volvé para elegir otra.
 		</p>
-	{/if}
+	{:else}
+		<input
+			bind:value={q}
+			placeholder="Buscar…"
+			class="mb-3 w-full rounded-xl bg-white/5 px-4 py-2.5 outline-none"
+		/>
 
-	<div class="gb-landscape-catalog space-y-2.5">
-		{#each mostrados as e (e.id)}
-			{@const g = grupos[e.grupo]}
-			{@const added = yaEn.has(e.id)}
-			<div
-				class="flex w-full items-center gap-2 rounded-2xl border p-2.5 transition"
-				style="border-color: {added
-					? `rgb(${g.glow} / .6)`
-					: 'rgba(255,255,255,.1)'}; background: var(--surface)"
-			>
-				<button
-					onclick={() => (preview = e)}
-					class="flex min-w-0 flex-1 items-center gap-3 text-left"
-					aria-label={`Ver ${e.nombre} en grande`}
-				>
-					<video
-						use:reproducirEnVista={e.demoVideo}
-						class="size-14 shrink-0 rounded-xl bg-white object-contain"
-						aria-label={e.nombre}
-						loop
-						muted
-						playsinline
-						preload="none"
-					></video>
-					<div class="min-w-0 flex-1">
-						<p class="gb-line-clamp-2 text-sm font-semibold leading-tight">{e.nombre}</p>
-						<p class="mt-0.5 truncate text-xs font-medium" style="color: rgb({g.glow})">
-							{g.emoji}
-							{g.label} · {e.musculo}
-						</p>
-					</div>
-				</button>
-				<button
-					onclick={() => void toggle(e)}
-					class="grid size-11 shrink-0 place-items-center rounded-full text-lg font-bold transition"
-					style={added
-						? `background: rgb(${g.glow}); color: #000`
-						: 'background: rgba(255,255,255,.1); color: white'}
-					aria-label={added ? `Quitar ${e.nombre}` : `Agregar ${e.nombre}`}
-					>{added ? '✓' : '+'}</button
-				>
-			</div>
-		{/each}
-
-		{#if filtrados.length > visibles}
+		<div class="gb-filter-row mb-4 flex flex-wrap gap-2">
 			<button
-				onclick={() => (visibles += POR_TANDA)}
-				class="min-h-12 w-full rounded-2xl border border-white/10 py-3 text-sm font-semibold"
-				style="background: var(--surface); color: var(--muted)"
+				onclick={() => ((filtro = 'todos'), (q = ''))}
+				class="min-h-11 rounded-full px-3.5 py-2 text-xs font-semibold"
+				aria-pressed={filtroVisible === 'todos'}
+				style={filtroVisible === 'todos'
+					? 'background: var(--accent); color: var(--on-accent)'
+					: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Todos</button
 			>
-				Ver más ({filtrados.length - visibles} restantes)
-			</button>
-		{/if}
-
-		{#if filtrados.length === 0}
-			<p class="py-8 text-center text-sm" style="color: var(--muted)">
-				Nada coincide con tu búsqueda.
+			{#each gruposList as gKey (gKey)}
+				{@const g = grupos[gKey]}
+				<button
+					onclick={() => ((filtro = gKey), (q = ''))}
+					class="min-h-11 rounded-full px-3.5 py-2 text-xs font-semibold"
+					aria-pressed={filtroVisible === gKey}
+					style={filtroVisible === gKey
+						? `background: rgb(${g.glow}); color: #000`
+						: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{g.emoji} {g.label}</button
+				>
+			{/each}
+		</div>
+		{#if buscando}
+			<p class="-mt-2 mb-3 px-1 text-[11px]" style="color: var(--muted)">
+				Buscando en todos los grupos · {filtrados.length}
+				{filtrados.length === 1 ? 'resultado' : 'resultados'}
 			</p>
 		{/if}
-	</div>
+
+		<div class="gb-landscape-catalog space-y-2.5">
+			{#each mostrados as e (e.id)}
+				{@const g = grupos[e.grupo]}
+				{@const added = yaEn.has(e.id)}
+				<div
+					class="flex w-full items-center gap-2 rounded-2xl border p-2.5 transition"
+					style="border-color: {added
+						? `rgb(${g.glow} / .6)`
+						: 'rgba(255,255,255,.1)'}; background: var(--surface)"
+				>
+					<button
+						onclick={() => (preview = e)}
+						class="flex min-w-0 flex-1 items-center gap-3 text-left"
+						aria-label={`Ver ${e.nombre} en grande`}
+					>
+						<video
+							use:reproducirEnVista={e.demoVideo}
+							class="size-14 shrink-0 rounded-xl bg-white object-contain"
+							aria-label={e.nombre}
+							loop
+							muted
+							playsinline
+							preload="none"
+						></video>
+						<div class="min-w-0 flex-1">
+							<p class="gb-line-clamp-2 text-sm font-semibold leading-tight">{e.nombre}</p>
+							<p class="mt-0.5 truncate text-xs font-medium" style="color: rgb({g.glow})">
+								{g.emoji}
+								{g.label} · {e.musculo}
+							</p>
+						</div>
+					</button>
+					<button
+						onclick={() => void toggle(e)}
+						class="grid size-11 shrink-0 place-items-center rounded-full text-lg font-bold transition"
+						style={added
+							? `background: rgb(${g.glow}); color: #000`
+							: 'background: rgba(255,255,255,.1); color: white'}
+						aria-label={added ? `Quitar ${e.nombre}` : `Agregar ${e.nombre}`}
+						>{added ? '✓' : '+'}</button
+					>
+				</div>
+			{/each}
+
+			{#if filtrados.length > visibles}
+				<button
+					onclick={() => (visibles += POR_TANDA)}
+					class="min-h-12 w-full rounded-2xl border border-white/10 py-3 text-sm font-semibold"
+					style="background: var(--surface); color: var(--muted)"
+				>
+					Ver más ({filtrados.length - visibles} restantes)
+				</button>
+			{/if}
+
+			{#if filtrados.length === 0}
+				<p class="py-8 text-center text-sm" style="color: var(--muted)">
+					Nada coincide con tu búsqueda.
+				</p>
+			{/if}
+		</div>
+	{/if}
 </main>
 
 {#if preview}

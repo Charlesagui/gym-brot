@@ -7,21 +7,34 @@
 		type HistorialResumen
 	} from '$lib/historial';
 	import { ejercicioPorId } from '$lib/catalog';
-	import { fromLiveQuery } from '$lib/live';
+	import { estadoLiveQuery } from '$lib/live';
 	import { hoyStr, recordsGlobalesObs } from '$lib/sesion';
 	import type { RecordEjercicio } from '$lib/sesion-reglas';
 	import { onMount } from 'svelte';
 
 	const VACIO: HistorialResumen = crearHistorialResumen([], []);
 
-	const ajustesStore = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
-	const ajustes = $derived($ajustesStore);
-	const historialStore = fromLiveQuery(resumenHistorialObs(), VACIO);
-	const historial = $derived($historialStore);
+	const ajustesStore = estadoLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
+	const consultaAjustes = $derived($ajustesStore);
+	const ajustes = $derived(consultaAjustes.valor);
+	const historialStore = estadoLiveQuery(resumenHistorialObs(), VACIO);
+	const consultaHistorial = $derived($historialStore);
+	const historial = $derived(consultaHistorial.valor);
 	const recordsStore = $derived(
-		fromLiveQuery(recordsGlobalesObs(ajustes.metricaPr), [] as RecordEjercicio[])
+		estadoLiveQuery(recordsGlobalesObs(ajustes.metricaPr), [] as RecordEjercicio[])
 	);
-	const records = $derived($recordsStore);
+	const consultaRecords = $derived($recordsStore);
+	const records = $derived(consultaRecords.valor);
+	const cargandoDatos = $derived(
+		consultaAjustes.estado === 'cargando' ||
+			consultaHistorial.estado === 'cargando' ||
+			consultaRecords.estado === 'cargando'
+	);
+	const errorDatos = $derived(
+		consultaAjustes.estado === 'error' ||
+			consultaHistorial.estado === 'error' ||
+			consultaRecords.estado === 'error'
+	);
 	const metricaLabel = $derived(ajustes.metricaPr === 'e1rm' ? '1RM estimado' : 'peso máximo');
 
 	const diasEntrenados = $derived(new Set(historial.dias.map((d) => d.fecha)));
@@ -87,201 +100,226 @@
 		<h1 class="mt-1 text-3xl font-extrabold tracking-tight">Historial</h1>
 	</header>
 
-	{#if recordarBackup}
-		<!-- Discreto y accionable: el dato local se puede perder sin backup (iOS purga IndexedDB). -->
-		<a
-			href="/ajustes"
-			class="mb-4 flex items-center gap-3 rounded-2xl border border-white/10 p-3.5"
-			style="background: var(--surface)"
+	{#if errorDatos}
+		<section
+			class="rounded-2xl border border-red-400/25 bg-red-400/10 p-4 text-center"
+			role="alert"
 		>
-			<span class="text-lg">💾</span>
-			<span class="min-w-0 flex-1 text-xs leading-relaxed" style="color: var(--muted)">
-				Tu historial vive solo en este teléfono ·
-				{ajustes.ultimoBackup
-					? `último backup hace ${diasDesde(ajustes.ultimoBackup)} días`
-					: 'todavía sin backup'}
-			</span>
-			<span class="shrink-0 text-xs font-bold" style="color: var(--accent-text)">Exportar →</span>
-		</a>
-	{/if}
-
-	<section
-		class="mb-4 rounded-2xl border border-white/10 p-4"
-		style="background: radial-gradient(120% 120% at 0% 0%, rgb(var(--exito) / .18), transparent 62%), var(--surface)"
-	>
-		<div class="grid grid-cols-3 gap-2 text-center">
-			<div>
-				<p class="text-2xl font-extrabold tabular-nums">{historial.rachaSemanal}</p>
-				<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">semanas en racha</p>
-			</div>
-			<div>
-				<p class="text-2xl font-extrabold tabular-nums">{historial.diasEstaSemana}</p>
-				<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">días esta semana</p>
-			</div>
-			<div>
-				<p class="text-2xl font-extrabold tabular-nums">{historial.totalDias}</p>
-				<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">días entrenados</p>
-			</div>
-		</div>
-		{#if historial.rachaSemanal > 0 && historial.diasEstaSemana === 0}
-			<!-- Racha con gracia: la semana en curso no la corta hasta terminar sin entrenar. -->
-			<p
-				class="mt-3 border-t border-white/10 pt-2.5 text-center text-xs"
-				style="color: var(--muted)"
-			>
-				Todavía no entrenaste esta semana · la racha se mantiene hasta el domingo
+			<p class="text-sm font-semibold" style="color: #ff9b9b">No se pudo leer el historial.</p>
+			<p class="mt-1 text-xs leading-relaxed" style="color: var(--muted)">
+				No cambiamos tus datos. Recargá para volver a intentarlo.
 			</p>
+			<button
+				onclick={() => location.reload()}
+				class="mt-3 min-h-11 rounded-xl px-4 text-sm font-bold"
+				style="background: rgba(255,255,255,.1); color: white">Reintentar</button
+			>
+		</section>
+	{:else if cargandoDatos}
+		<p class="py-8 text-center text-sm" style="color: var(--muted)">Cargando historial…</p>
+	{:else}
+		{#if recordarBackup}
+			<!-- Discreto y accionable: el dato local se puede perder sin backup (iOS purga IndexedDB). -->
+			<a
+				href="/ajustes"
+				class="mb-4 flex items-center gap-3 rounded-2xl border border-white/10 p-3.5"
+				style="background: var(--surface)"
+			>
+				<span class="text-lg">💾</span>
+				<span class="min-w-0 flex-1 text-xs leading-relaxed" style="color: var(--muted)">
+					Tu historial vive solo en este teléfono ·
+					{ajustes.ultimoBackup
+						? `último backup hace ${diasDesde(ajustes.ultimoBackup)} días`
+						: 'todavía sin backup'}
+				</span>
+				<span class="shrink-0 text-xs font-bold" style="color: var(--accent-text)">Exportar →</span>
+			</a>
 		{/if}
-	</section>
 
-	<section class="mb-4 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
-		<div class="mb-3 flex items-center justify-between gap-2">
-			<button
-				onclick={() => (mesOffset -= 1)}
-				disabled={sinMesAnterior}
-				class="grid size-11 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
-				aria-label="Mes anterior">‹</button
-			>
-			<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
-				{mes.label}
-			</p>
-			<button
-				onclick={() => (mesOffset += 1)}
-				disabled={mesOffset >= 0}
-				class="grid size-11 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
-				aria-label="Mes siguiente">›</button
-			>
-		</div>
-		<div class="grid grid-cols-7 gap-1.5">
-			{#each ['L', 'M', 'X', 'J', 'V', 'S', 'D'] as letra, i (i)}
-				<p class="text-center text-[10px] font-bold" style="color: var(--muted)">{letra}</p>
-			{/each}
-			{#each mes.celdas as fecha, i (i)}
-				{#if fecha == null}
-					<div></div>
-				{:else if diasEntrenados.has(fecha)}
-					<!-- Día entrenado: tap → detalle de ese día -->
-					<a
-						href={`/historial/dia/${fecha}`}
-						class="grid aspect-square place-items-center rounded-lg border text-[11px] font-bold"
-						style="background: rgb(var(--exito) / .18); border-color: rgb(var(--exito) / {fecha ===
-						hoy
-							? '.9'
-							: '.36'}); color: rgb(var(--exito))"
-						aria-label={`${fechaCorta(fecha)} entrenado · ver detalle`}
-					>
-						{Number(fecha.slice(8, 10))}
-					</a>
-				{:else}
-					<div
-						class="grid aspect-square place-items-center rounded-lg border text-[11px] font-semibold {fecha >
-						hoy
-							? 'opacity-35'
-							: ''}"
-						style="background: rgba(255,255,255,.035); border-color: {fecha === hoy
-							? 'rgba(255,255,255,.4)'
-							: 'rgba(255,255,255,.06)'}; color: var(--muted)"
-						aria-label={`${fechaCorta(fecha)} sin entrenamiento`}
-					>
-						{Number(fecha.slice(8, 10))}
-					</div>
-				{/if}
-			{/each}
-		</div>
-		<p class="mt-2.5 text-right text-[11px] font-semibold" style="color: rgb(var(--exito))">
-			● entrenado
-		</p>
-	</section>
-
-	<section class="mb-4 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
-		<div class="mb-3 flex items-center justify-between gap-3">
-			<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
-				Racha semanal
-			</p>
-			<p class="text-xs font-semibold" style="color: var(--muted)">últimas {semanas.length}</p>
-		</div>
-		<div class="space-y-2">
-			{#each semanas as semana (semana.inicio)}
-				<div class="flex items-center gap-3">
-					<div class="w-20 text-xs font-semibold tabular-nums" style="color: var(--muted)">
-						{fechaCorta(semana.inicio)}
-					</div>
-					<div class="h-2 flex-1 overflow-hidden rounded-full bg-white/5">
-						<div
-							class="h-full rounded-full"
-							style="width: {Math.min(
-								100,
-								semana.diasEntrenados * 20
-							)}%; background: {semana.entrenada ? 'rgb(var(--exito))' : 'rgba(255,255,255,.12)'}"
-						></div>
-					</div>
-					<p class="w-12 text-right text-xs font-bold tabular-nums">
-						{semana.diasEntrenados} día{semana.diasEntrenados === 1 ? '' : 's'}
+		<section
+			class="mb-4 rounded-2xl border border-white/10 p-4"
+			style="background: radial-gradient(120% 120% at 0% 0%, rgb(var(--exito) / .18), transparent 62%), var(--surface)"
+		>
+			<div class="grid grid-cols-3 gap-2 text-center">
+				<div>
+					<p class="text-2xl font-extrabold tabular-nums">{historial.rachaSemanal}</p>
+					<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">
+						semanas en racha
 					</p>
 				</div>
-			{/each}
-			{#if semanas.length === 0}
-				<p class="py-3 text-center text-sm" style="color: var(--muted)">
-					Todavía no hay semanas entrenadas.
-				</p>
-			{/if}
-		</div>
-	</section>
-
-	<section class="mb-4">
-		<div class="mb-2 flex flex-wrap items-end justify-between gap-x-3 gap-y-1 px-1">
-			<p class="shrink-0 text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
-				Récords vigentes
-			</p>
-			<p class="text-right text-xs font-semibold" style="color: var(--muted)">
-				{metricaLabel} · recientes primero
-			</p>
-		</div>
-		<div class="space-y-1.5">
-			{#each records.slice(0, recordsVisibles) as record (record.exerciseId)}
-				{@const ejercicio = ejercicioPorId(record.exerciseId)}
-				<!-- Fila compacta: el detalle del set vive en la pantalla del ejercicio. -->
-				<a
-					href={`/ejercicio/${record.exerciseId}`}
-					class="flex min-h-11 items-center gap-2 rounded-xl border border-white/10 px-3 py-2"
-					style="background: var(--surface)"
-					aria-label={`Ver progreso de ${ejercicio?.nombre ?? 'ejercicio archivado'}`}
-				>
-					<p class="min-w-0 flex-1 truncate text-sm font-semibold">
-						{ejercicio?.nombre ?? 'Ejercicio archivado'}
+				<div>
+					<p class="text-2xl font-extrabold tabular-nums">{historial.diasEstaSemana}</p>
+					<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">
+						días esta semana
 					</p>
-					<span class="shrink-0 text-[11px]" style="color: var(--muted)"
-						>{fechaCorta(record.fecha)}</span
-					>
-					<p
-						class="shrink-0 text-right text-sm font-extrabold tabular-nums"
-						style="color: rgb(var(--max))"
-					>
-						{formatoNumero(record.valor)}
-						<span class="ml-1 text-[11px] font-semibold" style="color: var(--muted)"
-							>{record.modo === 'reps' ? 'reps' : ajustes.unidad}</span
-						>
+				</div>
+				<div>
+					<p class="text-2xl font-extrabold tabular-nums">{historial.totalDias}</p>
+					<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">
+						días entrenados
 					</p>
-				</a>
-			{/each}
-			{#if records.length > recordsVisibles}
-				<button
-					onclick={() => (recordsVisibles += 15)}
-					class="w-full rounded-xl border border-white/10 py-2.5 text-sm font-semibold"
-					style="background: var(--surface); color: var(--muted)"
-				>
-					Ver más ({records.length - recordsVisibles}
-					{records.length - recordsVisibles === 1 ? 'récord' : 'récords'})
-				</button>
-			{/if}
-			{#if records.length === 0}
+				</div>
+			</div>
+			{#if historial.rachaSemanal > 0 && historial.diasEstaSemana === 0}
+				<!-- Racha con gracia: la semana en curso no la corta hasta terminar sin entrenar. -->
 				<p
-					class="rounded-2xl border border-dashed border-white/15 p-5 text-center text-sm"
+					class="mt-3 border-t border-white/10 pt-2.5 text-center text-xs"
 					style="color: var(--muted)"
 				>
-					Tus récords aparecen cuando marques series hechas.
+					Todavía no entrenaste esta semana · la racha se mantiene hasta el domingo
 				</p>
 			{/if}
-		</div>
-	</section>
+		</section>
+
+		<section class="mb-4 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+			<div class="mb-3 flex items-center justify-between gap-2">
+				<button
+					onclick={() => (mesOffset -= 1)}
+					disabled={sinMesAnterior}
+					class="grid size-11 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
+					aria-label="Mes anterior">‹</button
+				>
+				<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
+					{mes.label}
+				</p>
+				<button
+					onclick={() => (mesOffset += 1)}
+					disabled={mesOffset >= 0}
+					class="grid size-11 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
+					aria-label="Mes siguiente">›</button
+				>
+			</div>
+			<div class="grid grid-cols-7 gap-1.5">
+				{#each ['L', 'M', 'X', 'J', 'V', 'S', 'D'] as letra, i (i)}
+					<p class="text-center text-[10px] font-bold" style="color: var(--muted)">{letra}</p>
+				{/each}
+				{#each mes.celdas as fecha, i (i)}
+					{#if fecha == null}
+						<div></div>
+					{:else if diasEntrenados.has(fecha)}
+						<!-- Día entrenado: tap → detalle de ese día -->
+						<a
+							href={`/historial/dia/${fecha}`}
+							class="grid aspect-square place-items-center rounded-lg border text-[11px] font-bold"
+							style="background: rgb(var(--exito) / .18); border-color: rgb(var(--exito) / {fecha ===
+							hoy
+								? '.9'
+								: '.36'}); color: rgb(var(--exito))"
+							aria-label={`${fechaCorta(fecha)} entrenado · ver detalle`}
+						>
+							{Number(fecha.slice(8, 10))}
+						</a>
+					{:else}
+						<div
+							class="grid aspect-square place-items-center rounded-lg border text-[11px] font-semibold {fecha >
+							hoy
+								? 'opacity-35'
+								: ''}"
+							style="background: rgba(255,255,255,.035); border-color: {fecha === hoy
+								? 'rgba(255,255,255,.4)'
+								: 'rgba(255,255,255,.06)'}; color: var(--muted)"
+							aria-label={`${fechaCorta(fecha)} sin entrenamiento`}
+						>
+							{Number(fecha.slice(8, 10))}
+						</div>
+					{/if}
+				{/each}
+			</div>
+			<p class="mt-2.5 text-right text-[11px] font-semibold" style="color: rgb(var(--exito))">
+				● entrenado
+			</p>
+		</section>
+
+		<section class="mb-4 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+			<div class="mb-3 flex items-center justify-between gap-3">
+				<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
+					Racha semanal
+				</p>
+				<p class="text-xs font-semibold" style="color: var(--muted)">últimas {semanas.length}</p>
+			</div>
+			<div class="space-y-2">
+				{#each semanas as semana (semana.inicio)}
+					<div class="flex items-center gap-3">
+						<div class="w-20 text-xs font-semibold tabular-nums" style="color: var(--muted)">
+							{fechaCorta(semana.inicio)}
+						</div>
+						<div class="h-2 flex-1 overflow-hidden rounded-full bg-white/5">
+							<div
+								class="h-full rounded-full"
+								style="width: {Math.min(
+									100,
+									semana.diasEntrenados * 20
+								)}%; background: {semana.entrenada ? 'rgb(var(--exito))' : 'rgba(255,255,255,.12)'}"
+							></div>
+						</div>
+						<p class="w-12 text-right text-xs font-bold tabular-nums">
+							{semana.diasEntrenados} día{semana.diasEntrenados === 1 ? '' : 's'}
+						</p>
+					</div>
+				{/each}
+				{#if semanas.length === 0}
+					<p class="py-3 text-center text-sm" style="color: var(--muted)">
+						Todavía no hay semanas entrenadas.
+					</p>
+				{/if}
+			</div>
+		</section>
+
+		<section class="mb-4">
+			<div class="mb-2 flex flex-wrap items-end justify-between gap-x-3 gap-y-1 px-1">
+				<p class="shrink-0 text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
+					Récords vigentes
+				</p>
+				<p class="text-right text-xs font-semibold" style="color: var(--muted)">
+					{metricaLabel} · recientes primero
+				</p>
+			</div>
+			<div class="space-y-1.5">
+				{#each records.slice(0, recordsVisibles) as record (record.exerciseId)}
+					{@const ejercicio = ejercicioPorId(record.exerciseId)}
+					<!-- Fila compacta: el detalle del set vive en la pantalla del ejercicio. -->
+					<a
+						href={`/ejercicio/${record.exerciseId}`}
+						class="flex min-h-11 items-center gap-2 rounded-xl border border-white/10 px-3 py-2"
+						style="background: var(--surface)"
+						aria-label={`Ver progreso de ${ejercicio?.nombre ?? 'ejercicio archivado'}`}
+					>
+						<p class="min-w-0 flex-1 truncate text-sm font-semibold">
+							{ejercicio?.nombre ?? 'Ejercicio archivado'}
+						</p>
+						<span class="shrink-0 text-[11px]" style="color: var(--muted)"
+							>{fechaCorta(record.fecha)}</span
+						>
+						<p
+							class="shrink-0 text-right text-sm font-extrabold tabular-nums"
+							style="color: rgb(var(--max))"
+						>
+							{formatoNumero(record.valor)}
+							<span class="ml-1 text-[11px] font-semibold" style="color: var(--muted)"
+								>{record.modo === 'reps' ? 'reps' : ajustes.unidad}</span
+							>
+						</p>
+					</a>
+				{/each}
+				{#if records.length > recordsVisibles}
+					<button
+						onclick={() => (recordsVisibles += 15)}
+						class="w-full rounded-xl border border-white/10 py-2.5 text-sm font-semibold"
+						style="background: var(--surface); color: var(--muted)"
+					>
+						Ver más ({records.length - recordsVisibles}
+						{records.length - recordsVisibles === 1 ? 'récord' : 'récords'})
+					</button>
+				{/if}
+				{#if records.length === 0}
+					<p
+						class="rounded-2xl border border-dashed border-white/15 p-5 text-center text-sm"
+						style="color: var(--muted)"
+					>
+						Tus récords aparecen cuando marques series hechas.
+					</p>
+				{/if}
+			</div>
+		</section>
+	{/if}
 </main>

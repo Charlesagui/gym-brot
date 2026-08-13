@@ -63,6 +63,9 @@ export function valorSet(
 	metrica: MetricaPr,
 	modo: ModoPr = 'peso'
 ): number | null {
+	// `0` sólo puede venir de datos viejos o editados manualmente: nunca representa
+	// trabajo real ni puede convertirse en un PR de peso o de reps.
+	if (set.reps === 0) return null;
 	if (modo === 'reps') return set.peso == null ? (set.reps ?? null) : null;
 	const efectivo = pesoEfectivo(set);
 	return efectivo == null ? null : valorMetrica(efectivo, set.reps, metrica);
@@ -77,7 +80,7 @@ export const DESCRIPCION_METRICA: Record<MetricaEfectiva, string> = {
 
 /** Una serie cuenta como completa cuando fue confirmada y tiene repeticiones. */
 export function serieCompleta(set: SetSesion): boolean {
-	return set.hecha && set.reps != null;
+	return set.hecha && set.reps != null && set.reps > 0;
 }
 
 /** 'reps' si hay series hechas y ninguna registró peso; si no, 'peso'. */
@@ -86,7 +89,7 @@ export function modoEjercicio(sesiones: Sesion[], exerciseId: string): ModoPr {
 	for (const sesion of sesiones) {
 		const ejercicio = sesion.ejercicios.find((item) => item.exerciseId === exerciseId);
 		for (const set of ejercicio?.sets ?? []) {
-			if (!set.hecha) continue;
+			if (!set.hecha || set.reps === 0) continue;
 			if (set.peso != null) return 'peso';
 			tieneHechas = true;
 		}

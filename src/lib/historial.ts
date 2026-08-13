@@ -82,7 +82,7 @@ export function resumenDiaSesion(sesion: Sesion | undefined): ResumenDiaSesion {
 
 	for (const ejercicio of sesion.ejercicios) {
 		for (const set of ejercicio.sets) {
-			if (!set.hecha) continue;
+			if (!set.hecha || set.reps === 0) continue;
 			setsHechos++;
 			const peso = pesoEfectivo(set);
 			if (peso != null && set.reps != null) volumen += peso * set.reps;
@@ -106,7 +106,7 @@ export function resumenDiaSesion(sesion: Sesion | undefined): ResumenDiaSesion {
 }
 
 function tieneEntrenamiento(sesion: Sesion): boolean {
-	return sesion.ejercicios.some((e) => e.sets.some((s) => s.hecha));
+	return sesion.ejercicios.some((e) => e.sets.some((s) => s.hecha && s.reps !== 0));
 }
 
 function resumenSesionAgrupada(sesiones: Sesion[], dias: Dia[]): DiaEntrenado {

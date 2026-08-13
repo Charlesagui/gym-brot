@@ -25,12 +25,14 @@
 		hayEspacioParaReserva,
 		RESERVA_VIDEOTECA_COMPLETA
 	} from '$lib/video';
-	import { fromLiveQuery } from '$lib/live';
+	import { estadoLiveQuery } from '$lib/live';
+	import { descanso } from '$lib/descanso.svelte';
 	import { onMount } from 'svelte';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
 
-	const ajustesStore = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
-	const ajustes = $derived<Ajustes>($ajustesStore);
+	const ajustesStore = estadoLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
+	const consultaAjustes = $derived($ajustesStore);
+	const ajustes = $derived<Ajustes>(consultaAjustes.valor);
 	let msg = $state('');
 	let msgId: ReturnType<typeof setTimeout> | null = null;
 	let guardandoUnidad = $state(false);
@@ -135,6 +137,9 @@
 				confirmarTexto: 'Restaurar',
 				onConfirm: async () => {
 					avisosImport = await importarBackup(data);
+					// El descanso persiste fuera de IndexedDB: si el backup reemplaza los datos,
+					// una alarma anterior no puede seguir refiriéndose a una serie eliminada.
+					descanso.saltar();
 					avisar('✅ Datos restaurados');
 					input.value = '';
 					confirmacion = null;
@@ -166,6 +171,7 @@
 			confirmarTexto: 'Borrar todo',
 			onConfirm: async () => {
 				await borrarTodo();
+				descanso.saltar();
 				confirmacion = null;
 				avisar('Datos borrados');
 			}
@@ -279,259 +285,281 @@
 		<h1 class="text-xl font-bold">Ajustes</h1>
 	</header>
 
-	<section class="rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
-		<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
-			Unidad de peso
-		</p>
-		<div class="mt-3 flex gap-2">
-			{#each ['kg', 'lb'] as u (u)}
-				<button
-					onclick={() => void cambiarUnidad(u as 'kg' | 'lb')}
-					disabled={guardandoUnidad}
-					class="min-h-11 flex-1 rounded-xl py-2.5 font-semibold"
-					aria-pressed={ajustes.unidad === u}
-					aria-busy={guardandoUnidad}
-					aria-label={`Seleccionar unidad ${u}`}
-					style={ajustes.unidad === u
-						? 'background: var(--accent); color: var(--on-accent)'
-						: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{u}</button
-				>
-			{/each}
-		</div>
-	</section>
-
-	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
-		<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
-			Paso del peso
-		</p>
-		<div class="mt-3 flex gap-2">
-			{#each [1, 2.5, 5] as paso (paso)}
-				<button
-					onclick={() => guardarAjuste(setPasoPeso(paso), 'el paso del peso')}
-					class="min-h-11 flex-1 rounded-xl py-2.5 font-semibold tabular-nums"
-					aria-pressed={ajustes.pasoPeso === paso}
-					aria-label={`Paso de ${paso} ${ajustes.unidad}`}
-					style={ajustes.pasoPeso === paso
-						? 'background: var(--accent); color: var(--on-accent)'
-						: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{paso}</button
-				>
-			{/each}
-		</div>
-		<p class="mt-2 text-xs" style="color: var(--muted)">
-			Cuánto suma o resta cada toque de − / + al cargar peso ({ajustes.unidad}). Las mancuernas usan
-			{ajustes.unidad === 'kg' ? '1 kg' : '5 lb'} automáticamente y cada ejercicio puede personalizarse.
-		</p>
-	</section>
-
-	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
-		<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
-			Métrica de PR
-		</p>
-		<div class="mt-3 grid grid-cols-2 gap-2">
-			<button
-				onclick={() => guardarAjuste(setMetricaPr('peso'), 'la métrica de PR')}
-				class="min-h-11 rounded-xl px-2 py-2.5 text-sm font-semibold"
-				aria-pressed={ajustes.metricaPr === 'peso'}
-				style={ajustes.metricaPr === 'peso'
-					? 'background: var(--accent); color: var(--on-accent)'
-					: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Peso máximo</button
-			>
-			<button
-				onclick={() => guardarAjuste(setMetricaPr('e1rm'), 'la métrica de PR')}
-				class="min-h-11 rounded-xl px-2 py-2.5 text-sm font-semibold"
-				aria-pressed={ajustes.metricaPr === 'e1rm'}
-				style={ajustes.metricaPr === 'e1rm'
-					? 'background: var(--accent); color: var(--on-accent)'
-					: 'background: rgba(255,255,255,.06); color: var(--muted)'}>1RM (1 rep. máx.)</button
-			>
-		</div>
-		<p class="mt-2 text-xs" style="color: var(--muted)">
-			{DESCRIPCION_METRICA[ajustes.metricaPr]}
-		</p>
-	</section>
-
-	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
-		<div class="flex items-center justify-between gap-4">
-			<div>
-				<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
-					Sonido
-				</p>
-				<p class="mt-1 text-xs" style="color: var(--muted)">Sets, PR y descansos</p>
-			</div>
-			<button
-				onclick={() => guardarAjuste(setSonido(!ajustes.sonido), 'el sonido')}
-				aria-pressed={ajustes.sonido}
-				class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
-				style={ajustes.sonido
-					? 'background: var(--accent); color: var(--on-accent)'
-					: 'background: rgba(255,255,255,.06); color: var(--muted)'}
-				>{ajustes.sonido ? 'On' : 'Off'}</button
-			>
-		</div>
-		<p class="mt-2 text-xs leading-relaxed" style="color: var(--muted)">
-			Mientras corre un descanso, la app mantiene tomada la salida de audio para que la alarma suene
-			sí o sí al volver de la pantalla bloqueada. En iPhone eso puede pausar la música durante el
-			descanso.
-		</p>
-	</section>
-
-	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
-		<div class="flex items-center justify-between gap-4">
-			<div>
-				<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
-					Descanso grande
-				</p>
-				<p class="mt-1 text-xs" style="color: var(--muted)">Pantalla completa al marcar serie</p>
-			</div>
-			<button
-				onclick={() =>
-					guardarAjuste(
-						setDescansoPantallaCompleta(!ajustes.descansoPantallaCompleta),
-						'el descanso grande'
-					)}
-				aria-pressed={ajustes.descansoPantallaCompleta}
-				class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
-				style={ajustes.descansoPantallaCompleta
-					? 'background: var(--accent); color: var(--on-accent)'
-					: 'background: rgba(255,255,255,.06); color: var(--muted)'}
-				>{ajustes.descansoPantallaCompleta ? 'On' : 'Off'}</button
-			>
-		</div>
-	</section>
-
-	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
-		<div class="flex items-center justify-between gap-4">
-			<div>
-				<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
-					Vibración
-				</p>
-				<p class="mt-1 text-xs" style="color: var(--muted)">Logros y fin de descanso</p>
-			</div>
-			<button
-				onclick={() => guardarAjuste(setVibracion(!ajustes.vibracion), 'la vibración')}
-				aria-pressed={ajustes.vibracion}
-				class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
-				style={ajustes.vibracion
-					? 'background: var(--accent); color: var(--on-accent)'
-					: 'background: rgba(255,255,255,.06); color: var(--muted)'}
-				>{ajustes.vibracion ? 'On' : 'Off'}</button
-			>
-		</div>
-	</section>
-
-	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
-		<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
-			Videos sin señal
-		</p>
-		<p class="mt-1 text-xs leading-relaxed" style="color: var(--muted)">
-			Las miniaturas no ocupan espacio al verlas. Si vas a un gym sin datos, podés dejar la
-			videoteca completa lista ahora (~22 MB), sin afectar tus datos de entrenamiento.
-		</p>
-		{#if videosGuardados != null}
-			<p class="mt-2 text-xs" style="color: var(--muted)">
-				{videosGuardados
-					? `${videosGuardados} ${videosGuardados === 1 ? 'video guardado' : 'videos guardados'}`
-					: 'Todavía no guardaste videos'}
+	{#if consultaAjustes.estado === 'cargando'}
+		<p class="py-8 text-center text-sm" style="color: var(--muted)">Cargando ajustes…</p>
+	{:else if consultaAjustes.estado === 'error'}
+		<section
+			class="rounded-2xl border border-red-400/25 bg-red-400/10 p-4 text-center"
+			role="alert"
+		>
+			<p class="text-sm font-semibold" style="color: #ff9b9b">No se pudieron leer tus ajustes.</p>
+			<p class="mt-1 text-xs leading-relaxed" style="color: var(--muted)">
+				No cambiamos nada. Recargá para volver a intentarlo.
 			</p>
-		{/if}
-		{#if bajando}
-			<div class="mt-3">
-				<div class="h-2 overflow-hidden rounded-full bg-white/5">
-					<div
-						class="h-full rounded-full transition-all"
-						style="width: {totalVideos
-							? (bajados / totalVideos) * 100
-							: 0}%; background: var(--accent)"
-					></div>
-				</div>
-				<div class="mt-2 flex items-center justify-between gap-3">
-					<p class="text-xs tabular-nums" style="color: var(--muted)">
-						{bajados + fallidos}/{totalVideos} videos{fallidos ? ` · ${fallidos} fallidos` : ''}
-					</p>
-					<button
-						onclick={pararDescarga}
-						class="min-h-11 rounded-xl px-4 text-sm font-bold"
-						style="background: rgba(255,255,255,.08); color: var(--muted)">Cancelar</button
-					>
-				</div>
-			</div>
-		{:else}
 			<button
-				onclick={descargarVideos}
-				class="mt-3 min-h-12 w-full rounded-xl py-3 font-semibold"
-				style="background: rgba(255,255,255,.08)">⬇️ Descargar todos los videos</button
+				onclick={() => location.reload()}
+				class="mt-3 min-h-11 rounded-xl px-4 text-sm font-bold"
+				style="background: rgba(255,255,255,.1); color: white">Reintentar</button
 			>
-			{#if videosGuardados}
+		</section>
+	{:else}
+		<section class="rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+			<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+				Unidad de peso
+			</p>
+			<div class="mt-3 flex gap-2">
+				{#each ['kg', 'lb'] as u (u)}
+					<button
+						onclick={() => void cambiarUnidad(u as 'kg' | 'lb')}
+						disabled={guardandoUnidad}
+						class="min-h-11 flex-1 rounded-xl py-2.5 font-semibold"
+						aria-pressed={ajustes.unidad === u}
+						aria-busy={guardandoUnidad}
+						aria-label={`Seleccionar unidad ${u}`}
+						style={ajustes.unidad === u
+							? 'background: var(--accent); color: var(--on-accent)'
+							: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{u}</button
+					>
+				{/each}
+			</div>
+		</section>
+
+		<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+			<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+				Paso del peso
+			</p>
+			<div class="mt-3 flex gap-2">
+				{#each [1, 2.5, 5] as paso (paso)}
+					<button
+						onclick={() => guardarAjuste(setPasoPeso(paso), 'el paso del peso')}
+						class="min-h-11 flex-1 rounded-xl py-2.5 font-semibold tabular-nums"
+						aria-pressed={ajustes.pasoPeso === paso}
+						aria-label={`Paso de ${paso} ${ajustes.unidad}`}
+						style={ajustes.pasoPeso === paso
+							? 'background: var(--accent); color: var(--on-accent)'
+							: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{paso}</button
+					>
+				{/each}
+			</div>
+			<p class="mt-2 text-xs" style="color: var(--muted)">
+				Cuánto suma o resta cada toque de − / + al cargar peso ({ajustes.unidad}). Las mancuernas
+				usan
+				{ajustes.unidad === 'kg' ? '1 kg' : '5 lb'} automáticamente y cada ejercicio puede personalizarse.
+			</p>
+		</section>
+
+		<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+			<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+				Métrica de PR
+			</p>
+			<div class="mt-3 grid grid-cols-2 gap-2">
 				<button
-					onclick={confirmarBorrarVideos}
+					onclick={() => guardarAjuste(setMetricaPr('peso'), 'la métrica de PR')}
+					class="min-h-11 rounded-xl px-2 py-2.5 text-sm font-semibold"
+					aria-pressed={ajustes.metricaPr === 'peso'}
+					style={ajustes.metricaPr === 'peso'
+						? 'background: var(--accent); color: var(--on-accent)'
+						: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Peso máximo</button
+				>
+				<button
+					onclick={() => guardarAjuste(setMetricaPr('e1rm'), 'la métrica de PR')}
+					class="min-h-11 rounded-xl px-2 py-2.5 text-sm font-semibold"
+					aria-pressed={ajustes.metricaPr === 'e1rm'}
+					style={ajustes.metricaPr === 'e1rm'
+						? 'background: var(--accent); color: var(--on-accent)'
+						: 'background: rgba(255,255,255,.06); color: var(--muted)'}>1RM (1 rep. máx.)</button
+				>
+			</div>
+			<p class="mt-2 text-xs" style="color: var(--muted)">
+				{DESCRIPCION_METRICA[ajustes.metricaPr]}
+			</p>
+		</section>
+
+		<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+			<div class="flex items-center justify-between gap-4">
+				<div>
+					<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+						Sonido
+					</p>
+					<p class="mt-1 text-xs" style="color: var(--muted)">Sets, PR y descansos</p>
+				</div>
+				<button
+					onclick={() => guardarAjuste(setSonido(!ajustes.sonido), 'el sonido')}
+					aria-pressed={ajustes.sonido}
+					class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
+					style={ajustes.sonido
+						? 'background: var(--accent); color: var(--on-accent)'
+						: 'background: rgba(255,255,255,.06); color: var(--muted)'}
+					>{ajustes.sonido ? 'On' : 'Off'}</button
+				>
+			</div>
+			<p class="mt-2 text-xs leading-relaxed" style="color: var(--muted)">
+				Mientras corre un descanso, la app mantiene tomada la salida de audio para que la alarma
+				suene sí o sí al volver de la pantalla bloqueada. En iPhone eso puede pausar la música
+				durante el descanso.
+			</p>
+		</section>
+
+		<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+			<div class="flex items-center justify-between gap-4">
+				<div>
+					<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+						Descanso grande
+					</p>
+					<p class="mt-1 text-xs" style="color: var(--muted)">Pantalla completa al marcar serie</p>
+				</div>
+				<button
+					onclick={() =>
+						guardarAjuste(
+							setDescansoPantallaCompleta(!ajustes.descansoPantallaCompleta),
+							'el descanso grande'
+						)}
+					aria-pressed={ajustes.descansoPantallaCompleta}
+					class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
+					style={ajustes.descansoPantallaCompleta
+						? 'background: var(--accent); color: var(--on-accent)'
+						: 'background: rgba(255,255,255,.06); color: var(--muted)'}
+					>{ajustes.descansoPantallaCompleta ? 'On' : 'Off'}</button
+				>
+			</div>
+		</section>
+
+		<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+			<div class="flex items-center justify-between gap-4">
+				<div>
+					<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+						Vibración
+					</p>
+					<p class="mt-1 text-xs" style="color: var(--muted)">Logros y fin de descanso</p>
+				</div>
+				<button
+					onclick={() => guardarAjuste(setVibracion(!ajustes.vibracion), 'la vibración')}
+					aria-pressed={ajustes.vibracion}
+					class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
+					style={ajustes.vibracion
+						? 'background: var(--accent); color: var(--on-accent)'
+						: 'background: rgba(255,255,255,.06); color: var(--muted)'}
+					>{ajustes.vibracion ? 'On' : 'Off'}</button
+				>
+			</div>
+		</section>
+
+		<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+			<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+				Videos sin señal
+			</p>
+			<p class="mt-1 text-xs leading-relaxed" style="color: var(--muted)">
+				Las miniaturas no ocupan espacio al verlas. Si vas a un gym sin datos, podés dejar la
+				videoteca completa lista ahora (~22 MB), sin afectar tus datos de entrenamiento.
+			</p>
+			{#if videosGuardados != null}
+				<p class="mt-2 text-xs" style="color: var(--muted)">
+					{videosGuardados
+						? `${videosGuardados} ${videosGuardados === 1 ? 'video guardado' : 'videos guardados'}`
+						: 'Todavía no guardaste videos'}
+				</p>
+			{/if}
+			{#if bajando}
+				<div class="mt-3">
+					<div class="h-2 overflow-hidden rounded-full bg-white/5">
+						<div
+							class="h-full rounded-full transition-all"
+							style="width: {totalVideos
+								? (bajados / totalVideos) * 100
+								: 0}%; background: var(--accent)"
+						></div>
+					</div>
+					<div class="mt-2 flex items-center justify-between gap-3">
+						<p class="text-xs tabular-nums" style="color: var(--muted)">
+							{bajados + fallidos}/{totalVideos} videos{fallidos ? ` · ${fallidos} fallidos` : ''}
+						</p>
+						<button
+							onclick={pararDescarga}
+							class="min-h-11 rounded-xl px-4 text-sm font-bold"
+							style="background: rgba(255,255,255,.08); color: var(--muted)">Cancelar</button
+						>
+					</div>
+				</div>
+			{:else}
+				<button
+					onclick={descargarVideos}
+					class="mt-3 min-h-12 w-full rounded-xl py-3 font-semibold"
+					style="background: rgba(255,255,255,.08)">⬇️ Descargar todos los videos</button
+				>
+				{#if videosGuardados}
+					<button
+						onclick={confirmarBorrarVideos}
+						class="mt-2 min-h-11 w-full rounded-xl border border-white/15 py-2 text-sm font-semibold"
+						style="color: var(--muted)">Eliminar videos guardados</button
+					>
+				{/if}
+			{/if}
+		</section>
+
+		<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+			<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+				Backup
+			</p>
+			<p class="mt-1 text-xs" style="color: var(--muted)">
+				Guardá una copia de tus rutinas y progreso (importante en iPhone, que puede borrar datos
+				locales).
+			</p>
+			{#if persistido === false}
+				<p class="mt-2 text-xs leading-relaxed" style="color: rgb(var(--max))">
+					⚠️ El navegador no marcó tus datos como persistentes: puede borrarlos si necesita espacio.
+					Exportá seguido.
+				</p>
+			{/if}
+			<button
+				onclick={exportar}
+				class="mt-3 min-h-12 w-full rounded-xl py-3 font-semibold"
+				style="background: var(--accent); color: var(--on-accent)"
+				>⬇️ Guardar copia de seguridad</button
+			>
+			{#if backupPendienteConfirmacion}
+				<button
+					onclick={() => void confirmarBackupGuardado()}
 					class="mt-2 min-h-11 w-full rounded-xl border border-white/15 py-2 text-sm font-semibold"
-					style="color: var(--muted)">Eliminar videos guardados</button
+					style="color: var(--muted)">✅ Ya guardé el archivo</button
 				>
 			{/if}
-		{/if}
-	</section>
+			<label
+				class="mt-2 block min-h-12 w-full cursor-pointer rounded-xl border border-white/15 py-3 text-center font-semibold"
+			>
+				⬆️ Restaurar copia de seguridad
+				<input type="file" accept="application/json" onchange={importar} class="hidden" />
+			</label>
+			{#if msg}
+				<p class="mt-3 text-center text-sm font-medium" role="status" aria-live="polite">{msg}</p>
+			{/if}
+			{#if avisosImport.length}
+				<ul
+					class="mt-3 space-y-1 rounded-xl p-3 text-xs leading-relaxed"
+					style="background: rgb(var(--max) / .1); color: var(--muted)"
+				>
+					{#each avisosImport as aviso (aviso)}
+						<li>· {aviso}</li>
+					{/each}
+				</ul>
+			{/if}
+		</section>
 
-	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
-		<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">Backup</p>
-		<p class="mt-1 text-xs" style="color: var(--muted)">
-			Guardá una copia de tus rutinas y progreso (importante en iPhone, que puede borrar datos
-			locales).
-		</p>
-		{#if persistido === false}
-			<p class="mt-2 text-xs leading-relaxed" style="color: rgb(var(--max))">
-				⚠️ El navegador no marcó tus datos como persistentes: puede borrarlos si necesita espacio.
-				Exportá seguido.
+		<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+			<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+				Mantenimiento
 			</p>
-		{/if}
-		<button
-			onclick={exportar}
-			class="mt-3 min-h-12 w-full rounded-xl py-3 font-semibold"
-			style="background: var(--accent); color: var(--on-accent)"
-			>⬇️ Guardar copia de seguridad</button
-		>
-		{#if backupPendienteConfirmacion}
 			<button
-				onclick={() => void confirmarBackupGuardado()}
-				class="mt-2 min-h-11 w-full rounded-xl border border-white/15 py-2 text-sm font-semibold"
-				style="color: var(--muted)">✅ Ya guardé el archivo</button
+				onclick={confirmarReiniciarAyudas}
+				class="mt-3 min-h-12 w-full rounded-xl border border-white/10 py-3 text-sm font-semibold"
+				style="color: var(--muted)">💡 Volver a mostrar los carteles de ayuda</button
 			>
-		{/if}
-		<label
-			class="mt-2 block min-h-12 w-full cursor-pointer rounded-xl border border-white/15 py-3 text-center font-semibold"
-		>
-			⬆️ Restaurar copia de seguridad
-			<input type="file" accept="application/json" onchange={importar} class="hidden" />
-		</label>
-		{#if msg}
-			<p class="mt-3 text-center text-sm font-medium" role="status" aria-live="polite">{msg}</p>
-		{/if}
-		{#if avisosImport.length}
-			<ul
-				class="mt-3 space-y-1 rounded-xl p-3 text-xs leading-relaxed"
-				style="background: rgb(var(--max) / .1); color: var(--muted)"
+			<button
+				onclick={confirmarBorrarTodo}
+				class="mt-2 min-h-12 w-full rounded-xl border border-white/10 py-3 text-sm font-semibold"
+				style="color: #ff6b6b">🗑 Borrar todos mis datos</button
 			>
-				{#each avisosImport as aviso (aviso)}
-					<li>· {aviso}</li>
-				{/each}
-			</ul>
-		{/if}
-	</section>
-
-	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
-		<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
-			Mantenimiento
-		</p>
-		<button
-			onclick={confirmarReiniciarAyudas}
-			class="mt-3 min-h-12 w-full rounded-xl border border-white/10 py-3 text-sm font-semibold"
-			style="color: var(--muted)">💡 Volver a mostrar los carteles de ayuda</button
-		>
-		<button
-			onclick={confirmarBorrarTodo}
-			class="mt-2 min-h-12 w-full rounded-xl border border-white/10 py-3 text-sm font-semibold"
-			style="color: #ff6b6b">🗑 Borrar todos mis datos</button
-		>
-	</section>
+		</section>
+	{/if}
 
 	<footer class="mt-8 text-center text-xs" style="color: var(--muted)">
 		<p>Gym-brot · todo se guarda en tu teléfono 📴</p>
