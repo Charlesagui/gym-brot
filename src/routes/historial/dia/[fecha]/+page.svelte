@@ -9,12 +9,13 @@
 	import { fromLiveQuery } from '$lib/live';
 	import { formatoSet, formatoVolumen } from '$lib/formato';
 	import { pasoPesoEfectivo } from '$lib/paso-peso';
+	import { fechaCalendarioValida } from '$lib/fechas';
 	import EditarSerieSheet, { type SerieEditable } from '$lib/components/EditarSerieSheet.svelte';
 
 	// La fecha viene de la URL: si no tiene forma de YYYY-MM-DD no se consulta nada y
 	// el título no muestra "Invalid Date".
 	const fecha = $derived($page.params.fecha!);
-	const fechaValida = $derived(/^\d{4}-\d{2}-\d{2}$/.test(fecha));
+	const fechaValida = $derived(fechaCalendarioValida(fecha));
 
 	const ajustesStore = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
 	const ajustes = $derived($ajustesStore);
@@ -95,7 +96,21 @@
 		</div>
 	</header>
 
-	{#if conEntrenamiento.length === 0}
+	{#if !fechaValida}
+		<section class="rounded-2xl border border-dashed border-white/15 p-6 text-center" role="alert">
+			<p class="text-sm font-bold">La fecha del historial no es válida</p>
+			<p class="mt-1 text-xs" style="color: var(--muted)">
+				No se consultó ni modificó ningún entrenamiento.
+			</p>
+			<a
+				href="/historial"
+				class="mt-4 inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold"
+				style="background: var(--accent); color: var(--on-accent)"
+			>
+				Volver al historial
+			</a>
+		</section>
+	{:else if conEntrenamiento.length === 0}
 		<p
 			class="rounded-2xl border border-dashed border-white/15 p-6 text-center text-sm"
 			style="color: var(--muted)"

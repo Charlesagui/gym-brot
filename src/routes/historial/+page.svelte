@@ -171,7 +171,10 @@
 			{/if}
 		</section>
 
-		<section class="mb-4 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+		<section
+			class="-mx-5 mb-4 rounded-none border-y border-white/10 px-1.5 py-4 sm:mx-0 sm:rounded-2xl sm:border sm:p-4"
+			style="background: var(--surface)"
+		>
 			<div class="mb-3 flex items-center justify-between gap-2">
 				<button
 					onclick={() => (mesOffset -= 1)}
@@ -189,7 +192,7 @@
 					aria-label="Mes siguiente">›</button
 				>
 			</div>
-			<div class="grid grid-cols-7 gap-1.5">
+			<div class="grid grid-cols-7 gap-0 sm:gap-1.5">
 				{#each ['L', 'M', 'X', 'J', 'V', 'S', 'D'] as letra, i (i)}
 					<p class="text-center text-[10px] font-bold" style="color: var(--muted)">{letra}</p>
 				{/each}
@@ -200,7 +203,7 @@
 						<!-- Día entrenado: tap → detalle de ese día -->
 						<a
 							href={`/historial/dia/${fecha}`}
-							class="grid aspect-square place-items-center rounded-lg border text-[11px] font-bold"
+							class="grid min-h-11 min-w-11 place-items-center rounded-lg border text-[11px] font-bold"
 							style="background: rgb(var(--exito) / .18); border-color: rgb(var(--exito) / {fecha ===
 							hoy
 								? '.9'
@@ -211,7 +214,7 @@
 						</a>
 					{:else}
 						<div
-							class="grid aspect-square place-items-center rounded-lg border text-[11px] font-semibold {fecha >
+							class="grid min-h-11 min-w-11 place-items-center rounded-lg border text-[11px] font-semibold {fecha >
 							hoy
 								? 'opacity-35'
 								: ''}"

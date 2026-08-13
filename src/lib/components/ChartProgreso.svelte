@@ -2,7 +2,8 @@
 	import { scaleTime } from 'd3-scale';
 	import { curveMonotoneX } from 'd3-shape';
 	import { Axis, Chart, Highlight, Points, Spline, Svg, Tooltip } from 'layerchart';
-	import { mejorSet, type MejorSet } from '$lib/sesion';
+	import { hoyStr, mejorSet, type MejorSet } from '$lib/sesion';
+	import { fechaDentroDeRango } from '$lib/fechas';
 	import { formatoNumero, formatoSet, fechaCorta } from '$lib/formato';
 	import { dur, menosMovimiento } from '$lib/motion';
 
@@ -59,6 +60,10 @@
 		return corte;
 	}
 
+	function fechaStrLocal(fecha: Date): string {
+		return fecha.toLocaleDateString('sv');
+	}
+
 	/** Una fecha puede tener varias rutinas: se muestra su mejor serie del día, sin solaparlas. */
 	function agruparPorFecha(series: MejorSet[]): PuntoChart[] {
 		const porFecha = new Map<string, { fuente: MejorSet; sesiones: Set<string | undefined> }>();
@@ -110,8 +115,8 @@
 	const todos = $derived(agruparPorFecha(puntos));
 	const datos = $derived.by(() => {
 		const corte = limiteRango(rango);
-		const hoy = inicioDelDia();
-		return todos.filter((punto) => punto.fecha >= (corte ?? new Date(0)) && punto.fecha <= hoy);
+		const desde = corte ? fechaStrLocal(corte) : null;
+		return todos.filter((punto) => fechaDentroDeRango(punto.fechaStr, desde, hoyStr()));
 	});
 	const datosDibujados = $derived(reducirParaDibujar(datos));
 	const conTendencia = $derived(datos.length >= 5);
@@ -243,7 +248,9 @@
 		class="mt-2 rounded-lg bg-white/[0.025] px-3 py-2 text-[11px]"
 		style="color: var(--muted)"
 	>
-		<summary class="cursor-pointer font-semibold">Ver los datos que muestra el gráfico</summary>
+		<summary class="flex min-h-11 cursor-pointer items-center font-semibold">
+			Ver los datos que muestra el gráfico
+		</summary>
 		<ol class="mt-2 space-y-1">
 			{#each datosDibujados as punto (punto.fechaStr + punto.valor)}
 				<li>

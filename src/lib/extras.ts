@@ -9,6 +9,7 @@ import {
 	type Ajustes,
 	type MetricaPr
 } from './db';
+import { fechaCalendarioValida } from './fechas';
 
 // --- Notas por ejercicio ---
 
@@ -433,17 +434,6 @@ function normalizarDiaBackup(dia: Dia & { diaSemana?: number }): Dia {
 	return resto;
 }
 
-const FECHA_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-function fechaValida(fecha: string): boolean {
-	if (!FECHA_RE.test(fecha)) return false;
-	const [ano, mes, dia] = fecha.split('-').map(Number);
-	const valor = new Date(Date.UTC(ano!, mes! - 1, dia!));
-	return (
-		valor.getUTCFullYear() === ano && valor.getUTCMonth() === mes! - 1 && valor.getUTCDate() === dia
-	);
-}
-
 export interface ImportPreparado {
 	datos: Required<Pick<Backup, 'dias' | 'sesiones' | 'notas' | 'ajustes'>>;
 	/** Qué se reparó o se descartó, para decírselo al usuario antes de confirmar. */
@@ -497,7 +487,7 @@ export function prepararImport(data: Backup): ImportPreparado {
 	let prsDescartados = 0;
 	let seriesCeroReparadas = 0;
 	for (const sesion of data.sesiones ?? []) {
-		if (!fechaValida(sesion.fecha)) {
+		if (!fechaCalendarioValida(sesion.fecha)) {
 			fechaInvalida++;
 			continue;
 		}

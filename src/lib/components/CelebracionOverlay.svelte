@@ -69,7 +69,8 @@
 			</p>
 		{:else if exito === 'parcial'}
 			<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
-				{hechas}/{total} series · volviendo al día…
+				{hechas}/{total}
+				{total === 1 ? 'serie' : 'series'} · volviendo al día…
 			</p>
 		{:else}
 			<p class="mt-1 text-sm font-medium" style="color: var(--muted)">Volviendo al día…</p>

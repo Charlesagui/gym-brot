@@ -30,6 +30,7 @@
 		sub: string;
 	}
 	let reordenando = $state(false);
+	let creandoDia = $state(false);
 	let ordenItems = $state<ItemDia[]>([]);
 	const flipMs = dur(180);
 
@@ -87,10 +88,10 @@
 		for (const item of dia.ejercicios) {
 			const e = sesion.ejercicios.find((x) => x.exerciseId === item.exerciseId);
 			if (!e || e.sets.length === 0) continue;
-			// Saltado cuenta como resuelto (igual que en la pantalla del día).
+			// Un salto resuelve el día, pero no convierte el ejercicio en hecho. Si hubo
+			// series reales, la portada muestra actividad sin inflar los completos.
 			if (e.saltado) {
 				conActividad++;
-				completos++;
 				continue;
 			}
 			if (e.sets.some(serieCompleta)) conActividad++;
@@ -101,10 +102,13 @@
 	}
 
 	async function nuevoDia() {
+		if (creandoDia) return;
+		creandoDia = true;
 		try {
 			const id = await crearDia();
 			await goto(`/dia/${id}`);
 		} catch (error) {
+			creandoDia = false;
 			reportarErrorDatos('No se pudo crear la rutina. Intentá de nuevo.', error);
 		}
 	}
@@ -325,10 +329,12 @@
 
 			<button
 				onclick={nuevoDia}
-				class="mt-4 w-full rounded-2xl border border-dashed border-white/20 p-4 text-sm font-medium"
+				disabled={creandoDia}
+				aria-busy={creandoDia}
+				class="mt-4 w-full rounded-2xl border border-dashed border-white/20 p-4 text-sm font-medium disabled:opacity-60"
 				style="color: var(--accent-text)"
 			>
-				+ Nuevo día
+				{creandoDia ? 'Creando día…' : '+ Nuevo día'}
 			</button>
 		{/if}
 	{:else}

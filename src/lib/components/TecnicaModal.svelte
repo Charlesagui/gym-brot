@@ -1,10 +1,8 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import { dur } from '$lib/motion';
+	import { modal } from '$lib/modal';
 
-	const FOCUSABLE_SELECTOR =
-		'a[href], button:not([disabled]), iframe, input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 	const tituloId = 'tecnica-modal-title';
 	const cierrePorArrastrePx = 76;
 
@@ -23,11 +21,6 @@
 		onClose: () => void;
 	} = $props();
 
-	let panelEl: HTMLDivElement | undefined;
-	let closeButtonEl: HTMLButtonElement | undefined;
-	let focoPrevio: HTMLElement | null = null;
-	let bodyOverflowPrevio = '';
-	let htmlOverflowPrevio = '';
 	let inicioY = 0;
 	let pointerActivo: number | null = null;
 	let arrastrando = $state(false);
@@ -37,59 +30,6 @@
 	const panelStyle = $derived(
 		`background: radial-gradient(140% 100% at 50% 0%, rgb(${glow} / 0.14), transparent 60%), var(--surface); max-height: calc(100dvh - 3rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); transform: translate3d(0, ${arrastreY}px, 0); transition: ${arrastrando ? 'none' : 'transform 160ms ease-out'}`
 	);
-
-	onMount(() => {
-		focoPrevio = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-		bodyOverflowPrevio = document.body.style.overflow;
-		htmlOverflowPrevio = document.documentElement.style.overflow;
-		document.body.style.overflow = 'hidden';
-		document.documentElement.style.overflow = 'hidden';
-		requestAnimationFrame(() => closeButtonEl?.focus({ preventScroll: true }));
-	});
-
-	onDestroy(() => {
-		document.body.style.overflow = bodyOverflowPrevio;
-		document.documentElement.style.overflow = htmlOverflowPrevio;
-		focoPrevio?.focus({ preventScroll: true });
-	});
-
-	function focusables(): HTMLElement[] {
-		if (!panelEl) return [];
-		return Array.from(panelEl.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-			(el) => el.getClientRects().length > 0 && !el.hasAttribute('disabled')
-		);
-	}
-
-	function manejarTecla(e: KeyboardEvent) {
-		if (e.key === 'Escape') {
-			e.preventDefault();
-			onClose();
-			return;
-		}
-		if (e.key !== 'Tab') return;
-
-		const items = focusables();
-		if (items.length === 0) {
-			e.preventDefault();
-			panelEl?.focus({ preventScroll: true });
-			return;
-		}
-
-		const primero = items[0];
-		const ultimo = items[items.length - 1];
-		const activo = document.activeElement;
-
-		if (e.shiftKey && activo === primero) {
-			e.preventDefault();
-			ultimo.focus({ preventScroll: true });
-		} else if (!e.shiftKey && activo === ultimo) {
-			e.preventDefault();
-			primero.focus({ preventScroll: true });
-		} else if (activo instanceof Node && panelEl && !panelEl.contains(activo)) {
-			e.preventDefault();
-			primero.focus({ preventScroll: true });
-		}
-	}
 
 	function iniciarArrastre(e: PointerEvent) {
 		if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -150,9 +90,8 @@
 	}
 </script>
 
-<svelte:window onkeydown={manejarTecla} />
-
 <div
+	use:modal={{ onClose, focoInicial: '[data-tecnica-cerrar]' }}
 	class="fixed inset-0 z-[70] flex items-center justify-center px-4 sm:px-5"
 	style="padding-top: calc(1.5rem + env(safe-area-inset-top)); padding-bottom: calc(1.5rem + env(safe-area-inset-bottom))"
 	role="dialog"
@@ -168,7 +107,6 @@
 	></button>
 	<div in:fly={{ y: 40, duration: dur(240) }} class="relative mx-auto w-full max-w-2xl">
 		<div
-			bind:this={panelEl}
 			tabindex="-1"
 			class="relative w-full overflow-y-auto overscroll-contain rounded-3xl border border-white/10 px-5 pt-3 shadow-2xl outline-none"
 			style={panelStyle}
@@ -191,7 +129,7 @@
 					<p id={tituloId} class="truncate text-lg font-bold leading-tight">{nombre}</p>
 				</div>
 				<button
-					bind:this={closeButtonEl}
+					data-tecnica-cerrar
 					onclick={onClose}
 					class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-xl font-bold"
 					aria-label="Cerrar técnica">×</button

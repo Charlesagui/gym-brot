@@ -20,6 +20,8 @@
 	import { modal } from '$lib/modal';
 
 	const diaId = $derived($page.params.id!);
+	const fechaSesion = $derived($page.url.searchParams.get('fecha'));
+	const volver = $derived(`/dia/${diaId}${fechaSesion ? `?fecha=${fechaSesion}` : ''}`);
 	const cierrePorArrastrePx = 76;
 
 	const diaStore = $derived(
@@ -179,7 +181,7 @@
 <main class="gb-page glow-bg min-h-dvh px-5 pb-12 pt-6">
 	<header class="mb-4 flex items-center gap-3">
 		<a
-			href={`/dia/${diaId}`}
+			href={volver}
 			class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
 			aria-label="Volver">←</a
 		>
