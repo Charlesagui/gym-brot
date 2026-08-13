@@ -197,7 +197,7 @@
 				{#each ordenItems as it (it.id)}
 					<div
 						animate:flip={{ duration: flipMs }}
-						class="flex touch-none items-center gap-3 rounded-2xl border border-white/10 p-4"
+					class="flex touch-pan-y items-center gap-3 rounded-2xl border border-white/10 p-4"
 						style="background: linear-gradient(90deg, rgb({it.color} / 0.12), transparent 55%), var(--surface)"
 					>
 						<span

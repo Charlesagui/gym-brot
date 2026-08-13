@@ -391,7 +391,7 @@
 			{#each ordenItems as it (it.id)}
 				<div
 					animate:flip={{ duration: flipMs }}
-					class="grid touch-none grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2 rounded-2xl border border-white/10 p-2.5"
+					class="grid touch-pan-y grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2 rounded-2xl border border-white/10 p-2.5"
 					style="background: radial-gradient(150% 130% at 0% 0%, rgb({it.glow} / 0.14), transparent 60%), var(--surface)"
 				>
 					<span class="shrink-0 text-lg leading-none" style="color: var(--muted)" aria-hidden="true"
