@@ -28,7 +28,7 @@ import {
 	toggleMax,
 	ultimaSesion
 } from './sesion';
-import { resumenDiaSesion } from './historial';
+import { resumenDiaSesion, rachaSemanalActual } from './historial';
 import { agregarEjercicio } from './dias';
 
 async function limpiarDb() {
@@ -333,6 +333,26 @@ describe('sesion con IndexedDB', () => {
 
 		await reabrirDia('push', '2026-01-07');
 		expect((await db.sesiones.get('2026-01-07__push'))?.diaTerminado).toBe(false);
+		vi.useRealTimers();
+	});
+
+	it('rachaSemanalActual cuenta semanas seguidas entrenadas hasta hoy', async () => {
+		vi.setSystemTime(new Date('2026-01-14T10:00:00')); // miércoles
+		await db.dias.add({
+			id: 'push',
+			nombre: 'Push',
+			orden: 0,
+			ejercicios: [{ exerciseId: 'press', seriesObjetivo: 1, orden: 0 }]
+		});
+		// Semana previa (lunes 5 de enero) y semana actual (martes 13): dos seguidas.
+		await ensureEjercicio('push', 'press', 1, '2026-01-05');
+		await setReps('push', 'press', 0, 10, '2026-01-05');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-05');
+		await ensureEjercicio('push', 'press', 1, '2026-01-13');
+		await setReps('push', 'press', 0, 10, '2026-01-13');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-13');
+
+		expect(await rachaSemanalActual()).toBe(2);
 		vi.useRealTimers();
 	});
 

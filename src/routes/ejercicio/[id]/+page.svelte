@@ -43,7 +43,7 @@
 	} from '$lib/extras';
 	import { sonarSetHecho, sonarExito } from '$lib/audio';
 	import { descanso } from '$lib/descanso.svelte';
-	import { dur } from '$lib/motion';
+	import { dur, DUR_BASE, DUR_SLOW } from '$lib/motion';
 	import { fromLiveQuery } from '$lib/live';
 	import { formatoNumero, formatoSet, fechaCorta } from '$lib/formato';
 	import { fechaSesionDesdeUrl } from '$lib/fechas';
@@ -69,6 +69,7 @@
 	import SetRow from '$lib/components/SetRow.svelte';
 	import MiniChart from '$lib/components/MiniChart.svelte';
 	import CelebracionOverlay from '$lib/components/CelebracionOverlay.svelte';
+	import CelebracionParticulas from '$lib/components/CelebracionParticulas.svelte';
 	import TecnicaModal from '$lib/components/TecnicaModal.svelte';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
 
@@ -145,6 +146,13 @@
 	// Cada serie acepta una sola intención mientras IndexedDB confirma el resultado.
 	// Esto evita que un doble toque convierta un "marcar" en "desmarcar".
 	let seriesPendientes = $state<Set<number>>(new Set());
+	// Acuse visual breve tras CONFIRMAR el guardado de una serie marcada (no al desmarcar).
+	let filasFlash = $state<Set<number>>(new Set());
+	let flashIds = new Map<number, ReturnType<typeof setTimeout>>();
+	// El contador "hechas/total" hace un pop corto cuando cambia.
+	let contadorPop = $state(false);
+	let contadorPopId: ReturnType<typeof setTimeout> | null = null;
+	let restoId: ReturnType<typeof setTimeout> | null = null;
 	let confirmacion = $state<{
 		titulo: string;
 		mensaje: string;
@@ -155,6 +163,9 @@
 	$effect(() => {
 		$page.params.id; // dep: reinicia "grande" al cambiar de ejercicio
 		videoGrande = demoGrande();
+		// El pop del contador es para un toque en ESTE ejercicio, no para el salto de
+		// "hechas" que trae cargar uno nuevo.
+		hechasPrevias = null;
 	});
 
 	function setVideoGrande(valor: boolean) {
@@ -269,10 +280,29 @@
 		if (exitoId) clearTimeout(exitoId);
 		if (prFlashId) clearTimeout(prFlashId);
 		if (notaId) clearTimeout(notaId);
+		if (contadorPopId) clearTimeout(contadorPopId);
+		if (restoId) clearTimeout(restoId);
+		for (const id of flashIds.values()) clearTimeout(id);
 		void guardarNotaPendiente();
 	});
 
 	const hechas = $derived(sets.filter(serieCompleta).length);
+	let hechasPrevias: number | null = null;
+	$effect(() => {
+		const actuales = hechas;
+		if (hechasPrevias === null) {
+			hechasPrevias = actuales;
+			return;
+		}
+		if (actuales === hechasPrevias) return;
+		hechasPrevias = actuales;
+		contadorPop = false;
+		requestAnimationFrame(() => {
+			contadorPop = true;
+			if (contadorPopId) clearTimeout(contadorPopId);
+			contadorPopId = setTimeout(() => (contadorPop = false), DUR_BASE);
+		});
+	});
 	const completo = $derived(sets.length > 0 && sets.every(serieCompleta));
 	const unidad = $derived(ajustes.unidad);
 	const sonidoActivo = $derived(ajustes.sonido);
@@ -475,6 +505,25 @@
 		el.value = reps != null ? String(reps) : '';
 	}
 
+	function marcarFlash(i: number) {
+		const previo = flashIds.get(i);
+		if (previo) clearTimeout(previo);
+		// Reinicia la animación aunque ya estuviera corriendo (toques rápidos consecutivos).
+		filasFlash.delete(i);
+		filasFlash = new Set(filasFlash);
+		requestAnimationFrame(() => {
+			filasFlash = new Set(filasFlash).add(i);
+			flashIds.set(
+				i,
+				setTimeout(() => {
+					filasFlash.delete(i);
+					filasFlash = new Set(filasFlash);
+					flashIds.delete(i);
+				}, DUR_SLOW)
+			);
+		});
+	}
+
 	async function onToggle(i: number) {
 		if (seriesPendientes.has(i)) return;
 		const actual = sets[i];
@@ -493,11 +542,15 @@
 		// Antes de cualquier await: iOS exige gesto vivo para desbloquear el audio y
 		// para pedir el permiso de notificaciones.
 		if (objetivo && ajustes.timer.activo) descanso.prepararDesdeGesto();
+		// Respuesta óptima al toque: el check se ve marcado ya, antes de que confirme la base.
+		// Si la escritura falla, se revierte más abajo junto con el aviso de error.
+		sets[i].hecha = objetivo;
 		seriesPendientes = new Set(seriesPendientes).add(i);
 		let resultado: Awaited<ReturnType<typeof setSerieHecha>> | undefined;
 		try {
 			resultado = await setSerieHecha(diaId!, $page.params.id!, i, objetivo, fechaSesion, metrica);
 		} catch (e) {
+			if (sets[i]) sets[i].hecha = !objetivo;
 			errorGuardado = e instanceof Error ? e.message : 'No se pudo guardar la serie.';
 			return;
 		} finally {
@@ -506,14 +559,20 @@
 			seriesPendientes = pendientes;
 		}
 		if (!resultado?.encontrada) {
+			if (sets[i]) sets[i].hecha = !objetivo;
 			errorGuardado = 'La serie ya no existe. Se actualizó la pantalla.';
 			return;
 		}
+		if (sets[i]) sets[i].hecha = resultado.hecha ?? sets[i].hecha;
 		if (!resultado.cambio) return;
 		if (!resultado.hecha) {
+			// Desmarcar es sobrio: sin glow, sin sonido, sin demora antes de saltar el descanso.
 			descanso.saltar();
 			return;
 		}
+
+		// Recién confirmado por la base: ahora sí se celebra el microfeedback de la fila.
+		marcarFlash(i);
 
 		// ¿Esta serie acaba de marcar un PR? La decisión la toma la base adentro de la
 		// transacción: acá los derivados pueden venir de un liveQuery que todavía no
@@ -537,12 +596,16 @@
 			mostrarHintTimer = false;
 			descanso.saltar();
 		} else if (ajustes.timer.activo) {
-			// recién hecha → arranca descanso, con la próxima serie como recordatorio
-			descanso.iniciar(
-				ajustes.timer.minutos,
-				g?.glow ?? '124 92 255',
-				etiquetaProximaSerie(sets, i, ej?.nombre ?? '')
-			);
+			// El check y el glow de la fila necesitan un instante para percibirse antes
+			// de que el descanso tape la pantalla con su propia barra.
+			if (restoId) clearTimeout(restoId);
+			restoId = setTimeout(() => {
+				descanso.iniciar(
+					ajustes.timer.minutos,
+					g?.glow ?? '124 92 255',
+					etiquetaProximaSerie(sets, i, ej?.nombre ?? '')
+				);
+			}, 220);
 		} else if (debeMostrarHintTimer()) {
 			// Timer apagado: sugerir activarlo (una sola vez) para que avise cuándo volver.
 			mostrarHintTimer = true;
@@ -673,12 +736,12 @@
 					{#if !videoGrande}
 						<button
 							onclick={() => setVideoGrande(true)}
-							class="shrink-0 overflow-hidden rounded-xl"
+							class="gb-pressable gb-thumb-frame shrink-0 overflow-hidden rounded-xl"
 							aria-label="Ver demostración en grande"
 						>
 							<video
 								use:demostracionActiva={ej.demoVideo}
-								class="size-12 bg-white object-contain"
+								class="size-12 object-contain"
 								autoplay
 								loop
 								muted
@@ -699,12 +762,13 @@
 				{#if videoGrande}
 					<button
 						onclick={() => setVideoGrande(false)}
-						class="gb-exercise-demo block w-full"
+						class="gb-exercise-demo gb-demo-frame block w-full"
+						style="--frame-glow: {g.glow}"
 						aria-label="Achicar demostración"
 					>
 						<video
 							use:demostracionActiva={ej.demoVideo}
-							class="gb-exercise-demo-video mx-auto aspect-square w-full max-w-xs rounded-2xl bg-white object-contain"
+							class="gb-exercise-demo-video gb-media-ivory mx-auto aspect-square w-full max-w-xs rounded-2xl object-contain"
 							aria-label={ej.nombre}
 							autoplay
 							loop
@@ -830,19 +894,21 @@
 									<button
 										onclick={quitarSerie}
 										disabled={sets.length <= 1}
-										class="grid size-11 touch-manipulation place-items-center rounded-full text-sm font-bold disabled:opacity-35"
+										class="gb-pressable grid size-11 touch-manipulation place-items-center rounded-full text-sm font-bold disabled:opacity-35"
 										style="color: var(--muted)"
 										aria-label="Quitar serie de hoy">−</button
 									>
 									<span
-										class="min-w-11 text-center text-sm font-bold tabular-nums"
+										class="min-w-11 text-center text-sm font-bold tabular-nums {contadorPop
+											? 'gb-pop'
+											: ''}"
 										style="color: {completo ? `rgb(${g.glow})` : 'var(--text)'}"
 										aria-label={`${hechas} de ${sets.length} series hechas`}
 										>{hechas}/{sets.length}</span
 									>
 									<button
 										onclick={() => escribir(addSet(diaId, $page.params.id!, fechaSesion))}
-										class="grid size-11 touch-manipulation place-items-center rounded-full text-sm font-bold"
+										class="gb-pressable grid size-11 touch-manipulation place-items-center rounded-full text-sm font-bold"
 										style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
 										aria-label="Agregar serie de hoy">+</button
 									>
@@ -913,6 +979,7 @@
 										{unidad}
 										{pasoPeso}
 										pendiente={seriesPendientes.has(i)}
+										flash={filasFlash.has(i)}
 										onToggle={() => onToggle(i)}
 										onToggleMax={() =>
 											escribir(toggleMax(diaId, $page.params.id!, i, fechaSesion, metrica))}
@@ -1015,7 +1082,7 @@
 								{#if superado}
 									<span
 										class="rounded-full px-2 py-0.5 text-xs font-bold"
-										style="background: rgb({g.glow} / .2); color: rgb({g.glow})">🎉 Nuevo PR</span
+										style="background: rgb({g.glow} / .2); color: rgb({g.glow})">🏆 Nuevo PR</span
 									>
 								{/if}
 							</div>
@@ -1093,7 +1160,7 @@
 							<button
 								onclick={terminarEjercicio}
 								disabled={!!exito}
-								class="block w-full rounded-2xl py-4 text-center font-bold"
+								class="gb-pressable block w-full rounded-2xl py-4 text-center font-bold"
 								style="background: rgb({g.glow}); color: var(--on-bright)"
 								>{exito ? 'Cerrando…' : '✓ Volver al día'}</button
 							>
@@ -1102,7 +1169,7 @@
 						<button
 							onclick={terminarEjercicio}
 							disabled={!!exito}
-							class="mt-4 block w-full rounded-2xl py-4 text-center font-bold"
+							class="gb-pressable mt-4 block w-full rounded-2xl py-4 text-center font-bold"
 							style="background: var(--accent); color: var(--on-accent)"
 							>{exito ? 'Cerrando…' : 'Terminar ejercicio'}</button
 						>
@@ -1146,11 +1213,15 @@
 				aria-live="polite"
 				aria-label="Nuevo PR"
 			>
-				<div
-					class="mx-auto grid size-24 place-items-center rounded-full border border-white/15 text-5xl font-extrabold"
-					style="background: rgb({g.glow} / .22); color: rgb({g.glow}); box-shadow: 0 0 55px rgb({g.glow} / .25)"
-				>
-					🏆
+				<div class="relative mx-auto grid size-24 place-items-center">
+					<div class="gb-shockwave" style="--shock-color: {g.glow}"></div>
+					<CelebracionParticulas color={g.glow} cantidad={14} />
+					<div
+						class="relative grid size-24 place-items-center rounded-full border border-white/15 text-5xl font-extrabold"
+						style="background: rgb({g.glow} / .22); color: rgb({g.glow}); box-shadow: 0 0 55px rgb({g.glow} / .25)"
+					>
+						🏆
+					</div>
 				</div>
 				<p class="mt-5 text-2xl font-extrabold">¡Nuevo PR!</p>
 				<p class="mt-2 text-4xl font-extrabold tabular-nums">

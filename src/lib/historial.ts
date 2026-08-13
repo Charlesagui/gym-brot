@@ -109,6 +109,35 @@ function tieneEntrenamiento(sesion: Sesion): boolean {
 	return sesion.ejercicios.some((e) => e.sets.some((s) => s.hecha && s.reps !== 0));
 }
 
+export interface ComparacionSesion {
+	fechaAnterior: string;
+	deltaVolumen: number;
+	deltaSets: number;
+}
+
+/**
+ * Compara una sesión contra la más reciente sesión comparable anterior: mismo día de
+ * rutina, fecha estrictamente anterior, con actividad real. Sin eso, no hay con qué
+ * comparar (primera vez, o entrenaste ese día suelto sin rutina) y devuelve null — el
+ * manifiesto pide no inventar comparaciones donde no hay base real.
+ */
+export function compararConAnterior(
+	actual: Sesion,
+	candidatas: Sesion[]
+): ComparacionSesion | null {
+	const previa = candidatas
+		.filter((s) => s.diaId === actual.diaId && s.fecha < actual.fecha && tieneEntrenamiento(s))
+		.sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
+	if (!previa) return null;
+	const resumenActual = resumenDiaSesion(actual);
+	const resumenPrevio = resumenDiaSesion(previa);
+	return {
+		fechaAnterior: previa.fecha,
+		deltaVolumen: resumenActual.volumen - resumenPrevio.volumen,
+		deltaSets: resumenActual.setsHechos - resumenPrevio.setsHechos
+	};
+}
+
 function resumenSesionAgrupada(sesiones: Sesion[], dias: Dia[]): DiaEntrenado {
 	const porDia = new Map(dias.map((d) => [d.id, d.nombre]));
 	let sets = 0;
@@ -187,6 +216,20 @@ export function crearHistorialResumen(sesiones: Sesion[], dias: Dia[]): Historia
 		diasEstaSemana,
 		totalDias: diasEntrenados.length
 	};
+}
+
+/**
+ * Racha semanal actual, para el resumen puntual de "día terminado". Es una lectura
+ * única (no un liveQuery suscripto): pedirla solo en el momento de cerrar el día evita
+ * pagar un escaneo completo del historial en cada toque, como sí hace la pantalla de
+ * Historial (que la necesita siempre visible).
+ */
+export async function rachaSemanalActual(): Promise<number> {
+	const [sesiones, dias] = await Promise.all([
+		db.sesiones.orderBy('fecha').toArray(),
+		db.dias.toArray()
+	]);
+	return crearHistorialResumen(sesiones, dias).rachaSemanal;
 }
 
 export function resumenHistorialObs() {

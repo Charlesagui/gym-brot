@@ -2,6 +2,7 @@
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import { onNavigate } from '$app/navigation';
 	import { useRegisterSW } from 'virtual:pwa-register/svelte';
 	import { db, onDbBloqueada } from '$lib/db';
 	import { seedSiVacio } from '$lib/seed';
@@ -10,8 +11,26 @@
 	import RestFocusOverlay from '$lib/components/RestFocusOverlay.svelte';
 	import { descanso } from '$lib/descanso.svelte';
 	import { errorDatos } from '$lib/errores-datos';
+	import { menosMovimiento } from '$lib/motion';
 
 	let { children } = $props();
+
+	// Transición breve y espacial entre pantallas (View Transitions nativas: sin
+	// librería). Sin soporte del navegador o con movimiento reducido, no hace nada y
+	// SvelteKit navega como siempre — nunca bloquea ni retrasa el registro rápido.
+	onNavigate((navigation) => {
+		if (!document.startViewTransition || menosMovimiento()) return;
+		if (navigation.to?.url.pathname === navigation.from?.url.pathname) return;
+		// Volver (atrás del navegador) invierte el sentido del deslizamiento.
+		const esVuelta = navigation.type === 'popstate' && (navigation.delta ?? 0) < 0;
+		document.documentElement.dataset.gbNavDir = esVuelta ? 'back' : 'forward';
+		return new Promise((resolve) => {
+			document.startViewTransition(async () => {
+				resolve();
+				await navigation.complete;
+			});
+		});
+	});
 
 	// Mid-entrenamiento el nav no aporta y ocupa la mejor zona del pulgar:
 	// en la pantalla de ejercicio ese espacio es para la barra de descanso.

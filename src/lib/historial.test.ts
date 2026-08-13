@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Dia, Sesion } from './db';
-import { crearHistorialResumen, resumenDiaSesion } from './historial';
+import { compararConAnterior, crearHistorialResumen, resumenDiaSesion } from './historial';
 
 const dia: Dia = {
 	id: 'piernas',
@@ -18,6 +18,20 @@ function sesion(fecha: string, hecha = true): Sesion {
 			{
 				exerciseId: 'sentadilla',
 				sets: [{ peso: 100, reps: 5, hecha }]
+			}
+		]
+	};
+}
+
+function sesionConVolumen(fecha: string, diaId: string, peso: number, sets = 1): Sesion {
+	return {
+		id: `${fecha}__${diaId}`,
+		fecha,
+		diaId,
+		ejercicios: [
+			{
+				exerciseId: 'sentadilla',
+				sets: Array.from({ length: sets }, () => ({ peso, reps: 5, hecha: true }))
 			}
 		]
 	};
@@ -122,5 +136,48 @@ describe('resumenDiaSesion', () => {
 		expect(resumen.setsHechos).toBe(3);
 		expect(resumen.volumen).toBe(500);
 		expect(resumen.setsSinVolumen).toBe(2);
+	});
+});
+
+describe('compararConAnterior', () => {
+	it('primera sesión de este día: sin base para comparar, no inventa un delta', () => {
+		const actual = sesionConVolumen('2026-01-14', 'piernas', 100);
+		expect(compararConAnterior(actual, [])).toBeNull();
+	});
+
+	it('mayor volumen que la vez anterior: delta positivo', () => {
+		const previa = sesionConVolumen('2026-01-07', 'piernas', 100);
+		const actual = sesionConVolumen('2026-01-14', 'piernas', 120);
+		const cmp = compararConAnterior(actual, [previa]);
+		expect(cmp).toEqual({ fechaAnterior: '2026-01-07', deltaVolumen: 100, deltaSets: 0 });
+	});
+
+	it('menor volumen que la vez anterior: delta negativo, sin lenguaje de culpa', () => {
+		const previa = sesionConVolumen('2026-01-07', 'piernas', 100, 3);
+		const actual = sesionConVolumen('2026-01-14', 'piernas', 100, 1);
+		const cmp = compararConAnterior(actual, [previa]);
+		expect(cmp).toEqual({ fechaAnterior: '2026-01-07', deltaVolumen: -1000, deltaSets: -2 });
+	});
+
+	it('usa la sesión comparable más reciente cuando hay varias anteriores', () => {
+		const vieja = sesionConVolumen('2025-12-01', 'piernas', 50);
+		const reciente = sesionConVolumen('2026-01-07', 'piernas', 100);
+		const actual = sesionConVolumen('2026-01-14', 'piernas', 110);
+		const cmp = compararConAnterior(actual, [vieja, reciente]);
+		expect(cmp?.fechaAnterior).toBe('2026-01-07');
+		expect(cmp?.deltaVolumen).toBe(50); // (110-100) kg × 5 reps
+	});
+
+	it('ignora sesiones de otro día de rutina y sesiones futuras', () => {
+		const otroDia = sesionConVolumen('2026-01-07', 'espalda', 100);
+		const futura = sesionConVolumen('2026-01-20', 'piernas', 100);
+		const actual = sesionConVolumen('2026-01-14', 'piernas', 100);
+		expect(compararConAnterior(actual, [otroDia, futura])).toBeNull();
+	});
+
+	it('ignora una sesión anterior sin series realmente hechas (parcial vacía o saltada)', () => {
+		const previaSinTrabajo = sesion('2026-01-07', false);
+		const actual = sesionConVolumen('2026-01-14', 'piernas', 100);
+		expect(compararConAnterior(actual, [previaSinTrabajo])).toBeNull();
 	});
 });

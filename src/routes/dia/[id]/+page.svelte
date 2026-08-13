@@ -28,7 +28,7 @@
 	} from '$lib/sesion';
 	import { estadoEjercicioSesion, serieCompleta } from '$lib/sesion-reglas';
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
-	import { resumenDiaSesion } from '$lib/historial';
+	import { resumenDiaSesion, rachaSemanalActual } from '$lib/historial';
 	import { sonarDiaTerminado } from '$lib/audio';
 	import { reproducirEnVista } from '$lib/video';
 	import { dur } from '$lib/motion';
@@ -36,6 +36,7 @@
 	import { formatoVolumen } from '$lib/formato';
 	import { fechaSesionDesdeUrl } from '$lib/fechas';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
+	import CelebracionParticulas from '$lib/components/CelebracionParticulas.svelte';
 	import { guardarSinBloquear, reportarErrorDatos } from '$lib/errores-datos';
 
 	let editando = $state(false);
@@ -43,6 +44,8 @@
 	let avisoDia = $state<string | null>(null);
 	let premioDia = $state(false);
 	let premioId: ReturnType<typeof setTimeout> | null = null;
+	// Solo se muestra si es una racha real (2+ semanas seguidas): no infla la primera.
+	let rachaSemanal = $state(0);
 	let confirmacion = $state<{
 		titulo: string;
 		mensaje: string;
@@ -180,10 +183,19 @@
 		}
 		avisoDia = null;
 		premioDia = true;
+		rachaSemanal = 0;
 		const conActividadReal = resumenDia.setsHechos > 0;
 		if (conActividadReal && sonidoActivo) void sonarDiaTerminado().catch(() => {});
 		if (conActividadReal && (ajustes.vibracion ?? true) && 'vibrate' in navigator)
 			navigator.vibrate([120, 70, 120, 70, 220]);
+		if (conActividadReal) {
+			// Puntual, no suscripta: ver el comentario en rachaSemanalActual().
+			void rachaSemanalActual()
+				.then((valor) => {
+					if (premioDia) rachaSemanal = valor;
+				})
+				.catch(() => {});
+		}
 		if (premioId) clearTimeout(premioId);
 		premioId = setTimeout(() => (premioDia = false), 2400);
 	}
@@ -312,7 +324,7 @@
 			{#if dia && !reordenando}
 				<button
 					onclick={abrirEdicion}
-					class="flex min-h-11 items-center gap-1.5 rounded-full border border-white/10 px-3 py-2 text-sm font-semibold"
+					class="gb-pressable flex min-h-11 items-center gap-1.5 rounded-full border border-white/10 px-3 py-2 text-sm font-semibold"
 					aria-label="Editar">✏️ Editar</button
 				>
 			{/if}
@@ -380,7 +392,7 @@
 					>
 					<video
 						use:reproducirEnVista={it.demoVideo}
-						class="size-14 shrink-0 rounded-xl bg-white object-contain"
+						class="gb-thumb-frame size-14 shrink-0 rounded-xl object-contain"
 						aria-label={it.nombre}
 						loop
 						muted
@@ -486,7 +498,7 @@
 						{#if e}
 							<video
 								use:reproducirEnVista={e.demoVideo}
-								class="size-14 shrink-0 rounded-xl bg-white object-contain"
+								class="gb-thumb-frame size-14 shrink-0 rounded-xl object-contain"
 								aria-label={e.nombre}
 								loop
 								muted
@@ -558,7 +570,7 @@
 							{#if e}
 								<video
 									use:reproducirEnVista={e.demoVideo}
-									class="size-16 shrink-0 rounded-xl bg-white object-contain"
+									class="gb-thumb-frame size-16 shrink-0 rounded-xl object-contain"
 									aria-label={e.nombre}
 									loop
 									muted
@@ -620,14 +632,16 @@
 										reanudarEjercicio(diaId, item.exerciseId, fechaSesion!),
 										'No se pudo reanudar el ejercicio. Intentá de nuevo.'
 									)}
-								class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-sm"
+								class="gb-pressable grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-sm"
 								style="color: var(--accent-text)"
 								aria-label={`Reanudar ${nombre} hoy`}>↩</button
 							>
 						{:else}
+							<!-- Acción secundaria: sin borde ni negrita, para no competir con el
+							     progreso de la fila. El target táctil se mantiene en 44px. -->
 							<button
 								onclick={() => void saltarEjercicioActual(item.exerciseId)}
-								class="min-h-11 shrink-0 rounded-full border border-white/10 px-3.5 py-2 text-xs font-bold"
+								class="gb-pressable min-h-11 shrink-0 rounded-full px-3 py-2 text-xs font-medium"
 								style="color: var(--muted)"
 								aria-label={`Saltar ${nombre} hoy`}>Saltar</button
 							>
@@ -700,14 +714,14 @@
 				{#if diaTerminado}
 					<button
 						onclick={reabrir}
-						class="mt-3 w-full rounded-2xl border border-white/10 py-3 text-sm font-bold"
+						class="gb-pressable mt-3 w-full rounded-2xl border border-white/10 py-3 text-sm font-bold"
 						style="color: var(--muted)">Reabrir día</button
 					>
 				{:else}
 					<button
 						onclick={terminarDia}
 						disabled={!diaListo}
-						class="mt-3 w-full rounded-2xl py-3 text-sm font-bold disabled:opacity-45"
+						class="gb-pressable mt-3 w-full rounded-2xl py-3 text-sm font-bold disabled:opacity-45"
 						style="background: {diaListo
 							? 'var(--accent)'
 							: 'rgba(255,255,255,.08)'}; color: {diaListo ? 'white' : 'var(--muted)'}"
@@ -750,11 +764,16 @@
 			: 'background: rgb(var(--scrim) / .9); backdrop-filter: blur(8px)'}
 	>
 		<div transition:fly={{ y: 18, duration: dur(260) }} class="text-center" aria-live="polite">
-			<div
-				class="mx-auto grid size-24 place-items-center rounded-full border border-white/15 text-5xl font-extrabold"
-				style="background: rgb(var(--exito) / .18); color: rgb(var(--exito)); box-shadow: 0 0 55px rgb(var(--exito) / .24)"
-			>
-				{resumenDia.setsHechos > 0 ? '🏁' : '✓'}
+			<div class="relative mx-auto grid size-24 place-items-center">
+				{#if resumenDia.setsHechos > 0}
+					<CelebracionParticulas color="var(--exito)" cantidad={16} />
+				{/if}
+				<div
+					class="relative grid size-24 place-items-center rounded-full border border-white/15 text-5xl font-extrabold"
+					style="background: rgb(var(--exito) / .18); color: rgb(var(--exito)); box-shadow: 0 0 55px rgb(var(--exito) / .24)"
+				>
+					{resumenDia.setsHechos > 0 ? '🏁' : '✓'}
+				</div>
 			</div>
 			{#if resumenDia.setsHechos > 0}
 				<p class="mt-5 text-2xl font-extrabold">Día terminado</p>
@@ -799,6 +818,14 @@
 						</p>
 					{/if}
 				</div>
+			{/if}
+			{#if rachaSemanal >= 2}
+				<p
+					class="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-bold"
+					style="color: rgb(var(--exito))"
+				>
+					🔥 {rachaSemanal} semanas seguidas
+				</p>
 			{/if}
 			<p class="mt-5 text-[11px] font-semibold" style="color: var(--muted)">Tocá para cerrar</p>
 		</div>
