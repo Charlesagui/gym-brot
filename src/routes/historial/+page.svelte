@@ -11,6 +11,9 @@
 	import { hoyStr, recordsGlobalesObs } from '$lib/sesion';
 	import type { RecordEjercicio } from '$lib/sesion-reglas';
 	import { onMount } from 'svelte';
+	import { scale } from 'svelte/transition';
+	import { dur } from '$lib/motion';
+	import { popOnChange } from '$lib/pop-on-change';
 
 	const VACIO: HistorialResumen = crearHistorialResumen([], []);
 
@@ -142,19 +145,28 @@
 		>
 			<div class="grid grid-cols-3 gap-2 text-center">
 				<div>
-					<p class="text-2xl font-extrabold tabular-nums">{historial.rachaSemanal}</p>
+					<p class="text-2xl font-extrabold tabular-nums" use:popOnChange={historial.rachaSemanal}>
+						{historial.rachaSemanal}
+					</p>
 					<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">
 						semanas en racha
 					</p>
 				</div>
 				<div>
-					<p class="text-2xl font-extrabold tabular-nums">{historial.diasEstaSemana}</p>
+					<p
+						class="text-2xl font-extrabold tabular-nums"
+						use:popOnChange={historial.diasEstaSemana}
+					>
+						{historial.diasEstaSemana}
+					</p>
 					<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">
 						días esta semana
 					</p>
 				</div>
 				<div>
-					<p class="text-2xl font-extrabold tabular-nums">{historial.totalDias}</p>
+					<p class="text-2xl font-extrabold tabular-nums" use:popOnChange={historial.totalDias}>
+						{historial.totalDias}
+					</p>
 					<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">
 						días entrenados
 					</p>
@@ -179,7 +191,7 @@
 				<button
 					onclick={() => (mesOffset -= 1)}
 					disabled={sinMesAnterior}
-					class="grid size-11 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
+					class="gb-pressable grid size-11 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
 					aria-label="Mes anterior">‹</button
 				>
 				<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
@@ -188,7 +200,7 @@
 				<button
 					onclick={() => (mesOffset += 1)}
 					disabled={mesOffset >= 0}
-					class="grid size-11 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
+					class="gb-pressable grid size-11 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
 					aria-label="Mes siguiente">›</button
 				>
 			</div>
@@ -200,9 +212,11 @@
 					{#if fecha == null}
 						<div></div>
 					{:else if diasEntrenados.has(fecha)}
-						<!-- Día entrenado: tap → detalle de ese día -->
+						<!-- Día entrenado: tap → detalle de ese día. El de hoy entra con un pop
+						     breve: es probable que sea "el día recién completado". -->
 						<a
 							href={`/historial/dia/${fecha}`}
+							in:scale={fecha === hoy ? { duration: dur(240), start: 0.7 } : { duration: 0 }}
 							class="grid min-h-11 min-w-11 place-items-center rounded-lg border text-[11px] font-bold"
 							style="background: rgb(var(--exito) / .18); border-color: rgb(var(--exito) / {fecha ===
 							hoy
@@ -248,7 +262,7 @@
 						</div>
 						<div class="h-2 flex-1 overflow-hidden rounded-full bg-white/5">
 							<div
-								class="h-full rounded-full"
+								class="gb-streak-bar h-full rounded-full"
 								style="width: {Math.min(
 									100,
 									semana.diasEntrenados * 20
@@ -307,7 +321,7 @@
 				{#if records.length > recordsVisibles}
 					<button
 						onclick={() => (recordsVisibles += 15)}
-						class="w-full rounded-xl border border-white/10 py-2.5 text-sm font-semibold"
+						class="gb-pressable w-full rounded-xl border border-white/10 py-2.5 text-sm font-semibold"
 						style="background: var(--surface); color: var(--muted)"
 					>
 						Ver más ({records.length - recordsVisibles}
@@ -326,3 +340,11 @@
 		</section>
 	{/if}
 </main>
+
+<style>
+	.gb-streak-bar {
+		transition:
+			width var(--dur-slow) var(--ease-out),
+			background-color var(--dur-slow) var(--ease-out);
+	}
+</style>

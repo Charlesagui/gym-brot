@@ -4,10 +4,14 @@
 :root {
 	--bg: #08080c;
 	--surface: #14141d;
+	/* Superficie elevada: tarjeta sobre tarjeta (fila dentro de una sección) */
+	--surface-2: rgba(255, 255, 255, 0.035);
+	--border-soft: rgba(255, 255, 255, 0.1);
 	--text: #e8e8f0;
 	--muted: #9aa0b4;
 	/* Fondo de acción y variante para texto: ambas cumplen AA en su contexto. */
 	--accent: #7654f4;
+	--accent-rgb: 118 84 244; /* = --accent, en rgb para opacidad variable */
 	--accent-text: #8268ff;
 	--on-accent: #ffffff;
 	/* Los glows de grupo son luminosos: su texto necesita tinta oscura. */
@@ -16,6 +20,13 @@
 	--max: 255 157 60; /* naranja MAX (tope de la pila de placas) */
 	--exito: 74 222 128; /* verde de día/ejercicio terminado */
 	--scrim: 8 8 12; /* velo de overlays (= --bg, como rgb para opacidad variable) */
+
+	/* Movimiento: duraciones y curvas semánticas (ver src/lib/motion.ts) */
+	--dur-fast: 120ms; /* presión, respuesta inmediata */
+	--dur-base: 220ms; /* cambio de estado (check, glow de fila) */
+	--dur-slow: 340ms; /* celebración, entrada de overlays */
+	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 html {
@@ -54,6 +65,162 @@ body {
 		radial-gradient(70% 55% at 50% -5%, rgb(var(--glow) / 0.22), transparent 70%), var(--bg);
 }
 
+/*
+ * Primitiva de presión: respuesta táctil inmediata y consistente en botones,
+ * steppers y filas tocables. Un solo lugar para "cómo se siente" tocar algo.
+ */
+.gb-pressable {
+	transition:
+		transform var(--dur-fast) var(--ease-out),
+		filter var(--dur-fast) var(--ease-out);
+}
+.gb-pressable:active {
+	transform: scale(0.96);
+	filter: brightness(0.93);
+}
+
+/*
+ * Rebote corto reutilizable: cambio de estado que merece un acuse breve
+ * (check de serie, contador de series). No desplaza layout (solo transform).
+ */
+@keyframes gb-pop {
+	0% {
+		transform: scale(1);
+	}
+	40% {
+		transform: scale(1.16);
+	}
+	100% {
+		transform: scale(1);
+	}
+}
+.gb-pop {
+	animation: gb-pop var(--dur-base) var(--ease-spring);
+}
+
+/* Glow localizado breve (fila que acaba de confirmar un cambio) */
+@keyframes gb-glow-flash {
+	0% {
+		box-shadow: 0 0 0 0 rgb(var(--row-glow, var(--glow)) / 0);
+		background-color: rgb(var(--row-glow, var(--glow)) / 0);
+	}
+	30% {
+		box-shadow: 0 0 0 3px rgb(var(--row-glow, var(--glow)) / 0.22);
+		background-color: rgb(var(--row-glow, var(--glow)) / 0.14);
+	}
+	100% {
+		box-shadow: 0 0 0 0 rgb(var(--row-glow, var(--glow)) / 0);
+		background-color: rgb(var(--row-glow, var(--glow)) / 0);
+	}
+}
+.gb-row-flash {
+	animation: gb-glow-flash var(--dur-slow) var(--ease-out);
+}
+
+/*
+ * Marco para el video/imagen del ejercicio: el material fuente trae fondo
+ * claro sólido. En vez de flotar como un rectángulo blanco clínico sobre el
+ * tema oscuro, queda enmarcado en un bisel oscuro con el glow del grupo
+ * muscular detrás — el músculo resaltado (rojo) no se toca.
+ */
+.gb-demo-frame {
+	position: relative;
+	border-radius: 1.5rem;
+	padding: 0.7rem;
+	background:
+		radial-gradient(
+			120% 95% at 50% -8%,
+			rgb(var(--frame-glow, var(--glow)) / 0.3),
+			transparent 65%
+		),
+		linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 45%), var(--surface);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.gb-demo-frame > video,
+.gb-demo-frame > img {
+	display: block;
+	border-radius: 1rem;
+}
+
+/* Shockwave del PR: anillo que se expande y se apaga detrás del trofeo. Puramente
+   decorativo — bajo movimiento reducido el `*` global lo deja fijo, sin ocultar el número. */
+@keyframes gb-shockwave {
+	0% {
+		transform: scale(0.55);
+		opacity: 0.55;
+	}
+	100% {
+		transform: scale(2.1);
+		opacity: 0;
+	}
+}
+.gb-shockwave {
+	position: absolute;
+	inset: 0;
+	border-radius: 999px;
+	border: 2px solid rgb(var(--shock-color, var(--glow)));
+	animation: gb-shockwave 700ms var(--ease-out) both;
+}
+
+/* Ivorio cálido en vez de blanco puro: baja el brillo clínico sin tocar el rojo del músculo. */
+.gb-media-ivory {
+	background: #f2efe7;
+}
+
+/* Miniaturas de lista: mismo tono, sin el bisel grande (no hay lugar). */
+.gb-thumb-frame {
+	background: #f2efe7;
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+/*
+ * Transición de ruta: fade + deslizamiento corto entre pantallas (View Transitions
+ * nativas, activadas desde +layout.svelte). "forward" es el sentido por defecto;
+ * "back" (volver con el navegador) lo invierte. Deshabilitada por completo con
+ * movimiento reducido desde JS, así que estas reglas ni se disparan en ese caso.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation-duration: var(--dur-base);
+	animation-timing-function: var(--ease-out);
+}
+::view-transition-old(root) {
+	animation-name: gb-nav-out;
+}
+::view-transition-new(root) {
+	animation-name: gb-nav-in;
+}
+@keyframes gb-nav-out {
+	to {
+		transform: translateX(-2.5%);
+		opacity: 0;
+	}
+}
+@keyframes gb-nav-in {
+	from {
+		transform: translateX(2.5%);
+		opacity: 0;
+	}
+}
+:root[data-gb-nav-dir='back'] ::view-transition-old(root) {
+	animation-name: gb-nav-out-rev;
+}
+:root[data-gb-nav-dir='back'] ::view-transition-new(root) {
+	animation-name: gb-nav-in-rev;
+}
+@keyframes gb-nav-out-rev {
+	to {
+		transform: translateX(2.5%);
+		opacity: 0;
+	}
+}
+@keyframes gb-nav-in-rev {
+	from {
+		transform: translateX(-2.5%);
+		opacity: 0;
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
 	*,
 	*::before,
@@ -62,6 +229,11 @@ body {
 		animation-duration: 0.01ms !important;
 		animation-iteration-count: 1 !important;
 		transition-duration: 0.01ms !important;
+	}
+
+	/* La presión sigue respondiendo (cambia de estado), pero sin desplazamiento. */
+	.gb-pressable:active {
+		transform: none;
 	}
 }
 

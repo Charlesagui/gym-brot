@@ -3,13 +3,14 @@
 	import { liveQuery } from 'dexie';
 	import { db, type Dia, type Sesion, type SetSesion } from '$lib/db';
 	import { ejercicioPorId, grupos } from '$lib/catalog';
-	import { resumenDiaSesion } from '$lib/historial';
+	import { resumenDiaSesion, compararConAnterior } from '$lib/historial';
 	import { indexSetPr } from '$lib/progreso';
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
 	import { fromLiveQuery } from '$lib/live';
-	import { formatoSet, formatoVolumen } from '$lib/formato';
+	import { fechaCorta, formatoSet, formatoVolumen } from '$lib/formato';
 	import { pasoPesoEfectivo } from '$lib/paso-peso';
 	import { fechaCalendarioValida } from '$lib/fechas';
+	import { popOnChange } from '$lib/pop-on-change';
 	import EditarSerieSheet, { type SerieEditable } from '$lib/components/EditarSerieSheet.svelte';
 
 	// La fecha viene de la URL: si no tiene forma de YYYY-MM-DD no se consulta nada y
@@ -48,6 +49,27 @@
 		$sesionesStore.sesiones.filter((s) => s.ejercicios.some((e) => e.sets.some((x) => x.hecha)))
 	);
 	const nombreDia = $derived(new Map($sesionesStore.dias.map((d) => [d.id, d.nombre])));
+
+	// Historial de los mismos días de rutina (para comparar contra "la vez anterior").
+	// Solo se compara cuando existe de verdad esa sesión anterior; si no, no se muestra nada.
+	const candidatasStore = $derived(
+		fromLiveQuery(
+			liveQuery(async () => {
+				if (!fechaValida) return [] as Sesion[];
+				const deHoy = await db.sesiones.where('fecha').equals(fecha).toArray();
+				const diaIds = [...new Set(deHoy.map((s) => s.diaId))];
+				if (diaIds.length === 0) return [] as Sesion[];
+				const listas = await Promise.all(
+					diaIds.map((id) => db.sesiones.where('diaId').equals(id).toArray())
+				);
+				return listas.flat();
+			}),
+			[] as Sesion[]
+		)
+	);
+	const comparaciones = $derived(
+		new Map(conEntrenamiento.map((s) => [s.id, compararConAnterior(s, $candidatasStore)]))
+	);
 
 	const resumenes = $derived(conEntrenamiento.map((s) => resumenDiaSesion(s)));
 	const totalSets = $derived(resumenes.reduce((n, r) => n + r.setsHechos, 0));
@@ -124,11 +146,13 @@
 		>
 			<div class="grid grid-cols-3 gap-2 text-center">
 				<div>
-					<p class="text-2xl font-extrabold tabular-nums">{totalSets}</p>
+					<p class="text-2xl font-extrabold tabular-nums" use:popOnChange={totalSets}>
+						{totalSets}
+					</p>
 					<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">sets hechos</p>
 				</div>
 				<div>
-					<p class="text-2xl font-extrabold tabular-nums">
+					<p class="text-2xl font-extrabold tabular-nums" use:popOnChange={totalVolumen}>
 						{formatoVolumen(totalVolumen)}
 					</p>
 					<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">
@@ -136,7 +160,7 @@
 					</p>
 				</div>
 				<div>
-					<p class="text-2xl font-extrabold tabular-nums">{totalPrs}</p>
+					<p class="text-2xl font-extrabold tabular-nums" use:popOnChange={totalPrs}>{totalPrs}</p>
 					<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">
 						PRs registrados
 					</p>
@@ -157,10 +181,22 @@
 		</section>
 
 		{#each conEntrenamiento as sesion (sesion.id)}
+			{@const cmp = comparaciones.get(sesion.id) ?? null}
 			<section class="mb-4">
-				<p class="mb-2 px-1 text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
-					{nombreDia.get(sesion.diaId) ?? 'Rutina'}
-				</p>
+				<div class="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-1">
+					<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
+						{nombreDia.get(sesion.diaId) ?? 'Rutina'}
+					</p>
+					{#if cmp}
+						<p class="text-[11px] font-semibold" style="color: var(--muted)">
+							vs. {fechaCorta(cmp.fechaAnterior)}:
+							<span style="color: {cmp.deltaVolumen >= 0 ? 'rgb(var(--exito))' : 'var(--text)'}">
+								{cmp.deltaVolumen >= 0 ? '+' : ''}{formatoVolumen(cmp.deltaVolumen)}
+								{ajustes.unidad}
+							</span>
+						</p>
+					{/if}
+				</div>
 				<div class="space-y-2">
 					{#each sesion.ejercicios.filter( (e) => e.sets.some((s) => s.hecha) ) as ejercicio (ejercicio.exerciseId)}
 						{@const ej = ejercicioPorId(ejercicio.exerciseId)}

@@ -261,7 +261,7 @@
 					>
 						<video
 							use:reproducirEnVista={e.demoVideo}
-							class="size-14 shrink-0 rounded-xl bg-white object-contain"
+							class="gb-thumb-frame size-14 shrink-0 rounded-xl object-contain"
 							aria-label={e.nombre}
 							loop
 							muted
@@ -357,20 +357,22 @@
 						aria-label="Cerrar vista previa">×</button
 					>
 				</div>
-				<video
-					use:demostracionActiva={p.demoVideo}
-					class="mx-auto aspect-square w-full max-w-xs rounded-2xl bg-white object-contain"
-					aria-label={p.nombre}
-					autoplay
-					loop
-					muted
-					playsinline
-					preload="auto"
-					onpointerdown={iniciarArrastre}
-					onpointermove={moverArrastre}
-					onpointerup={terminarArrastre}
-					onpointercancel={cancelarArrastre}
-				></video>
+				<div class="gb-demo-frame" style="--frame-glow: {g.glow}">
+					<video
+						use:demostracionActiva={p.demoVideo}
+						class="gb-media-ivory mx-auto aspect-square w-full max-w-xs rounded-2xl object-contain"
+						aria-label={p.nombre}
+						autoplay
+						loop
+						muted
+						playsinline
+						preload="auto"
+						onpointerdown={iniciarArrastre}
+						onpointermove={moverArrastre}
+						onpointerup={terminarArrastre}
+						onpointercancel={cancelarArrastre}
+					></video>
+				</div>
 				<p class="mt-3 text-center text-sm font-medium" style="color: rgb({g.glow})">
 					{g.emoji}
 					{g.label} · {p.musculo}

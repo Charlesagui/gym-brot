@@ -13,6 +13,7 @@
 		unidad,
 		pasoPeso,
 		pendiente = false,
+		flash = false,
 		onToggle,
 		onToggleMax,
 		onAjustarPeso,
@@ -29,6 +30,8 @@
 		unidad: Ajustes['unidad'];
 		pasoPeso: number;
 		pendiente?: boolean;
+		/** Breve acuse visual tras confirmar el guardado (no se usa al desmarcar). */
+		flash?: boolean;
 		onToggle: () => void;
 		onToggleMax: () => void;
 		onAjustarPeso: (delta: number) => void;
@@ -41,7 +44,10 @@
 	const ant = $derived(formatoAnterior(anterior, unidad));
 </script>
 
-<div class="gb-set-row rounded-xl bg-white/[0.025] p-2.5">
+<div
+	class="gb-set-row rounded-xl p-2.5 {flash ? 'gb-row-flash' : ''}"
+	style="background: var(--surface-2); --row-glow: {glow}"
+>
 	<div class="gb-set-row-head flex items-center gap-2">
 		<span
 			class="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 text-sm font-bold"
@@ -50,7 +56,7 @@
 		{#if maquinaPlacas}
 			<button
 				onclick={onToggleMax}
-				class="flex min-h-11 shrink-0 touch-manipulation items-center rounded-full border px-3 text-[11px] font-bold"
+				class="gb-pressable flex min-h-11 shrink-0 touch-manipulation items-center rounded-full border px-3 text-[11px] font-bold"
 				style={set.esMax
 					? 'background: rgb(var(--max) / .22); color: rgb(var(--max)); border-color: rgb(var(--max) / .5)'
 					: 'color: var(--muted); border-color: rgba(255,255,255,.16); border-style: dashed'}
@@ -64,13 +70,22 @@
 		<button
 			onclick={onToggle}
 			disabled={pendiente}
-			class="grid size-12 shrink-0 touch-manipulation place-items-center rounded-full border-2 text-base font-bold transition-colors"
+			class="gb-pressable relative grid size-12 shrink-0 touch-manipulation place-items-center rounded-full border-2 text-base font-bold transition-colors {flash
+				? 'gb-pop'
+				: ''}"
 			style={set.hecha
 				? 'background: var(--accent); border-color: var(--accent); color: var(--on-accent)'
 				: 'border-color: rgba(255,255,255,.22); color: transparent'}
 			aria-pressed={set.hecha}
-			aria-label={`${set.hecha ? 'Desmarcar' : 'Marcar'} serie ${index + 1}`}>✓</button
+			aria-busy={pendiente}
+			aria-label={`${set.hecha ? 'Desmarcar' : 'Marcar'} serie ${index + 1}`}
 		>
+			{#if pendiente}
+				<span class="gb-set-spinner" aria-hidden="true"></span>
+			{:else}
+				✓
+			{/if}
+		</button>
 	</div>
 	<div class="gb-set-grid mt-2 grid grid-cols-2 gap-2">
 		<div class="min-w-0">
@@ -119,7 +134,7 @@
 			<div class="flex items-center gap-1.5">
 				<button
 					use:pulsar={() => onAjustarExtra(-pasoPeso)}
-					class="grid size-11 touch-manipulation select-none place-items-center rounded-lg text-sm font-bold"
+					class="gb-pressable grid size-11 touch-manipulation select-none place-items-center rounded-lg text-sm font-bold"
 					style="background: rgba(255,255,255,.06); color: var(--muted)"
 					aria-label={`Bajar ${pasoPeso} ${unidad} encima en serie ${index + 1}`}>−</button
 				>
@@ -131,7 +146,7 @@
 				</span>
 				<button
 					use:pulsar={() => onAjustarExtra(pasoPeso)}
-					class="grid size-11 touch-manipulation select-none place-items-center rounded-lg text-sm font-bold"
+					class="gb-pressable grid size-11 touch-manipulation select-none place-items-center rounded-lg text-sm font-bold"
 					style="background: rgb(var(--max) / .18); color: rgb(var(--max))"
 					aria-label={`Subir ${pasoPeso} ${unidad} encima en serie ${index + 1}`}>+</button
 				>
@@ -164,6 +179,22 @@
 	@container (max-width: 19.5rem) {
 		.gb-set-grid {
 			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+
+	/* Guardando: anillo breve, no bloquea la lectura del número/estado alrededor. */
+	.gb-set-spinner {
+		width: 1.1rem;
+		height: 1.1rem;
+		border-radius: 999px;
+		border: 2px solid rgba(255, 255, 255, 0.3);
+		border-top-color: var(--text);
+		animation: gb-spin 0.7s linear infinite;
+	}
+
+	@keyframes gb-spin {
+		to {
+			transform: rotate(360deg);
 		}
 	}
 </style>

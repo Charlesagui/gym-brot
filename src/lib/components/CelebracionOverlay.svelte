@@ -3,6 +3,7 @@
 	import type { MejorSet } from '$lib/sesion';
 	import { dur } from '$lib/motion';
 	import { formatoNumero, formatoSet } from '$lib/formato';
+	import CelebracionParticulas from './CelebracionParticulas.svelte';
 
 	let {
 		exito,
@@ -40,13 +41,19 @@
 				? 'Series guardadas'
 				: 'Ejercicio terminado'}
 	>
-		<div
-			class="mx-auto grid size-24 place-items-center rounded-full border border-white/15 text-5xl font-extrabold"
-			style={exito === 'parcial'
-				? 'background: rgba(255,255,255,.08); color: var(--muted)'
-				: `background: rgb(${glow} / .22); color: rgb(${glow}); box-shadow: 0 0 55px rgb(${glow} / .25)`}
-		>
-			{exito === 'pr' ? '🏆' : '✓'}
+		<div class="relative mx-auto grid size-24 place-items-center">
+			{#if exito === 'pr'}
+				<div class="gb-shockwave" style="--shock-color: {glow}"></div>
+				<CelebracionParticulas color={glow} cantidad={14} />
+			{/if}
+			<div
+				class="relative grid size-24 place-items-center rounded-full border border-white/15 text-5xl font-extrabold"
+				style={exito === 'parcial'
+					? 'background: rgba(255,255,255,.08); color: var(--muted)'
+					: `background: rgb(${glow} / .22); color: rgb(${glow}); box-shadow: 0 0 55px rgb(${glow} / .25)`}
+			>
+				{exito === 'pr' ? '🏆' : '✓'}
+			</div>
 		</div>
 		<p class="mt-5 text-2xl font-extrabold">
 			{exito === 'pr'
