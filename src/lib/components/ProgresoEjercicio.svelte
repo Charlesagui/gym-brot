@@ -103,7 +103,8 @@
 			</p>
 			<p class="text-[11px] font-medium" style="color: var(--muted)">
 				{progreso.sesiones.length}
-				{progreso.sesiones.length === 1 ? 'sesión' : 'sesiones'} · {progreso.totalSeries} series ✓
+				{progreso.sesiones.length === 1 ? 'sesión' : 'sesiones'} · {progreso.totalSeries}
+				{progreso.totalSeries === 1 ? 'serie' : 'series'} ✓
 			</p>
 		</div>
 		<div class="mt-3">

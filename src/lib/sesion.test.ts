@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	mejorSet,
+	estadoEjercicioSesion,
 	modoEjercicio,
 	pesoEfectivo,
 	serieCompleta,
@@ -17,6 +18,17 @@ describe('serieCompleta', () => {
 		expect(serieCompleta({ hecha: true, peso: 80 })).toBe(false);
 		expect(serieCompleta({ hecha: true, peso: 80, reps: 0 })).toBe(false);
 		expect(serieCompleta({ hecha: false, reps: 10 })).toBe(false);
+	});
+});
+
+describe('estadoEjercicioSesion', () => {
+	it('distingue pendiente, saltado, parcial y completado sin inventar series', () => {
+		const pendiente = { peso: 80, reps: 8, hecha: false };
+		const hecha = { peso: 80, reps: 8, hecha: true };
+		expect(estadoEjercicioSesion([pendiente], false)).toBe('pendiente');
+		expect(estadoEjercicioSesion([pendiente], true)).toBe('saltado');
+		expect(estadoEjercicioSesion([hecha, pendiente, pendiente, pendiente], true)).toBe('parcial');
+		expect(estadoEjercicioSesion([hecha], true)).toBe('completado');
 	});
 });
 

@@ -37,6 +37,7 @@ export function modal(node: HTMLElement, opciones: OpcionesModal) {
 		return Array.from(panel().querySelectorAll<HTMLElement>(SELECTOR_FOCO)).filter(
 			(elemento) =>
 				!elemento.inert &&
+				elemento.tabIndex >= 0 &&
 				!elemento.hasAttribute('disabled') &&
 				elemento.getClientRects().length > 0
 		);

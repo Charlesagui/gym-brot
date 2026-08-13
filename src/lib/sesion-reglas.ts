@@ -5,6 +5,7 @@ export type ModoPr = 'peso' | 'reps';
 
 /** Métrica que la UI rotula: la de ajustes, o reps máximas en ejercicios sin carga. */
 export type MetricaEfectiva = MetricaPr | 'reps';
+export type EstadoEjercicio = 'pendiente' | 'saltado' | 'parcial' | 'completado';
 
 export interface MejorSet {
 	/** Ausente en modo reps: el ejercicio no usa peso y el valor son las reps. */
@@ -81,6 +82,15 @@ export const DESCRIPCION_METRICA: Record<MetricaEfectiva, string> = {
 /** Una serie cuenta como completa cuando fue confirmada y tiene repeticiones. */
 export function serieCompleta(set: SetSesion): boolean {
 	return set.hecha && set.reps != null && set.reps > 0;
+}
+
+/** Estado visible sin convertir trabajo parcial ni un salto en un ejercicio completo. */
+export function estadoEjercicioSesion(sets: SetSesion[], saltado = false): EstadoEjercicio {
+	const hechas = sets.filter(serieCompleta).length;
+	if (sets.length > 0 && hechas === sets.length) return 'completado';
+	if (saltado && hechas > 0) return 'parcial';
+	if (saltado) return 'saltado';
+	return 'pendiente';
 }
 
 /** 'reps' si hay series hechas y ninguna registró peso; si no, 'peso'. */

@@ -46,6 +46,7 @@
 	import { dur } from '$lib/motion';
 	import { fromLiveQuery } from '$lib/live';
 	import { formatoNumero, formatoSet, fechaCorta } from '$lib/formato';
+	import { fechaSesionDesdeUrl } from '$lib/fechas';
 	import { youtubeEmbedUrl } from '$lib/youtube';
 	import {
 		etiquetaProximaSerie,
@@ -74,10 +75,19 @@
 	const ej = $derived(ejercicioPorId($page.params.id!));
 	const g = $derived(ej ? grupos[ej.grupo] : undefined);
 	const diaId = $derived($page.url.searchParams.get('dia'));
+	const fechaApertura = hoyStr();
+	const fechaSolicitada = $derived(
+		fechaSesionDesdeUrl($page.url.searchParams.get('fecha'), fechaApertura)
+	);
+	const fechaUrlInvalida = $derived(fechaSolicitada == null);
 	// `desde`: día desde el que se abrió la vista de progreso (para volver a entrenar).
 	const desde = $derived($page.url.searchParams.get('desde'));
 	const volver = $derived(
-		diaId ? `/dia/${diaId}` : desde ? `/ejercicio/${$page.params.id}?dia=${desde}` : '/historial'
+		diaId
+			? `/dia/${diaId}?fecha=${fechaSolicitada ?? ''}`
+			: desde
+				? `/ejercicio/${$page.params.id}?dia=${desde}&fecha=${fechaSolicitada ?? fechaApertura}`
+				: '/historial'
 	);
 
 	// El progreso completo arrastra layerchart + d3 (el chunk más grande de la app) y
@@ -109,8 +119,8 @@
 	let anteriores = $state<SetSesion[]>([]);
 	let anterioresFecha = $state<string | null>(null);
 	let prCelebrado = $state<PrCelebrado | null>(null);
-	// Fecha fija de la sesión activa: evita perder toques si cruzás la medianoche entrenando.
-	let fechaSesion = $state(hoyStr());
+	// Fecha fija transportada por la URL: evita mezclar sesiones al cruzar medianoche.
+	const fechaSesion = $derived(fechaSolicitada ?? fechaApertura);
 	let notaTexto = $state('');
 	let tieneNota = $state(false);
 	let notaPendiente = $state<{ exerciseId: string; texto: string } | null>(null);
@@ -192,7 +202,7 @@
 		const dId = diaId;
 		let cancelado = false;
 		let sub: { unsubscribe: () => void } | undefined;
-		if (!dId) {
+		if (!dId || !ej || !fechaSolicitada) {
 			sets = [];
 			anteriores = [];
 			anterioresFecha = null;
@@ -201,8 +211,7 @@
 			ejercicioNoDisponible = false;
 			return;
 		}
-		const fecha = hoyStr();
-		fechaSesion = fecha;
+		const fecha = fechaSolicitada;
 		cargandoSeries = true;
 		ejercicioNoDisponible = false;
 		anteriores = [];
@@ -622,8 +631,31 @@
 />
 
 {#if !ej || !g}
-	<main class="glow-bg grid min-h-dvh place-items-center">
-		<p style="color: var(--muted)">Ejercicio no encontrado.</p>
+	<main class="glow-bg grid min-h-dvh place-items-center px-5">
+		<section
+			class="w-full max-w-sm rounded-2xl border border-dashed border-white/15 p-5 text-center"
+		>
+			<p class="text-sm font-bold">Ejercicio no encontrado</p>
+			<p class="mt-1 text-xs leading-relaxed" style="color: var(--muted)">
+				Pudo haber sido eliminado del catálogo. Su historial guardado no fue modificado y esta URL
+				no puede crear series nuevas.
+			</p>
+			<div class="mt-4 grid grid-cols-2 gap-2">
+				<a
+					href={diaId ? volver : '/'}
+					class="grid min-h-11 place-items-center rounded-xl border border-white/10 px-3 text-sm font-bold"
+				>
+					{diaId ? 'Volver al día' : 'Ir a rutinas'}
+				</a>
+				<a
+					href="/historial"
+					class="grid min-h-11 place-items-center rounded-xl px-3 text-sm font-bold"
+					style="background: var(--accent); color: var(--on-accent)"
+				>
+					Ver historial
+				</a>
+			</div>
+		</section>
 	</main>
 {:else}
 	<main
@@ -687,7 +719,7 @@
 					<div class="mt-3 flex justify-center">
 						<button
 							onclick={abrirTecnica}
-							class="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold"
+							class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold"
 							style="color: rgb({g.glow})"
 							aria-label={`Ver video de técnica para ${ej.nombre}`}>▶ Ver técnica</button
 						>
@@ -695,7 +727,24 @@
 				{/if}
 			</div>
 
-			{#if ejercicioNoDisponible}
+			{#if fechaUrlInvalida}
+				<section
+					class="mt-6 rounded-2xl border border-dashed border-white/15 p-5 text-center"
+					role="alert"
+				>
+					<p class="text-sm font-bold">La fecha de esta sesión no es válida</p>
+					<p class="mt-1 text-xs leading-relaxed" style="color: var(--muted)">
+						No se creó ni modificó ningún entrenamiento.
+					</p>
+					<a
+						href={diaId ? `/ejercicio/${$page.params.id}?dia=${diaId}` : '/historial'}
+						class="mt-4 inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold"
+						style="background: var(--accent); color: var(--on-accent)"
+					>
+						{diaId ? 'Abrir la sesión de hoy' : 'Volver al historial'}
+					</a>
+				</section>
+			{:else if ejercicioNoDisponible}
 				<section
 					class="mt-6 rounded-2xl border border-dashed border-white/15 p-5 text-center"
 					style="background: var(--surface)"
@@ -800,8 +849,11 @@
 								</div>
 							{/if}
 						</div>
-						<details class="mt-3 rounded-xl border border-white/5 bg-white/[0.025] px-3 py-2">
-							<summary class="cursor-pointer text-xs font-semibold" style="color: var(--muted)">
+						<details class="mt-3 rounded-xl border border-white/5 bg-white/[0.025] px-3 py-1">
+							<summary
+								class="flex min-h-11 cursor-pointer items-center text-xs font-semibold"
+								style="color: var(--muted)"
+							>
 								−/+ Paso: {formatoNumero(pasoPeso)}
 								{unidad}
 								{pasoPersonalizado == null ? '· automático' : '· personalizado'}
@@ -918,7 +970,7 @@
 							{#each [1, 2, 3, 4, 5] as m (m)}
 								<button
 									onclick={() => cambiarTimer(m)}
-									class="min-h-11 rounded-full px-3.5 py-2 text-xs font-semibold"
+									class="min-h-11 min-w-11 rounded-full px-3.5 py-2 text-xs font-semibold"
 									aria-label={`Descanso ${m} ${m === 1 ? 'minuto' : 'minutos'}`}
 									style={ajustes.timer.activo && ajustes.timer.minutos === m
 										? 'background: var(--accent); color: var(--on-accent)'
@@ -993,8 +1045,8 @@
 							<MiniChart {puntos} glow={g.glow} {metricaLabel} unidad={unidadValor} />
 							<!-- Link discreto: la operación manda, el progreso completo se consulta aparte. -->
 							<a
-								href={`/ejercicio/${$page.params.id}?desde=${diaId}`}
-								class="mt-2.5 block text-right text-xs font-bold"
+								href={`/ejercicio/${$page.params.id}?desde=${diaId}&fecha=${fechaSesion}`}
+								class="mt-2.5 block min-h-11 text-right text-xs font-bold leading-[2.75rem]"
 								style="color: rgb({g.glow})">Ver progreso completo →</a
 							>
 						</section>
@@ -1012,10 +1064,13 @@
 					{/if}
 
 					<details
-						class="mt-3 rounded-2xl border border-white/10 p-4"
+						class="mt-3 rounded-2xl border border-white/10 px-4 py-2"
 						style="background: var(--surface)"
 					>
-						<summary class="cursor-pointer text-sm font-medium" style="color: var(--muted)">
+						<summary
+							class="flex min-h-11 cursor-pointer items-center text-sm font-medium"
+							style="color: var(--muted)"
+						>
 							📝 Notas {#if tieneNota}<span style="color: rgb({g.glow})">●</span>{/if}
 						</summary>
 						<textarea

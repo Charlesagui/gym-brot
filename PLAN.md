@@ -178,10 +178,29 @@ Refinamiento del PR para cumplir el manifiesto ("Datos y verdad").
   pasa por una función de valor única; rótulos dinámicos + línea con la métrica secundaria.
 - **C · MAX coherente** — `extraKg` ("encima de la placa") implementado y suma al PR; toggle MAX más descubrible.
 - **UI** — estado vacío "Todavía sin PR"; mini-gráfico con 1 sola sesión.
+- **D4 · Vista global de récords** — `Historial` incluye **Récords vigentes**, con todos los
+  PRs paginables, métrica rotulada y acceso al progreso de cada ejercicio.
 
 **⏳ Pendiente (mayor esfuerzo / riesgo — pedir antes de hacer):**
 
 - **D3 · Corrección de dato** — long-press en un punto del gráfico para quitar/editar una serie del historial
   (salida de emergencia ante un dato malo). Menos urgente ahora que A1–A3 cierran las fuentes de datos falsos.
-- **D4 · Vista global de récords** — pantalla que liste todos los PRs (pantalla nueva).
 - **Métrica por ejercicio** — hoy es global; permitir `peso` en unos y `1RM` en otros.
+
+---
+
+## 13. Correcciones posteriores a la auditoría integral ✅
+
+- La fecha de una sesión activa viaja en la URL y permanece estable al cruzar medianoche,
+  navegar y recargar, sin mezclar el entrenamiento con el día siguiente.
+- El gráfico completo incluye el día actual y sigue excluyendo fechas futuras mediante
+  comparaciones `YYYY-MM-DD` sin horas ni zona horaria.
+- Día y cierre distinguen pendiente, completado, saltado y parcial con trabajo real.
+- Crear una rutina es idempotente ante toques repetidos; las rutas inválidas ofrecen salida
+  sin crear datos.
+- Los diálogos de técnica y edición histórica comparten aislamiento, foco, Escape, scroll y
+  restauración del disparador.
+- Editor, calendario y controles compactos fueron verificados a 320 px, 393 px, horizontal y
+  texto ampliado, con targets táctiles de al menos 44 px.
+- El cierre sin series es sobrio y no dispara audio o vibración de logro; singular y plural
+  reflejan la cantidad real.
