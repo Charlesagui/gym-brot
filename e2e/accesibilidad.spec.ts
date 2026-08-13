@@ -125,9 +125,10 @@ test('mantener una tarjeta de ejercicio abre el ordenamiento sin navegar al ejer
 	await page.mouse.move(caja!.x + caja!.width / 2, caja!.y + caja!.height / 2);
 	await page.mouse.down();
 	await page.waitForTimeout(450);
+	// El modo aparece apenas se cumple la pulsación sostenida; no espera a soltar.
+	await expect(page.getByRole('button', { name: 'Terminar orden' })).toBeVisible();
 	await page.mouse.up();
 
-	await expect(page.getByRole('button', { name: 'Terminar orden' })).toBeVisible();
 	await expect(page).toHaveURL(/\/dia\/dia-piernas/);
 });
 

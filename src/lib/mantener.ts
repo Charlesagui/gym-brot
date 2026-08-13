@@ -9,11 +9,8 @@ export function mantener(node: HTMLElement | SVGElement, fn: () => void) {
 	let inicioX = 0;
 	let inicioY = 0;
 	let longPressActivo = false;
-	// El `click` se emite al soltar el puntero, después de que ya entramos al modo
-	// reordenar. Si la acción vive sobre una tarjeta que contiene un enlace, sin
-	// bloquearlo se navega al ejercicio inmediatamente y parece que el long-press
-	// no funcionó.
 	let suprimirSiguienteClick = false;
+	let bloqueoClickId: ReturnType<typeof setTimeout> | null = null;
 	const DEMORA = 420; // ms apretado para activar
 	const TOLERANCIA = 10; // px de movimiento antes de cancelar (es scroll, no long-press)
 
@@ -22,19 +19,36 @@ export function mantener(node: HTMLElement | SVGElement, fn: () => void) {
 		timer = null;
 	}
 
+	function limpiarBloqueoClick() {
+		if (bloqueoClickId) clearTimeout(bloqueoClickId);
+		bloqueoClickId = null;
+		suprimirSiguienteClick = false;
+		window.removeEventListener('click', alClick, true);
+	}
+
+	function bloquearSiguienteClick() {
+		limpiarBloqueoClick();
+		suprimirSiguienteClick = true;
+		// El modo reordenar reemplaza la tarjeta y desmonta esta acción antes de
+		// soltar el dedo. Por eso el bloqueo vive brevemente en window: captura el
+		// click de compatibilidad aunque el enlace original ya no esté en el DOM.
+		window.addEventListener('click', alClick, true);
+		bloqueoClickId = setTimeout(limpiarBloqueoClick, 750);
+	}
+
 	function alApretar(evento: Event) {
 		const e = evento as PointerEvent;
 		if (e.pointerType === 'mouse' && e.button !== 0) return;
-		suprimirSiguienteClick = false;
+		limpiarBloqueoClick();
 		longPressActivo = false;
 		inicioX = e.clientX;
 		inicioY = e.clientY;
 		cancelar();
 		timer = setTimeout(() => {
 			timer = null;
-			// Esperamos a soltar para que el listener de click siga montado cuando el
-			// navegador intente activar el enlace de la tarjeta.
 			longPressActivo = true;
+			bloquearSiguienteClick();
+			actual();
 		}, DEMORA);
 	}
 
@@ -42,10 +56,8 @@ export function mantener(node: HTMLElement | SVGElement, fn: () => void) {
 		cancelar();
 		if (!longPressActivo) return;
 		longPressActivo = false;
-		suprimirSiguienteClick = true;
 		// También ayuda a que el navegador no genere el click de compatibilidad.
 		evento.preventDefault();
-		actual();
 	}
 
 	function alCancelar() {
@@ -67,8 +79,9 @@ export function mantener(node: HTMLElement | SVGElement, fn: () => void) {
 
 	function alClick(e: Event) {
 		if (!suprimirSiguienteClick) return;
-		suprimirSiguienteClick = false;
+		limpiarBloqueoClick();
 		e.preventDefault();
+		e.stopImmediatePropagation();
 		e.stopPropagation();
 	}
 
@@ -78,8 +91,6 @@ export function mantener(node: HTMLElement | SVGElement, fn: () => void) {
 	node.addEventListener('pointercancel', alCancelar);
 	node.addEventListener('pointerleave', alCancelar);
 	node.addEventListener('contextmenu', alMenu);
-	// Captura el click que nace en un enlace hijo antes de que llegue a su handler.
-	node.addEventListener('click', alClick, true);
 
 	return {
 		update(nuevo: () => void) {
@@ -87,14 +98,12 @@ export function mantener(node: HTMLElement | SVGElement, fn: () => void) {
 		},
 		destroy() {
 			alCancelar();
-			suprimirSiguienteClick = false;
 			node.removeEventListener('pointerdown', alApretar);
 			node.removeEventListener('pointermove', alMover);
 			node.removeEventListener('pointerup', alSoltar);
 			node.removeEventListener('pointercancel', alCancelar);
 			node.removeEventListener('pointerleave', alCancelar);
 			node.removeEventListener('contextmenu', alMenu);
-			node.removeEventListener('click', alClick, true);
 		}
 	};
 }
