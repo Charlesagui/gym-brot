@@ -456,6 +456,7 @@ function coincidePr(
 ): boolean {
 	return (
 		!!set?.hecha &&
+		set.reps !== 0 &&
 		set.peso === pr.peso &&
 		set.reps === pr.reps &&
 		!!set.esMax === !!pr.esMax &&
@@ -494,6 +495,7 @@ export function prepararImport(data: Backup): ImportPreparado {
 	let sinDia = 0;
 	let prsReubicados = 0;
 	let prsDescartados = 0;
+	let seriesCeroReparadas = 0;
 	for (const sesion of data.sesiones ?? []) {
 		if (!fechaValida(sesion.fecha)) {
 			fechaInvalida++;
@@ -513,22 +515,32 @@ export function prepararImport(data: Backup): ImportPreparado {
 			const { prPesoCelebrado: _legacy, ...actual } = ejercicio as typeof ejercicio & {
 				prPesoCelebrado?: number;
 			};
-			if (!actual.prCelebrado) return actual;
+			const sets = actual.sets.map((set) => {
+				if (set.reps !== 0) return set;
+				seriesCeroReparadas++;
+				return { ...set, reps: undefined, hecha: false };
+			});
+			const actualConSeries = { ...actual, sets };
+			if (!actualConSeries.prCelebrado) return actualConSeries;
 
-			const indiceGuardado = actual.prCelebrado.setIndex;
+			const indiceGuardado = actualConSeries.prCelebrado.setIndex;
 			const indice =
-				indiceGuardado != null && coincidePr(actual.sets[indiceGuardado], actual.prCelebrado)
+				indiceGuardado != null &&
+				coincidePr(actualConSeries.sets[indiceGuardado], actualConSeries.prCelebrado)
 					? indiceGuardado
-					: actual.sets.findIndex((set) => coincidePr(set, actual.prCelebrado!));
+					: actualConSeries.sets.findIndex((set) => coincidePr(set, actualConSeries.prCelebrado!));
 			if (indice < 0) {
 				prsDescartados++;
-				return { ...actual, prCelebrado: undefined };
+				return { ...actualConSeries, prCelebrado: undefined };
 			}
 			if (indiceGuardado !== indice) {
 				prsReubicados++;
-				return { ...actual, prCelebrado: { ...actual.prCelebrado, setIndex: indice } };
+				return {
+					...actualConSeries,
+					prCelebrado: { ...actualConSeries.prCelebrado, setIndex: indice }
+				};
 			}
-			return actual;
+			return actualConSeries;
 		});
 		sesiones.push({ ...sesion, id: idEsperado, ejercicios });
 	}
@@ -539,6 +551,8 @@ export function prepararImport(data: Backup): ImportPreparado {
 	if (prsReubicados) avisos.push(`${prsReubicados} PR(s) con índice antiguo: se reubicaron`);
 	if (prsDescartados)
 		avisos.push(`${prsDescartados} PR(s) sin una serie hecha que los respalde: se descartaron`);
+	if (seriesCeroReparadas)
+		avisos.push(`${seriesCeroReparadas} serie(s) con 0 reps: se marcaron pendientes`);
 
 	const notas: Nota[] = [];
 	const idsNota = new Set<string>();

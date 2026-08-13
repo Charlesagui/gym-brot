@@ -29,6 +29,7 @@ import {
 	ultimaSesion
 } from './sesion';
 import { resumenDiaSesion } from './historial';
+import { agregarEjercicio } from './dias';
 
 async function limpiarDb() {
 	await db.open();
@@ -85,11 +86,44 @@ describe('sesion con IndexedDB', () => {
 		const preparacion = await prepararEjercicioSesion('push', 'press', '2026-01-05');
 		const estado = await primerValor(ejercicioSesionObs('push', 'press', '2026-01-05'));
 
-		expect(preparacion).toEqual({ anteriores: [], anterioresFecha: null });
+		expect(preparacion).toEqual({ disponible: true, anteriores: [], anterioresFecha: null });
 		expect(estado).toEqual({
 			sets: [{ hecha: false }, { hecha: false }],
 			prCelebrado: null
 		});
+	});
+
+	it('no crea una sesión si la rutina o el ejercicio ya no existen', async () => {
+		expect(await prepararEjercicioSesion('push', 'press', '2026-01-05')).toEqual({
+			disponible: false
+		});
+		expect(await db.sesiones.count()).toBe(0);
+
+		await db.dias.add({
+			id: 'push',
+			nombre: 'Push',
+			orden: 0,
+			ejercicios: [{ exerciseId: 'fondos', seriesObjetivo: 3, orden: 0 }]
+		});
+		expect(await prepararEjercicioSesion('push', 'press', '2026-01-05')).toEqual({
+			disponible: false
+		});
+		expect(await db.sesiones.count()).toBe(0);
+	});
+
+	it('no permite confirmar una serie sin repeticiones', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-05');
+		expect(await setSerieHecha('push', 'press', 0, true, '2026-01-05')).toMatchObject({
+			encontrada: true,
+			hecha: false,
+			cambio: false
+		});
+		expect((await db.sesiones.get('2026-01-05__push'))?.ejercicios[0]?.sets[0]?.hecha).toBe(false);
+	});
+
+	it('no crea una sesión al saltar un ejercicio que ya no está en la rutina', async () => {
+		expect(await saltarEjercicio('push', 'press', '2026-01-05')).toBe(false);
+		expect(await db.sesiones.count()).toBe(0);
 	});
 
 	it('el indice por ejercicio se mantiene al sumar ejercicios a la sesion', async () => {
@@ -173,6 +207,7 @@ describe('sesion con IndexedDB', () => {
 
 	it('destildar una serie reabre el dia terminado', async () => {
 		await ensureEjercicio('push', 'press', 1, '2026-01-05');
+		await setReps('push', 'press', 0, 10, '2026-01-05');
 		await setSerieHecha('push', 'press', 0, true, '2026-01-05');
 		await db.sesiones.update('2026-01-05__push', {
 			diaTerminado: true,
@@ -189,6 +224,7 @@ describe('sesion con IndexedDB', () => {
 
 	it('fija una serie de forma idempotente ante dobles toques', async () => {
 		await ensureEjercicio('push', 'press', 1, '2026-01-05');
+		await setReps('push', 'press', 0, 10, '2026-01-05');
 
 		const resultados = await Promise.all([
 			setSerieHecha('push', 'press', 0, true, '2026-01-05'),
@@ -201,7 +237,14 @@ describe('sesion con IndexedDB', () => {
 	});
 
 	it('marcar una serie reanuda automáticamente un ejercicio saltado', async () => {
-		await saltarEjercicio('push', 'press', 1, '2026-01-05');
+		await db.dias.add({
+			id: 'push',
+			nombre: 'Push',
+			orden: 0,
+			ejercicios: [{ exerciseId: 'press', seriesObjetivo: 1, orden: 0 }]
+		});
+		await saltarEjercicio('push', 'press', '2026-01-05');
+		await setReps('push', 'press', 0, 10, '2026-01-05');
 
 		await setSerieHecha('push', 'press', 0, true, '2026-01-05');
 
@@ -271,7 +314,15 @@ describe('sesion con IndexedDB', () => {
 
 	it('terminar el dia usa la fecha de la sesion, no el reloj', async () => {
 		vi.setSystemTime(new Date('2026-01-07T23:59:30'));
+		await db.dias.add({
+			id: 'push',
+			nombre: 'Push',
+			orden: 0,
+			ejercicios: [{ exerciseId: 'press', seriesObjetivo: 1, orden: 0 }]
+		});
 		await ensureEjercicio('push', 'press', 1, '2026-01-07');
+		await setReps('push', 'press', 0, 10, '2026-01-07');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-07');
 		// Cruzamos la medianoche con la pantalla todavía apuntando al 07.
 		vi.setSystemTime(new Date('2026-01-08T00:00:30'));
 		await marcarDiaTerminado('push', '2026-01-07');
@@ -525,7 +576,14 @@ describe('sesion con IndexedDB', () => {
 	});
 
 	it('borrar una serie histórica reabre un día que estaba terminado', async () => {
+		await db.dias.add({
+			id: 'push',
+			nombre: 'Push',
+			orden: 0,
+			ejercicios: [{ exerciseId: 'press', seriesObjetivo: 1, orden: 0 }]
+		});
 		await ensureEjercicio('push', 'press', 1, '2026-01-01');
+		await setReps('push', 'press', 0, 10, '2026-01-01');
 		await setSerieHecha('push', 'press', 0, true, '2026-01-01');
 		await marcarDiaTerminado('push', '2026-01-01');
 
@@ -624,12 +682,14 @@ describe('sesion con IndexedDB', () => {
 	it('bajar una serie vieja no inventa un PR en una sesion posterior', async () => {
 		await ensureEjercicio('push', 'press', 1, '2026-01-01');
 		await setPeso('push', 'press', 0, 100, '2026-01-01');
+		await setReps('push', 'press', 0, 5, '2026-01-01');
 		await setSerieHecha('push', 'press', 0, true, '2026-01-01');
 		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-01');
 
 		// Nunca fue récord (90 < 100), así que ese día no celebró nada.
 		await ensureEjercicio('push', 'press', 1, '2026-01-02');
 		await setPeso('push', 'press', 0, 90, '2026-01-02');
+		await setReps('push', 'press', 0, 5, '2026-01-02');
 		await setSerieHecha('push', 'press', 0, true, '2026-01-02');
 		expect(await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-02')).toBeNull();
 
@@ -637,7 +697,7 @@ describe('sesion con IndexedDB', () => {
 			'2026-01-01__push',
 			'press',
 			0,
-			{ peso: 80, reps: undefined, esMax: false },
+			{ peso: 80, reps: 5, esMax: false },
 			'peso'
 		);
 
@@ -650,10 +710,12 @@ describe('sesion con IndexedDB', () => {
 	it('editar una serie activa recalcula el PR celebrado de la sesion', async () => {
 		await ensureEjercicio('push', 'press', 1, '2026-01-01');
 		await setPeso('push', 'press', 0, 100, '2026-01-01');
+		await setReps('push', 'press', 0, 5, '2026-01-01');
 		await setSerieHecha('push', 'press', 0, true, '2026-01-01', 'peso');
 
 		await ensureEjercicio('push', 'press', 1, '2026-01-02');
 		await setPeso('push', 'press', 0, 110, '2026-01-02');
+		await setReps('push', 'press', 0, 5, '2026-01-02');
 		await setSerieHecha('push', 'press', 0, true, '2026-01-02', 'peso');
 		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-02');
 
@@ -665,7 +727,7 @@ describe('sesion con IndexedDB', () => {
 		expect(await primerValor(historialObs('press', 'peso'))).toEqual([
 			{
 				peso: 100,
-				reps: undefined,
+				reps: 5,
 				esMax: false,
 				extraKg: undefined,
 				fecha: '2026-01-01',
@@ -675,7 +737,7 @@ describe('sesion con IndexedDB', () => {
 			},
 			{
 				peso: 95,
-				reps: undefined,
+				reps: 5,
 				esMax: false,
 				extraKg: undefined,
 				fecha: '2026-01-02',
@@ -686,14 +748,45 @@ describe('sesion con IndexedDB', () => {
 		]);
 	});
 
+	it('vaciar las reps al editar una serie histórica la deja pendiente', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-01');
+		await setPeso('push', 'press', 0, 100, '2026-01-01');
+		await setReps('push', 'press', 0, 5, '2026-01-01');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01');
+
+		await actualizarSetHistorial(
+			'2026-01-01__push',
+			'press',
+			0,
+			{ peso: 100, reps: undefined, esMax: false },
+			'peso'
+		);
+
+		expect((await db.sesiones.get('2026-01-01__push'))?.ejercicios[0]?.sets[0]).toMatchObject({
+			hecha: false,
+			reps: undefined
+		});
+		expect(await primerValor(historialObs('press', 'peso'))).toEqual([]);
+	});
+
 	it('saltar, reanudar, terminar y reabrir dia actual', async () => {
 		vi.setSystemTime(new Date('2026-01-07T12:00:00'));
+		await db.dias.add({
+			id: 'push',
+			nombre: 'Push',
+			orden: 0,
+			ejercicios: [{ exerciseId: 'press', seriesObjetivo: 2, orden: 0 }]
+		});
 
-		await saltarEjercicio('push', 'press', 2);
+		await saltarEjercicio('push', 'press');
 		expect((await db.sesiones.get('2026-01-07__push'))?.ejercicios[0]?.saltado).toBe(true);
 
 		await reanudarEjercicio('push', 'press');
 		expect((await db.sesiones.get('2026-01-07__push'))?.ejercicios[0]?.saltado).toBe(false);
+		await setReps('push', 'press', 0, 10);
+		await setReps('push', 'press', 1, 8);
+		await setSerieHecha('push', 'press', 0, true);
+		await setSerieHecha('push', 'press', 1, true);
 
 		await marcarDiaTerminado('push');
 		expect((await db.sesiones.get('2026-01-07__push'))?.diaTerminado).toBe(true);
@@ -707,8 +800,14 @@ describe('sesion con IndexedDB', () => {
 
 	it('reanudar un ejercicio saltado reabre un dia terminado', async () => {
 		vi.setSystemTime(new Date('2026-01-07T12:00:00'));
+		await db.dias.add({
+			id: 'push',
+			nombre: 'Push',
+			orden: 0,
+			ejercicios: [{ exerciseId: 'press', seriesObjetivo: 2, orden: 0 }]
+		});
 
-		await saltarEjercicio('push', 'press', 2);
+		await saltarEjercicio('push', 'press');
 		await marcarDiaTerminado('push');
 
 		await reanudarEjercicio('push', 'press');
@@ -718,6 +817,27 @@ describe('sesion con IndexedDB', () => {
 			diaTerminadoAt: undefined,
 			ejercicios: [{ exerciseId: 'press', saltado: false }]
 		});
+	});
+
+	it('agregar un ejercicio al terminar no deja una sesión cerrada con trabajo pendiente', async () => {
+		vi.setSystemTime(new Date('2026-01-07T12:00:00'));
+		await db.dias.add({
+			id: 'push',
+			nombre: 'Push',
+			orden: 0,
+			ejercicios: [{ exerciseId: 'press', seriesObjetivo: 1, orden: 0 }]
+		});
+		await ensureEjercicio('push', 'press', 1);
+		await setReps('push', 'press', 0, 10);
+		await setSerieHecha('push', 'press', 0, true);
+
+		await Promise.all([marcarDiaTerminado('push'), agregarEjercicio('push', 'remo')]);
+
+		expect((await db.dias.get('push'))?.ejercicios.map((e) => e.exerciseId)).toEqual([
+			'press',
+			'remo'
+		]);
+		expect((await db.sesiones.get('2026-01-07__push'))?.diaTerminado).toBe(false);
 	});
 
 	it('destildar el set del PR limpia el resumen y conserva el historial real', async () => {

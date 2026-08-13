@@ -15,6 +15,7 @@ describe('serieCompleta', () => {
 		expect(serieCompleta({ hecha: true, reps: 10 })).toBe(true);
 		expect(serieCompleta({ hecha: true, peso: 80, reps: 8 })).toBe(true);
 		expect(serieCompleta({ hecha: true, peso: 80 })).toBe(false);
+		expect(serieCompleta({ hecha: true, peso: 80, reps: 0 })).toBe(false);
 		expect(serieCompleta({ hecha: false, reps: 10 })).toBe(false);
 	});
 });
@@ -56,6 +57,7 @@ describe('valorSet', () => {
 		expect(valorSet({ peso: 80, reps: 10 }, 'peso')).toBe(80);
 		expect(valorSet({ peso: 80, reps: 10, esMax: true, extraKg: 5 }, 'peso')).toBe(85);
 		expect(valorSet({ reps: 10 }, 'peso')).toBeNull();
+		expect(valorSet({ peso: 120, reps: 0 }, 'peso')).toBeNull();
 	});
 
 	it('en modo reps el valor son las reps, sin importar la metrica de ajustes', () => {
@@ -63,6 +65,7 @@ describe('valorSet', () => {
 		expect(valorSet({ reps: 14 }, 'e1rm', 'reps')).toBe(14);
 		expect(valorSet({}, 'peso', 'reps')).toBeNull();
 		expect(valorSet({ peso: 5, reps: 8 }, 'peso', 'reps')).toBeNull();
+		expect(valorSet({ reps: 0 }, 'peso', 'reps')).toBeNull();
 	});
 });
 

@@ -39,6 +39,7 @@
 
 	let editando = $state(false);
 	let nombreEdit = $state('');
+	let avisoDia = $state<string | null>(null);
 	let premioDia = $state(false);
 	let premioId: ReturnType<typeof setTimeout> | null = null;
 	let confirmacion = $state<{
@@ -159,17 +160,34 @@
 		// La fecha va explícita: con `hoyStr()` adentro, terminar el día pasada la
 		// medianoche marcaba una sesión nueva y vacía y dejaba abierta la real.
 		try {
-			await marcarDiaTerminado(diaId, fechaHoy);
+			const resultado = await marcarDiaTerminado(diaId, fechaHoy);
+			if (!resultado.terminado) {
+				avisoDia =
+					resultado.razon === 'ejercicios-pendientes'
+						? 'La rutina cambió mientras la cerrabas. Revisá el ejercicio pendiente antes de terminar el día.'
+						: 'Esta rutina ya no está disponible. Volvé a tus rutinas e intentá de nuevo.';
+				return;
+			}
 		} catch (error) {
 			reportarErrorDatos('No se pudo marcar la rutina como terminada. Intentá de nuevo.', error);
 			return;
 		}
+		avisoDia = null;
 		premioDia = true;
 		if (sonidoActivo) void sonarDiaTerminado().catch(() => {});
 		if ((ajustes.vibracion ?? true) && 'vibrate' in navigator)
 			navigator.vibrate([120, 70, 120, 70, 220]);
 		if (premioId) clearTimeout(premioId);
 		premioId = setTimeout(() => (premioDia = false), 2400);
+	}
+
+	async function saltarEjercicioActual(exerciseId: string) {
+		try {
+			if (await saltarEjercicio(diaId, exerciseId)) return;
+			avisoDia = 'Este ejercicio ya no está en la rutina. No se guardó ningún cambio.';
+		} catch (error) {
+			reportarErrorDatos('No se pudo guardar que saltaste el ejercicio. Intentá de nuevo.', error);
+		}
 	}
 
 	async function reabrir() {
@@ -565,11 +583,7 @@
 							>
 						{:else}
 							<button
-								onclick={() =>
-									guardarSinBloquear(
-										saltarEjercicio(diaId, item.exerciseId, item.seriesObjetivo),
-										'No se pudo guardar que saltaste el ejercicio. Intentá de nuevo.'
-									)}
+								onclick={() => void saltarEjercicioActual(item.exerciseId)}
 								class="min-h-11 shrink-0 rounded-full border border-white/10 px-3.5 py-2 text-xs font-bold"
 								style="color: var(--muted)"
 								aria-label={`Saltar ${nombre} hoy`}>Saltar</button
@@ -590,6 +604,15 @@
 		</div>
 
 		{#if !editando && totalEjercicios > 0}
+			{#if avisoDia}
+				<p
+					class="mt-4 rounded-xl px-3 py-2.5 text-xs font-semibold leading-relaxed"
+					style="background: rgb(var(--max) / .1); color: rgb(var(--max))"
+					role="alert"
+				>
+					{avisoDia}
+				</p>
+			{/if}
 			<section
 				class="mt-4 rounded-2xl border border-white/10 p-4"
 				style="background: var(--surface)"

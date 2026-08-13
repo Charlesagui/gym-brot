@@ -113,7 +113,11 @@
 	let fechaSesion = $state(hoyStr());
 	let notaTexto = $state('');
 	let tieneNota = $state(false);
+	let notaPendiente = $state<{ exerciseId: string; texto: string } | null>(null);
+	let notaGuardandoExerciseId = $state<string | null>(null);
+	let notaId: ReturnType<typeof setTimeout> | null = null;
 	let cargandoSeries = $state(false);
+	let ejercicioNoDisponible = $state(false);
 	let exito = $state<'normal' | 'pr' | 'parcial' | null>(null);
 	let prExito = $state<MejorSet | null>(null);
 	// Flash de PR no bloqueante: celebra el récord en el instante en que se gana,
@@ -175,6 +179,10 @@
 	const puntos = $derived($historial);
 	const notaStore = $derived(fromLiveQuery(notaObs($page.params.id!), undefined));
 	$effect(() => {
+		const exerciseId = $page.params.id!;
+		// Una escritura demorada de esta misma nota no puede volver el textarea a la
+		// versión anterior justo mientras la persona sigue tipeando.
+		if (notaPendiente?.exerciseId === exerciseId || notaGuardandoExerciseId === exerciseId) return;
 		notaTexto = $notaStore?.texto ?? '';
 		tieneNota = !!$notaStore?.texto;
 	});
@@ -190,16 +198,25 @@
 			anterioresFecha = null;
 			prCelebrado = null;
 			cargandoSeries = false;
+			ejercicioNoDisponible = false;
 			return;
 		}
 		const fecha = hoyStr();
 		fechaSesion = fecha;
 		cargandoSeries = true;
+		ejercicioNoDisponible = false;
 		anteriores = [];
 		anterioresFecha = null;
 		(async () => {
 			const preparacion = await prepararEjercicioSesion(dId, exId, fecha);
 			if (cancelado) return;
+			if (!preparacion.disponible) {
+				sets = [];
+				prCelebrado = null;
+				cargandoSeries = false;
+				ejercicioNoDisponible = true;
+				return;
+			}
 			anteriores = preparacion.anteriores;
 			anterioresFecha = preparacion.anterioresFecha;
 			sub = ejercicioSesionObs(dId, exId, fecha).subscribe((estado) => {
@@ -242,6 +259,8 @@
 	onDestroy(() => {
 		if (exitoId) clearTimeout(exitoId);
 		if (prFlashId) clearTimeout(prFlashId);
+		if (notaId) clearTimeout(notaId);
+		void guardarNotaPendiente();
 	});
 
 	const hechas = $derived(sets.filter(serieCompleta).length);
@@ -357,6 +376,35 @@
 			console.error(mensaje, error);
 			errorGuardado = `${mensaje} Intentá de nuevo.`;
 		});
+	}
+
+	function programarGuardadoNota(texto: string) {
+		const exerciseId = $page.params.id!;
+		notaTexto = texto;
+		tieneNota = !!texto.trim();
+		notaPendiente = { exerciseId, texto };
+		if (notaId) clearTimeout(notaId);
+		notaId = setTimeout(() => void guardarNotaPendiente(), 500);
+	}
+
+	/** Guarda en serie y vacía antes de ir a segundo plano; nunca escribe en otro ejercicio al navegar. */
+	async function guardarNotaPendiente() {
+		if (notaId) clearTimeout(notaId);
+		notaId = null;
+		if (notaGuardandoExerciseId || !notaPendiente) return;
+		const pendiente = notaPendiente;
+		notaPendiente = null;
+		notaGuardandoExerciseId = pendiente.exerciseId;
+		try {
+			await setNota(pendiente.exerciseId, pendiente.texto);
+		} catch (error) {
+			errorGuardado = `No se pudo guardar la nota. ${
+				error instanceof Error ? error.message : 'Intentá de nuevo.'
+			}`;
+		} finally {
+			notaGuardandoExerciseId = null;
+			if (notaPendiente) void guardarNotaPendiente();
+		}
 	}
 
 	function falloAlRegistrarPr(error: unknown): null {
@@ -567,6 +615,12 @@
 	}
 </script>
 
+<svelte:document
+	onvisibilitychange={() => {
+		if (document.visibilityState === 'hidden') void guardarNotaPendiente();
+	}}
+/>
+
 {#if !ej || !g}
 	<main class="glow-bg grid min-h-dvh place-items-center">
 		<p style="color: var(--muted)">Ejercicio no encontrado.</p>
@@ -641,7 +695,25 @@
 				{/if}
 			</div>
 
-			{#if !diaId}
+			{#if ejercicioNoDisponible}
+				<section
+					class="mt-6 rounded-2xl border border-dashed border-white/15 p-5 text-center"
+					style="background: var(--surface)"
+					role="alert"
+				>
+					<p class="text-sm font-bold">Este ejercicio ya no está en la rutina</p>
+					<p class="mt-1 text-xs leading-relaxed" style="color: var(--muted)">
+						No se creó ninguna sesión nueva. Volvé al día para elegir otro ejercicio.
+					</p>
+					<a
+						href={volver}
+						class="mt-4 inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold"
+						style="background: var(--accent); color: var(--on-accent)"
+					>
+						Volver al día
+					</a>
+				</section>
+			{:else if !diaId}
 				<!-- Sin ?dia= no se entrena: vista de consulta con el progreso completo. -->
 				{#if Progreso}
 					<Progreso
@@ -948,11 +1020,8 @@
 						</summary>
 						<textarea
 							bind:value={notaTexto}
-							onblur={() =>
-								guardarDatoSecundario(
-									setNota($page.params.id!, notaTexto),
-									'No se pudo guardar la nota.'
-								)}
+							oninput={(evento) => programarGuardadoNota(evento.currentTarget.value)}
+							onblur={() => void guardarNotaPendiente()}
 							placeholder="Ej: asiento en posición 4, agarre cerrado…"
 							rows="3"
 							class="mt-2 w-full resize-none rounded-lg bg-white/5 p-3 text-sm outline-none"

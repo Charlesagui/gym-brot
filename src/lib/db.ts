@@ -143,6 +143,49 @@ db.version(4)
 	});
 
 /**
+ * v5: las versiones anteriores aceptaban `reps: 0` en datos importados o escritos
+ * a mano. Cero no representa una serie hecha: podía cerrar un ejercicio y hasta
+ * quedar como PR de peso. Lo convertimos en serie pendiente y retiramos cualquier
+ * snapshot de PR que ya no tenga una serie real detrás.
+ */
+db.version(5)
+	.stores({
+		sesiones: 'id, diaId, fecha, *exerciseIds'
+	})
+	.upgrade(async (tx) => {
+		await tx
+			.table('sesiones')
+			.toCollection()
+			.modify((sesion: Sesion) => {
+				for (const ejercicio of sesion.ejercicios) {
+					for (const set of ejercicio.sets) {
+						if (set.reps === 0) {
+							set.reps = undefined;
+							set.hecha = false;
+						}
+					}
+
+					const pr = ejercicio.prCelebrado;
+					if (!pr) continue;
+					const coincide = (set: SetSesion | undefined) =>
+						!!set?.hecha &&
+						set.reps !== 0 &&
+						set.peso === pr.peso &&
+						set.reps === pr.reps &&
+						!!set.esMax === !!pr.esMax &&
+						(set.extraKg ?? 0) === (pr.extraKg ?? 0);
+					const indice =
+						pr.setIndex != null && coincide(ejercicio.sets[pr.setIndex])
+							? pr.setIndex
+							: ejercicio.sets.findIndex(coincide);
+					if (indice < 0) ejercicio.prCelebrado = undefined;
+					else if (pr.setIndex !== indice) ejercicio.prCelebrado = { ...pr, setIndex: indice };
+				}
+				sesion.exerciseIds = [...new Set(sesion.ejercicios.map((e) => e.exerciseId))];
+			});
+	});
+
+/**
  * Recalcula el índice por ejercicio a partir de `ejercicios`, que es la única fuente de
  * verdad. Se aplica SIEMPRE justo antes de persistir: si el índice quedara desfasado, las
  * consultas dejarían de ver una sesión y un PR podría desaparecer del historial o

@@ -139,7 +139,8 @@ export function recordsGlobalesObs(metrica: MetricaPr = 'peso') {
 		const conPeso = new Set<string>();
 		for (const s of todas)
 			for (const e of s.ejercicios)
-				for (const set of e.sets) if (set.hecha && set.peso != null) conPeso.add(e.exerciseId);
+				for (const set of e.sets)
+					if (set.hecha && set.reps !== 0 && set.peso != null) conPeso.add(e.exerciseId);
 		const mejores = new Map<string, RecordEjercicio>();
 		for (const s of todas) {
 			for (const ejercicio of s.ejercicios) {
@@ -179,10 +180,10 @@ export async function ultimaSesion(
 			// No hay hora de inicio: otra rutina del mismo día no es un “anterior” confiable.
 			if (s.id === exceptoId || s.fecha >= fecha || encontrada) return;
 			const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
-			if (e?.sets.some((set) => set.hecha)) {
+			if (e?.sets.some(serieCompleta)) {
 				encontrada = {
 					// Conserva índices, pero no prellena datos de sets abandonados o borrados.
-					sets: e.sets.map((set) => (set.hecha ? set : { hecha: false })),
+					sets: e.sets.map((set) => (serieCompleta(set) ? set : { hecha: false })),
 					fecha: s.fecha
 				};
 			}
@@ -221,8 +222,13 @@ export async function ensureEjercicio(
 }
 
 export interface PreparacionEjercicioSesion {
+	disponible: true;
 	anteriores: SetSesion[];
 	anterioresFecha: string | null;
+}
+
+export interface EjercicioSesionNoDisponible {
+	disponible: false;
 }
 
 /**
@@ -233,13 +239,40 @@ export async function prepararEjercicioSesion(
 	diaId: string,
 	exerciseId: string,
 	fecha = hoyStr()
-): Promise<PreparacionEjercicioSesion> {
-	const dia = await db.dias.get(diaId);
-	const objetivo =
-		dia?.ejercicios.find((item) => item.exerciseId === exerciseId)?.seriesObjetivo ?? 4;
-	await ensureEjercicio(diaId, exerciseId, objetivo, fecha);
-	const anterior = await ultimaSesion(diaId, exerciseId, fecha);
-	return { anteriores: anterior?.sets ?? [], anterioresFecha: anterior?.fecha ?? null };
+): Promise<PreparacionEjercicioSesion | EjercicioSesionNoDisponible> {
+	return db.transaction('rw', db.dias, db.sesiones, async () => {
+		// La URL puede quedar abierta mientras se edita o se restaura un backup. Nunca
+		// dejamos que una ruta vieja cree trabajo para una rutina o ejercicio inexistente.
+		const dia = await db.dias.get(diaId);
+		const configuracion = dia?.ejercicios.find((item) => item.exerciseId === exerciseId);
+		if (!dia || !configuracion) return { disponible: false };
+
+		const id = sesionId(diaId, fecha);
+		let sesion = await db.sesiones.get(id);
+		if (!sesion) {
+			sesion = { id, fecha, diaId, ejercicios: [] };
+			await db.sesiones.add(conIndice(sesion));
+		}
+		if (!sesion.ejercicios.some((item) => item.exerciseId === exerciseId)) {
+			const anterior = await ultimaDe(diaId, exerciseId, fecha);
+			sesion.ejercicios.push({
+				exerciseId,
+				sets: Array.from({ length: Math.max(1, configuracion.seriesObjetivo) }, (_, indice) => ({
+					peso: anterior?.[indice]?.peso,
+					reps: anterior?.[indice]?.reps,
+					hecha: false
+				}))
+			});
+			await guardarSesion(sesion);
+		}
+
+		const anterior = await ultimaSesion(diaId, exerciseId, fecha);
+		return {
+			disponible: true,
+			anteriores: anterior?.sets ?? [],
+			anterioresFecha: anterior?.fecha ?? null
+		};
+	});
 }
 
 /**
@@ -370,6 +403,12 @@ export function actualizarSetHistorial(
 		set.reps = cambios.reps;
 		set.esMax = cambios.esMax;
 		set.extraKg = cambios.extraKg;
+		// Una edición puede vaciar las reps de una serie histórica. En ese caso no
+		// conserva un ✓ inválido que seguiría contando para volumen, PR e historial.
+		if (set.reps == null || set.reps <= 0) {
+			set.hecha = false;
+			reabrirSesion(s);
+		}
 		// Editar el historial puede invalidar el PR de sesiones POSTERIORES a esta.
 		await recalcularPrCelebrado(s, exerciseId, true);
 		await guardarSesion(s);
@@ -426,6 +465,11 @@ export function setSerieHecha(
 		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
 		const set = e?.sets[i];
 		if (!s || !e || !set) return { encontrada: false, cambio: false };
+		// La pantalla no permite marcar sin reps, pero el dominio también protege
+		// importaciones, automatizaciones o pestañas desactualizadas.
+		if (hecha && (set.reps == null || set.reps <= 0)) {
+			return { encontrada: true, hecha: set.hecha, cambio: false, ejercicioCompleto: false };
+		}
 
 		let cambio = set.hecha !== hecha;
 		set.hecha = hecha;
@@ -574,21 +618,27 @@ function setSaltado(diaId: string, exerciseId: string, saltado: boolean, fecha =
 		});
 }
 
-/** Saltar el ejercicio hoy (p. ej. máquina ocupada): se asegura su entrada y lo marca. */
+/**
+ * Saltar el ejercicio hoy (p. ej. máquina ocupada). Valida la rutina dentro de la
+ * misma transacción: una pantalla vieja no puede crear una sesión huérfana al tocar
+ * "Saltar" mientras otra pestaña quitó el ejercicio.
+ */
 export async function saltarEjercicio(
 	diaId: string,
 	exerciseId: string,
-	nSets: number,
 	fecha = hoyStr()
-): Promise<void> {
-	await db.transaction('rw', db.sesiones, async () => {
+): Promise<boolean> {
+	return db.transaction('rw', db.dias, db.sesiones, async () => {
+		const dia = await db.dias.get(diaId);
+		const configuracion = dia?.ejercicios.find((item) => item.exerciseId === exerciseId);
+		if (!configuracion) return false;
 		const sesion = await ensureSesion(diaId, fecha);
 		let ejercicio = sesion.ejercicios.find((item) => item.exerciseId === exerciseId);
 		if (!ejercicio) {
 			const anterior = await ultimaDe(diaId, exerciseId, fecha);
 			ejercicio = {
 				exerciseId,
-				sets: Array.from({ length: Math.max(1, nSets) }, (_, indice) => ({
+				sets: Array.from({ length: Math.max(1, configuracion.seriesObjetivo) }, (_, indice) => ({
 					peso: anterior?.[indice]?.peso,
 					reps: anterior?.[indice]?.reps,
 					hecha: false
@@ -599,6 +649,7 @@ export async function saltarEjercicio(
 		ejercicio.saltado = true;
 		reabrirSesion(sesion);
 		await guardarSesion(sesion);
+		return true;
 	});
 }
 
@@ -692,12 +743,29 @@ export function registrarPrSiSupera(
  * ella, terminar el día justo después de la medianoche creaba una sesión nueva y
  * vacía marcada como terminada, y dejaba la sesión real del entrenamiento abierta.
  */
-export async function marcarDiaTerminado(diaId: string, fecha = hoyStr()) {
-	await db.transaction('rw', db.sesiones, async () => {
-		const s = await ensureSesion(diaId, fecha);
+export type ResultadoDiaTerminado =
+	| { terminado: true }
+	| { terminado: false; razon: 'rutina-no-disponible' | 'ejercicios-pendientes' };
+
+export async function marcarDiaTerminado(
+	diaId: string,
+	fecha = hoyStr()
+): Promise<ResultadoDiaTerminado> {
+	return db.transaction('rw', db.dias, db.sesiones, async () => {
+		const dia = await db.dias.get(diaId);
+		const s = await db.sesiones.get(sesionId(diaId, fecha));
+		if (!dia || !s) return { terminado: false, razon: 'rutina-no-disponible' };
+		const todoResuelto =
+			dia.ejercicios.length > 0 &&
+			dia.ejercicios.every((item) => {
+				const ejercicio = s.ejercicios.find((e) => e.exerciseId === item.exerciseId);
+				return !!ejercicio && (ejercicio.saltado || ejercicio.sets.every(serieCompleta));
+			});
+		if (!todoResuelto) return { terminado: false, razon: 'ejercicios-pendientes' };
 		s.diaTerminado = true;
 		s.diaTerminadoAt = new Date().toISOString();
 		await guardarSesion(s);
+		return { terminado: true };
 	});
 }
 
