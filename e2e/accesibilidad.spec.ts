@@ -115,6 +115,22 @@ test('reordenar rutinas ofrece controles táctiles además del arrastre', async 
 	expect(caja?.height).toBeGreaterThanOrEqual(44);
 });
 
+test('mantener una tarjeta de ejercicio abre el ordenamiento sin navegar al ejercicio', async ({
+	page
+}) => {
+	await page.goto('/dia/dia-piernas');
+	const ejercicio = page.getByRole('link', { name: /Prensa de pierna 45/ });
+	const caja = await ejercicio.boundingBox();
+	expect(caja).not.toBeNull();
+	await page.mouse.move(caja!.x + caja!.width / 2, caja!.y + caja!.height / 2);
+	await page.mouse.down();
+	await page.waitForTimeout(450);
+	await page.mouse.up();
+
+	await expect(page.getByRole('button', { name: 'Terminar orden' })).toBeVisible();
+	await expect(page).toHaveURL(/\/dia\/dia-piernas/);
+});
+
 test('dos toques rápidos crean una sola rutina y navegan una vez', async ({ page }) => {
 	await page.goto('/');
 	const crear = page.getByRole('button', { name: '+ Nuevo día' });
