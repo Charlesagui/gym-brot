@@ -12,6 +12,7 @@
 	import { descanso } from '$lib/descanso.svelte';
 	import { errorDatos } from '$lib/errores-datos';
 	import { menosMovimiento } from '$lib/motion';
+	import { limpiarArrastreHuerfano } from '$lib/dnd-safety';
 
 	let { children } = $props();
 
@@ -19,6 +20,10 @@
 	// librería). Sin soporte del navegador o con movimiento reducido, no hace nada y
 	// SvelteKit navega como siempre — nunca bloquea ni retrasa el registro rápido.
 	onNavigate((navigation) => {
+		// El gesto de "volver" del sistema puede robarse un arrastre de reordenar a
+		// mitad de camino: sin esto, la tarjeta arrastrada quedaba flotando en la
+		// pantalla siguiente (ver $lib/dnd-safety).
+		limpiarArrastreHuerfano();
 		if (!document.startViewTransition || menosMovimiento()) return;
 		if (navigation.to?.url.pathname === navigation.from?.url.pathname) return;
 		// Volver (atrás del navegador) invierte el sentido del deslizamiento.
@@ -86,6 +91,18 @@
 			reiniciandoDatos = false;
 		}
 	}
+
+	onMount(() => {
+		// El swipe de "volver" del sistema puede abortarse a mitad de camino sin
+		// disparar ninguna navegación: touchcancel/pointercancel es la única señal
+		// que llega en ese caso (ver $lib/dnd-safety).
+		window.addEventListener('touchcancel', limpiarArrastreHuerfano, true);
+		window.addEventListener('pointercancel', limpiarArrastreHuerfano, true);
+		return () => {
+			window.removeEventListener('touchcancel', limpiarArrastreHuerfano, true);
+			window.removeEventListener('pointercancel', limpiarArrastreHuerfano, true);
+		};
+	});
 
 	onMount(() => {
 		const lentaId = setTimeout(() => (dbLenta = true), 4000);

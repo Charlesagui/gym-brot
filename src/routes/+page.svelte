@@ -182,7 +182,14 @@
 				Arrastrá o usá las flechas para ordenar
 			</p>
 			<section
-				use:dndzone={{ items: ordenItems, flipDurationMs: flipMs, dropTargetStyle: {} }}
+				use:dndzone={{
+					items: ordenItems,
+					flipDurationMs: flipMs,
+					dropTargetStyle: {},
+					// Mismo motivo que en el reordenar de ejercicios: sin demora, un swipe
+					// para scrollear arrancaba un arrastre en vez de mover la página.
+					delayTouchStart: 200
+				}}
 				onconsider={alConsiderar}
 				onfinalize={alSoltar}
 				class="space-y-3"
