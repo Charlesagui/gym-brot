@@ -121,6 +121,26 @@ describe('sesion con IndexedDB', () => {
 		expect((await db.sesiones.get('2026-01-05__push'))?.ejercicios[0]?.sets[0]?.hecha).toBe(false);
 	});
 
+	it('borrar las reps de una serie hecha la desmarca, reabre el día y limpia su PR', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-05');
+		await setPeso('push', 'press', 0, 100, '2026-01-05');
+		await setReps('push', 'press', 0, 5, '2026-01-05');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-05');
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-05');
+		await db.sesiones.update('2026-01-05__push', {
+			diaTerminado: true,
+			diaTerminadoAt: '2026-01-05T20:00:00.000Z'
+		});
+
+		await setReps('push', 'press', 0, undefined, '2026-01-05');
+
+		expect(await db.sesiones.get('2026-01-05__push')).toMatchObject({
+			diaTerminado: false,
+			diaTerminadoAt: undefined,
+			ejercicios: [{ sets: [{ reps: undefined, hecha: false }], prCelebrado: undefined }]
+		});
+	});
+
 	it('no crea una sesión al saltar un ejercicio que ya no está en la rutina', async () => {
 		expect(await saltarEjercicio('push', 'press', '2026-01-05')).toBe(false);
 		expect(await db.sesiones.count()).toBe(0);
@@ -136,6 +156,18 @@ describe('sesion con IndexedDB', () => {
 		// La consulta por índice, que es lo que realmente usan historial y PR.
 		expect((await sesionesDe('fondos')).map((s) => s.id)).toEqual(['2026-01-05__push']);
 		expect(await sesionesDe('sentadilla')).toEqual([]);
+	});
+
+	it('asigna órdenes únicos a dos sesiones creadas concurrentemente el mismo día', async () => {
+		await Promise.all([
+			ensureEjercicio('rutina-a', 'press', 1, '2026-01-05'),
+			ensureEjercicio('rutina-b', 'remo', 1, '2026-01-05')
+		]);
+
+		const ordenes = (await db.sesiones.where('fecha').equals('2026-01-05').toArray())
+			.map((sesion) => sesion.ordenEnDia)
+			.sort();
+		expect(ordenes).toEqual([0, 1]);
 	});
 
 	it('una serie marcada aparece en el historial del ejercicio recien agregado', async () => {
@@ -289,6 +321,28 @@ describe('sesion con IndexedDB', () => {
 			setIndex: 1,
 			metrica: 'e1rm'
 		});
+	});
+
+	it('ordena PRs del mismo día por creación y no por el UUID de la rutina', async () => {
+		// `z-rutina` es lexicográficamente posterior, pero fue la primera sesión real.
+		await ensureEjercicio('z-rutina', 'press', 1, '2026-01-05');
+		await setPeso('z-rutina', 'press', 0, 100, '2026-01-05');
+		await setReps('z-rutina', 'press', 0, 5, '2026-01-05');
+		await setSerieHecha('z-rutina', 'press', 0, true, '2026-01-05');
+		expect(await registrarPrSiSupera('z-rutina', 'press', 0, 'peso', '2026-01-05')).toMatchObject({
+			valor: 100
+		});
+
+		await ensureEjercicio('a-rutina', 'press', 1, '2026-01-05');
+		await setPeso('a-rutina', 'press', 0, 90, '2026-01-05');
+		await setReps('a-rutina', 'press', 0, 5, '2026-01-05');
+		await setSerieHecha('a-rutina', 'press', 0, true, '2026-01-05');
+		expect(await registrarPrSiSupera('a-rutina', 'press', 0, 'peso', '2026-01-05')).toBeNull();
+
+		expect((await sesionesDe('press')).map((sesion) => [sesion.diaId, sesion.ordenEnDia])).toEqual([
+			['z-rutina', 0],
+			['a-rutina', 1]
+		]);
 	});
 
 	it('no registra PR de una serie sin marcar ni cuando el historial previo es mayor', async () => {

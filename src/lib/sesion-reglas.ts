@@ -42,7 +42,7 @@ export function pesoEfectivo(s: {
 	extraKg?: number;
 }): number | null {
 	if (s.peso == null) return null;
-	return s.peso + (s.esMax ? (s.extraKg ?? 0) : 0);
+	return normalizarValorPr(s.peso + (s.esMax ? (s.extraKg ?? 0) : 0));
 }
 
 /** Valor de una carga según peso directo o 1RM estimado de Epley. */
@@ -55,7 +55,12 @@ export function valorMetrica(
 		if (reps == null || reps <= 0) return null;
 		return normalizarValorPr(peso * (1 + Math.min(TOPE_REPS_E1RM, reps) / 30));
 	}
-	return peso;
+	return normalizarValorPr(peso);
+}
+
+/** Las repeticiones son una cantidad discreta: positiva y sin fracciones. */
+export function repeticionesValidas(reps: number | undefined): reps is number {
+	return reps != null && Number.isInteger(reps) && reps > 0;
 }
 
 /** Valor de un set bajo métrica y modo; null si todavía no puntúa. */
@@ -64,10 +69,9 @@ export function valorSet(
 	metrica: MetricaPr,
 	modo: ModoPr = 'peso'
 ): number | null {
-	// `0` sólo puede venir de datos viejos o editados manualmente: nunca representa
-	// trabajo real ni puede convertirse en un PR de peso o de reps.
-	if (set.reps === 0) return null;
-	if (modo === 'reps') return set.peso == null ? (set.reps ?? null) : null;
+	// Ninguna métrica puntúa una serie que el dominio no considera trabajo real.
+	if (!repeticionesValidas(set.reps)) return null;
+	if (modo === 'reps') return set.peso == null ? set.reps : null;
 	const efectivo = pesoEfectivo(set);
 	return efectivo == null ? null : valorMetrica(efectivo, set.reps, metrica);
 }
@@ -81,7 +85,7 @@ export const DESCRIPCION_METRICA: Record<MetricaEfectiva, string> = {
 
 /** Una serie cuenta como completa cuando fue confirmada y tiene repeticiones. */
 export function serieCompleta(set: SetSesion): boolean {
-	return set.hecha && set.reps != null && set.reps > 0;
+	return set.hecha && repeticionesValidas(set.reps);
 }
 
 /** Estado visible sin convertir trabajo parcial ni un salto en un ejercicio completo. */
@@ -99,7 +103,7 @@ export function modoEjercicio(sesiones: Sesion[], exerciseId: string): ModoPr {
 	for (const sesion of sesiones) {
 		const ejercicio = sesion.ejercicios.find((item) => item.exerciseId === exerciseId);
 		for (const set of ejercicio?.sets ?? []) {
-			if (!set.hecha || set.reps === 0) continue;
+			if (!serieCompleta(set)) continue;
 			if (set.peso != null) return 'peso';
 			tieneHechas = true;
 		}
@@ -124,7 +128,7 @@ export function mejorSetDeSeries(
 	modo: ModoPr = 'peso'
 ): MejorSet | null {
 	return sets.reduce<MejorSet | null>((best, set, setIndex) => {
-		if (!set.hecha) return best;
+		if (!serieCompleta(set)) return best;
 		const valor = valorSet(set, metrica, modo);
 		if (valor == null) return best;
 		return mejorSet(best, {

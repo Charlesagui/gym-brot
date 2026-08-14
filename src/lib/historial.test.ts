@@ -116,7 +116,7 @@ describe('resumenDiaSesion', () => {
 		expect(resumen.prs).toHaveLength(1);
 	});
 
-	it('cuenta las series hechas que quedan fuera del volumen (sin reps o sin peso)', () => {
+	it('ignora checks inválidos sin reps y cuenta bodyweight fuera del volumen', () => {
 		const resumen = resumenDiaSesion({
 			id: '2026-01-07__piernas',
 			fecha: '2026-01-07',
@@ -133,9 +133,9 @@ describe('resumenDiaSesion', () => {
 			]
 		});
 
-		expect(resumen.setsHechos).toBe(3);
+		expect(resumen.setsHechos).toBe(2);
 		expect(resumen.volumen).toBe(500);
-		expect(resumen.setsSinVolumen).toBe(2);
+		expect(resumen.setsSinVolumen).toBe(1);
 	});
 });
 

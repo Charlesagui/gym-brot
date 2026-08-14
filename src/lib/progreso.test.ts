@@ -124,6 +124,17 @@ describe('crearProgresoEjercicio', () => {
 		expect(progreso.mejorPeso).toBeNull();
 		expect(progreso.totalSeries).toBe(0);
 	});
+
+	it('no cuenta como progreso un check que quedó sin repeticiones válidas', () => {
+		const progreso = crearProgresoEjercicio(
+			[sesion('2026-01-01', [{ peso: 100, hecha: true }])],
+			'press'
+		);
+
+		expect(progreso.totalSeries).toBe(0);
+		expect(progreso.mejorPeso).toBeNull();
+		expect(progreso.sesiones).toEqual([]);
+	});
 });
 
 describe('crearDatosProgresoEjercicio', () => {

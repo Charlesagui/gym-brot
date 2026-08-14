@@ -1,9 +1,16 @@
 import { liveQuery } from 'dexie';
-import type { MetricaPr, PrCelebrado, Sesion, SetSesion } from './db';
+import {
+	compararSesiones,
+	type MetricaPr,
+	type PrCelebrado,
+	type Sesion,
+	type SetSesion
+} from './db';
 import { historialPorModo, sesionesDe, hoyStr } from './sesion';
 import {
 	mejorSet,
 	modoEjercicio,
+	serieCompleta,
 	valorSet,
 	type MejorSet,
 	type MetricaEfectiva,
@@ -62,12 +69,11 @@ export interface DatosProgresoEjercicio {
  */
 export function indexSetPr(sets: SetSesion[], pr: PrCelebrado | undefined): number {
 	if (!pr) return -1;
-	if (pr.setIndex != null && sets[pr.setIndex]?.hecha && sets[pr.setIndex]?.reps !== 0)
+	if (pr.setIndex != null && sets[pr.setIndex] && serieCompleta(sets[pr.setIndex]!))
 		return pr.setIndex;
 	return sets.findIndex(
 		(s) =>
-			s.hecha &&
-			s.reps !== 0 &&
+			serieCompleta(s) &&
 			s.peso === pr.peso &&
 			s.reps === pr.reps &&
 			!!s.esMax === !!pr.esMax &&
@@ -81,7 +87,9 @@ export function indexSetPr(sets: SetSesion[], pr: PrCelebrado | undefined): numb
  */
 export function crearProgresoEjercicio(sesiones: Sesion[], exerciseId: string): ProgresoEjercicio {
 	// Una sesión marcada para una fecha futura sigue siendo planificación, no un récord histórico.
-	const sesionesPasadas = sesiones.filter((sesion) => sesion.fecha <= hoyStr());
+	const sesionesPasadas = sesiones
+		.filter((sesion) => sesion.fecha <= hoyStr())
+		.sort(compararSesiones);
 	const modo = modoEjercicio(sesionesPasadas, exerciseId);
 	let mejorPeso: MejorSet | null = null;
 	let mejorE1rm: MejorSet | null = null;
@@ -97,7 +105,7 @@ export function crearProgresoEjercicio(sesiones: Sesion[], exerciseId: string): 
 		const metricaPr = e.prCelebrado?.metrica;
 		const series: SerieDeSesion[] = [];
 		e.sets.forEach((set, setIndex) => {
-			if (!set.hecha || set.reps === 0) return;
+			if (!serieCompleta(set)) return;
 			series.push({
 				set,
 				setIndex,
@@ -137,7 +145,8 @@ export function crearProgresoEjercicio(sesiones: Sesion[], exerciseId: string): 
 		if (series.length) porSesion.push({ sesionId: s.id, fecha: s.fecha, diaId: s.diaId, series });
 	}
 
-	porSesion.sort((a, b) => b.fecha.localeCompare(a.fecha) || b.sesionId.localeCompare(a.sesionId));
+	// `sesionesPasadas` ya está en orden cronológico real; la UI muestra recientes primero.
+	porSesion.reverse();
 	const setRecords = [...records.values()]
 		.sort((a, b) => a.reps - b.reps)
 		.map(({ efectivo: _efectivo, ...r }) => r);

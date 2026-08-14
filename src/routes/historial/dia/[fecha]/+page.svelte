@@ -9,6 +9,7 @@
 	import { fromLiveQuery } from '$lib/live';
 	import { fechaCorta, formatoSet, formatoVolumen } from '$lib/formato';
 	import { pasoPesoEfectivo } from '$lib/paso-peso';
+	import { serieCompleta } from '$lib/sesion-reglas';
 	import { fechaCalendarioValida } from '$lib/fechas';
 	import { popOnChange } from '$lib/pop-on-change';
 	import EditarSerieSheet, { type SerieEditable } from '$lib/components/EditarSerieSheet.svelte';
@@ -46,7 +47,7 @@
 		)
 	);
 	const conEntrenamiento = $derived(
-		$sesionesStore.sesiones.filter((s) => s.ejercicios.some((e) => e.sets.some((x) => x.hecha)))
+		$sesionesStore.sesiones.filter((s) => s.ejercicios.some((e) => e.sets.some(serieCompleta)))
 	);
 	const nombreDia = $derived(new Map($sesionesStore.dias.map((d) => [d.id, d.nombre])));
 
@@ -173,8 +174,8 @@
 				>
 					{totalSinVolumen}
 					{totalSinVolumen === 1
-						? 'serie hecha sin peso o reps no cuenta'
-						: 'series hechas sin peso o reps no cuentan'}
+						? 'serie hecha sin peso no cuenta'
+						: 'series hechas sin peso no cuentan'}
 					para el volumen
 				</p>
 			{/if}
@@ -198,7 +199,7 @@
 					{/if}
 				</div>
 				<div class="space-y-2">
-					{#each sesion.ejercicios.filter( (e) => e.sets.some((s) => s.hecha) ) as ejercicio (ejercicio.exerciseId)}
+					{#each sesion.ejercicios.filter( (e) => e.sets.some(serieCompleta) ) as ejercicio (ejercicio.exerciseId)}
 						{@const ej = ejercicioPorId(ejercicio.exerciseId)}
 						{@const g = ej ? grupos[ej.grupo] : undefined}
 						{@const setPr = indexSetPr(ejercicio.sets, ejercicio.prCelebrado)}
@@ -227,7 +228,7 @@
 							</div>
 							<div class="mt-2.5 space-y-1.5">
 								{#each ejercicio.sets as set, i (i)}
-									{#if set.hecha}
+									{#if serieCompleta(set)}
 										<button
 											onclick={() => {
 												glowEditando = g?.glow ?? '124 92 255';

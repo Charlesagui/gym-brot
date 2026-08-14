@@ -2,7 +2,7 @@ import { liveQuery } from 'dexie';
 import { db, type Dia, type Sesion } from './db';
 import { ejercicioPorId } from './catalog';
 import { hoyStr } from './sesion';
-import { pesoEfectivo, type MetricaEfectiva } from './sesion-reglas';
+import { pesoEfectivo, serieCompleta, type MetricaEfectiva } from './sesion-reglas';
 
 export interface DiaEntrenado {
 	fecha: string;
@@ -41,7 +41,7 @@ export interface PrDelDia {
 export interface ResumenDiaSesion {
 	setsHechos: number;
 	volumen: number;
-	/** Series ✓ sin peso o sin reps: quedan fuera del volumen (peso × reps) y la UI lo dice. */
+	/** Series ✓ sin peso: quedan fuera del volumen (peso × reps) y la UI lo dice. */
 	setsSinVolumen: number;
 	prs: PrDelDia[];
 }
@@ -82,7 +82,7 @@ export function resumenDiaSesion(sesion: Sesion | undefined): ResumenDiaSesion {
 
 	for (const ejercicio of sesion.ejercicios) {
 		for (const set of ejercicio.sets) {
-			if (!set.hecha || set.reps === 0) continue;
+			if (!serieCompleta(set)) continue;
 			setsHechos++;
 			const peso = pesoEfectivo(set);
 			if (peso != null && set.reps != null) volumen += peso * set.reps;
@@ -102,11 +102,12 @@ export function resumenDiaSesion(sesion: Sesion | undefined): ResumenDiaSesion {
 		}
 	}
 
+	volumen = Math.round(volumen * 10) / 10;
 	return { setsHechos, volumen, setsSinVolumen, prs };
 }
 
 function tieneEntrenamiento(sesion: Sesion): boolean {
-	return sesion.ejercicios.some((e) => e.sets.some((s) => s.hecha && s.reps !== 0));
+	return sesion.ejercicios.some((e) => e.sets.some(serieCompleta));
 }
 
 export interface ComparacionSesion {
