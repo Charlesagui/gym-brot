@@ -1,147 +1,56 @@
-# Gym-brot — Plan del proyecto
+# Gym-brot — Decisiones y pendientes
 
-App de gimnasio **personal, mobile-first**. Simple y bonita, pensada para usarse
-con una mano y con mala señal en el gym. Sin depender de los nombres: te guiás por un
-**video MP4 liviano** del ejercicio, que muestra el movimiento y marca **el músculo en rojo**.
+App de gimnasio **personal, mobile-first**, offline y sin backend. No dependés de los nombres:
+te guiás por un **video MP4 liviano** de cada ejercicio, que muestra el movimiento y marca
+**el músculo en rojo**.
 
-> Estado: **MVP completo** (Fases 0–6 construidas — ver historial git). Este doc queda
-> como referencia de decisiones y modelo de datos; el catálogo arrancó con los 30 ejercicios
-> documentados en `EJERCICIOS-INICIALES.md` y luego se amplió con más ejercicios de cable/polea.
-
----
-
-## 1. Objetivo y funciones principales
-
-1. **Rutina del día** con cantidad de series, para ir descontando lo que vas haciendo.
-2. **Video MP4 del ejercicio** (reconocimiento visual + cómo se hace, sin nombres).
-3. **Músculo trabajado resaltado** — ya viene marcado en rojo dentro de la animación.
-4. **PR por máquina** — **récord automático** por **peso máximo** (o **1RM estimado** opcional, configurable),
-   contado **solo de las series marcadas hechas ✓**, con **🔥 MAX** (+ kg encima de la placa) y **mini-gráfico**.
-
-Principios: botones grandes, una sola mano, dark mode, mínimos toques, animaciones suaves, **offline**.
+> **Qué es este documento.** Registra _por qué_ la app es como es y qué queda sin hacer:
+> lo que no se puede deducir leyendo el código. Deliberadamente **no** describe la
+> implementación — esa parte es la que se desactualiza. (Este archivo llegó a tener un
+> modelo de datos y un estado de fases que terminaron mintiendo: el modelo se quedó en
+> `diaSemana` singular varias migraciones atrás, y daba por pendiente la edición de series
+> del historial, que ya estaba construida.)
+>
+> | Busco…                                                         | Está en                |
+> | -------------------------------------------------------------- | ---------------------- |
+> | Qué hace la app, cómo correrla, cómo desplegarla               | `README.md`            |
+> | Principios de producto (operación, recompensas, accesibilidad) | `CLAUDE.md`            |
+> | Modelo de datos, invariantes y límites que no se rompen        | `docs/arquitectura.md` |
+> | Qué se construyó y cuándo                                      | historial de git       |
 
 ---
 
-## 2. Decisiones tomadas ✅
+## 1. Decisiones tomadas ✅
 
-| Tema              | Decisión                                                                                                                                                                 |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Framework         | **SvelteKit + Svelte 5** (runes)                                                                                                                                         |
-| Distribución      | **PWA** instalable (base). Capacitor = upgrade futuro                                                                                                                    |
-| Plataformas       | **Android + iPhone**                                                                                                                                                     |
-| Imágenes          | ✅ **MP4 compactados** desde GIFs de ExerciseDB vía [JahelCuadrado/ExerciseGymGifsDB](https://github.com/JahelCuadrado/ExerciseGymGifsDB) — movimiento + músculo en rojo |
-| Mapa muscular SVG | ❌ Descartado (la animación ya marca el músculo)                                                                                                                         |
-| Almacenamiento    | **Dexie.js** (IndexedDB) — local, offline                                                                                                                                |
-| Unidad            | **kg** por defecto, cambiable a **lb** en ajustes                                                                                                                        |
-| Estilo visual     | **Oscuro minimalista** + brillos sutiles de color (color a definir — no atado a azul/índigo), acento vivo (§7)                                                           |
-| Backend           | **Ninguno**                                                                                                                                                              |
-
----
-
-## 3. Stack técnico
-
-- **SvelteKit** con `adapter-static` (app 100% estática).
-- **vite-pwa/sveltekit** → service worker, instalable, cache offline.
-- **Tailwind CSS** (touch targets grandes, dark mode, glows).
-- **Dexie.js** para datos del usuario.
-- **MP4 locales** en `/videos`: se reproducen online bajo demanda y se descargan de forma
-  explícita desde Ajustes para uso offline, sin depender de un CDN.
-- Catálogo = **JSON estático** empaquetado (read-only).
+| Tema                   | Decisión                                                                                                      | Por qué                                                                                                                                                              |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Backend**            | **Ninguno**                                                                                                   | Es una app personal: sin cuentas, sin servidor que mantener ni pagar.                                                                                                |
+| **Almacenamiento**     | **Dexie.js** (IndexedDB), local                                                                               | Offline real y cero latencia durante la serie. Ver riesgo de desalojo en iOS (§2).                                                                                   |
+| **Distribución**       | **PWA** instalable                                                                                            | Cubre Android e iPhone con un solo build. Capacitor queda como upgrade si hace falta tienda.                                                                         |
+| **Build**              | SvelteKit + Svelte 5 (runes) con `adapter-static`                                                             | App 100% estática → hosting gratis, nada que servir dinámicamente.                                                                                                   |
+| **Demos de ejercicio** | **MP4 compactados** desde los GIFs de [ExerciseGymGifsDB](https://github.com/JahelCuadrado/ExerciseGymGifsDB) | Movimiento + músculo en rojo en un solo asset, mucho más liviano que el GIF original.                                                                                |
+| **Mapa muscular SVG**  | ❌ **Descartado**                                                                                             | La animación ya marca el músculo: un SVG aparte sería trabajo y peso para repetir información.                                                                       |
+| **Videos**             | Locales en `/videos`, descarga offline **explícita** desde Ajustes                                            | Sin CDN del que depender; el usuario decide cuándo gastar los ~22 MB.                                                                                                |
+| **Catálogo**           | JSON estático empaquetado, read-only                                                                          | No es dato del usuario: no tiene por qué vivir en la base ni migrarse.                                                                                               |
+| **Unidad**             | **kg** por defecto, cambiable a **lb**                                                                        | Cambiar la unidad es solo una preferencia de lectura: nunca reescribe el historial.                                                                                  |
+| **Estilo visual**      | Oscuro casi negro, minimalista, con brillos radiales de color y un color propio por grupo muscular            | Legible en el gym y con personalidad sin ser infantil. Los valores exactos viven en los tokens de `src/app.css` y `src/lib/catalog.ts`, que son la fuente de verdad. |
 
 ---
 
-## 4. Arquitectura
+## 2. Riesgos vigentes
 
-```
-Catálogo (JSON estático: ejercicios · nombre_es · grupo · demoVideo)
-                              │
-   MP4 animado (ExerciseDB)  ──►  movimiento + músculo en rojo (todo en uno)
-                              │
-   Dexie.js (en el teléfono)  ──►  Días · sesiones · pesos/PR · notas · ajustes
-                              │
-                 Shell offline · videoteca offline opcional · backup a archivo
-```
-
----
-
-## 5. Modelo de datos (conceptual)
-
-**Catálogo (estático — ver `EJERCICIOS-INICIALES.md`):**
-
-```
-Ejercicio: id · nombre_es · grupo_muscular · demoVideo · instrucciones_es? (opcional)
-```
-
-**Datos del usuario (Dexie):**
-
-```
-Dia:      id · nombre · color? · diaSemana? · ejercicios[ { exerciseId, seriesObjetivo, orden } ]
-Sesion:   id · fecha · diaId · ejercicios[ { exerciseId, sets[ { peso?, reps?, hecha, esMax? } ] } ]
-          → peso POR SERIE (permite rampa/pirámide) · se resetea por sesión
-Nota:     exerciseId · texto        (colapsada en la UI)
-Ajustes:  darkMode · unidad(kg|lb) · timer{ activo, minutos }
-```
-
-> El **PR** se deriva del historial de sesiones, **solo de las series marcadas hechas ✓** (no se fabrica nada).
-> Métrica **configurable** (Ajustes): `peso` = serie más pesada · `e1rm` = 1RM estimado (Epley `peso·(1+reps/30)`),
-> que sí tiene en cuenta las reps. El número y el mini-gráfico siempre rotulan qué métrica usan.
-> **MAX** por serie = placa full; `extraKg` suma los kg encima de la placa al valor del PR.
-> El umbral de "PR ya celebrado" guarda el **set** (no un escalar), así se recalcula bien al cambiar métrica o unidad.
-> Cada serie pre-llena el peso de la anterior / última sesión, para rampear rápido en el gym.
+- **iOS puede borrar los datos locales** tras semanas sin abrir la app. Mitigado con
+  almacenamiento persistente y backup a archivo, pero no eliminado.
+- **Licencia de las animaciones** (ExerciseDB): uso personal está bien; si la app se publica
+  o se vende hay que pasar a licencia oficial o a un set propio.
+- ⚠️ **El repo está público en GitHub** (verificado 2026-08-14) mientras el `LICENSE` es
+  propietario y el README pide mantenerlo privado. Los 962 MP4 de `static/videos` (22 MB)
+  derivan de ExerciseDB. Decidir una de dos: pasar el repo a privado, o revisar las licencias
+  y ajustar `LICENSE` y README para que digan la verdad.
 
 ---
 
-## 6. Pantallas y flujo
-
-**Flujo:** `Días → Día → Ejercicio → (Terminar) → vuelve al Día`
-
-1. **Días** (principal) — lista de días **editables** + **atajo HOY** (según día de semana).
-   Viene con **días de ejemplo** precargados. `[+ Nuevo día]`.
-2. **Día** — ejercicios del día con progreso de series (●○) y ✓ completado. `[+ Agregar ejercicio]`. Editable.
-3. **Ejercicio** —
-   - **Video** en loop (movimiento + músculo en rojo).
-   - **Series con peso por serie:** una fila por serie = `peso × reps` + marcar hecha ✓ (el **[+]** suma serie). Permite **rampa/pirámide** (10→15→20→25 kg); pre-llena el peso de la serie anterior / última sesión. Simple si querés: mismo peso o solo marcar hechas.
-   - **🏆 PR automático** (de tus series hechas ✓) por **peso máximo** o **1RM estimado** (elegís en Ajustes; el número dice qué métrica usa) · **🔥 MAX** por serie (+ kg encima de la placa).
-   - **📈 Mini-gráfico** de progreso del peso.
-   - **📝 Notas** colapsadas (tocar para abrir/editar: "asiento en 4", "agarre cerrado").
-   - **⏱️ Timer** de descanso opcional (arranca al completar serie).
-   - `[✓ Terminar ejercicio]` → marca ✓ y vuelve.
-
-**Reset por sesión:** al reentrar a un día, las series vuelven a 0; el historial de PR queda.
-
----
-
-## 7. Estilo visual
-
-- Base **oscura casi negra**, minimalista, mucho espacio en negro.
-- **Brillos sutiles de color** (radial glows): el fondo general usa el acento; cada tarjeta de ejercicio usa el color de su grupo. Ref de vibra: captura estilo Gemini.
-- **Sombras tintadas** con color, no gris plano.
-- **Acento global: violeta** (`#7c5cff`, elegido) para lo interactivo (círculos, botones, PR, 🔥 MAX).
-- **Color por grupo** (glow de cada tarjeta): Piernas rosa · Pecho coral · Espalda verde · Hombros ámbar · Brazos celeste · Core cian.
-- Tipografía limpia, botones grandes (una mano), transiciones suaves. (Tono exacto se afina al construir.)
-
----
-
-## 8. Fases del MVP (construidas — historial en git)
-
-`0` Cimientos · `1` Las 3 pantallas · `2` Días y rutinas · `3` ❤️ Contador de series ·
-`4` Peso y PR · `5` Notas y Timer · `6` Pulido y estética.
-
-**Preprocesamiento:** JSON semilla · días de ejemplo · empaquetar MP4 compactados.
-
----
-
-## 9. Riesgos / a verificar
-
-- **Cobertura de TU gym**: los 30 son máquinas genéricas; confirmar que coinciden. (Agregar máquinas propias = diferido, §11.)
-- **Offline real**: shell y datos disponibles al instalar; videoteca offline opcional mediante
-  descarga explícita desde Ajustes.
-- **iOS**: puede borrar datos locales tras semanas sin abrir → mitigado con backup.
-- **Licencia animaciones** (ExerciseDB): uso personal OK; si se publica → licencia oficial (§11).
-
----
-
-## 10. Fuentes
+## 3. Fuentes
 
 | Recurso                                                                               | Uso                                         | Licencia             |
 | ------------------------------------------------------------------------------------- | ------------------------------------------- | -------------------- |
@@ -151,56 +60,17 @@ Ajustes:  darkMode · unidad(kg|lb) · timer{ activo, minutos }
 
 ---
 
-## 11. Diferido / mejoras futuras
+## 4. Diferido / mejoras futuras
 
-- **Multiusuario:** ya funciona local (cada persona en su celu = su propio perfil/datos). Cuentas + sync en la nube = upgrade futuro (Dexie Cloud / Supabase), sin rehacer nada.
-- **Máquinas propias** (agregar ejercicio custom con nombre/foto) — pedido pero pospuesto.
-- **Personaje animado custom** (reemplazar las animaciones como "skin"): DIY 3D / comprar / encargar / IA.
-  Refs: `dscherm/gym-mouse` (MIT), `philg0ld/gemini-exercise-illustrator` (MIT). Debe ser original.
-- **Licencia animaciones**: si se publica/vende → ExerciseDB Pro o set propio.
-- **Capacitor** (tiendas), notificaciones/recordatorios, sync entre dispositivos.
-
----
-
-## 12. Roadmap verdad-de-datos + PR
-
-Refinamiento del PR para cumplir el manifiesto ("Datos y verdad").
-
-**✅ Hecho (fases A–C + pulido UI):**
-
-- **A1 · PR honesto** — el PR sale **solo de series marcadas hechas ✓**. "Terminar ejercicio" ya **no auto-completa**
-  series no tocadas (no fabrica récords ni progreso). El badge en vivo y la celebración al terminar usan el mismo criterio.
-- **A2 · Umbral robusto** — "PR ya celebrado" guarda el **set** (`{peso, reps, esMax, extraKg}`), no un escalar →
-  se recalcula bien al cambiar de métrica o de unidad.
-- **A3 · kg↔lb** — la conversión de unidad ahora también convierte `extraKg` y el umbral celebrado.
-- **A4 · Medianoche** — la sesión activa fija su fecha al entrar al ejercicio; no se pierden toques al cruzar las 00:00.
-- **B · Métrica configurable** — Ajustes → `peso máximo` | `1RM estimado (Epley)`. Todo (PR, gráfico, badge, celebración)
-  pasa por una función de valor única; rótulos dinámicos + línea con la métrica secundaria.
-- **C · MAX coherente** — `extraKg` ("encima de la placa") implementado y suma al PR; toggle MAX más descubrible.
-- **UI** — estado vacío "Todavía sin PR"; mini-gráfico con 1 sola sesión.
-- **D4 · Vista global de récords** — `Historial` incluye **Récords vigentes**, con todos los
-  PRs paginables, métrica rotulada y acceso al progreso de cada ejercicio.
-
-**⏳ Pendiente (mayor esfuerzo / riesgo — pedir antes de hacer):**
-
-- **D3 · Corrección de dato** — long-press en un punto del gráfico para quitar/editar una serie del historial
-  (salida de emergencia ante un dato malo). Menos urgente ahora que A1–A3 cierran las fuentes de datos falsos.
-- **Métrica por ejercicio** — hoy es global; permitir `peso` en unos y `1RM` en otros.
-
----
-
-## 13. Correcciones posteriores a la auditoría integral ✅
-
-- La fecha de una sesión activa viaja en la URL y permanece estable al cruzar medianoche,
-  navegar y recargar, sin mezclar el entrenamiento con el día siguiente.
-- El gráfico completo incluye el día actual y sigue excluyendo fechas futuras mediante
-  comparaciones `YYYY-MM-DD` sin horas ni zona horaria.
-- Día y cierre distinguen pendiente, completado, saltado y parcial con trabajo real.
-- Crear una rutina es idempotente ante toques repetidos; las rutas inválidas ofrecen salida
-  sin crear datos.
-- Los diálogos de técnica y edición histórica comparten aislamiento, foco, Escape, scroll y
-  restauración del disparador.
-- Editor, calendario y controles compactos fueron verificados a 320 px, 393 px, horizontal y
-  texto ampliado, con targets táctiles de al menos 44 px.
-- El cierre sin series es sobrio y no dispara audio o vibración de logro; singular y plural
-  reflejan la cantidad real.
+- **Máquinas propias** — agregar un ejercicio custom con nombre y foto, para las máquinas del
+  gym que no estén en el catálogo genérico. Pedido pero pospuesto.
+- **Métrica de PR por ejercicio** — hoy `peso máximo` vs `1RM estimado` es una preferencia
+  global; tendría sentido usar una en unos ejercicios y otra en otros.
+- **Multiusuario con sync** — ya funciona por dispositivo (cada persona en su celu tiene sus
+  datos). Cuentas y sync en la nube (Dexie Cloud / Supabase) serían un agregado, no un rehacer.
+- **Personaje animado propio** para reemplazar las animaciones como "skin" y salir de la
+  dependencia de licencia. Refs: `dscherm/gym-mouse` (MIT),
+  `philg0ld/gemini-exercise-illustrator` (MIT). Tiene que ser original.
+- **Capacitor** (tiendas), recordatorios, sync entre dispositivos.
+- **Drift de redondeo kg↔lb** — decidido no arreglar: raro en uso real, y los pesos se
+  persisten en gramos enteros, que son estables entre unidades (ver `docs/arquitectura.md`).
