@@ -1,6 +1,7 @@
 /**
  * Escala semántica de duraciones (ms), en espejo de los tokens --dur-* de app.css:
- * FAST = presión/respuesta inmediata · BASE = cambio de estado · SLOW = celebración.
+ * FAST = respuesta inmediata · BASE = cambio de estado · SLOW = celebración.
+ * (--dur-press no tiene par acá: la presión se resuelve entera en CSS.)
  */
 export const DUR_FAST = 120;
 export const DUR_BASE = 220;

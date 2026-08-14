@@ -753,7 +753,7 @@
 					{#if !videoGrande}
 						<button
 							onclick={() => setVideoGrande(true)}
-							class="gb-pressable gb-thumb-frame shrink-0 overflow-hidden rounded-xl"
+							class="gb-thumb-frame shrink-0 overflow-hidden rounded-xl"
 							aria-label="Ver demostración en grande"
 						>
 							<video
@@ -911,7 +911,7 @@
 									<button
 										onclick={quitarSerie}
 										disabled={sets.length <= 1}
-										class="gb-pressable grid size-11 touch-manipulation place-items-center rounded-full text-sm font-bold disabled:opacity-35"
+										class="grid size-11 touch-manipulation place-items-center rounded-full text-sm font-bold disabled:opacity-35"
 										style="color: var(--muted)"
 										aria-label="Quitar serie de hoy">−</button
 									>
@@ -925,7 +925,7 @@
 									>
 									<button
 										onclick={() => escribir(addSet(diaId, $page.params.id!, fechaSesion))}
-										class="gb-pressable grid size-11 touch-manipulation place-items-center rounded-full text-sm font-bold"
+										class="grid size-11 touch-manipulation place-items-center rounded-full text-sm font-bold"
 										style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
 										aria-label="Agregar serie de hoy">+</button
 									>
@@ -1177,7 +1177,7 @@
 							<button
 								onclick={terminarEjercicio}
 								disabled={!!exito}
-								class="gb-pressable block w-full rounded-2xl py-4 text-center font-bold"
+								class="block w-full rounded-2xl py-4 text-center font-bold"
 								style="background: rgb({g.glow}); color: var(--on-bright)"
 								>{exito ? 'Cerrando…' : '✓ Volver al día'}</button
 							>
@@ -1186,7 +1186,7 @@
 						<button
 							onclick={terminarEjercicio}
 							disabled={!!exito}
-							class="gb-pressable mt-4 block w-full rounded-2xl py-4 text-center font-bold"
+							class="mt-4 block w-full rounded-2xl py-4 text-center font-bold"
 							style="background: var(--accent); color: var(--on-accent)"
 							>{exito ? 'Cerrando…' : 'Terminar ejercicio'}</button
 						>

@@ -103,7 +103,7 @@ test('reordenar rutinas ofrece controles táctiles además del arrastre', async 
 	await page.goto('/');
 
 	await page.getByRole('button', { name: 'Reordenar rutinas' }).click();
-	await expect(page.getByText('Arrastrá o usá las flechas para ordenar')).toBeVisible();
+	await expect(page.getByText('Mantené una tarjeta y movela, o usá las flechas')).toBeVisible();
 
 	const subir = page.getByRole('button', { name: /^Subir / }).first();
 	const bajar = page.getByRole('button', { name: /^Bajar / }).first();

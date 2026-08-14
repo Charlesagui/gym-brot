@@ -56,7 +56,7 @@
 		{#if maquinaPlacas}
 			<button
 				onclick={onToggleMax}
-				class="gb-pressable flex min-h-11 shrink-0 touch-manipulation items-center rounded-full border px-3 text-[11px] font-bold"
+				class="flex min-h-11 shrink-0 touch-manipulation items-center rounded-full border px-3 text-[11px] font-bold"
 				style={set.esMax
 					? 'background: rgb(var(--max) / .22); color: rgb(var(--max)); border-color: rgb(var(--max) / .5)'
 					: 'color: var(--muted); border-color: rgba(255,255,255,.16); border-style: dashed'}
@@ -70,7 +70,7 @@
 		<button
 			onclick={onToggle}
 			disabled={pendiente}
-			class="gb-pressable relative grid size-12 shrink-0 touch-manipulation place-items-center rounded-full border-2 text-base font-bold transition-colors {flash
+			class="relative grid size-12 shrink-0 touch-manipulation place-items-center rounded-full border-2 text-base font-bold {flash
 				? 'gb-pop'
 				: ''}"
 			style={set.hecha
@@ -134,7 +134,7 @@
 			<div class="flex items-center gap-1.5">
 				<button
 					use:pulsar={() => onAjustarExtra(-pasoPeso)}
-					class="gb-pressable grid size-11 touch-manipulation select-none place-items-center rounded-lg text-sm font-bold"
+					class="grid size-11 touch-manipulation select-none place-items-center rounded-lg text-sm font-bold"
 					style="background: rgba(255,255,255,.06); color: var(--muted)"
 					aria-label={`Bajar ${pasoPeso} ${unidad} encima en serie ${index + 1}`}>−</button
 				>
@@ -146,7 +146,7 @@
 				</span>
 				<button
 					use:pulsar={() => onAjustarExtra(pasoPeso)}
-					class="gb-pressable grid size-11 touch-manipulation select-none place-items-center rounded-lg text-sm font-bold"
+					class="grid size-11 touch-manipulation select-none place-items-center rounded-lg text-sm font-bold"
 					style="background: rgb(var(--max) / .18); color: rgb(var(--max))"
 					aria-label={`Subir ${pasoPeso} ${unidad} encima en serie ${index + 1}`}>+</button
 				>

@@ -22,7 +22,8 @@
 	--scrim: 8 8 12; /* velo de overlays (= --bg, como rgb para opacidad variable) */
 
 	/* Movimiento: duraciones y curvas semánticas (ver src/lib/motion.ts) */
-	--dur-fast: 120ms; /* presión, respuesta inmediata */
+	--dur-press: 70ms; /* bajada de la presión: lo más cerca del dedo posible */
+	--dur-fast: 120ms; /* respuesta inmediata */
 	--dur-base: 220ms; /* cambio de estado (check, glow de fila) */
 	--dur-slow: 340ms; /* celebración, entrada de overlays */
 	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -66,17 +67,151 @@ body {
 }
 
 /*
- * Primitiva de presión: respuesta táctil inmediata y consistente en botones,
- * steppers y filas tocables. Un solo lugar para "cómo se siente" tocar algo.
+ * Higiene táctil: el recuadro gris cuadrado que Android pinta sobre cada tap
+ * pelea con nuestro propio acuse (y sobre tarjetas redondeadas queda roto), y
+ * `manipulation` saca el retardo del doble-tap para zoom, que se siente como si
+ * el botón hubiera ignorado el toque.
  */
-.gb-pressable {
+:where(button, a[href], summary, label, [role='button'], input, select, textarea) {
+	-webkit-tap-highlight-color: transparent;
+}
+:where(button, a[href], summary, [role='button'], .gb-pressable) {
+	touch-action: manipulation;
+}
+
+/*
+ * Primitiva de presión: un solo lugar para "cómo se siente" tocar algo.
+ *
+ * Se aplica por defecto a TODO lo tocable en vez de esperar que cada botón se
+ * acuerde de pedirla: antes había que marcar cada uno con .gb-pressable, solo un
+ * tercio lo hacía, y los ± de peso y reps —lo más tocado de la app— no acusaban
+ * nada. Un botón o enlace nuevo NO necesita clase: ya la tiene.
+ *
+ * `:where` deja todo en especificidad 0, así que cualquier clase propia (o de
+ * Tailwind) la pisa sin pelear. `.gb-no-press` la saca donde el elemento es un
+ * velo a pantalla completa; `.gb-pressable` sigue disponible para lo tocable que
+ * no es button/a (hoy no hay ninguno, por eso no aparece en el markup).
+ *
+ * El estado llega por dos vías: `:active` (mouse y teclado) y `[data-gb-press]`,
+ * que $lib/presion pone en pointerdown. iOS retiene `:active` mientras decide si
+ * el gesto es scroll — ese retardo era la mitad de la sensación de "no responde".
+ */
+:where(.gb-pressable, button, a[href], summary, [role='button']):where(
+	:not(.gb-no-press, :disabled)
+) {
+	transition:
+		transform var(--dur-base) var(--ease-spring),
+		filter var(--dur-base) var(--ease-out),
+		background-color var(--dur-base) var(--ease-out),
+		border-color var(--dur-base) var(--ease-out),
+		color var(--dur-base) var(--ease-out);
+}
+
+/*
+ * Asimetría: baja casi con el dedo y vuelve con el resorte. Un tap corto que
+ * sube y baja a la misma velocidad se lee como parpadeo, no como click.
+ */
+:where(.gb-pressable, button, a[href], summary, [role='button']):where(
+		:not(.gb-no-press, :disabled)
+	):where(:active, [data-gb-press]) {
+	transform: scale(0.955);
+	filter: brightness(0.84);
+	transition-duration: var(--dur-press);
+	transition-timing-function: var(--ease-out);
+}
+
+/*
+ * Reordenado táctil: el long-press acusa recibo antes de abrir el modo de orden,
+ * y la tarjeta que ya está en movimiento se separa claramente de la lista.
+ * --drag-color permite conservar el color propio de cada rutina/grupo muscular.
+ */
+.gb-long-press-pending {
+	transform: scale(0.985);
+	filter: brightness(1.08);
+	border-color: rgb(var(--accent-rgb) / 0.55) !important;
+	box-shadow:
+		0 0 0 3px rgb(var(--accent-rgb) / 0.13),
+		0 8px 24px rgb(0 0 0 / 0.28);
+}
+
+.gb-sortable-card {
+	position: relative;
 	transition:
 		transform var(--dur-fast) var(--ease-out),
-		filter var(--dur-fast) var(--ease-out);
+		filter var(--dur-fast) var(--ease-out),
+		border-color var(--dur-fast) var(--ease-out),
+		box-shadow var(--dur-fast) var(--ease-out);
 }
-.gb-pressable:active {
-	transform: scale(0.96);
-	filter: brightness(0.93);
+
+.gb-sortable-card:active {
+	transform: scale(0.985);
+	filter: brightness(1.07);
+	border-color: rgb(var(--drag-color, var(--glow)) / 0.55);
+}
+
+.gb-drag-grip {
+	display: grid;
+	height: 2.25rem;
+	width: 2.25rem;
+	flex-shrink: 0;
+	place-items: center;
+	border-radius: 999px;
+	background: rgb(var(--drag-color, var(--glow)) / 0.14);
+	color: rgb(var(--drag-color, var(--glow)));
+	font-size: 1.2rem;
+	line-height: 1;
+	transition:
+		transform var(--dur-fast) var(--ease-out),
+		background-color var(--dur-fast) var(--ease-out),
+		box-shadow var(--dur-fast) var(--ease-out);
+}
+
+/* El elemento flotante vive directamente en body, fuera del árbol de Svelte. */
+#dnd-action-dragged-el.gb-sortable-card {
+	border-color: rgb(var(--drag-color, var(--glow)) / 0.9) !important;
+	filter: brightness(1.13) saturate(1.08);
+	box-shadow:
+		0 0 0 3px rgb(var(--drag-color, var(--glow)) / 0.28),
+		0 18px 42px rgb(0 0 0 / 0.62),
+		0 0 32px rgb(var(--drag-color, var(--glow)) / 0.2);
+}
+
+#dnd-action-dragged-el .gb-drag-grip {
+	transform: scale(1.12);
+	background: rgb(var(--drag-color, var(--glow)) / 0.3);
+	box-shadow: 0 0 16px rgb(var(--drag-color, var(--glow)) / 0.38);
+}
+
+/* El hueco de destino también queda legible mientras la tarjeta flota. */
+[data-is-dnd-shadow-item-internal='true'].gb-sortable-card {
+	border-color: rgb(var(--drag-color, var(--glow)) / 0.42) !important;
+	border-style: dashed;
+	opacity: 0.48;
+}
+
+/*
+ * Esqueleto de carga: bloque con la forma de lo que viene, con un barrido suave
+ * encima. Dice "esto está llegando" mejor que un "Cargando…" quieto, que a los
+ * dos segundos no se distingue de una pantalla colgada.
+ */
+.gb-skeleton {
+	position: relative;
+	overflow: hidden;
+	border-radius: 1rem;
+	background: var(--surface-2);
+}
+.gb-skeleton::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	transform: translateX(-100%);
+	background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.055), transparent);
+	animation: gb-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes gb-shimmer {
+	to {
+		transform: translateX(100%);
+	}
 }
 
 /*
@@ -96,6 +231,26 @@ body {
 }
 .gb-pop {
 	animation: gb-pop var(--dur-base) var(--ease-spring);
+}
+
+/*
+ * Hermano chico del pop, para un valor que cambia de a un toque (peso, reps).
+ * Corto y discreto a propósito: mantener apretado el ± repite cada 130ms, y un
+ * rebote grande a esa frecuencia se lee como temblor en vez de como conteo.
+ */
+@keyframes gb-tick {
+	0% {
+		transform: scale(1);
+	}
+	45% {
+		transform: scale(1.08);
+	}
+	100% {
+		transform: scale(1);
+	}
+}
+.gb-tick {
+	animation: gb-tick var(--dur-fast) var(--ease-spring);
 }
 
 /* Glow localizado breve (fila que acaba de confirmar un cambio) */
@@ -231,8 +386,25 @@ body {
 		transition-duration: 0.01ms !important;
 	}
 
-	/* La presión sigue respondiendo (cambia de estado), pero sin desplazamiento. */
-	.gb-pressable:active {
+	/*
+	 * La presión sigue respondiendo —el acuse de que tocaste algo no es adorno—
+	 * pero sin desplazamiento: queda solo el cambio de brillo.
+	 */
+	:where(.gb-pressable, button, a[href], summary, [role='button']):where(:active, [data-gb-press]) {
+		transform: none;
+	}
+
+	/* El barrido del esqueleto es puro adorno: se apaga entero. */
+	.gb-skeleton::after {
+		display: none;
+	}
+
+	.gb-long-press-pending,
+	.gb-sortable-card:active {
+		transform: none;
+	}
+
+	#dnd-action-dragged-el .gb-drag-grip {
 		transform: none;
 	}
 }

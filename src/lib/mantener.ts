@@ -17,6 +17,7 @@ export function mantener(node: HTMLElement | SVGElement, fn: () => void) {
 	function cancelar() {
 		if (timer) clearTimeout(timer);
 		timer = null;
+		node.classList.remove('gb-long-press-pending');
 	}
 
 	function limpiarBloqueoClick() {
@@ -44,8 +45,12 @@ export function mantener(node: HTMLElement | SVGElement, fn: () => void) {
 		inicioX = e.clientX;
 		inicioY = e.clientY;
 		cancelar();
+		// Confirma visualmente desde el primer instante que mantener esta tarjeta
+		// tiene una acción, antes de que se cumpla la demora del long-press.
+		node.classList.add('gb-long-press-pending');
 		timer = setTimeout(() => {
 			timer = null;
+			node.classList.remove('gb-long-press-pending');
 			longPressActivo = true;
 			bloquearSiguienteClick();
 			actual();

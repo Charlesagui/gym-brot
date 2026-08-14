@@ -99,7 +99,7 @@
 	aria-labelledby={tituloId}
 >
 	<button
-		class="absolute inset-0"
+		class="gb-no-press absolute inset-0"
 		style="background: rgb(var(--scrim) / .86); backdrop-filter: blur(8px)"
 		aria-label="Cerrar técnica"
 		tabindex="-1"
@@ -146,7 +146,7 @@
 				></iframe>
 				{#if !videoInteractivo}
 					<button
-						class="absolute inset-0 touch-none bg-transparent"
+						class="gb-no-press absolute inset-0 touch-none bg-transparent"
 						aria-label="Activar video o arrastrar para cerrar técnica"
 						onpointerdown={iniciarArrastre}
 						onpointermove={moverArrastre}

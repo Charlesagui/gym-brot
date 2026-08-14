@@ -47,7 +47,7 @@
 	<button
 		transition:fade={{ duration: dur(140) }}
 		onclick={() => !ocupado && onCancel()}
-		class="absolute inset-0 w-full"
+		class="gb-no-press absolute inset-0 w-full"
 		style="background: rgb(var(--scrim) / .72)"
 		aria-label={cancelarTexto}
 		tabindex="-1"
