@@ -1,4 +1,5 @@
 import type { MetricaPr, PrCelebrado, Sesion, SetSesion } from './db';
+import { conPesoCanonico, conPesoVisible, gramosAPeso, type UnidadPeso } from './unidades';
 
 /** Cómo puntúa un ejercicio: por peso o por reps si nunca registró peso. */
 export type ModoPr = 'peso' | 'reps';
@@ -10,9 +11,11 @@ export type EstadoEjercicio = 'pendiente' | 'saltado' | 'parcial' | 'completado'
 export interface MejorSet {
 	/** Ausente en modo reps: el ejercicio no usa peso y el valor son las reps. */
 	peso?: number;
+	pesoGramos?: number;
 	reps?: number;
 	esMax: boolean;
 	extraKg?: number;
+	extraGramos?: number;
 	fecha: string;
 	valor: number;
 	sesionId?: string;
@@ -36,11 +39,20 @@ function normalizarValorPr(valor: number): number {
 export const METRICAS_EFECTIVAS: MetricaEfectiva[] = ['peso', 'e1rm', 'reps'];
 
 /** Peso ingresado más lo que haya encima de la placa si el set es MAX. */
-export function pesoEfectivo(s: {
-	peso?: number;
-	esMax?: boolean;
-	extraKg?: number;
-}): number | null {
+export function pesoEfectivo(
+	s: {
+		peso?: number;
+		pesoGramos?: number;
+		esMax?: boolean;
+		extraKg?: number;
+		extraGramos?: number;
+	},
+	unidad: UnidadPeso = 'kg'
+): number | null {
+	if (s.pesoGramos != null) {
+		const gramos = s.pesoGramos + (s.esMax ? (s.extraGramos ?? 0) : 0);
+		return gramosAPeso(gramos, unidad) ?? null;
+	}
 	if (s.peso == null) return null;
 	return normalizarValorPr(s.peso + (s.esMax ? (s.extraKg ?? 0) : 0));
 }
@@ -65,14 +77,22 @@ export function repeticionesValidas(reps: number | undefined): reps is number {
 
 /** Valor de un set bajo métrica y modo; null si todavía no puntúa. */
 export function valorSet(
-	set: { peso?: number; reps?: number; esMax?: boolean; extraKg?: number },
+	set: {
+		peso?: number;
+		pesoGramos?: number;
+		reps?: number;
+		esMax?: boolean;
+		extraKg?: number;
+		extraGramos?: number;
+	},
 	metrica: MetricaPr,
-	modo: ModoPr = 'peso'
+	modo: ModoPr = 'peso',
+	unidad: UnidadPeso = 'kg'
 ): number | null {
 	// Ninguna métrica puntúa una serie que el dominio no considera trabajo real.
 	if (!repeticionesValidas(set.reps)) return null;
-	if (modo === 'reps') return set.peso == null ? set.reps : null;
-	const efectivo = pesoEfectivo(set);
+	if (modo === 'reps') return set.peso == null && set.pesoGramos == null ? set.reps : null;
+	const efectivo = pesoEfectivo(set, unidad);
 	return efectivo == null ? null : valorMetrica(efectivo, set.reps, metrica);
 }
 
@@ -104,7 +124,7 @@ export function modoEjercicio(sesiones: Sesion[], exerciseId: string): ModoPr {
 		const ejercicio = sesion.ejercicios.find((item) => item.exerciseId === exerciseId);
 		for (const set of ejercicio?.sets ?? []) {
 			if (!serieCompleta(set)) continue;
-			if (set.peso != null) return 'peso';
+			if (set.peso != null || set.pesoGramos != null) return 'peso';
 			tieneHechas = true;
 		}
 	}
@@ -125,22 +145,31 @@ export function mejorSetDeSeries(
 	fecha: string,
 	metrica: MetricaPr,
 	sesionIdFuente?: string,
-	modo: ModoPr = 'peso'
+	modo: ModoPr = 'peso',
+	unidad: UnidadPeso = 'kg'
 ): MejorSet | null {
 	return sets.reduce<MejorSet | null>((best, set, setIndex) => {
 		if (!serieCompleta(set)) return best;
-		const valor = valorSet(set, metrica, modo);
+		const valor = valorSet(set, metrica, modo, unidad);
 		if (valor == null) return best;
-		return mejorSet(best, {
-			peso: set.peso,
-			reps: set.reps,
-			esMax: !!set.esMax,
-			extraKg: set.extraKg,
-			fecha,
-			valor,
-			sesionId: sesionIdFuente,
-			setIndex
-		});
+		return mejorSet(
+			best,
+			conPesoVisible(
+				{
+					peso: set.peso,
+					pesoGramos: set.pesoGramos,
+					reps: set.reps,
+					esMax: !!set.esMax,
+					extraKg: set.extraKg,
+					extraGramos: set.extraGramos,
+					fecha,
+					valor,
+					sesionId: sesionIdFuente,
+					setIndex
+				},
+				unidad
+			)
+		);
 	}, null);
 }
 
@@ -152,13 +181,20 @@ export function modoDeMetrica(metrica: MetricaEfectiva): ModoPr {
 	return metrica === 'reps' ? 'reps' : 'peso';
 }
 
-export function snapPr(set: MejorSet, metrica: MetricaEfectiva): PrCelebrado {
-	return {
-		peso: set.peso,
-		reps: set.reps,
-		esMax: set.esMax,
-		extraKg: set.extraKg,
-		setIndex: set.setIndex,
-		metrica
-	};
+export function snapPr(
+	set: MejorSet,
+	metrica: MetricaEfectiva,
+	unidad: UnidadPeso = 'kg'
+): PrCelebrado {
+	return conPesoCanonico(
+		{
+			peso: set.peso,
+			reps: set.reps,
+			esMax: set.esMax,
+			extraKg: set.extraKg,
+			setIndex: set.setIndex,
+			metrica
+		},
+		unidad
+	);
 }

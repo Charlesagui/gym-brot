@@ -61,13 +61,15 @@ describe('migración de esquema', () => {
 		// el historial y para el cálculo de PR, que es el peor fallo posible acá.
 		expect((await db.sesiones.get('2026-06-10__d1'))?.exerciseIds).toEqual(['press']);
 		expect((await db.sesiones.get('2026-06-10__d1'))?.ordenEnDia).toBe(0);
-		expect((await db.sesiones.get('2026-06-10__d1'))?.ejercicios[0]?.sets[1]).toEqual({
+		expect((await db.sesiones.get('2026-06-10__d1'))?.ejercicios[0]?.sets[1]).toMatchObject({
 			peso: 90,
+			pesoGramos: 90_000,
 			reps: undefined,
 			hecha: false
 		});
-		expect((await db.sesiones.get('2026-06-10__d1'))?.ejercicios[0]?.sets[2]).toEqual({
+		expect((await db.sesiones.get('2026-06-10__d1'))?.ejercicios[0]?.sets[2]).toMatchObject({
 			peso: 100,
+			pesoGramos: 100_000,
 			hecha: false
 		});
 		expect((await db.sesiones.get('2026-06-10__d1'))?.ejercicios[0]?.prCelebrado).toBeUndefined();

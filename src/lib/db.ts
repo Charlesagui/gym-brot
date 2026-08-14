@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
+import { pesoAGramos } from './unidades';
 
 /** Un día de entrenamiento (ej. "Piernas") con sus ejercicios. */
 export interface Dia {
@@ -14,20 +15,25 @@ export interface Dia {
 /** Una serie hecha, con su propio peso (permite rampa/pirámide). */
 export interface SetSesion {
 	peso?: number;
+	/** Fuente de verdad independiente de la unidad visible (milésimas de kg). */
+	pesoGramos?: number;
 	reps?: number;
 	hecha: boolean;
 	esMax?: boolean;
 	/** Kg sumados encima de la placa full cuando es MAX (progresión más allá del tope). */
 	extraKg?: number;
+	extraGramos?: number;
 }
 
 /** Snapshot del set que ya disparó la celebración de PR en esta sesión (anti-repetición). */
 export interface PrCelebrado {
 	/** Ausente en ejercicios sin peso (modo reps): el récord es por repeticiones. */
 	peso?: number;
+	pesoGramos?: number;
 	reps?: number;
 	esMax?: boolean;
 	extraKg?: number;
+	extraGramos?: number;
 	/**
 	 * Índice de la serie que logró el récord. Ausente en sesiones viejas: ahí el set
 	 * se ubica comparando valores, que con dos series idénticas puede marcar la otra.
@@ -39,6 +45,8 @@ export interface PrCelebrado {
 
 export interface EjercicioSesion {
 	exerciseId: string;
+	/** Nombre congelado al crear la entrada; sobrevive a renombres o archivados. */
+	nombreSnapshot?: string;
 	sets: SetSesion[];
 	/** Guarda el set, no un escalar, para recomputar su valor al cambiar métrica o unidad. */
 	prCelebrado?: PrCelebrado;
@@ -51,6 +59,8 @@ export interface Sesion {
 	id: string;
 	fecha: string; // YYYY-MM-DD
 	diaId: string;
+	/** Nombre de la rutina al crear la sesión; el historial no depende del nombre actual. */
+	diaNombre?: string;
 	/** Orden real de creación dentro de la fecha (0..n); desempata PRs del mismo día. */
 	ordenEnDia?: number;
 	ejercicios: EjercicioSesion[];
@@ -247,6 +257,45 @@ db.version(6)
 		}
 
 		await tabla.bulkPut(sesiones);
+	});
+
+/**
+ * v7: los valores visibles dejaron de ser la fuente de verdad. Guardarlos como gramos
+ * enteros permite alternar kg/lb sin modificar el historial ni acumular redondeos.
+ * También congelamos el nombre de la rutina para que un renombre futuro no reescriba
+ * implícitamente lo que el usuario entrenó aquel día.
+ */
+db.version(7)
+	.stores({
+		sesiones: 'id, diaId, fecha, *exerciseIds'
+	})
+	.upgrade(async (tx) => {
+		const ajustes = (await tx.table('ajustes').get('app')) as Ajustes | undefined;
+		const unidad = ajustes?.unidad === 'lb' ? 'lb' : 'kg';
+		const dias = (await tx.table('dias').toArray()) as Dia[];
+		const nombres = new Map(dias.map((dia) => [dia.id, dia.nombre]));
+		await tx
+			.table('sesiones')
+			.toCollection()
+			.modify((sesion: Sesion) => {
+				sesion.diaNombre ??= nombres.get(sesion.diaId);
+				for (const ejercicio of sesion.ejercicios) {
+					for (const set of ejercicio.sets) {
+						const peso = pesoAGramos(set.peso, unidad);
+						const extra = pesoAGramos(set.extraKg, unidad);
+						if (set.pesoGramos == null && peso != null) set.pesoGramos = peso;
+						if (set.extraGramos == null && extra != null) set.extraGramos = extra;
+					}
+					if (ejercicio.prCelebrado) {
+						const peso = pesoAGramos(ejercicio.prCelebrado.peso, unidad);
+						const extra = pesoAGramos(ejercicio.prCelebrado.extraKg, unidad);
+						if (ejercicio.prCelebrado.pesoGramos == null && peso != null)
+							ejercicio.prCelebrado.pesoGramos = peso;
+						if (ejercicio.prCelebrado.extraGramos == null && extra != null)
+							ejercicio.prCelebrado.extraGramos = extra;
+					}
+				}
+			});
 	});
 
 /** Orden cronológico estable usado por progreso y PR, incluida la misma fecha. */

@@ -63,7 +63,7 @@ describe('leerPeso', () => {
 describe('leerReps', () => {
 	it('toma el entero y descarta lo invalido', () => {
 		expect(leerReps('12')).toBe(12);
-		expect(leerReps('12.9')).toBe(12);
+		expect(leerReps('12.9')).toBeUndefined();
 		expect(leerReps('')).toBeUndefined();
 		expect(leerReps('abc')).toBeUndefined();
 		expect(leerReps('0')).toBeUndefined();

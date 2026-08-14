@@ -37,6 +37,6 @@ export function leerPeso(texto: string): number | undefined {
 
 /** Interpreta repeticiones tipeadas: entero positivo, o nada. */
 export function leerReps(texto: string): number | undefined {
-	const n = Number.parseInt(texto, 10);
-	return Number.isFinite(n) && n > 0 ? n : undefined;
+	const n = Number(texto);
+	return Number.isInteger(n) && n > 0 ? n : undefined;
 }

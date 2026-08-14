@@ -25,6 +25,9 @@ import {
 	type ModoPr,
 	type RecordEjercicio
 } from './sesion-reglas';
+import { ejercicioPorId } from './catalog';
+import { conPesoCanonico, conPesoVisible, pesoAGramos, type UnidadPeso } from './unidades';
+import { capturarRevisionDatos, exigirRevisionDatos } from './revision-datos';
 
 export {
 	DESCRIPCION_METRICA,
@@ -57,11 +60,19 @@ export interface EstadoEjercicioSesion {
 }
 
 /** Estado mínimo que necesita la pantalla de entrenamiento, sin exponer Dexie a la UI. */
-export function ejercicioSesionObs(diaId: string, exerciseId: string, fecha = hoyStr()) {
+export function ejercicioSesionObs(
+	diaId: string,
+	exerciseId: string,
+	fecha = hoyStr(),
+	unidad: UnidadPeso = 'kg'
+) {
 	return liveQuery(async (): Promise<EstadoEjercicioSesion> => {
 		const sesion = await db.sesiones.get(sesionId(diaId, fecha));
 		const ejercicio = sesion?.ejercicios.find((item) => item.exerciseId === exerciseId);
-		return { sets: ejercicio?.sets ?? [], prCelebrado: ejercicio?.prCelebrado ?? null };
+		return {
+			sets: (ejercicio?.sets ?? []).map((set) => conPesoVisible(set, unidad)),
+			prCelebrado: ejercicio?.prCelebrado ? conPesoVisible(ejercicio.prCelebrado, unidad) : null
+		};
 	});
 }
 
@@ -69,20 +80,23 @@ export function ejercicioSesionObs(diaId: string, exerciseId: string, fecha = ho
 export async function setsEjercicioSesion(
 	diaId: string,
 	exerciseId: string,
-	fecha = hoyStr()
+	fecha = hoyStr(),
+	unidad: UnidadPeso = 'kg'
 ): Promise<SetSesion[]> {
 	const sesion = await db.sesiones.get(sesionId(diaId, fecha));
-	return sesion?.ejercicios.find((item) => item.exerciseId === exerciseId)?.sets ?? [];
+	return (sesion?.ejercicios.find((item) => item.exerciseId === exerciseId)?.sets ?? []).map(
+		(set) => conPesoVisible(set, unidad)
+	);
 }
 
-async function ensureSesion(diaId: string, fecha = hoyStr()): Promise<Sesion> {
+async function ensureSesion(diaId: string, fecha = hoyStr(), diaNombre?: string): Promise<Sesion> {
 	const id = sesionId(diaId, fecha);
 	let s = await db.sesiones.get(id);
 	if (!s) {
 		const mismoDia = await db.sesiones.where('fecha').equals(fecha).toArray();
 		const ordenEnDia =
 			mismoDia.reduce((maximo, sesion) => Math.max(maximo, sesion.ordenEnDia ?? -1), -1) + 1;
-		s = { id, fecha, diaId, ordenEnDia, ejercicios: [] };
+		s = { id, fecha, diaId, diaNombre, ordenEnDia, ejercicios: [] };
 		await db.sesiones.add(conIndice(s));
 	}
 	return s;
@@ -105,21 +119,26 @@ export function historialPorModo(
 	sesiones: Sesion[],
 	exerciseId: string,
 	metrica: MetricaPr,
-	modo: ModoPr
+	modo: ModoPr,
+	unidad: UnidadPeso = 'kg'
 ): MejorSet[] {
 	const puntos: MejorSet[] = [];
 	for (const s of sesiones) {
 		if (s.fecha > hoyStr()) continue;
 		const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
 		if (!e) continue;
-		const mejor = mejorSetDeSeries(e.sets, s.fecha, metrica, s.id, modo);
+		const mejor = mejorSetDeSeries(e.sets, s.fecha, metrica, s.id, modo, unidad);
 		if (mejor) puntos.push(mejor);
 	}
 	return puntos;
 }
 
 /** Serie principal: carga si ya existe una serie hecha con carga; si no, reps. */
-export function historialObs(exerciseId: string, metrica: MetricaPr = 'peso') {
+export function historialObs(
+	exerciseId: string,
+	metrica: MetricaPr = 'peso',
+	unidad: UnidadPeso = 'kg'
+) {
 	return liveQuery(async () => {
 		const todas = (await sesionesDe(exerciseId)).filter((sesion) => sesion.fecha <= hoyStr());
 		const modo = modoEjercicio(todas, exerciseId);
@@ -127,14 +146,14 @@ export function historialObs(exerciseId: string, metrica: MetricaPr = 'peso') {
 		for (const s of todas) {
 			const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
 			if (!e) continue;
-			const mejor = mejorSetDeSeries(e.sets, s.fecha, metrica, s.id, modo);
+			const mejor = mejorSetDeSeries(e.sets, s.fecha, metrica, s.id, modo, unidad);
 			if (mejor) puntos.push(mejor);
 		}
 		return puntos;
 	});
 }
 
-export function recordsGlobalesObs(metrica: MetricaPr = 'peso') {
+export function recordsGlobalesObs(metrica: MetricaPr = 'peso', unidad: UnidadPeso = 'kg') {
 	return liveQuery(async () => {
 		const todas = (await db.sesiones.orderBy('fecha').toArray())
 			.filter((sesion) => sesion.fecha <= hoyStr())
@@ -144,12 +163,13 @@ export function recordsGlobalesObs(metrica: MetricaPr = 'peso') {
 		for (const s of todas)
 			for (const e of s.ejercicios)
 				for (const set of e.sets)
-					if (serieCompleta(set) && set.peso != null) conPeso.add(e.exerciseId);
+					if (serieCompleta(set) && (set.peso != null || set.pesoGramos != null))
+						conPeso.add(e.exerciseId);
 		const mejores = new Map<string, RecordEjercicio>();
 		for (const s of todas) {
 			for (const ejercicio of s.ejercicios) {
 				const modo: ModoPr = conPeso.has(ejercicio.exerciseId) ? 'peso' : 'reps';
-				const candidato = mejorSetDeSeries(ejercicio.sets, s.fecha, metrica, s.id, modo);
+				const candidato = mejorSetDeSeries(ejercicio.sets, s.fecha, metrica, s.id, modo, unidad);
 				if (!candidato) continue;
 				const mejor = mejorSet(mejores.get(ejercicio.exerciseId) ?? null, candidato);
 				mejores.set(ejercicio.exerciseId, { ...mejor, exerciseId: ejercicio.exerciseId, modo });
@@ -172,7 +192,8 @@ export function recordsGlobalesObs(metrica: MetricaPr = 'peso') {
 export async function ultimaSesion(
 	diaId: string,
 	exerciseId: string,
-	fecha = hoyStr()
+	fecha = hoyStr(),
+	unidad: UnidadPeso = 'kg'
 ): Promise<{ sets: SetSesion[]; fecha: string } | undefined> {
 	const exceptoId = sesionId(diaId, fecha);
 	let encontrada: { sets: SetSesion[]; fecha: string } | undefined;
@@ -187,7 +208,9 @@ export async function ultimaSesion(
 			if (e?.sets.some(serieCompleta)) {
 				encontrada = {
 					// Conserva índices, pero no prellena datos de sets abandonados o borrados.
-					sets: e.sets.map((set) => (serieCompleta(set) ? set : { hecha: false })),
+					sets: e.sets.map((set) =>
+						serieCompleta(set) ? conPesoVisible(set, unidad) : { hecha: false }
+					),
 					fecha: s.fecha
 				};
 			}
@@ -199,9 +222,10 @@ export async function ultimaSesion(
 async function ultimaDe(
 	diaId: string,
 	exerciseId: string,
-	fecha = hoyStr()
+	fecha = hoyStr(),
+	unidad: UnidadPeso = 'kg'
 ): Promise<SetSesion[] | undefined> {
-	return (await ultimaSesion(diaId, exerciseId, fecha))?.sets;
+	return (await ultimaSesion(diaId, exerciseId, fecha, unidad))?.sets;
 }
 
 /** Inicializa los sets de un ejercicio en la sesión de hoy (atómico). */
@@ -209,18 +233,19 @@ export async function ensureEjercicio(
 	diaId: string,
 	exerciseId: string,
 	nSets: number,
-	fecha = hoyStr()
+	fecha = hoyStr(),
+	unidad: UnidadPeso = 'kg'
 ): Promise<void> {
 	await db.transaction('rw', db.sesiones, async () => {
 		const s = await ensureSesion(diaId, fecha);
 		if (s.ejercicios.some((e) => e.exerciseId === exerciseId)) return;
-		const prev = await ultimaDe(diaId, exerciseId, fecha);
+		const prev = await ultimaDe(diaId, exerciseId, fecha, unidad);
 		const sets: SetSesion[] = Array.from({ length: Math.max(1, nSets) }, (_, i) => ({
-			peso: prev?.[i]?.peso,
+			...conPesoCanonico({ peso: prev?.[i]?.peso }, unidad),
 			reps: prev?.[i]?.reps,
 			hecha: false
 		}));
-		s.ejercicios.push({ exerciseId, sets });
+		s.ejercicios.push({ exerciseId, nombreSnapshot: ejercicioPorId(exerciseId)?.nombre, sets });
 		await guardarSesion(s);
 	});
 }
@@ -242,9 +267,12 @@ export interface EjercicioSesionNoDisponible {
 export async function prepararEjercicioSesion(
 	diaId: string,
 	exerciseId: string,
-	fecha = hoyStr()
+	fecha = hoyStr(),
+	unidad: UnidadPeso = 'kg'
 ): Promise<PreparacionEjercicioSesion | EjercicioSesionNoDisponible> {
+	const revision = capturarRevisionDatos();
 	return db.transaction('rw', db.dias, db.sesiones, async () => {
+		exigirRevisionDatos(revision);
 		// La URL puede quedar abierta mientras se edita o se restaura un backup. Nunca
 		// dejamos que una ruta vieja cree trabajo para una rutina o ejercicio inexistente.
 		const dia = await db.dias.get(diaId);
@@ -254,22 +282,33 @@ export async function prepararEjercicioSesion(
 		const id = sesionId(diaId, fecha);
 		let sesion = await db.sesiones.get(id);
 		if (!sesion) {
-			sesion = await ensureSesion(diaId, fecha);
+			sesion = await ensureSesion(diaId, fecha, dia.nombre);
+		}
+		let snapshotsActualizados = false;
+		if (!sesion.diaNombre) {
+			sesion.diaNombre = dia.nombre;
+			snapshotsActualizados = true;
+		}
+		const ejercicioExistente = sesion.ejercicios.find((item) => item.exerciseId === exerciseId);
+		if (ejercicioExistente && !ejercicioExistente.nombreSnapshot) {
+			ejercicioExistente.nombreSnapshot = ejercicioPorId(exerciseId)?.nombre;
+			snapshotsActualizados = true;
 		}
 		if (!sesion.ejercicios.some((item) => item.exerciseId === exerciseId)) {
-			const anterior = await ultimaDe(diaId, exerciseId, fecha);
+			const anterior = await ultimaDe(diaId, exerciseId, fecha, unidad);
 			sesion.ejercicios.push({
 				exerciseId,
+				nombreSnapshot: ejercicioPorId(exerciseId)?.nombre,
 				sets: Array.from({ length: Math.max(1, configuracion.seriesObjetivo) }, (_, indice) => ({
-					peso: anterior?.[indice]?.peso,
+					...conPesoCanonico({ peso: anterior?.[indice]?.peso }, unidad),
 					reps: anterior?.[indice]?.reps,
 					hecha: false
 				}))
 			});
 			await guardarSesion(sesion);
-		}
+		} else if (snapshotsActualizados) await guardarSesion(sesion);
 
-		const anterior = await ultimaSesion(diaId, exerciseId, fecha);
+		const anterior = await ultimaSesion(diaId, exerciseId, fecha, unidad);
 		return {
 			disponible: true,
 			anteriores: anterior?.sets ?? [],
@@ -291,7 +330,9 @@ async function mutar(
 	metrica: MetricaPr = 'peso',
 	recalcularPr = false
 ): Promise<void> {
+	const revision = capturarRevisionDatos();
 	await db.transaction('rw', db.sesiones, async () => {
+		exigirRevisionDatos(revision);
 		const s = await db.sesiones.get(sesionId(diaId, fecha));
 		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
 		if (!s || !e) return;
@@ -393,17 +434,32 @@ export function actualizarSetHistorial(
 	exerciseId: string,
 	setIndex: number,
 	cambios: CambiosSetHistorial,
-	metrica: MetricaPr = 'peso'
+	metrica: MetricaPr = 'peso',
+	unidad: UnidadPeso = 'kg'
 ): Promise<boolean> {
+	if (
+		(cambios.peso != null && (!Number.isFinite(cambios.peso) || cambios.peso < 0)) ||
+		(cambios.extraKg != null && (!Number.isFinite(cambios.extraKg) || cambios.extraKg < 0)) ||
+		(cambios.reps != null && !repeticionesValidas(cambios.reps))
+	)
+		return Promise.reject(new RangeError('La serie contiene un peso o repeticiones inválidos.'));
+	const revision = capturarRevisionDatos();
 	return db.transaction('rw', db.sesiones, async () => {
+		exigirRevisionDatos(revision);
 		const s = await db.sesiones.get(idSesion);
 		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
 		const set = e?.sets[setIndex];
 		if (!s || !set?.hecha) return false;
 		set.peso = cambios.peso;
+		const pesoCanonico = pesoAGramos(cambios.peso, unidad);
+		if (pesoCanonico == null) delete set.pesoGramos;
+		else set.pesoGramos = pesoCanonico;
 		set.reps = cambios.reps;
 		set.esMax = cambios.esMax;
 		set.extraKg = cambios.extraKg;
+		const extraCanonico = pesoAGramos(cambios.extraKg, unidad);
+		if (extraCanonico == null) delete set.extraGramos;
+		else set.extraGramos = extraCanonico;
 		// Una edición puede vaciar las reps de una serie histórica. En ese caso no
 		// conserva un ✓ inválido que seguiría contando para volumen, PR e historial.
 		if (!repeticionesValidas(set.reps)) {
@@ -423,7 +479,9 @@ export function borrarSetHistorial(
 	setIndex: number,
 	metrica: MetricaPr = 'peso'
 ): Promise<boolean> {
+	const revision = capturarRevisionDatos();
 	return db.transaction('rw', db.sesiones, async () => {
+		exigirRevisionDatos(revision);
 		const s = await db.sesiones.get(idSesion);
 		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
 		const set = e?.sets[setIndex];
@@ -461,7 +519,9 @@ export function setSerieHecha(
 	fecha = hoyStr(),
 	metrica: MetricaPr = 'peso'
 ): Promise<ResultadoSet> {
+	const revision = capturarRevisionDatos();
 	return db.transaction('rw', db.sesiones, async (): Promise<ResultadoSet> => {
+		exigirRevisionDatos(revision);
 		const s = await db.sesiones.get(sesionId(diaId, fecha));
 		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
 		const set = e?.sets[i];
@@ -518,13 +578,21 @@ export function setPeso(
 	i: number,
 	peso?: number,
 	fecha = hoyStr(),
-	metrica: MetricaPr = 'peso'
+	metrica: MetricaPr = 'peso',
+	unidad: UnidadPeso = 'kg'
 ) {
+	if (peso != null && (!Number.isFinite(peso) || peso < 0))
+		return Promise.reject(new RangeError('El peso debe ser un número no negativo.'));
 	return mutar(
 		diaId,
 		exerciseId,
 		(sets) => {
-			if (sets[i]) sets[i].peso = peso;
+			if (sets[i]) {
+				sets[i].peso = peso;
+				const canonico = pesoAGramos(peso, unidad);
+				if (canonico == null) delete sets[i].pesoGramos;
+				else sets[i].pesoGramos = canonico;
+			}
 		},
 		fecha,
 		metrica,
@@ -539,6 +607,8 @@ export function setReps(
 	fecha = hoyStr(),
 	metrica: MetricaPr = 'peso'
 ) {
+	if (reps != null && !repeticionesValidas(reps))
+		return Promise.reject(new RangeError('Las repeticiones deben ser un entero positivo.'));
 	return mutar(
 		diaId,
 		exerciseId,
@@ -563,13 +633,21 @@ export function setExtra(
 	i: number,
 	extraKg?: number,
 	fecha = hoyStr(),
-	metrica: MetricaPr = 'peso'
+	metrica: MetricaPr = 'peso',
+	unidad: UnidadPeso = 'kg'
 ) {
+	if (extraKg != null && (!Number.isFinite(extraKg) || extraKg < 0))
+		return Promise.reject(new RangeError('El peso extra debe ser un número no negativo.'));
 	return mutar(
 		diaId,
 		exerciseId,
 		(sets) => {
-			if (sets[i]) sets[i].extraKg = extraKg;
+			if (sets[i]) {
+				sets[i].extraKg = extraKg;
+				const canonico = pesoAGramos(extraKg, unidad);
+				if (canonico == null) delete sets[i].extraGramos;
+				else sets[i].extraGramos = canonico;
+			}
 		},
 		fecha,
 		metrica,
@@ -582,7 +660,12 @@ export function addSet(diaId: string, exerciseId: string, fecha = hoyStr()) {
 		exerciseId,
 		(sets, sesion) => {
 			const last = sets[sets.length - 1];
-			sets.push({ peso: last?.peso, reps: last?.reps, hecha: false });
+			sets.push({
+				peso: last?.peso,
+				pesoGramos: last?.pesoGramos,
+				reps: last?.reps,
+				hecha: false
+			});
 			sesion.diaTerminado = false;
 			sesion.diaTerminadoAt = undefined;
 		},
@@ -635,24 +718,30 @@ export async function saltarEjercicio(
 	exerciseId: string,
 	fecha = hoyStr()
 ): Promise<boolean> {
+	const revision = capturarRevisionDatos();
 	return db.transaction('rw', db.dias, db.sesiones, async () => {
+		exigirRevisionDatos(revision);
 		const dia = await db.dias.get(diaId);
 		const configuracion = dia?.ejercicios.find((item) => item.exerciseId === exerciseId);
-		if (!configuracion) return false;
-		const sesion = await ensureSesion(diaId, fecha);
+		if (!dia || !configuracion) return false;
+		const sesion = await ensureSesion(diaId, fecha, dia.nombre);
+		sesion.diaNombre ??= dia.nombre;
 		let ejercicio = sesion.ejercicios.find((item) => item.exerciseId === exerciseId);
 		if (!ejercicio) {
 			const anterior = await ultimaDe(diaId, exerciseId, fecha);
 			ejercicio = {
 				exerciseId,
+				nombreSnapshot: ejercicioPorId(exerciseId)?.nombre,
 				sets: Array.from({ length: Math.max(1, configuracion.seriesObjetivo) }, (_, indice) => ({
 					peso: anterior?.[indice]?.peso,
+					pesoGramos: anterior?.[indice]?.pesoGramos,
 					reps: anterior?.[indice]?.reps,
 					hecha: false
 				}))
 			};
 			sesion.ejercicios.push(ejercicio);
 		}
+		ejercicio.nombreSnapshot ??= ejercicioPorId(exerciseId)?.nombre;
 		ejercicio.saltado = true;
 		reabrirSesion(sesion);
 		await guardarSesion(sesion);
@@ -682,9 +771,12 @@ export function registrarPrSiSupera(
 	exerciseId: string,
 	setIndex: number,
 	metrica: MetricaPr = 'peso',
-	fecha = hoyStr()
+	fecha = hoyStr(),
+	unidad: UnidadPeso = 'kg'
 ): Promise<MejorSet | null> {
+	const revision = capturarRevisionDatos();
 	return db.transaction('rw', db.sesiones, async (): Promise<MejorSet | null> => {
+		exigirRevisionDatos(revision);
 		const s = await db.sesiones.get(sesionId(diaId, fecha));
 		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
 		const set = e?.sets[setIndex];
@@ -699,7 +791,12 @@ export function registrarPrSiSupera(
 			exerciseId
 		);
 		const metricaEfectiva: MetricaEfectiva = modo === 'reps' ? 'reps' : metrica;
-		const valor = valorSet(set, metricaEfectiva === 'reps' ? 'peso' : metricaEfectiva, modo);
+		const valor = valorSet(
+			set,
+			metricaEfectiva === 'reps' ? 'peso' : metricaEfectiva,
+			modo,
+			unidad
+		);
 		if (valor == null) return null;
 
 		// “Previo” es sólo lo que existía cronológicamente antes de esta sesión. Mirar
@@ -715,14 +812,20 @@ export function registrarPrSiSupera(
 				otra.fecha,
 				metricaEfectiva === 'reps' ? 'peso' : metricaEfectiva,
 				otra.id,
-				modo
+				modo,
+				unidad
 			);
 			if (!mejor) return best;
 			return best == null || mejor.valor > best ? mejor.valor : best;
 		}, null);
 		const yaCelebrado =
 			e.prCelebrado && metricaDeSnapshot(e.prCelebrado) === metricaEfectiva
-				? valorSet(e.prCelebrado, metricaEfectiva === 'reps' ? 'peso' : metricaEfectiva, modo)
+				? valorSet(
+						e.prCelebrado,
+						metricaEfectiva === 'reps' ? 'peso' : metricaEfectiva,
+						modo,
+						unidad
+					)
 				: null;
 
 		const supera =
@@ -730,16 +833,16 @@ export function registrarPrSiSupera(
 		if (!supera) return null;
 
 		const ganador: MejorSet = {
-			peso: set.peso,
+			peso: conPesoVisible(set, unidad).peso,
 			reps: set.reps,
 			esMax: !!set.esMax,
-			extraKg: set.extraKg,
+			extraKg: conPesoVisible(set, unidad).extraKg,
 			fecha: s.fecha,
 			valor,
 			sesionId: s.id,
 			setIndex
 		};
-		e.prCelebrado = snapPr(ganador, metricaEfectiva);
+		e.prCelebrado = snapPr(ganador, metricaEfectiva, unidad);
 		await guardarSesion(s);
 		return ganador;
 	});
@@ -758,7 +861,9 @@ export async function marcarDiaTerminado(
 	diaId: string,
 	fecha = hoyStr()
 ): Promise<ResultadoDiaTerminado> {
+	const revision = capturarRevisionDatos();
 	return db.transaction('rw', db.dias, db.sesiones, async () => {
+		exigirRevisionDatos(revision);
 		const dia = await db.dias.get(diaId);
 		const s = await db.sesiones.get(sesionId(diaId, fecha));
 		if (!dia || !s) return { terminado: false, razon: 'rutina-no-disponible' };

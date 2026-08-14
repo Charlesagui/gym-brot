@@ -75,6 +75,12 @@ describe('sesion con IndexedDB', () => {
 		]);
 	});
 
+	it('rechaza pesos negativos y repeticiones fraccionarias en la frontera de datos', async () => {
+		await prepararEjercicioSesion('push', 'press', '2026-01-05');
+		await expect(setPeso('push', 'press', 0, -1, '2026-01-05')).rejects.toThrow('no negativo');
+		await expect(setReps('push', 'press', 0, 1.5, '2026-01-05')).rejects.toThrow('entero positivo');
+	});
+
 	it('prepara el ejercicio desde la rutina y expone solo el estado que consume la UI', async () => {
 		await db.dias.add({
 			id: 'push',
@@ -196,8 +202,9 @@ describe('sesion con IndexedDB', () => {
 			fecha: '2026-01-01',
 			sets: [{ peso: 90, reps: 8, hecha: true }]
 		});
-		expect((await db.sesiones.get('2026-01-02__push'))?.ejercicios[0]?.sets[0]).toEqual({
+		expect((await db.sesiones.get('2026-01-02__push'))?.ejercicios[0]?.sets[0]).toMatchObject({
 			peso: 90,
+			pesoGramos: 90_000,
 			reps: 8,
 			hecha: false
 		});
@@ -296,8 +303,9 @@ describe('sesion con IndexedDB', () => {
 			valor: 100,
 			setIndex: 0
 		});
-		expect((await db.sesiones.get('2026-01-05__push'))?.ejercicios[0]?.prCelebrado).toEqual({
+		expect((await db.sesiones.get('2026-01-05__push'))?.ejercicios[0]?.prCelebrado).toMatchObject({
 			peso: 100,
+			pesoGramos: 100_000,
 			reps: 1,
 			esMax: false,
 			extraKg: undefined,
@@ -962,8 +970,9 @@ describe('sesion con IndexedDB', () => {
 
 		await setSerieHecha('push', 'press', 0, false, '2026-01-02', 'peso');
 
-		expect((await db.sesiones.get('2026-01-02__push'))?.ejercicios[0]?.prCelebrado).toEqual({
+		expect((await db.sesiones.get('2026-01-02__push'))?.ejercicios[0]?.prCelebrado).toMatchObject({
 			peso: 105,
+			pesoGramos: 105_000,
 			reps: 5,
 			esMax: false,
 			extraKg: undefined,
@@ -989,8 +998,9 @@ describe('sesion con IndexedDB', () => {
 
 		await setSerieHecha('push', 'press', 0, false, '2026-01-02', 'peso');
 
-		expect((await db.sesiones.get('2026-01-02__push'))?.ejercicios[0]?.prCelebrado).toEqual({
+		expect((await db.sesiones.get('2026-01-02__push'))?.ejercicios[0]?.prCelebrado).toMatchObject({
 			peso: 110,
+			pesoGramos: 110_000,
 			reps: 5,
 			esMax: false,
 			extraKg: undefined,

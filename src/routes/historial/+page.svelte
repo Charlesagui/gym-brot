@@ -24,7 +24,7 @@
 	const consultaHistorial = $derived($historialStore);
 	const historial = $derived(consultaHistorial.valor);
 	const recordsStore = $derived(
-		estadoLiveQuery(recordsGlobalesObs(ajustes.metricaPr), [] as RecordEjercicio[])
+		estadoLiveQuery(recordsGlobalesObs(ajustes.metricaPr, ajustes.unidad), [] as RecordEjercicio[])
 	);
 	const consultaRecords = $derived($recordsStore);
 	const records = $derived(consultaRecords.valor);

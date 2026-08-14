@@ -13,6 +13,7 @@
 	import { errorDatos } from '$lib/errores-datos';
 	import { menosMovimiento } from '$lib/motion';
 	import { limpiarArrastreHuerfano } from '$lib/dnd-safety';
+	import { escucharReemplazosDatos } from '$lib/revision-datos';
 
 	let { children } = $props();
 
@@ -93,12 +94,14 @@
 	}
 
 	onMount(() => {
+		const dejarDeEscucharReemplazos = escucharReemplazosDatos(() => location.reload());
 		// El swipe de "volver" del sistema puede abortarse a mitad de camino sin
 		// disparar ninguna navegación: touchcancel/pointercancel es la única señal
 		// que llega en ese caso (ver $lib/dnd-safety).
 		window.addEventListener('touchcancel', limpiarArrastreHuerfano, true);
 		window.addEventListener('pointercancel', limpiarArrastreHuerfano, true);
 		return () => {
+			dejarDeEscucharReemplazos();
 			window.removeEventListener('touchcancel', limpiarArrastreHuerfano, true);
 			window.removeEventListener('pointercancel', limpiarArrastreHuerfano, true);
 		};

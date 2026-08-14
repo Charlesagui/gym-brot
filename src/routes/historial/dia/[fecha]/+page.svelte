@@ -6,13 +6,14 @@
 	import { resumenDiaSesion, compararConAnterior } from '$lib/historial';
 	import { indexSetPr } from '$lib/progreso';
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
-	import { fromLiveQuery } from '$lib/live';
+	import { estadoLiveQuery, fromLiveQuery } from '$lib/live';
 	import { fechaCorta, formatoSet, formatoVolumen } from '$lib/formato';
 	import { pasoPesoEfectivo } from '$lib/paso-peso';
 	import { serieCompleta } from '$lib/sesion-reglas';
 	import { fechaCalendarioValida } from '$lib/fechas';
 	import { popOnChange } from '$lib/pop-on-change';
 	import EditarSerieSheet, { type SerieEditable } from '$lib/components/EditarSerieSheet.svelte';
+	import { conPesoVisible } from '$lib/unidades';
 
 	// La fecha viene de la URL: si no tiene forma de YYYY-MM-DD no se consulta nada y
 	// el título no muestra "Invalid Date".
@@ -34,22 +35,36 @@
 
 	// Puede haber más de una sesión (día de rutina) en la misma fecha: se muestran agrupadas.
 	const sesionesStore = $derived(
-		fromLiveQuery(
+		estadoLiveQuery(
 			liveQuery(async () => {
 				if (!fechaValida) return { sesiones: [] as Sesion[], dias: [] as Dia[] };
 				const [sesiones, dias] = await Promise.all([
 					db.sesiones.where('fecha').equals(fecha).toArray(),
 					db.dias.toArray()
 				]);
-				return { sesiones, dias };
+				return {
+					sesiones: sesiones.map((sesion) => ({
+						...sesion,
+						ejercicios: sesion.ejercicios.map((ejercicio) => ({
+							...ejercicio,
+							sets: ejercicio.sets.map((set) => conPesoVisible(set, ajustes.unidad)),
+							prCelebrado: ejercicio.prCelebrado
+								? conPesoVisible(ejercicio.prCelebrado, ajustes.unidad)
+								: undefined
+						}))
+					})),
+					dias
+				};
 			}),
 			{ sesiones: [] as Sesion[], dias: [] as Dia[] }
 		)
 	);
+	const consultaSesiones = $derived($sesionesStore);
+	const datosSesiones = $derived(consultaSesiones.valor);
 	const conEntrenamiento = $derived(
-		$sesionesStore.sesiones.filter((s) => s.ejercicios.some((e) => e.sets.some(serieCompleta)))
+		datosSesiones.sesiones.filter((s) => s.ejercicios.some((e) => e.sets.some(serieCompleta)))
 	);
-	const nombreDia = $derived(new Map($sesionesStore.dias.map((d) => [d.id, d.nombre])));
+	const nombreDia = $derived(new Map(datosSesiones.dias.map((d) => [d.id, d.nombre])));
 
 	// Historial de los mismos días de rutina (para comparar contra "la vez anterior").
 	// Solo se compara cuando existe de verdad esa sesión anterior; si no, no se muestra nada.
@@ -69,10 +84,12 @@
 		)
 	);
 	const comparaciones = $derived(
-		new Map(conEntrenamiento.map((s) => [s.id, compararConAnterior(s, $candidatasStore)]))
+		new Map(
+			conEntrenamiento.map((s) => [s.id, compararConAnterior(s, $candidatasStore, ajustes.unidad)])
+		)
 	);
 
-	const resumenes = $derived(conEntrenamiento.map((s) => resumenDiaSesion(s)));
+	const resumenes = $derived(conEntrenamiento.map((s) => resumenDiaSesion(s, ajustes.unidad)));
 	const totalSets = $derived(resumenes.reduce((n, r) => n + r.setsHechos, 0));
 	const totalVolumen = $derived(resumenes.reduce((n, r) => n + r.volumen, 0));
 	const totalSinVolumen = $derived(resumenes.reduce((n, r) => n + r.setsSinVolumen, 0));
@@ -133,6 +150,21 @@
 				Volver al historial
 			</a>
 		</section>
+	{:else if consultaSesiones.estado === 'error'}
+		<section
+			class="rounded-2xl border border-red-400/25 bg-red-400/10 p-5 text-center"
+			role="alert"
+		>
+			<p class="text-sm font-bold" style="color: #ff9b9b">No se pudo leer este entrenamiento.</p>
+			<p class="mt-1 text-xs" style="color: var(--muted)">No se modificó ningún dato.</p>
+			<button
+				onclick={() => location.reload()}
+				class="mt-3 min-h-11 rounded-xl px-4 text-sm font-bold"
+				style="background: rgba(255,255,255,.1)">Reintentar</button
+			>
+		</section>
+	{:else if consultaSesiones.estado === 'cargando'}
+		<p class="py-8 text-center text-sm" style="color: var(--muted)">Cargando entrenamiento…</p>
 	{:else if conEntrenamiento.length === 0}
 		<p
 			class="rounded-2xl border border-dashed border-white/15 p-6 text-center text-sm"
@@ -186,7 +218,7 @@
 			<section class="mb-4">
 				<div class="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-1">
 					<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
-						{nombreDia.get(sesion.diaId) ?? 'Rutina'}
+						{sesion.diaNombre ?? nombreDia.get(sesion.diaId) ?? 'Rutina archivada'}
 					</p>
 					{#if cmp}
 						<p class="text-[11px] font-semibold" style="color: var(--muted)">
@@ -201,6 +233,8 @@
 				<div class="space-y-2">
 					{#each sesion.ejercicios.filter( (e) => e.sets.some(serieCompleta) ) as ejercicio (ejercicio.exerciseId)}
 						{@const ej = ejercicioPorId(ejercicio.exerciseId)}
+						{@const nombreEjercicio =
+							ejercicio.nombreSnapshot ?? ej?.nombre ?? 'Ejercicio archivado'}
 						{@const g = ej ? grupos[ej.grupo] : undefined}
 						{@const setPr = indexSetPr(ejercicio.sets, ejercicio.prCelebrado)}
 						<article
@@ -213,7 +247,7 @@
 									class="min-w-0 flex-1 truncate text-sm font-bold"
 								>
 									{#if g}<span style="color: rgb({g.glow})">{g.emoji}</span>{/if}
-									{ej?.nombre ?? 'Ejercicio archivado'}
+									{nombreEjercicio}
 								</a>
 								{#if ejercicio.prCelebrado}
 									<span
