@@ -46,9 +46,36 @@
 	// Actualización de la app: el service worker nuevo queda esperando y avisamos acá.
 	// Nunca durante el entrenamiento — recargar a mitad de una serie es justo lo que
 	// el manifiesto pide no hacer; el aviso espera a que salgas del ejercicio.
-	const { needRefresh, updateServiceWorker } = useRegisterSW();
+	let registroSW: ServiceWorkerRegistration | undefined;
+	const { needRefresh, updateServiceWorker } = useRegisterSW({
+		onRegisteredSW(_url, registro) {
+			registroSW = registro;
+		}
+	});
 	const entrenando = $derived(sinNav || descanso.restoSeg > 0 || descanso.vencido);
 	let actualizando = $state(false);
+
+	// Sin esto el navegador solo busca versión nueva al registrar el service worker,
+	// o sea al cargar la página: en la app instalada, que no se cierra nunca, un
+	// deploy podía tardar días en aparecer. Buscar acá NO activa nada — deja el
+	// service worker nuevo esperando y el cambio de versión sigue dependiendo del
+	// botón "Actualizar", así que es seguro aunque estés a mitad de una serie.
+	const ESPERA_MIN_CHEQUEO_MS = 60_000;
+	const INTERVALO_CHEQUEO_MS = 30 * 60_000;
+	let ultimoChequeo = 0;
+
+	function buscarVersionNueva() {
+		// Entrenando no chequeamos: el aviso está tapado igual y la instalación se
+		// baja el shell nuevo justo donde la conexión del gym menos ayuda.
+		if (!registroSW || entrenando || navigator.onLine === false) return;
+		// Volver al frente varias veces seguidas no debe disparar una request cada vez.
+		const ahora = Date.now();
+		if (ahora - ultimoChequeo < ESPERA_MIN_CHEQUEO_MS) return;
+		ultimoChequeo = ahora;
+		// Sin red o con el sw.js caído update() rechaza; no hay nada que hacer salvo
+		// esperar al próximo chequeo.
+		void registroSW.update().catch(() => {});
+	}
 
 	async function actualizar() {
 		actualizando = true;
@@ -103,11 +130,20 @@
 		// que llega en ese caso (ver $lib/dnd-safety).
 		window.addEventListener('touchcancel', limpiarArrastreHuerfano, true);
 		window.addEventListener('pointercancel', limpiarArrastreHuerfano, true);
+		// Volver a la app es el momento útil: pusheás, la abrís y ya se entera. El
+		// intervalo largo es solo para la sesión que queda horas abierta.
+		const alVolverAlFrente = () => {
+			if (document.visibilityState === 'visible') buscarVersionNueva();
+		};
+		document.addEventListener('visibilitychange', alVolverAlFrente);
+		const chequeoId = setInterval(buscarVersionNueva, INTERVALO_CHEQUEO_MS);
 		return () => {
 			dejarDePresionar();
 			dejarDeEscucharReemplazos();
 			window.removeEventListener('touchcancel', limpiarArrastreHuerfano, true);
 			window.removeEventListener('pointercancel', limpiarArrastreHuerfano, true);
+			document.removeEventListener('visibilitychange', alVolverAlFrente);
+			clearInterval(chequeoId);
 		};
 	});
 
