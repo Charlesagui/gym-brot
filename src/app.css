@@ -6,7 +6,6 @@
 	--surface: #14141d;
 	/* Superficie elevada: tarjeta sobre tarjeta (fila dentro de una sección) */
 	--surface-2: rgba(255, 255, 255, 0.035);
-	--border-soft: rgba(255, 255, 255, 0.1);
 	--text: #e8e8f0;
 	--muted: #9aa0b4;
 	/* Fondo de acción y variante para texto: ambas cumplen AA en su contexto. */
