@@ -17,6 +17,7 @@ describe('serieCompleta', () => {
 		expect(serieCompleta({ hecha: true, peso: 80, reps: 8 })).toBe(true);
 		expect(serieCompleta({ hecha: true, peso: 80 })).toBe(false);
 		expect(serieCompleta({ hecha: true, peso: 80, reps: 0 })).toBe(false);
+		expect(serieCompleta({ hecha: true, peso: 80, reps: 2.5 })).toBe(false);
 		expect(serieCompleta({ hecha: false, reps: 10 })).toBe(false);
 	});
 });
@@ -42,6 +43,11 @@ describe('pesoEfectivo', () => {
 		expect(pesoEfectivo({ peso: 80, esMax: true })).toBe(80);
 		expect(pesoEfectivo({ peso: 80, esMax: true, extraKg: 5 })).toBe(85);
 		expect(pesoEfectivo({ peso: 80, esMax: false, extraKg: 5 })).toBe(80);
+	});
+
+	it('normaliza la suma a la misma precisión que ve el usuario', () => {
+		expect(pesoEfectivo({ peso: 20.1, esMax: true, extraKg: 0.1 })).toBe(20.2);
+		expect(valorSet({ peso: 20.1, reps: 8, esMax: true, extraKg: 0.1 }, 'peso')).toBe(20.2);
 	});
 });
 

@@ -10,6 +10,7 @@ import {
 	type MetricaPr
 } from './db';
 import { fechaCalendarioValida } from './fechas';
+import { repeticionesValidas, serieCompleta } from './sesion-reglas';
 
 // --- Notas por ejercicio ---
 
@@ -318,7 +319,8 @@ function esPrCelebrado(value: unknown): boolean {
 	return (
 		esRecord(value) &&
 		(value.peso === undefined || esNumeroNoNegativo(value.peso)) &&
-		(value.reps === undefined || esNumeroNoNegativo(value.reps)) &&
+		(value.reps === undefined ||
+			(esNumeroNoNegativo(value.reps) && Number.isInteger(value.reps))) &&
 		(value.esMax === undefined || esBoolean(value.esMax)) &&
 		(value.extraKg === undefined || esNumeroNoNegativo(value.extraKg)) &&
 		(value.setIndex === undefined ||
@@ -339,6 +341,8 @@ function esSesion(value: unknown): value is Sesion {
 		esString(value.diaId) &&
 		(value.diaTerminado === undefined || esBoolean(value.diaTerminado)) &&
 		(value.diaTerminadoAt === undefined || esString(value.diaTerminadoAt)) &&
+		(value.ordenEnDia === undefined ||
+			(esNumeroNoNegativo(value.ordenEnDia) && Number.isInteger(value.ordenEnDia))) &&
 		Array.isArray(ejercicios) &&
 		ejercicios.every((e) => {
 			if (!esRecord(e) || !esString(e.exerciseId) || !Array.isArray(e.sets)) return false;
@@ -352,7 +356,8 @@ function esSesion(value: unknown): value is Sesion {
 						esRecord(set) &&
 						esBoolean(set.hecha) &&
 						(set.peso === undefined || esNumeroNoNegativo(set.peso)) &&
-						(set.reps === undefined || esNumeroNoNegativo(set.reps)) &&
+						(set.reps === undefined ||
+							(esNumeroNoNegativo(set.reps) && Number.isInteger(set.reps))) &&
 						(set.esMax === undefined || esBoolean(set.esMax)) &&
 						(set.extraKg === undefined || esNumeroNoNegativo(set.extraKg))
 				)
@@ -445,8 +450,8 @@ function coincidePr(
 	pr: NonNullable<Sesion['ejercicios'][number]['prCelebrado']>
 ): boolean {
 	return (
-		!!set?.hecha &&
-		set.reps !== 0 &&
+		!!set &&
+		serieCompleta(set) &&
 		set.peso === pr.peso &&
 		set.reps === pr.reps &&
 		!!set.esMax === !!pr.esMax &&
@@ -485,7 +490,7 @@ export function prepararImport(data: Backup): ImportPreparado {
 	let sinDia = 0;
 	let prsReubicados = 0;
 	let prsDescartados = 0;
-	let seriesCeroReparadas = 0;
+	let seriesInvalidasReparadas = 0;
 	for (const sesion of data.sesiones ?? []) {
 		if (!fechaCalendarioValida(sesion.fecha)) {
 			fechaInvalida++;
@@ -506,8 +511,8 @@ export function prepararImport(data: Backup): ImportPreparado {
 				prPesoCelebrado?: number;
 			};
 			const sets = actual.sets.map((set) => {
-				if (set.reps !== 0) return set;
-				seriesCeroReparadas++;
+				if (!set.hecha || repeticionesValidas(set.reps)) return set;
+				seriesInvalidasReparadas++;
 				return { ...set, reps: undefined, hecha: false };
 			});
 			const actualConSeries = { ...actual, sets };
@@ -541,8 +546,35 @@ export function prepararImport(data: Backup): ImportPreparado {
 	if (prsReubicados) avisos.push(`${prsReubicados} PR(s) con índice antiguo: se reubicaron`);
 	if (prsDescartados)
 		avisos.push(`${prsDescartados} PR(s) sin una serie hecha que los respalde: se descartaron`);
-	if (seriesCeroReparadas)
-		avisos.push(`${seriesCeroReparadas} serie(s) con 0 reps: se marcaron pendientes`);
+	if (seriesInvalidasReparadas)
+		avisos.push(
+			`${seriesInvalidasReparadas} serie(s) sin repeticiones válidas: se marcaron pendientes`
+		);
+
+	const sesionesPorFecha = new Map<string, Sesion[]>();
+	for (const sesion of sesiones) {
+		const grupo = sesionesPorFecha.get(sesion.fecha) ?? [];
+		grupo.push(sesion);
+		sesionesPorFecha.set(sesion.fecha, grupo);
+	}
+	for (const grupo of sesionesPorFecha.values()) {
+		grupo.sort((a, b) => {
+			const ordenA =
+				a.ordenEnDia != null && Number.isInteger(a.ordenEnDia)
+					? a.ordenEnDia
+					: Number.MAX_SAFE_INTEGER;
+			const ordenB =
+				b.ordenEnDia != null && Number.isInteger(b.ordenEnDia)
+					? b.ordenEnDia
+					: Number.MAX_SAFE_INTEGER;
+			if (ordenA !== ordenB) return ordenA - ordenB;
+			const finA = a.diaTerminadoAt ? Date.parse(a.diaTerminadoAt) : Number.NaN;
+			const finB = b.diaTerminadoAt ? Date.parse(b.diaTerminadoAt) : Number.NaN;
+			if (Number.isFinite(finA) && Number.isFinite(finB) && finA !== finB) return finA - finB;
+			return a.id.localeCompare(b.id);
+		});
+		grupo.forEach((sesion, ordenEnDia) => (sesion.ordenEnDia = ordenEnDia));
+	}
 
 	const notas: Nota[] = [];
 	const idsNota = new Set<string>();

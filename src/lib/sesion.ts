@@ -1,5 +1,6 @@
 import { liveQuery } from 'dexie';
 import {
+	compararSesiones,
 	conIndice,
 	db,
 	guardarSesion,
@@ -15,6 +16,7 @@ import {
 	metricaDeSnapshot,
 	modoDeMetrica,
 	modoEjercicio,
+	repeticionesValidas,
 	serieCompleta,
 	snapPr,
 	valorSet,
@@ -77,15 +79,17 @@ async function ensureSesion(diaId: string, fecha = hoyStr()): Promise<Sesion> {
 	const id = sesionId(diaId, fecha);
 	let s = await db.sesiones.get(id);
 	if (!s) {
-		s = { id, fecha, diaId, ejercicios: [] };
+		const mismoDia = await db.sesiones.where('fecha').equals(fecha).toArray();
+		const ordenEnDia =
+			mismoDia.reduce((maximo, sesion) => Math.max(maximo, sesion.ordenEnDia ?? -1), -1) + 1;
+		s = { id, fecha, diaId, ordenEnDia, ejercicios: [] };
 		await db.sesiones.add(conIndice(s));
 	}
 	return s;
 }
 
 /**
- * Sesiones que registraron este ejercicio, por fecha ascendente (id como desempate,
- * igual que el orden con el que se decide un récord).
+ * Sesiones que registraron este ejercicio, por fecha y orden real dentro del día.
  *
  * Va por el índice multiEntry `exerciseIds` en vez de deserializar toda la tabla: como
  * cualquier escritura invalida los liveQuery, ese escaneo se pagaba en CADA toque de peso
@@ -93,7 +97,7 @@ async function ensureSesion(diaId: string, fecha = hoyStr()): Promise<Sesion> {
  */
 export async function sesionesDe(exerciseId: string): Promise<Sesion[]> {
 	const sesiones = await db.sesiones.where('exerciseIds').equals(exerciseId).toArray();
-	return sesiones.sort((a, b) => a.fecha.localeCompare(b.fecha) || a.id.localeCompare(b.id));
+	return sesiones.sort(compararSesiones);
 }
 
 /** Derivación pura para reutilizar una misma lectura de IndexedDB en varias vistas. */
@@ -132,15 +136,15 @@ export function historialObs(exerciseId: string, metrica: MetricaPr = 'peso') {
 
 export function recordsGlobalesObs(metrica: MetricaPr = 'peso') {
 	return liveQuery(async () => {
-		const todas = (await db.sesiones.orderBy('fecha').toArray()).filter(
-			(sesion) => sesion.fecha <= hoyStr()
-		);
+		const todas = (await db.sesiones.orderBy('fecha').toArray())
+			.filter((sesion) => sesion.fecha <= hoyStr())
+			.sort(compararSesiones);
 		// Modo por ejercicio en una pasada: con algún set ✓ con peso puntúa por peso.
 		const conPeso = new Set<string>();
 		for (const s of todas)
 			for (const e of s.ejercicios)
 				for (const set of e.sets)
-					if (set.hecha && set.reps !== 0 && set.peso != null) conPeso.add(e.exerciseId);
+					if (serieCompleta(set) && set.peso != null) conPeso.add(e.exerciseId);
 		const mejores = new Map<string, RecordEjercicio>();
 		for (const s of todas) {
 			for (const ejercicio of s.ejercicios) {
@@ -250,8 +254,7 @@ export async function prepararEjercicioSesion(
 		const id = sesionId(diaId, fecha);
 		let sesion = await db.sesiones.get(id);
 		if (!sesion) {
-			sesion = { id, fecha, diaId, ejercicios: [] };
-			await db.sesiones.add(conIndice(sesion));
+			sesion = await ensureSesion(diaId, fecha);
 		}
 		if (!sesion.ejercicios.some((item) => item.exerciseId === exerciseId)) {
 			const anterior = await ultimaDe(diaId, exerciseId, fecha);
@@ -324,10 +327,8 @@ async function recalcularPrCelebrado(
 
 	const todas = await sesionesDe(exerciseId);
 	// `todas` trae la versión ya persistida de esta sesión: manda la copia editada.
-	// El orden (fecha, id) es el mismo con el que se decide un récord al celebrarlo.
-	const orden = [...todas.filter((s) => s.id !== sesion.id), sesion].sort(
-		(a, b) => a.fecha.localeCompare(b.fecha) || a.id.localeCompare(b.id)
-	);
+	// El orden es el mismo con el que se decide un récord al celebrarlo.
+	const orden = [...todas.filter((s) => s.id !== sesion.id), sesion].sort(compararSesiones);
 	const previos = new Map<MetricaEfectiva, number | null>(
 		METRICAS_EFECTIVAS.map((metrica) => [metrica, null])
 	);
@@ -405,7 +406,7 @@ export function actualizarSetHistorial(
 		set.extraKg = cambios.extraKg;
 		// Una edición puede vaciar las reps de una serie histórica. En ese caso no
 		// conserva un ✓ inválido que seguiría contando para volumen, PR e historial.
-		if (set.reps == null || set.reps <= 0) {
+		if (!repeticionesValidas(set.reps)) {
 			set.hecha = false;
 			reabrirSesion(s);
 		}
@@ -467,7 +468,7 @@ export function setSerieHecha(
 		if (!s || !e || !set) return { encontrada: false, cambio: false };
 		// La pantalla no permite marcar sin reps, pero el dominio también protege
 		// importaciones, automatizaciones o pestañas desactualizadas.
-		if (hecha && (set.reps == null || set.reps <= 0)) {
+		if (hecha && !repeticionesValidas(set.reps)) {
 			return { encontrada: true, hecha: set.hecha, cambio: false, ejercicioCompleto: false };
 		}
 
@@ -541,8 +542,14 @@ export function setReps(
 	return mutar(
 		diaId,
 		exerciseId,
-		(sets) => {
-			if (sets[i]) sets[i].reps = reps;
+		(sets, sesion) => {
+			const set = sets[i];
+			if (!set) return;
+			set.reps = reps;
+			if (set.hecha && !repeticionesValidas(reps)) {
+				set.hecha = false;
+				reabrirSesion(sesion);
+			}
 		},
 		fecha,
 		metrica,
@@ -688,7 +695,7 @@ export function registrarPrSiSupera(
 		// existe historial con carga, una serie incompleta con solo reps no puede mutar
 		// temporalmente a “reps” ni disparar un PR rotulado como kg en la interfaz.
 		const modo = modoEjercicio(
-			todas.filter((otra) => otra.fecha <= s.fecha),
+			todas.filter((otra) => compararSesiones(otra, s) <= 0),
 			exerciseId
 		);
 		const metricaEfectiva: MetricaEfectiva = modo === 'reps' ? 'reps' : metrica;
@@ -698,7 +705,7 @@ export function registrarPrSiSupera(
 		// “Previo” es sólo lo que existía cronológicamente antes de esta sesión. Mirar
 		// sesiones futuras hacía negar récords históricos válidos al cargar/editar datos.
 		const mejorPrevio = todas.reduce<number | null>((best, otra) => {
-			if (otra.id === s.id || otra.fecha > s.fecha || (otra.fecha === s.fecha && otra.id > s.id)) {
+			if (otra.id === s.id || compararSesiones(otra, s) >= 0) {
 				return best;
 			}
 			const eo = otra.ejercicios.find((x) => x.exerciseId === exerciseId);

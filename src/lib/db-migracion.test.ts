@@ -6,8 +6,8 @@ import { describe, expect, it } from 'vitest';
  * Simula la base REAL de un usuario existente (creada con el esquema v1/v2,
  * días con diaSemana único) y la abre con el módulo actual: las migraciones
  * tienen que completarse sin colgarse — v3 convierte diaSemana → diasSemana[]
- * v4 rellena el índice `exerciseIds` y v5 recupera las series antiguas que
- * habían quedado marcadas con 0 reps.
+ * v4 rellena el índice `exerciseIds`, v5 recupera series con 0 reps y v6
+ * ordena las sesiones dentro del día y limpia cualquier check sin reps válidas.
  */
 describe('migración de esquema', () => {
 	it('abre una base v2 existente y migra diaSemana a diasSemana[]', async () => {
@@ -35,7 +35,8 @@ describe('migración de esquema', () => {
 					prCelebrado: { peso: 90, reps: 0, setIndex: 1 },
 					sets: [
 						{ peso: 80, reps: 10, hecha: true },
-						{ peso: 90, reps: 0, hecha: true }
+						{ peso: 90, reps: 0, hecha: true },
+						{ peso: 100, hecha: true }
 					]
 				}
 			]
@@ -59,9 +60,14 @@ describe('migración de esquema', () => {
 		// consulta: si el índice no se hubiera poblado, esa sesión sería invisible para
 		// el historial y para el cálculo de PR, que es el peor fallo posible acá.
 		expect((await db.sesiones.get('2026-06-10__d1'))?.exerciseIds).toEqual(['press']);
+		expect((await db.sesiones.get('2026-06-10__d1'))?.ordenEnDia).toBe(0);
 		expect((await db.sesiones.get('2026-06-10__d1'))?.ejercicios[0]?.sets[1]).toEqual({
 			peso: 90,
 			reps: undefined,
+			hecha: false
+		});
+		expect((await db.sesiones.get('2026-06-10__d1'))?.ejercicios[0]?.sets[2]).toEqual({
+			peso: 100,
 			hecha: false
 		});
 		expect((await db.sesiones.get('2026-06-10__d1'))?.ejercicios[0]?.prCelebrado).toBeUndefined();

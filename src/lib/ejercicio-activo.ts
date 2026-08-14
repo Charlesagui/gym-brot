@@ -1,5 +1,5 @@
 import type { Ajustes, MetricaPr, SetSesion } from './db';
-import type { MejorSet, MetricaEfectiva, ModoPr } from './sesion-reglas';
+import { serieCompleta, type MejorSet, type MetricaEfectiva, type ModoPr } from './sesion-reglas';
 
 type PuntoConPeso = Pick<MejorSet, 'peso'>;
 type SetActivo = Pick<SetSesion, 'peso' | 'reps' | 'hecha'>;
@@ -10,7 +10,7 @@ type SetActivo = Pick<SetSesion, 'peso' | 'reps' | 'hecha'>;
  * antes de que el usuario cargue su primer set.
  */
 export function modoEjercicioActivo(puntos: PuntoConPeso[], sets: SetActivo[]): ModoPr {
-	if (puntos.some((p) => p.peso != null) || sets.some((s) => s.hecha && s.peso != null))
+	if (puntos.some((p) => p.peso != null) || sets.some((s) => serieCompleta(s) && s.peso != null))
 		return 'peso';
 	if (sets.some((s) => s.reps != null)) return 'reps';
 	return 'peso';

@@ -460,7 +460,10 @@
 
 	function ajustarReps(i: number, delta: number) {
 		const reps = sumarReps(sets[i]?.reps, delta);
-		if (sets[i]) sets[i].reps = reps;
+		if (sets[i]) {
+			sets[i].reps = reps;
+			if (reps == null) sets[i].hecha = false;
+		}
 		if (reps != null) avisoSerie = null;
 		escribir(setReps(diaId!, $page.params.id!, i, reps, fechaSesion, metrica));
 	}
@@ -499,7 +502,10 @@
 
 	function escribirReps(i: number, el: HTMLInputElement) {
 		const reps = leerReps(el.value);
-		if (sets[i]) sets[i].reps = reps;
+		if (sets[i]) {
+			sets[i].reps = reps;
+			if (reps == null) sets[i].hecha = false;
+		}
 		if (reps != null) avisoSerie = null;
 		escribir(setReps(diaId!, $page.params.id!, i, reps, fechaSesion, metrica));
 		el.value = reps != null ? String(reps) : '';

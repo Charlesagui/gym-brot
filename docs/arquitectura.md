@@ -10,6 +10,15 @@ Este documento registra los límites que deben preservarse al cambiar la app.
 - `src/lib/sesion.ts` consulta y modifica sesiones mediante Dexie; sus funciones son la frontera usada por la UI.
 - `src/lib/progreso.ts` e `src/lib/historial.ts` derivan vistas desde sesiones crudas. Un PR mostrado siempre se calcula a partir de sets hechos.
 
+Una serie solo representa trabajo real cuando está marcada y tiene una cantidad entera y positiva
+de repeticiones (`serieCompleta`). Esa misma regla gobierna cierre de ejercicios, volumen, rachas,
+progreso y PR. Si se vacían las reps de una serie hecha, la misma transacción la desmarca y reabre
+la sesión.
+
+Las sesiones de una fecha se ordenan por `ordenEnDia`, asignado transaccionalmente al crearlas.
+Nunca usar `diaId` como aproximación temporal: puede ser un UUID y no expresa qué rutina ocurrió
+primero. Las bases anteriores a v6 reciben un orden determinista durante la migración.
+
 ## Reactividad y fallos
 
 Las lecturas Dexie se adaptan a stores de Svelte en `src/lib/live.ts`. Las pantallas que deben distinguir carga, vacío y fallo usan `estadoLiveQuery`; las escrituras no bloqueantes informan fallos mediante `errores-datos.ts`.

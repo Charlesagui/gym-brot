@@ -51,6 +51,8 @@ export interface Sesion {
 	id: string;
 	fecha: string; // YYYY-MM-DD
 	diaId: string;
+	/** Orden real de creación dentro de la fecha (0..n); desempata PRs del mismo día. */
+	ordenEnDia?: number;
 	ejercicios: EjercicioSesion[];
 	diaTerminado?: boolean;
 	diaTerminadoAt?: string;
@@ -184,6 +186,83 @@ db.version(5)
 				sesion.exerciseIds = [...new Set(sesion.ejercicios.map((e) => e.exerciseId))];
 			});
 	});
+
+/**
+ * v6: dos rutinas pueden compartir un ejercicio en la misma fecha. Hasta ahora sus
+ * PR se ordenaban por `diaId` (muchas veces un UUID), que no representa qué sesión
+ * ocurrió primero. Asignamos una secuencia estable por fecha y, de paso, reparamos
+ * series antiguas marcadas sin una cantidad entera y positiva de repeticiones.
+ */
+db.version(6)
+	.stores({
+		sesiones: 'id, diaId, fecha, *exerciseIds'
+	})
+	.upgrade(async (tx) => {
+		const tabla = tx.table('sesiones');
+		const sesiones = (await tabla.toArray()) as Sesion[];
+		const porFecha = new Map<string, Sesion[]>();
+		for (const sesion of sesiones) {
+			const grupo = porFecha.get(sesion.fecha) ?? [];
+			grupo.push(sesion);
+			porFecha.set(sesion.fecha, grupo);
+		}
+
+		for (const grupo of porFecha.values()) {
+			grupo.sort((a, b) => {
+				const finA = a.diaTerminadoAt ? Date.parse(a.diaTerminadoAt) : Number.NaN;
+				const finB = b.diaTerminadoAt ? Date.parse(b.diaTerminadoAt) : Number.NaN;
+				if (Number.isFinite(finA) && Number.isFinite(finB) && finA !== finB) return finA - finB;
+				if (Number.isFinite(finA) !== Number.isFinite(finB)) return Number.isFinite(finA) ? -1 : 1;
+				return a.id.localeCompare(b.id);
+			});
+
+			grupo.forEach((sesion, ordenEnDia) => {
+				sesion.ordenEnDia = ordenEnDia;
+				for (const ejercicio of sesion.ejercicios) {
+					for (const set of ejercicio.sets) {
+						const repsValidas = set.reps != null && Number.isInteger(set.reps) && set.reps > 0;
+						if (set.hecha && !repsValidas) set.hecha = false;
+					}
+
+					const pr = ejercicio.prCelebrado;
+					if (!pr) continue;
+					const coincide = (set: SetSesion | undefined) =>
+						!!set?.hecha &&
+						set.reps != null &&
+						Number.isInteger(set.reps) &&
+						set.reps > 0 &&
+						set.peso === pr.peso &&
+						set.reps === pr.reps &&
+						!!set.esMax === !!pr.esMax &&
+						(set.extraKg ?? 0) === (pr.extraKg ?? 0);
+					const indice =
+						pr.setIndex != null && coincide(ejercicio.sets[pr.setIndex])
+							? pr.setIndex
+							: ejercicio.sets.findIndex(coincide);
+					if (indice < 0) ejercicio.prCelebrado = undefined;
+					else if (pr.setIndex !== indice) ejercicio.prCelebrado = { ...pr, setIndex: indice };
+				}
+				sesion.exerciseIds = [...new Set(sesion.ejercicios.map((e) => e.exerciseId))];
+			});
+		}
+
+		await tabla.bulkPut(sesiones);
+	});
+
+/** Orden cronológico estable usado por progreso y PR, incluida la misma fecha. */
+export function compararSesiones(a: Sesion, b: Sesion): number {
+	const porFecha = a.fecha.localeCompare(b.fecha);
+	if (porFecha) return porFecha;
+	const ordenA =
+		a.ordenEnDia != null && Number.isInteger(a.ordenEnDia) && a.ordenEnDia >= 0
+			? a.ordenEnDia
+			: Number.MAX_SAFE_INTEGER;
+	const ordenB =
+		b.ordenEnDia != null && Number.isInteger(b.ordenEnDia) && b.ordenEnDia >= 0
+			? b.ordenEnDia
+			: Number.MAX_SAFE_INTEGER;
+	return ordenA - ordenB || a.id.localeCompare(b.id);
+}
 
 /**
  * Recalcula el índice por ejercicio a partir de `ejercicios`, que es la única fuente de

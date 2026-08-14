@@ -94,7 +94,7 @@ describe('backup', () => {
 		// El backup no guarda `exerciseIds` (es índice derivado): se reconstruye al importar.
 		expect(JSON.parse(await exportarJSON()).sesiones[0].exerciseIds).toBeUndefined();
 		expect(await db.sesiones.toArray()).toEqual([
-			{ ...sesion, exerciseIds: sesion.ejercicios.map((e) => e.exerciseId) }
+			{ ...sesion, ordenEnDia: 0, exerciseIds: sesion.ejercicios.map((e) => e.exerciseId) }
 		]);
 	});
 
@@ -384,7 +384,7 @@ describe('prepararImport', () => {
 			sets: [{ peso: 110, reps: undefined, hecha: false }],
 			prCelebrado: undefined
 		});
-		expect(avisos.join(' ')).toContain('0 reps');
+		expect(avisos.join(' ')).toContain('sin repeticiones válidas');
 		expect(avisos.join(' ')).toContain('PR(s)');
 	});
 });
