@@ -12,6 +12,7 @@
 	import { descanso } from '$lib/descanso.svelte';
 	import { errorDatos } from '$lib/errores-datos';
 	import { menosMovimiento } from '$lib/motion';
+	import { iniciarPresion } from '$lib/presion';
 	import { limpiarArrastreHuerfano } from '$lib/dnd-safety';
 	import { escucharReemplazosDatos } from '$lib/revision-datos';
 
@@ -94,6 +95,8 @@
 	}
 
 	onMount(() => {
+		// Acuse de presión para toda la app, con un solo listener delegado.
+		const dejarDePresionar = iniciarPresion();
 		const dejarDeEscucharReemplazos = escucharReemplazosDatos(() => location.reload());
 		// El swipe de "volver" del sistema puede abortarse a mitad de camino sin
 		// disparar ninguna navegación: touchcancel/pointercancel es la única señal
@@ -101,6 +104,7 @@
 		window.addEventListener('touchcancel', limpiarArrastreHuerfano, true);
 		window.addEventListener('pointercancel', limpiarArrastreHuerfano, true);
 		return () => {
+			dejarDePresionar();
 			dejarDeEscucharReemplazos();
 			window.removeEventListener('touchcancel', limpiarArrastreHuerfano, true);
 			window.removeEventListener('pointercancel', limpiarArrastreHuerfano, true);
@@ -218,9 +222,17 @@
 			</section>
 		</main>
 	{:else if !dbLista}
-		<main class="gb-page glow-bg grid min-h-dvh place-items-center px-5 py-10 text-center">
-			<div>
-				<p class="text-sm" style="color: var(--muted)">Cargando tus datos…</p>
+		<main class="gb-page glow-bg min-h-dvh px-5 py-10 text-center">
+			<div class="mx-auto w-full max-w-md">
+				<!-- Esqueleto con la silueta de la portada: la espera se lee como carga
+				     en curso y no como una pantalla que se quedó trabada. -->
+				<div class="gb-skeleton mx-auto h-8 w-40 rounded-full" aria-hidden="true"></div>
+				<div class="mt-7 space-y-3" aria-hidden="true">
+					<div class="gb-skeleton h-24 rounded-2xl"></div>
+					<div class="gb-skeleton h-20 rounded-2xl"></div>
+					<div class="gb-skeleton h-20 rounded-2xl"></div>
+				</div>
+				<p class="mt-6 text-sm" style="color: var(--muted)" role="status">Cargando tus datos…</p>
 				{#if dbLenta}
 					<p class="mx-auto mt-3 max-w-xs text-xs leading-relaxed" style="color: var(--muted)">
 						⏳ Está tardando más de lo normal. Si tenés Gym-brot abierto en otra pestaña o como app

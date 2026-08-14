@@ -324,7 +324,7 @@
 			{#if dia && !reordenando}
 				<button
 					onclick={abrirEdicion}
-					class="gb-pressable flex min-h-11 items-center gap-1.5 rounded-full border border-white/10 px-3 py-2 text-sm font-semibold"
+					class="flex min-h-11 items-center gap-1.5 rounded-full border border-white/10 px-3 py-2 text-sm font-semibold"
 					aria-label="Editar">✏️ Editar</button
 				>
 			{/if}
@@ -373,9 +373,10 @@
 			class="mb-3 text-center text-xs font-semibold uppercase tracking-wider"
 			style="color: var(--muted)"
 		>
-			Arrastrá o usá las flechas para ordenar
+			Mantené una tarjeta y movela, o usá las flechas
 		</p>
 		<section
+			aria-label="Orden de ejercicios"
 			use:dndzone={{
 				items: ordenItems,
 				flipDurationMs: flipMs,
@@ -391,12 +392,11 @@
 			{#each ordenItems as it (it.id)}
 				<div
 					animate:flip={{ duration: flipMs }}
-					class="grid touch-pan-y grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2 rounded-2xl border border-white/10 p-2.5"
-					style="background: radial-gradient(150% 130% at 0% 0%, rgb({it.glow} / 0.14), transparent 60%), var(--surface)"
+					aria-label={`Mover ${it.nombre}`}
+					class="gb-sortable-card grid touch-pan-y grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2 rounded-2xl border border-white/10 p-2.5"
+					style="--drag-color: {it.glow}; background: radial-gradient(150% 130% at 0% 0%, rgb({it.glow} / 0.14), transparent 60%), var(--surface)"
 				>
-					<span class="shrink-0 text-lg leading-none" style="color: var(--muted)" aria-hidden="true"
-						>⠿</span
-					>
+					<span class="gb-drag-grip" aria-hidden="true">⠿</span>
 					<video
 						use:reproducirEnVista={it.demoVideo}
 						class="gb-thumb-frame size-14 shrink-0 rounded-xl object-contain"
@@ -491,7 +491,7 @@
 		{/if}
 
 		<div class="gb-landscape-cards space-y-3">
-			{#each dia.ejercicios.slice().sort((a, b) => a.orden - b.orden) as item (item.exerciseId)}
+			{#each dia.ejercicios.slice().sort((a, b) => a.orden - b.orden) as item, i (item.exerciseId)}
 				{@const e = ejercicioPorId(item.exerciseId)}
 				{@const g = e ? grupos[e.grupo] : grupoArchivado}
 				{@const nombre = e?.nombre ?? 'Ejercicio archivado'}
@@ -563,8 +563,12 @@
 						>
 					</div>
 				{:else}
+					<!-- Cascada corta al entrar, como en la portada. El tope de 6 importa acá:
+					     una rutina larga si no deja la última tarjeta llegando a los 700ms, y a
+					     esta pantalla se vuelve entre serie y serie. -->
 					<div
 						use:mantener={entrarReordenar}
+						in:fly={{ y: 12, duration: dur(250), delay: dur(Math.min(i, 6) * 45) }}
 						class="flex items-center gap-2 rounded-2xl border border-white/10 p-2.5 {saltado
 							? 'opacity-55'
 							: ''}"
@@ -639,7 +643,7 @@
 										reanudarEjercicio(diaId, item.exerciseId, fechaSesion!),
 										'No se pudo reanudar el ejercicio. Intentá de nuevo.'
 									)}
-								class="gb-pressable grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-sm"
+								class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-sm"
 								style="color: var(--accent-text)"
 								aria-label={`Reanudar ${nombre} hoy`}>↩</button
 							>
@@ -648,7 +652,7 @@
 							     progreso de la fila. El target táctil se mantiene en 44px. -->
 							<button
 								onclick={() => void saltarEjercicioActual(item.exerciseId)}
-								class="gb-pressable min-h-11 shrink-0 rounded-full px-3 py-2 text-xs font-medium"
+								class="min-h-11 shrink-0 rounded-full px-3 py-2 text-xs font-medium"
 								style="color: var(--muted)"
 								aria-label={`Saltar ${nombre} hoy`}>Saltar</button
 							>
@@ -721,14 +725,14 @@
 				{#if diaTerminado}
 					<button
 						onclick={reabrir}
-						class="gb-pressable mt-3 w-full rounded-2xl border border-white/10 py-3 text-sm font-bold"
+						class="mt-3 w-full rounded-2xl border border-white/10 py-3 text-sm font-bold"
 						style="color: var(--muted)">Reabrir día</button
 					>
 				{:else}
 					<button
 						onclick={terminarDia}
 						disabled={!diaListo}
-						class="gb-pressable mt-3 w-full rounded-2xl py-3 text-sm font-bold disabled:opacity-45"
+						class="mt-3 w-full rounded-2xl py-3 text-sm font-bold disabled:opacity-45"
 						style="background: {diaListo
 							? 'var(--accent)'
 							: 'rgba(255,255,255,.08)'}; color: {diaListo ? 'white' : 'var(--muted)'}"

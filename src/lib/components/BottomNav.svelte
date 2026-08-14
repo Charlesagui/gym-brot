@@ -10,7 +10,7 @@
 <nav class="bottom-nav">
 	<a
 		href="/"
-		class="nav-item gb-pressable"
+		class="nav-item"
 		class:active={rutinasActivas}
 		aria-current={rutinasActivas ? 'page' : undefined}
 	>
@@ -36,7 +36,7 @@
 	</a>
 	<a
 		href="/historial"
-		class="nav-item gb-pressable"
+		class="nav-item"
 		class:active={historialActivo}
 		aria-current={historialActivo ? 'page' : undefined}
 	>
@@ -69,7 +69,7 @@
 	</a>
 	<a
 		href="/ajustes"
-		class="nav-item gb-pressable"
+		class="nav-item"
 		class:active={ajustesActivo}
 		aria-current={ajustesActivo ? 'page' : undefined}
 	>

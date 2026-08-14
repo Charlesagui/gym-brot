@@ -179,9 +179,10 @@
 				class="mb-3 text-center text-xs font-semibold uppercase tracking-wider"
 				style="color: var(--muted)"
 			>
-				Arrastrá o usá las flechas para ordenar
+				Mantené una tarjeta y movela, o usá las flechas
 			</p>
 			<section
+				aria-label="Orden de rutinas"
 				use:dndzone={{
 					items: ordenItems,
 					flipDurationMs: flipMs,
@@ -197,14 +198,11 @@
 				{#each ordenItems as it (it.id)}
 					<div
 						animate:flip={{ duration: flipMs }}
-					class="flex touch-pan-y items-center gap-3 rounded-2xl border border-white/10 p-4"
-						style="background: linear-gradient(90deg, rgb({it.color} / 0.12), transparent 55%), var(--surface)"
+						aria-label={`Mover ${it.nombre}`}
+						class="gb-sortable-card flex touch-pan-y items-center gap-3 rounded-2xl border border-white/10 p-4"
+						style="--drag-color: {it.color}; background: linear-gradient(90deg, rgb({it.color} / 0.12), transparent 55%), var(--surface)"
 					>
-						<span
-							class="shrink-0 text-lg leading-none"
-							style="color: var(--muted)"
-							aria-hidden="true">⠿</span
-						>
+						<span class="gb-drag-grip" aria-hidden="true">⠿</span>
 						<span class="h-11 w-1.5 shrink-0 rounded-full" style="background: rgb({it.color})"
 						></span>
 						<div class="min-w-0 flex-1">
@@ -307,7 +305,7 @@
 					<a
 						href={`/dia/${d.id}`}
 						use:mantener={entrarReordenar}
-						in:fly={{ y: 12, duration: dur(250), delay: dur(i * 45) }}
+						in:fly={{ y: 12, duration: dur(250), delay: dur(Math.min(i, 6) * 45) }}
 						class="flex items-center gap-3 rounded-2xl border border-white/10 p-4"
 						style="background: linear-gradient(90deg, rgb({d.color} / 0.12), transparent 55%), var(--surface)"
 					>

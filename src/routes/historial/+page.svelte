@@ -191,7 +191,7 @@
 				<button
 					onclick={() => (mesOffset -= 1)}
 					disabled={sinMesAnterior}
-					class="gb-pressable grid size-11 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
+					class="grid size-11 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
 					aria-label="Mes anterior">‹</button
 				>
 				<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
@@ -200,7 +200,7 @@
 				<button
 					onclick={() => (mesOffset += 1)}
 					disabled={mesOffset >= 0}
-					class="gb-pressable grid size-11 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
+					class="grid size-11 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
 					aria-label="Mes siguiente">›</button
 				>
 			</div>
@@ -321,7 +321,7 @@
 				{#if records.length > recordsVisibles}
 					<button
 						onclick={() => (recordsVisibles += 15)}
-						class="gb-pressable w-full rounded-xl border border-white/10 py-2.5 text-sm font-semibold"
+						class="w-full rounded-xl border border-white/10 py-2.5 text-sm font-semibold"
 						style="background: var(--surface); color: var(--muted)"
 					>
 						Ver más ({records.length - recordsVisibles}

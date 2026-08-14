@@ -312,7 +312,7 @@
 					<button
 						onclick={() => void cambiarUnidad(u as 'kg' | 'lb')}
 						disabled={guardandoUnidad}
-						class="gb-pressable min-h-11 flex-1 rounded-xl py-2.5 font-semibold"
+						class="min-h-11 flex-1 rounded-xl py-2.5 font-semibold"
 						aria-pressed={ajustes.unidad === u}
 						aria-busy={guardandoUnidad}
 						aria-label={`Seleccionar unidad ${u}`}
@@ -332,7 +332,7 @@
 				{#each [1, 2.5, 5] as paso (paso)}
 					<button
 						onclick={() => guardarAjuste(setPasoPeso(paso), 'el paso del peso')}
-						class="gb-pressable min-h-11 flex-1 rounded-xl py-2.5 font-semibold tabular-nums"
+						class="min-h-11 flex-1 rounded-xl py-2.5 font-semibold tabular-nums"
 						aria-pressed={ajustes.pasoPeso === paso}
 						aria-label={`Paso de ${paso} ${ajustes.unidad}`}
 						style={ajustes.pasoPeso === paso
@@ -355,7 +355,7 @@
 			<div class="mt-3 grid grid-cols-2 gap-2">
 				<button
 					onclick={() => guardarAjuste(setMetricaPr('peso'), 'la métrica de PR')}
-					class="gb-pressable min-h-11 rounded-xl px-2 py-2.5 text-sm font-semibold"
+					class="min-h-11 rounded-xl px-2 py-2.5 text-sm font-semibold"
 					aria-pressed={ajustes.metricaPr === 'peso'}
 					style={ajustes.metricaPr === 'peso'
 						? 'background: var(--accent); color: var(--on-accent)'
@@ -363,7 +363,7 @@
 				>
 				<button
 					onclick={() => guardarAjuste(setMetricaPr('e1rm'), 'la métrica de PR')}
-					class="gb-pressable min-h-11 rounded-xl px-2 py-2.5 text-sm font-semibold"
+					class="min-h-11 rounded-xl px-2 py-2.5 text-sm font-semibold"
 					aria-pressed={ajustes.metricaPr === 'e1rm'}
 					style={ajustes.metricaPr === 'e1rm'
 						? 'background: var(--accent); color: var(--on-accent)'
@@ -386,7 +386,7 @@
 				<button
 					onclick={() => guardarAjuste(toggleSonido(), 'el sonido')}
 					aria-pressed={ajustes.sonido}
-					class="gb-pressable min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
+					class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
 					style={ajustes.sonido
 						? 'background: var(--accent); color: var(--on-accent)'
 						: 'background: rgba(255,255,255,.06); color: var(--muted)'}
@@ -411,7 +411,7 @@
 				<button
 					onclick={() => guardarAjuste(toggleDescansoPantallaCompleta(), 'el descanso grande')}
 					aria-pressed={ajustes.descansoPantallaCompleta}
-					class="gb-pressable min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
+					class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
 					style={ajustes.descansoPantallaCompleta
 						? 'background: var(--accent); color: var(--on-accent)'
 						: 'background: rgba(255,255,255,.06); color: var(--muted)'}
@@ -431,7 +431,7 @@
 				<button
 					onclick={() => guardarAjuste(toggleVibracion(), 'la vibración')}
 					aria-pressed={ajustes.vibracion}
-					class="gb-pressable min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
+					class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
 					style={ajustes.vibracion
 						? 'background: var(--accent); color: var(--on-accent)'
 						: 'background: rgba(255,255,255,.06); color: var(--muted)'}
@@ -479,13 +479,13 @@
 			{:else}
 				<button
 					onclick={descargarVideos}
-					class="gb-pressable mt-3 min-h-12 w-full rounded-xl py-3 font-semibold"
+					class="mt-3 min-h-12 w-full rounded-xl py-3 font-semibold"
 					style="background: rgba(255,255,255,.08)">⬇️ Descargar todos los videos</button
 				>
 				{#if videosGuardados}
 					<button
 						onclick={confirmarBorrarVideos}
-						class="gb-pressable mt-2 min-h-11 w-full rounded-xl border border-white/15 py-2 text-sm font-semibold"
+						class="mt-2 min-h-11 w-full rounded-xl border border-white/15 py-2 text-sm font-semibold"
 						style="color: var(--muted)">Eliminar videos guardados</button
 					>
 				{/if}
@@ -515,7 +515,7 @@
 			{#if backupPendienteConfirmacion}
 				<button
 					onclick={() => void confirmarBackupGuardado()}
-					class="gb-pressable mt-2 min-h-11 w-full rounded-xl border border-white/15 py-2 text-sm font-semibold"
+					class="mt-2 min-h-11 w-full rounded-xl border border-white/15 py-2 text-sm font-semibold"
 					style="color: var(--muted)">✅ Ya guardé el archivo</button
 				>
 			{/if}
@@ -546,12 +546,12 @@
 			</p>
 			<button
 				onclick={confirmarReiniciarAyudas}
-				class="gb-pressable mt-3 min-h-12 w-full rounded-xl border border-white/10 py-3 text-sm font-semibold"
+				class="mt-3 min-h-12 w-full rounded-xl border border-white/10 py-3 text-sm font-semibold"
 				style="color: var(--muted)">💡 Volver a mostrar los carteles de ayuda</button
 			>
 			<button
 				onclick={confirmarBorrarTodo}
-				class="gb-pressable mt-2 min-h-12 w-full rounded-xl border border-white/10 py-3 text-sm font-semibold"
+				class="mt-2 min-h-12 w-full rounded-xl border border-white/10 py-3 text-sm font-semibold"
 				style="color: #ff6b6b">🗑 Borrar todos mis datos</button
 			>
 		</section>
