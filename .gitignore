@@ -16,3 +16,6 @@ vite.config.ts.timestamp-*
 
 # Local Netlify folder
 .netlify
+
+# Notas personales de trabajo (no forman parte del proyecto)
+ideas.md
