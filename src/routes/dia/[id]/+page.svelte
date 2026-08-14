@@ -136,7 +136,7 @@
 	const diaListo = $derived(totalEjercicios > 0 && ejerciciosResueltos === totalEjercicios);
 	const diaTerminado = $derived(!!sesion?.diaTerminado);
 	const sonidoActivo = $derived(ajustes.sonido);
-	const resumenDia = $derived(resumenDiaSesion(sesion));
+	const resumenDia = $derived(resumenDiaSesion(sesion, ajustes.unidad));
 
 	function abrirEdicion() {
 		nombreEdit = dia?.nombre ?? '';

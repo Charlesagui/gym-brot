@@ -195,7 +195,10 @@
 	const ajustes = $derived($ajustesStore);
 	// El historial se recalcula al cambiar de ejercicio o de métrica; el `$` re-suscribe solo.
 	const historial = $derived(
-		fromLiveQuery(historialObs($page.params.id!, ajustes.metricaPr), [] as MejorSet[])
+		fromLiveQuery(
+			historialObs($page.params.id!, ajustes.metricaPr, ajustes.unidad),
+			[] as MejorSet[]
+		)
 	);
 	const puntos = $derived($historial);
 	const notaStore = $derived(fromLiveQuery(notaObs($page.params.id!), undefined));
@@ -228,7 +231,7 @@
 		anteriores = [];
 		anterioresFecha = null;
 		(async () => {
-			const preparacion = await prepararEjercicioSesion(dId, exId, fecha);
+			const preparacion = await prepararEjercicioSesion(dId, exId, fecha, ajustes.unidad);
 			if (cancelado) return;
 			if (!preparacion.disponible) {
 				sets = [];
@@ -239,7 +242,7 @@
 			}
 			anteriores = preparacion.anteriores;
 			anterioresFecha = preparacion.anterioresFecha;
-			sub = ejercicioSesionObs(dId, exId, fecha).subscribe((estado) => {
+			sub = ejercicioSesionObs(dId, exId, fecha, ajustes.unidad).subscribe((estado) => {
 				if (cancelado) return;
 				prCelebrado = estado.prCelebrado;
 				cargandoSeries = false;
@@ -320,11 +323,11 @@
 	const pr = $derived(puntos.reduce<MejorSet | null>((best, p) => mejorSet(best, p), null));
 	// Equivalencia en la otra métrica: solo tiene sentido cuando el PR es por peso.
 	const valorOtraPr = $derived(
-		modo === 'peso' && pr && pesoEfectivo(pr) != null
-			? valorMetrica(pesoEfectivo(pr)!, pr.reps, otraMetrica)
+		modo === 'peso' && pr && pesoEfectivo(pr, unidad) != null
+			? valorMetrica(pesoEfectivo(pr, unidad)!, pr.reps, otraMetrica)
 			: null
 	);
-	const mejorHoy = $derived(mejorSetDeSeries(sets, fechaSesion, metrica, undefined, modo));
+	const mejorHoy = $derived(mejorSetDeSeries(sets, fechaSesion, metrica, undefined, modo, unidad));
 	// "Previo" = todo menos la sesión actual: si hiciste este ejercicio hoy en otra
 	// rutina, ese valor también cuenta (mismo criterio que recalcularPrCelebrado).
 	const mejorPrevio = $derived(
@@ -332,7 +335,9 @@
 			.filter((p) => !diaId || p.sesionId !== sesionId(diaId, fechaSesion))
 			.reduce<number | null>((m, p) => (m == null || p.valor > m ? p.valor : m), null)
 	);
-	const valorCelebrado = $derived(prCelebrado ? valorSet(prCelebrado, metrica, modo) : null);
+	const valorCelebrado = $derived(
+		prCelebrado ? valorSet(prCelebrado, metrica, modo, unidad) : null
+	);
 	const valorMejorHoy = $derived(mejorHoy ? mejorHoy.valor : null);
 	const superado = $derived(
 		valorMejorHoy != null &&
@@ -384,7 +389,7 @@
 		const exId = $page.params.id!;
 		if (!dId) return;
 		try {
-			const setsPersistidos = await setsEjercicioSesion(dId, exId, fechaSesion);
+			const setsPersistidos = await setsEjercicioSesion(dId, exId, fechaSesion, unidad);
 			// Mientras leíamos pudo entrar otro toque o haberse cambiado de pantalla: en
 			// cualquiera de los dos casos esta lectura ya quedó vieja y pisar sería peor.
 			if (escriturasEnVuelo > 0 || diaId !== dId || $page.params.id !== exId) return;
@@ -455,7 +460,7 @@
 	function ajustarPeso(i: number, delta: number) {
 		const peso = sumarPeso(sets[i]?.peso, delta);
 		if (sets[i]) sets[i].peso = peso;
-		escribir(setPeso(diaId!, $page.params.id!, i, peso, fechaSesion, metrica));
+		escribir(setPeso(diaId!, $page.params.id!, i, peso, fechaSesion, metrica, unidad));
 	}
 
 	function ajustarReps(i: number, delta: number) {
@@ -471,13 +476,13 @@
 	function ajustarExtra(i: number, delta: number) {
 		const extra = sumarPeso(sets[i]?.extraKg, delta);
 		if (sets[i]) sets[i].extraKg = extra;
-		escribir(setExtra(diaId!, $page.params.id!, i, extra, fechaSesion, metrica));
+		escribir(setExtra(diaId!, $page.params.id!, i, extra, fechaSesion, metrica, unidad));
 	}
 
 	function escribirPeso(i: number, el: HTMLInputElement) {
 		const peso = leerPeso(el.value);
 		if (sets[i]) sets[i].peso = peso;
-		escribir(setPeso(diaId!, $page.params.id!, i, peso, fechaSesion, metrica));
+		escribir(setPeso(diaId!, $page.params.id!, i, peso, fechaSesion, metrica, unidad));
 		el.value = peso != null ? formatoNumero(peso) : '';
 	}
 
@@ -588,7 +593,8 @@
 			$page.params.id!,
 			i,
 			metrica,
-			fechaSesion
+			fechaSesion,
+			unidad
 		).catch(falloAlRegistrarPr);
 		if (nuevoPr) {
 			celebrarPrFlash(nuevoPr);
@@ -654,9 +660,14 @@
 		const candidato = mejor?.setIndex;
 		const ganado =
 			candidato != null
-				? await registrarPrSiSupera(diaId, $page.params.id!, candidato, metrica, fechaSesion).catch(
-						falloAlRegistrarPr
-					)
+				? await registrarPrSiSupera(
+						diaId,
+						$page.params.id!,
+						candidato,
+						metrica,
+						fechaSesion,
+						unidad
+					).catch(falloAlRegistrarPr)
 				: null;
 		const esPr = ganado != null;
 		// La fanfarria es para el ejercicio completo (o PR); cierre parcial = sobrio.

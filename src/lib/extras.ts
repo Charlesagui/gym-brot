@@ -2,7 +2,6 @@ import { liveQuery } from 'dexie';
 import {
 	conIndice,
 	db,
-	guardarSesion,
 	type Dia,
 	type Sesion,
 	type Nota,
@@ -11,6 +10,13 @@ import {
 } from './db';
 import { fechaCalendarioValida } from './fechas';
 import { repeticionesValidas, serieCompleta } from './sesion-reglas';
+import { conPesoCanonico } from './unidades';
+import {
+	anunciarReemplazoDatos,
+	capturarRevisionDatos,
+	exigirRevisionDatos,
+	invalidarEscriturasPendientes
+} from './revision-datos';
 
 // --- Notas por ejercicio ---
 
@@ -19,8 +25,12 @@ export function notaObs(exerciseId: string) {
 }
 
 export async function setNota(exerciseId: string, texto: string): Promise<void> {
-	if (texto.trim()) await db.notas.put({ exerciseId, texto: texto.trim() });
-	else await db.notas.delete(exerciseId);
+	const revision = capturarRevisionDatos();
+	await db.transaction('rw', db.notas, async () => {
+		exigirRevisionDatos(revision);
+		if (texto.trim()) await db.notas.put({ exerciseId, texto: texto.trim() });
+		else await db.notas.delete(exerciseId);
+	});
 }
 
 // --- Ajustes (timer de descanso, unidad, etc.) ---
@@ -64,7 +74,9 @@ export function ajustesObs() {
  * restauren campos viejos al hacer un `get + put` fuera de una transacción.
  */
 async function actualizarAjustes(mutador: (ajustes: Ajustes) => void): Promise<void> {
+	const revision = capturarRevisionDatos();
 	await db.transaction('rw', db.ajustes, async () => {
+		exigirRevisionDatos(revision);
 		const ajustes = normalizarAjustes(await db.ajustes.get('app'));
 		mutador(ajustes);
 		await db.ajustes.put(ajustes);
@@ -72,6 +84,8 @@ async function actualizarAjustes(mutador: (ajustes: Ajustes) => void): Promise<v
 }
 
 export async function setTimer(activo: boolean, minutos: number): Promise<void> {
+	if (!Number.isFinite(minutos) || minutos <= 0)
+		throw new RangeError('El descanso debe ser un número positivo de minutos.');
 	await actualizarAjustes((a) => {
 		a.timer = { activo, minutos };
 	});
@@ -83,9 +97,21 @@ export async function setSonido(sonido: boolean): Promise<void> {
 	});
 }
 
+export async function toggleSonido(): Promise<void> {
+	await actualizarAjustes((a) => {
+		a.sonido = !a.sonido;
+	});
+}
+
 export async function setVibracion(vibracion: boolean): Promise<void> {
 	await actualizarAjustes((a) => {
 		a.vibracion = vibracion;
+	});
+}
+
+export async function toggleVibracion(): Promise<void> {
+	await actualizarAjustes((a) => {
+		a.vibracion = !a.vibracion;
 	});
 }
 
@@ -97,6 +123,12 @@ export async function setDescansoPantallaCompleta(
 	});
 }
 
+export async function toggleDescansoPantallaCompleta(): Promise<void> {
+	await actualizarAjustes((a) => {
+		a.descansoPantallaCompleta = !a.descansoPantallaCompleta;
+	});
+}
+
 export async function setMetricaPr(metricaPr: MetricaPr): Promise<void> {
 	await actualizarAjustes((a) => {
 		a.metricaPr = metricaPr;
@@ -104,6 +136,8 @@ export async function setMetricaPr(metricaPr: MetricaPr): Promise<void> {
 }
 
 export async function setPasoPeso(pasoPeso: number): Promise<void> {
+	if (!Number.isFinite(pasoPeso) || pasoPeso <= 0)
+		throw new RangeError('El paso de peso debe ser un número positivo.');
 	await actualizarAjustes((a) => {
 		a.pasoPeso = pasoPeso;
 	});
@@ -115,6 +149,8 @@ export async function setPasoPesoEjercicio(
 	unidad: Ajustes['unidad'],
 	pasoPeso?: number
 ): Promise<void> {
+	if (pasoPeso != null && (!Number.isFinite(pasoPeso) || pasoPeso <= 0))
+		throw new RangeError('El paso de peso debe ser un número positivo.');
 	await actualizarAjustes((a) => {
 		const todos = { ...(a.pasosPesoEjercicio ?? {}) };
 		const ejercicio = { ...(todos[exerciseId] ?? {}) };
@@ -160,62 +196,11 @@ export function necesitaBackup(
 	return fechasEntrenadas.some((f) => f > fechaBackup);
 }
 
-const KG_TO_LB = 2.2046226218;
-
-function convertirPeso(peso: number, desde: Ajustes['unidad'], hacia: Ajustes['unidad']): number {
-	if (desde === hacia) return peso;
-	const convertido = hacia === 'lb' ? peso * KG_TO_LB : peso / KG_TO_LB;
-	return Math.round(convertido * 10) / 10;
-}
-
 export async function setUnidad(unidad: 'kg' | 'lb'): Promise<void> {
-	await db.transaction('rw', db.sesiones, db.ajustes, async () => {
-		// La unidad debe leerse dentro de la misma transacción que convierte las
-		// sesiones. Así una segunda llamada ve la unidad ya persistida y no vuelve a
-		// convertir valores que la primera acabó de transformar.
-		const a = normalizarAjustes(await db.ajustes.get('app'));
-		if (a.unidad === unidad) {
-			await db.ajustes.put(a);
-			return;
-		}
-		const sesiones = await db.sesiones.toArray();
-		for (const sesion of sesiones) {
-			let cambio = false;
-			for (const ejercicio of sesion.ejercicios) {
-				for (const set of ejercicio.sets) {
-					if (set.peso != null) {
-						set.peso = convertirPeso(set.peso, a.unidad, unidad);
-						cambio = true;
-					}
-					if (set.extraKg != null) {
-						set.extraKg = convertirPeso(set.extraKg, a.unidad, unidad);
-						cambio = true;
-					}
-				}
-				// El umbral de PR ya celebrado se guarda en peso → convertir también.
-				// En modo reps (sin peso) no hay nada que convertir.
-				if (ejercicio.prCelebrado) {
-					if (ejercicio.prCelebrado.peso != null) {
-						ejercicio.prCelebrado.peso = convertirPeso(
-							ejercicio.prCelebrado.peso,
-							a.unidad,
-							unidad
-						);
-						cambio = true;
-					}
-					if (ejercicio.prCelebrado.extraKg != null) {
-						ejercicio.prCelebrado.extraKg = convertirPeso(
-							ejercicio.prCelebrado.extraKg,
-							a.unidad,
-							unidad
-						);
-						cambio = true;
-					}
-				}
-			}
-			if (cambio) await guardarSesion(sesion);
-		}
-		await db.ajustes.put({ ...a, unidad });
+	// La unidad es presentación. Los pesos canónicos permanecen intactos, por lo que
+	// alternar muchas veces no degrada el historial con redondeos acumulativos.
+	await actualizarAjustes((ajustes) => {
+		ajustes.unidad = unidad;
 	});
 }
 
@@ -284,6 +269,10 @@ function esNumeroNoNegativo(value: unknown): value is number {
 	return esNumero(value) && value >= 0;
 }
 
+function esEnteroNoNegativo(value: unknown): value is number {
+	return esNumeroNoNegativo(value) && Number.isInteger(value);
+}
+
 function esBoolean(value: unknown): value is boolean {
 	return typeof value === 'boolean';
 }
@@ -303,14 +292,14 @@ function esDia(value: unknown): value is Dia {
 		(value.diaSemana === undefined || esDiaSemanaValido(value.diaSemana)) &&
 		(value.diasSemana === undefined ||
 			(Array.isArray(value.diasSemana) && value.diasSemana.every(esDiaSemanaValido))) &&
-		esNumeroNoNegativo(value.orden) &&
+		esEnteroNoNegativo(value.orden) &&
 		Array.isArray(ejercicios) &&
 		ejercicios.every(
 			(e) =>
 				esRecord(e) &&
 				esString(e.exerciseId) &&
-				esNumeroNoNegativo(e.seriesObjetivo) &&
-				esNumeroNoNegativo(e.orden)
+				esEnteroNoNegativo(e.seriesObjetivo) &&
+				esEnteroNoNegativo(e.orden)
 		)
 	);
 }
@@ -319,10 +308,12 @@ function esPrCelebrado(value: unknown): boolean {
 	return (
 		esRecord(value) &&
 		(value.peso === undefined || esNumeroNoNegativo(value.peso)) &&
+		(value.pesoGramos === undefined || esEnteroNoNegativo(value.pesoGramos)) &&
 		(value.reps === undefined ||
 			(esNumeroNoNegativo(value.reps) && Number.isInteger(value.reps))) &&
 		(value.esMax === undefined || esBoolean(value.esMax)) &&
 		(value.extraKg === undefined || esNumeroNoNegativo(value.extraKg)) &&
+		(value.extraGramos === undefined || esEnteroNoNegativo(value.extraGramos)) &&
 		(value.setIndex === undefined ||
 			(esNumeroNoNegativo(value.setIndex) && Number.isInteger(value.setIndex))) &&
 		(value.metrica === undefined ||
@@ -341,12 +332,14 @@ function esSesion(value: unknown): value is Sesion {
 		esString(value.diaId) &&
 		(value.diaTerminado === undefined || esBoolean(value.diaTerminado)) &&
 		(value.diaTerminadoAt === undefined || esString(value.diaTerminadoAt)) &&
+		(value.diaNombre === undefined || esString(value.diaNombre)) &&
 		(value.ordenEnDia === undefined ||
 			(esNumeroNoNegativo(value.ordenEnDia) && Number.isInteger(value.ordenEnDia))) &&
 		Array.isArray(ejercicios) &&
 		ejercicios.every((e) => {
 			if (!esRecord(e) || !esString(e.exerciseId) || !Array.isArray(e.sets)) return false;
 			return (
+				(e.nombreSnapshot === undefined || esString(e.nombreSnapshot)) &&
 				(e.saltado === undefined || esBoolean(e.saltado)) &&
 				(e.prCelebrado === undefined || esPrCelebrado(e.prCelebrado)) &&
 				// legacy: backups viejos guardaban un escalar prPesoCelebrado → se tolera y se ignora.
@@ -356,10 +349,12 @@ function esSesion(value: unknown): value is Sesion {
 						esRecord(set) &&
 						esBoolean(set.hecha) &&
 						(set.peso === undefined || esNumeroNoNegativo(set.peso)) &&
+						(set.pesoGramos === undefined || esEnteroNoNegativo(set.pesoGramos)) &&
 						(set.reps === undefined ||
 							(esNumeroNoNegativo(set.reps) && Number.isInteger(set.reps))) &&
 						(set.esMax === undefined || esBoolean(set.esMax)) &&
-						(set.extraKg === undefined || esNumeroNoNegativo(set.extraKg))
+						(set.extraKg === undefined || esNumeroNoNegativo(set.extraKg)) &&
+						(set.extraGramos === undefined || esEnteroNoNegativo(set.extraGramos))
 				)
 			);
 		})
@@ -415,6 +410,7 @@ function validarLista<T>(
 
 /** Parsea y valida que el texto sea un backup de gym-brot. Lanza si no lo es. */
 export function parseBackup(texto: string): Backup {
+	if (texto.length > 25 * 1024 * 1024) throw new Error('El backup supera el límite de 25 MB');
 	const data = JSON.parse(texto) as unknown;
 	if (!esRecord(data) || data.app !== 'gym-brot') {
 		throw new Error('No parece un backup de gym-brot');
@@ -425,6 +421,15 @@ export function parseBackup(texto: string): Backup {
 	if (data.exportado !== undefined && !esString(data.exportado)) {
 		throw new Error('Backup inválido: exportado');
 	}
+	for (const nombre of ['dias', 'sesiones', 'notas', 'ajustes'] as const) {
+		if (!Array.isArray(data[nombre])) throw new Error(`Backup inválido: ${nombre}`);
+	}
+	if ((data.dias as unknown[]).length > 1_000)
+		throw new Error('Backup inválido: demasiadas rutinas');
+	if ((data.sesiones as unknown[]).length > 50_000)
+		throw new Error('Backup inválido: demasiadas sesiones');
+	if ((data.notas as unknown[]).length > 10_000)
+		throw new Error('Backup inválido: demasiadas notas');
 	validarLista(data, 'dias', esDia);
 	validarLista(data, 'sesiones', esSesion);
 	validarLista(data, 'notas', esNota);
@@ -452,10 +457,14 @@ function coincidePr(
 	return (
 		!!set &&
 		serieCompleta(set) &&
-		set.peso === pr.peso &&
+		(set.pesoGramos != null || pr.pesoGramos != null
+			? set.pesoGramos === pr.pesoGramos
+			: set.peso === pr.peso) &&
 		set.reps === pr.reps &&
 		!!set.esMax === !!pr.esMax &&
-		(set.extraKg ?? 0) === (pr.extraKg ?? 0)
+		(set.extraGramos != null || pr.extraGramos != null
+			? (set.extraGramos ?? 0) === (pr.extraGramos ?? 0)
+			: (set.extraKg ?? 0) === (pr.extraKg ?? 0))
 	);
 }
 
@@ -482,6 +491,11 @@ export function prepararImport(data: Backup): ImportPreparado {
 	}
 	if (diasDuplicados) avisos.push(`${diasDuplicados} día(s) con id repetido: se ignoraron`);
 
+	const ajustesRecibidos = data.ajustes ?? [];
+	if (ajustesRecibidos.length > 1)
+		avisos.push(`${ajustesRecibidos.length - 1} ajuste(s) duplicados: se conservó el primero`);
+	const ajustes = normalizarAjustes(ajustesRecibidos[0]);
+
 	const sesiones: Sesion[] = [];
 	const idsSesion = new Set<string>();
 	let fechaInvalida = 0;
@@ -491,6 +505,8 @@ export function prepararImport(data: Backup): ImportPreparado {
 	let prsReubicados = 0;
 	let prsDescartados = 0;
 	let seriesInvalidasReparadas = 0;
+	let ejerciciosDuplicados = 0;
+	let seriesTruncadas = 0;
 	for (const sesion of data.sesiones ?? []) {
 		if (!fechaCalendarioValida(sesion.fecha)) {
 			fechaInvalida++;
@@ -504,39 +520,59 @@ export function prepararImport(data: Backup): ImportPreparado {
 		}
 		idsSesion.add(idEsperado);
 		if (!idsDia.has(sesion.diaId)) sinDia++;
-		const ejercicios = sesion.ejercicios.map((ejercicio) => {
-			// `prPesoCelebrado` existió antes del snapshot completo. Se acepta al parsear
-			// backups viejos, pero nunca vuelve a entrar a la base actual.
-			const { prPesoCelebrado: _legacy, ...actual } = ejercicio as typeof ejercicio & {
-				prPesoCelebrado?: number;
-			};
-			const sets = actual.sets.map((set) => {
-				if (!set.hecha || repeticionesValidas(set.reps)) return set;
-				seriesInvalidasReparadas++;
-				return { ...set, reps: undefined, hecha: false };
-			});
-			const actualConSeries = { ...actual, sets };
-			if (!actualConSeries.prCelebrado) return actualConSeries;
-
-			const indiceGuardado = actualConSeries.prCelebrado.setIndex;
-			const indice =
-				indiceGuardado != null &&
-				coincidePr(actualConSeries.sets[indiceGuardado], actualConSeries.prCelebrado)
-					? indiceGuardado
-					: actualConSeries.sets.findIndex((set) => coincidePr(set, actualConSeries.prCelebrado!));
-			if (indice < 0) {
-				prsDescartados++;
-				return { ...actualConSeries, prCelebrado: undefined };
-			}
-			if (indiceGuardado !== indice) {
-				prsReubicados++;
-				return {
-					...actualConSeries,
-					prCelebrado: { ...actualConSeries.prCelebrado, setIndex: indice }
+		const idsEjercicio = new Set<string>();
+		const ejercicios = sesion.ejercicios
+			.filter((ejercicio) => {
+				if (idsEjercicio.has(ejercicio.exerciseId)) {
+					ejerciciosDuplicados++;
+					return false;
+				}
+				idsEjercicio.add(ejercicio.exerciseId);
+				return true;
+			})
+			.map((ejercicio) => {
+				// `prPesoCelebrado` existió antes del snapshot completo. Se acepta al parsear
+				// backups viejos, pero nunca vuelve a entrar a la base actual.
+				const { prPesoCelebrado: _legacy, ...actual } = ejercicio as typeof ejercicio & {
+					prPesoCelebrado?: number;
 				};
-			}
-			return actualConSeries;
-		});
+				if (actual.sets.length > 500) seriesTruncadas += actual.sets.length - 500;
+				const sets = actual.sets.slice(0, 500).map((set) => {
+					set = conPesoCanonico(set, ajustes.unidad);
+					if (!set.hecha || repeticionesValidas(set.reps)) return set;
+					seriesInvalidasReparadas++;
+					return { ...set, reps: undefined, hecha: false };
+				});
+				const actualConSeries = {
+					...actual,
+					sets,
+					prCelebrado: actual.prCelebrado
+						? conPesoCanonico(actual.prCelebrado, ajustes.unidad)
+						: undefined
+				};
+				if (!actualConSeries.prCelebrado) return actualConSeries;
+
+				const indiceGuardado = actualConSeries.prCelebrado.setIndex;
+				const indice =
+					indiceGuardado != null &&
+					coincidePr(actualConSeries.sets[indiceGuardado], actualConSeries.prCelebrado)
+						? indiceGuardado
+						: actualConSeries.sets.findIndex((set) =>
+								coincidePr(set, actualConSeries.prCelebrado!)
+							);
+				if (indice < 0) {
+					prsDescartados++;
+					return { ...actualConSeries, prCelebrado: undefined };
+				}
+				if (indiceGuardado !== indice) {
+					prsReubicados++;
+					return {
+						...actualConSeries,
+						prCelebrado: { ...actualConSeries.prCelebrado, setIndex: indice }
+					};
+				}
+				return actualConSeries;
+			});
 		sesiones.push({ ...sesion, id: idEsperado, ejercicios });
 	}
 	if (fechaInvalida) avisos.push(`${fechaInvalida} sesión(es) con fecha inválida: se descartaron`);
@@ -550,6 +586,12 @@ export function prepararImport(data: Backup): ImportPreparado {
 		avisos.push(
 			`${seriesInvalidasReparadas} serie(s) sin repeticiones válidas: se marcaron pendientes`
 		);
+	if (ejerciciosDuplicados)
+		avisos.push(
+			`${ejerciciosDuplicados} ejercicio(s) duplicados dentro de una sesión: se ignoraron`
+		);
+	if (seriesTruncadas)
+		avisos.push(`${seriesTruncadas} serie(s) por encima del límite de 500: se ignoraron`);
 
 	const sesionesPorFecha = new Map<string, Sesion[]>();
 	for (const sesion of sesiones) {
@@ -584,10 +626,6 @@ export function prepararImport(data: Backup): ImportPreparado {
 		notas.push(nota);
 	}
 
-	const ajustesRecibidos = data.ajustes ?? [];
-	if (ajustesRecibidos.length > 1)
-		avisos.push(`${ajustesRecibidos.length - 1} ajuste(s) duplicados: se conservó el primero`);
-	const ajustes = normalizarAjustes(ajustesRecibidos[0]);
 	let ajustesReparados = false;
 	if (!(ajustes.timer.minutos > 0)) {
 		ajustes.timer.minutos = AJUSTES_DEFAULT.timer.minutos;
@@ -619,6 +657,7 @@ export function prepararImport(data: Backup): ImportPreparado {
 /** Reemplaza TODOS los datos locales por los del backup (destructivo). */
 export async function importarBackup(data: Backup): Promise<ImportPreparado['avisos']> {
 	const { datos, avisos } = prepararImport(data);
+	invalidarEscriturasPendientes();
 	await db.transaction('rw', db.dias, db.sesiones, db.notas, db.ajustes, async () => {
 		await Promise.all([db.dias.clear(), db.sesiones.clear(), db.notas.clear(), db.ajustes.clear()]);
 		if (datos.dias.length) await db.dias.bulkPut(datos.dias);
@@ -626,12 +665,15 @@ export async function importarBackup(data: Backup): Promise<ImportPreparado['avi
 		if (datos.notas.length) await db.notas.bulkPut(datos.notas);
 		if (datos.ajustes.length) await db.ajustes.bulkPut(datos.ajustes);
 	});
+	anunciarReemplazoDatos();
 	return avisos;
 }
 
 /** Borra todos los datos locales y deja la app como recién instalada. */
 export async function borrarTodo(): Promise<void> {
+	invalidarEscriturasPendientes();
 	await db.transaction('rw', db.dias, db.sesiones, db.notas, db.ajustes, async () => {
 		await Promise.all([db.dias.clear(), db.sesiones.clear(), db.notas.clear(), db.ajustes.clear()]);
 	});
+	anunciarReemplazoDatos();
 }

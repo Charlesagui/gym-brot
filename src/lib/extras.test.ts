@@ -14,8 +14,10 @@ import {
 	setSonido,
 	setPasoPesoEjercicio,
 	setUnidad,
-	setVibracion
+	setVibracion,
+	toggleSonido
 } from './extras';
+import { conPesoCanonico, conPesoVisible } from './unidades';
 
 const dia: Dia = {
 	id: 'push',
@@ -51,6 +53,16 @@ const ajustes: Ajustes = {
 	unidad: 'kg',
 	pasoPeso: 2.5
 };
+
+function sesionCanonica(origen = sesion, unidad: Ajustes['unidad'] = 'kg'): Sesion {
+	const copia = structuredClone(origen);
+	for (const ejercicio of copia.ejercicios) {
+		ejercicio.sets = ejercicio.sets.map((set) => conPesoCanonico(set, unidad));
+		if (ejercicio.prCelebrado)
+			ejercicio.prCelebrado = conPesoCanonico(ejercicio.prCelebrado, unidad);
+	}
+	return copia;
+}
 
 async function limpiarDb() {
 	await db.open();
@@ -93,13 +105,17 @@ describe('backup', () => {
 		expect(await db.ajustes.toArray()).toEqual([ajustes]);
 		// El backup no guarda `exerciseIds` (es índice derivado): se reconstruye al importar.
 		expect(JSON.parse(await exportarJSON()).sesiones[0].exerciseIds).toBeUndefined();
-		expect(await db.sesiones.toArray()).toEqual([
+		expect(await db.sesiones.toArray()).toMatchObject([
 			{ ...sesion, ordenEnDia: 0, exerciseIds: sesion.ejercicios.map((e) => e.exerciseId) }
 		]);
+		expect((await db.sesiones.get(sesion.id))?.ejercicios[0]?.sets[1]).toMatchObject({
+			pesoGramos: 100_000,
+			extraGramos: 5_000
+		});
 	});
 
 	it('personalizar el paso de un ejercicio no modifica ninguna sesión histórica', async () => {
-		await db.sesiones.put(structuredClone(sesion));
+		await db.sesiones.put(sesionCanonica());
 		await db.ajustes.put(ajustes);
 		const historialAntes = structuredClone(await db.sesiones.toArray());
 
@@ -109,36 +125,34 @@ describe('backup', () => {
 		expect((await db.ajustes.get('app'))?.pasosPesoEjercicio).toEqual({ press: { kg: 1 } });
 	});
 
-	it('setUnidad lb -> kg conserva pesos con redondeo a 1 decimal', async () => {
-		await db.sesiones.put(structuredClone(sesion));
+	it('setUnidad lb -> kg no reescribe el historial', async () => {
+		await db.sesiones.put(sesionCanonica());
 		await db.ajustes.put(ajustes);
+		const historialAntes = structuredClone(await db.sesiones.toArray());
 
 		await setUnidad('lb');
 		await setUnidad('kg');
 
-		const vuelta = await db.sesiones.get(sesion.id);
-		expect(vuelta?.ejercicios[0]?.sets[0]?.peso).toBeCloseTo(80, 1);
-		expect(vuelta?.ejercicios[0]?.sets[1]?.peso).toBeCloseTo(100, 1);
-		expect(vuelta?.ejercicios[0]?.sets[1]?.extraKg).toBeCloseTo(5, 1);
-		expect(vuelta?.ejercicios[0]?.prCelebrado?.peso).toBeCloseTo(100, 1);
-		expect(vuelta?.ejercicios[0]?.prCelebrado?.extraKg).toBeCloseTo(5, 1);
+		expect(await db.sesiones.toArray()).toEqual(historialAntes);
 	});
 
 	it('serializa cambios de unidad concurrentes para no convertir dos veces el historial', async () => {
-		await db.sesiones.put(structuredClone(sesion));
+		await db.sesiones.put(sesionCanonica());
 		await db.ajustes.put(ajustes);
+		const historialAntes = structuredClone(await db.sesiones.toArray());
 
 		await Promise.all([setUnidad('lb'), setUnidad('lb')]);
 
 		const vuelta = await db.sesiones.get(sesion.id);
 		expect((await db.ajustes.get('app'))?.unidad).toBe('lb');
-		expect(vuelta?.ejercicios[0]?.sets[1]?.peso).toBeCloseTo(220.5, 1);
-		expect(vuelta?.ejercicios[0]?.prCelebrado?.peso).toBeCloseTo(220.5, 1);
+		expect(await db.sesiones.toArray()).toEqual(historialAntes);
+		expect(conPesoVisible(vuelta!.ejercicios[0]!.sets[1]!, 'lb').peso).toBeCloseTo(220.5, 1);
 	});
 
 	it('no pierde ajustes concurrentes mientras cambia la unidad', async () => {
-		await db.sesiones.put(structuredClone(sesion));
+		await db.sesiones.put(sesionCanonica());
 		await db.ajustes.put(ajustes);
+		const historialAntes = structuredClone(await db.sesiones.toArray());
 
 		await Promise.all([setUnidad('lb'), setSonido(false), setVibracion(false)]);
 
@@ -147,7 +161,13 @@ describe('backup', () => {
 			sonido: false,
 			vibracion: false
 		});
-		expect((await db.sesiones.get(sesion.id))?.ejercicios[0]?.sets[1]?.peso).toBeCloseTo(220.5, 1);
+		expect(await db.sesiones.toArray()).toEqual(historialAntes);
+	});
+
+	it('dos toggles concurrentes se componen sobre el valor persistido', async () => {
+		await db.ajustes.put(ajustes);
+		await Promise.all([toggleSonido(), toggleSonido()]);
+		expect((await db.ajustes.get('app'))?.sonido).toBe(true);
 	});
 
 	it('importarBackup migra el diaSemana único de backups viejos a diasSemana[]', async () => {
@@ -294,6 +314,45 @@ describe('prepararImport', () => {
 		expect(avisos.join(' ')).toContain('id repetido');
 	});
 
+	it('avisa y elimina ejercicios repetidos dentro de una sesión', () => {
+		const repetida: Sesion = {
+			...sesion,
+			ejercicios: [sesion.ejercicios[0]!, structuredClone(sesion.ejercicios[0]!)]
+		};
+		const { datos, avisos } = prepararImport({
+			dias: [dia],
+			sesiones: [repetida],
+			notas: [],
+			ajustes: [ajustes]
+		});
+		expect(datos.sesiones[0]?.ejercicios).toHaveLength(1);
+		expect(avisos.join(' ')).toContain('duplicados dentro de una sesión');
+	});
+
+	it('acepta pesos decimales pero rechaza cantidades fraccionarias de series', () => {
+		const base = {
+			app: 'gym-brot',
+			dias: [dia],
+			sesiones: [
+				{
+					...sesion,
+					ejercicios: [{ ...sesion.ejercicios[0]!, sets: [{ peso: 1.5, reps: 5, hecha: true }] }]
+				}
+			],
+			notas: [],
+			ajustes: [ajustes]
+		};
+		expect(() => parseBackup(JSON.stringify(base))).not.toThrow();
+		expect(() =>
+			parseBackup(
+				JSON.stringify({
+					...base,
+					dias: [{ ...dia, ejercicios: [{ ...dia.ejercicios[0]!, seriesObjetivo: 1.5 }] }]
+				})
+			)
+		).toThrow('dias');
+	});
+
 	it('un backup sano no genera ningún aviso', () => {
 		const { avisos } = prepararImport({
 			dias: [dia],
@@ -379,7 +438,7 @@ describe('prepararImport', () => {
 			ajustes: [ajustes]
 		});
 
-		expect(datos.sesiones[0]?.ejercicios[0]).toEqual({
+		expect(datos.sesiones[0]?.ejercicios[0]).toMatchObject({
 			exerciseId: 'press',
 			sets: [{ peso: 110, reps: undefined, hecha: false }],
 			prCelebrado: undefined

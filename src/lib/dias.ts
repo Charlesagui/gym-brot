@@ -1,4 +1,5 @@
 import { db, guardarSesion, type Dia } from './db';
+import { capturarRevisionDatos, exigirRevisionDatos } from './revision-datos';
 
 /** Paleta de colores para los días. */
 export const coloresDia: { nombre: string; rgb: string }[] = [
@@ -21,14 +22,20 @@ export const SERIES_MAX = 12;
  * perdía la primera escritura; `modify` lee y escribe de forma atómica.
  */
 function modificarDia(id: string, fn: (dia: Dia) => void): Promise<number> {
-	return db.dias.where('id').equals(id).modify(fn);
+	const revision = capturarRevisionDatos();
+	return db.transaction('rw', db.dias, async () => {
+		exigirRevisionDatos(revision);
+		return db.dias.where('id').equals(id).modify(fn);
+	});
 }
 
 export async function crearDia(): Promise<string> {
+	const revision = capturarRevisionDatos();
 	const id = crypto.randomUUID();
 	// El orden se calcula adentro de la transacción: dos "Nuevo día" seguidos no
 	// pueden quedar con el mismo orden.
 	await db.transaction('rw', db.dias, async () => {
+		exigirRevisionDatos(revision);
 		const ultimo = await db.dias.orderBy('orden').last();
 		await db.dias.add({
 			id,
@@ -43,11 +50,19 @@ export async function crearDia(): Promise<string> {
 
 /** Cambios de campos escalares (nombre, color): `update` ya es atómico en Dexie. */
 export async function actualizarDia(id: string, cambios: Partial<Dia>): Promise<void> {
-	await db.dias.update(id, cambios);
+	const revision = capturarRevisionDatos();
+	await db.transaction('rw', db.dias, async () => {
+		exigirRevisionDatos(revision);
+		await db.dias.update(id, cambios);
+	});
 }
 
 export async function borrarDia(id: string): Promise<void> {
-	await db.dias.delete(id);
+	const revision = capturarRevisionDatos();
+	await db.transaction('rw', db.dias, async () => {
+		exigirRevisionDatos(revision);
+		await db.dias.delete(id);
+	});
 }
 
 /** Suma o quita un día de la semana de la agenda (0 dom – 6 sáb). */
@@ -64,7 +79,9 @@ export async function toggleDiaSemana(id: string, indice: number): Promise<void>
 
 /** Reordena los días según `idsEnOrden` y normaliza `orden` a 0..n-1. */
 export async function reordenarDias(idsEnOrden: string[]): Promise<void> {
+	const revision = capturarRevisionDatos();
 	await db.transaction('rw', db.dias, async () => {
+		exigirRevisionDatos(revision);
 		const todos = await db.dias.toArray();
 		const porId = new Map(todos.map((d) => [d.id, d]));
 		const ordenados: Dia[] = [];
@@ -82,7 +99,9 @@ export async function reordenarDias(idsEnOrden: string[]): Promise<void> {
 }
 
 export async function agregarEjercicio(diaId: string, exerciseId: string): Promise<void> {
+	const revision = capturarRevisionDatos();
 	await db.transaction('rw', db.dias, db.sesiones, async () => {
+		exigirRevisionDatos(revision);
 		const dia = await db.dias.get(diaId);
 		if (!dia) return;
 		if (dia.ejercicios.some((e) => e.exerciseId === exerciseId)) return;

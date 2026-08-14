@@ -90,6 +90,13 @@ describe('crearHistorialResumen', () => {
 		expect(resumen.totalDias).toBe(1);
 		expect(resumen.dias.map((d) => d.fecha)).toEqual(['2026-01-06']);
 	});
+
+	it('conserva el nombre histórico aunque la rutina actual haya sido renombrada', () => {
+		vi.setSystemTime(new Date('2026-01-07T12:00:00'));
+		const historica = { ...sesion('2026-01-06'), diaNombre: 'Piernas original' };
+		const resumen = crearHistorialResumen([historica], [{ ...dia, nombre: 'Piernas nueva' }]);
+		expect(resumen.dias[0]?.dias).toEqual(['Piernas original']);
+	});
 });
 
 describe('resumenDiaSesion', () => {
@@ -136,6 +143,13 @@ describe('resumenDiaSesion', () => {
 		expect(resumen.setsHechos).toBe(2);
 		expect(resumen.volumen).toBe(500);
 		expect(resumen.setsSinVolumen).toBe(1);
+	});
+
+	it('usa el snapshot del ejercicio en un PR histórico', () => {
+		const actual = sesion('2026-01-07');
+		actual.ejercicios[0]!.nombreSnapshot = 'Sentadilla histórica';
+		actual.ejercicios[0]!.prCelebrado = { peso: 100, reps: 5 };
+		expect(resumenDiaSesion(actual).prs[0]?.nombre).toBe('Sentadilla histórica');
 	});
 });
 

@@ -3,6 +3,7 @@ import { db, type Dia, type Sesion } from './db';
 import { ejercicioPorId } from './catalog';
 import { hoyStr } from './sesion';
 import { pesoEfectivo, serieCompleta, type MetricaEfectiva } from './sesion-reglas';
+import { conPesoVisible, type UnidadPeso } from './unidades';
 
 export interface DiaEntrenado {
 	fecha: string;
@@ -73,7 +74,10 @@ function addDias(d: Date, dias: number): Date {
 	return nuevo;
 }
 
-export function resumenDiaSesion(sesion: Sesion | undefined): ResumenDiaSesion {
+export function resumenDiaSesion(
+	sesion: Sesion | undefined,
+	unidad: UnidadPeso = 'kg'
+): ResumenDiaSesion {
 	if (!sesion) return { setsHechos: 0, volumen: 0, setsSinVolumen: 0, prs: [] };
 	let setsHechos = 0;
 	let volumen = 0;
@@ -84,19 +88,20 @@ export function resumenDiaSesion(sesion: Sesion | undefined): ResumenDiaSesion {
 		for (const set of ejercicio.sets) {
 			if (!serieCompleta(set)) continue;
 			setsHechos++;
-			const peso = pesoEfectivo(set);
+			const peso = pesoEfectivo(set, unidad);
 			if (peso != null && set.reps != null) volumen += peso * set.reps;
 			else setsSinVolumen++;
 		}
 		if (ejercicio.prCelebrado) {
 			const ej = ejercicioPorId(ejercicio.exerciseId);
+			const prVisible = conPesoVisible(ejercicio.prCelebrado, unidad);
 			prs.push({
 				exerciseId: ejercicio.exerciseId,
-				nombre: ej?.nombre ?? 'Ejercicio archivado',
-				peso: ejercicio.prCelebrado.peso,
+				nombre: ejercicio.nombreSnapshot ?? ej?.nombre ?? 'Ejercicio archivado',
+				peso: prVisible.peso,
 				reps: ejercicio.prCelebrado.reps,
 				esMax: !!ejercicio.prCelebrado.esMax,
-				extraKg: ejercicio.prCelebrado.extraKg,
+				extraKg: prVisible.extraKg,
 				metrica: ejercicio.prCelebrado.metrica
 			});
 		}
@@ -124,14 +129,15 @@ export interface ComparacionSesion {
  */
 export function compararConAnterior(
 	actual: Sesion,
-	candidatas: Sesion[]
+	candidatas: Sesion[],
+	unidad: UnidadPeso = 'kg'
 ): ComparacionSesion | null {
 	const previa = candidatas
 		.filter((s) => s.diaId === actual.diaId && s.fecha < actual.fecha && tieneEntrenamiento(s))
 		.sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
 	if (!previa) return null;
-	const resumenActual = resumenDiaSesion(actual);
-	const resumenPrevio = resumenDiaSesion(previa);
+	const resumenActual = resumenDiaSesion(actual, unidad);
+	const resumenPrevio = resumenDiaSesion(previa, unidad);
 	return {
 		fechaAnterior: previa.fecha,
 		deltaVolumen: resumenActual.volumen - resumenPrevio.volumen,
@@ -139,7 +145,7 @@ export function compararConAnterior(
 	};
 }
 
-function resumenSesionAgrupada(sesiones: Sesion[], dias: Dia[]): DiaEntrenado {
+function resumenSesionAgrupada(sesiones: Sesion[], dias: Dia[], unidad: UnidadPeso): DiaEntrenado {
 	const porDia = new Map(dias.map((d) => [d.id, d.nombre]));
 	let sets = 0;
 	let volumen = 0;
@@ -147,11 +153,11 @@ function resumenSesionAgrupada(sesiones: Sesion[], dias: Dia[]): DiaEntrenado {
 	const nombres = new Set<string>();
 
 	for (const sesion of sesiones) {
-		const resumen = resumenDiaSesion(sesion);
+		const resumen = resumenDiaSesion(sesion, unidad);
 		sets += resumen.setsHechos;
 		volumen += resumen.volumen;
 		prs += resumen.prs.length;
-		const nombre = porDia.get(sesion.diaId);
+		const nombre = sesion.diaNombre ?? porDia.get(sesion.diaId);
 		if (nombre) nombres.add(nombre);
 	}
 
@@ -164,7 +170,11 @@ function resumenSesionAgrupada(sesiones: Sesion[], dias: Dia[]): DiaEntrenado {
 	};
 }
 
-export function crearHistorialResumen(sesiones: Sesion[], dias: Dia[]): HistorialResumen {
+export function crearHistorialResumen(
+	sesiones: Sesion[],
+	dias: Dia[],
+	unidad: UnidadPeso = 'kg'
+): HistorialResumen {
 	// Las sesiones cargadas para una fecha futura son planificación, no entrenamiento pasado.
 	const entrenadas = sesiones.filter(
 		(sesion) => sesion.fecha <= hoyStr() && tieneEntrenamiento(sesion)
@@ -181,7 +191,7 @@ export function crearHistorialResumen(sesiones: Sesion[], dias: Dia[]): Historia
 	}
 
 	const diasEntrenados = [...porFecha.values()]
-		.map((lista) => resumenSesionAgrupada(lista, dias))
+		.map((lista) => resumenSesionAgrupada(lista, dias, unidad))
 		.sort((a, b) => b.fecha.localeCompare(a.fecha));
 
 	const fechas = [...porFecha.keys()].sort();
@@ -235,10 +245,11 @@ export async function rachaSemanalActual(): Promise<number> {
 
 export function resumenHistorialObs() {
 	return liveQuery(async () => {
-		const [sesiones, dias] = await Promise.all([
+		const [sesiones, dias, ajustes] = await Promise.all([
 			db.sesiones.orderBy('fecha').toArray(),
-			db.dias.toArray()
+			db.dias.toArray(),
+			db.ajustes.get('app')
 		]);
-		return crearHistorialResumen(sesiones, dias);
+		return crearHistorialResumen(sesiones, dias, ajustes?.unidad ?? 'kg');
 	});
 }

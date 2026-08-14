@@ -4,9 +4,9 @@
 	import {
 		ajustesObs,
 		setUnidad,
-		setSonido,
-		setVibracion,
-		setDescansoPantallaCompleta,
+		toggleSonido,
+		toggleVibracion,
+		toggleDescansoPantallaCompleta,
 		setMetricaPr,
 		setPasoPeso,
 		exportarJSON,
@@ -384,7 +384,7 @@
 					<p class="mt-1 text-xs" style="color: var(--muted)">Sets, PR y descansos</p>
 				</div>
 				<button
-					onclick={() => guardarAjuste(setSonido(!ajustes.sonido), 'el sonido')}
+					onclick={() => guardarAjuste(toggleSonido(), 'el sonido')}
 					aria-pressed={ajustes.sonido}
 					class="gb-pressable min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
 					style={ajustes.sonido
@@ -409,11 +409,7 @@
 					<p class="mt-1 text-xs" style="color: var(--muted)">Pantalla completa al marcar serie</p>
 				</div>
 				<button
-					onclick={() =>
-						guardarAjuste(
-							setDescansoPantallaCompleta(!ajustes.descansoPantallaCompleta),
-							'el descanso grande'
-						)}
+					onclick={() => guardarAjuste(toggleDescansoPantallaCompleta(), 'el descanso grande')}
 					aria-pressed={ajustes.descansoPantallaCompleta}
 					class="gb-pressable min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
 					style={ajustes.descansoPantallaCompleta
@@ -433,7 +429,7 @@
 					<p class="mt-1 text-xs" style="color: var(--muted)">Logros y fin de descanso</p>
 				</div>
 				<button
-					onclick={() => guardarAjuste(setVibracion(!ajustes.vibracion), 'la vibración')}
+					onclick={() => guardarAjuste(toggleVibracion(), 'la vibración')}
 					aria-pressed={ajustes.vibracion}
 					class="gb-pressable min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
 					style={ajustes.vibracion

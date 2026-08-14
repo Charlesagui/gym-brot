@@ -12,7 +12,7 @@
 
 <script lang="ts">
 	import { fade, fly } from 'svelte/transition';
-	import type { MetricaPr } from '$lib/db';
+	import type { Ajustes, MetricaPr } from '$lib/db';
 	import { actualizarSetHistorial, borrarSetHistorial } from '$lib/sesion';
 	import { dur } from '$lib/motion';
 	import { formatoNumero, fechaCorta } from '$lib/formato';
@@ -30,7 +30,7 @@
 	}: {
 		serie: SerieEditable;
 		glow: string;
-		unidad: string;
+		unidad: Ajustes['unidad'];
 		pasoPeso: number;
 		metrica: MetricaPr;
 		onClose: () => void;
@@ -112,7 +112,8 @@
 					esMax: esMax || undefined,
 					extraKg: esMax ? extraKg : undefined
 				},
-				metrica
+				metrica,
+				unidad
 			)
 		);
 	}

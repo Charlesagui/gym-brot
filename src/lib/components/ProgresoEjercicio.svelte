@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { db, type MetricaPr } from '$lib/db';
+	import { db, type Ajustes, type MetricaPr } from '$lib/db';
 	import { liveQuery } from 'dexie';
 	import { DESCRIPCION_METRICA, type MetricaEfectiva } from '$lib/sesion-reglas';
 	import {
@@ -22,7 +22,7 @@
 	}: {
 		exerciseId: string;
 		glow: string;
-		unidad: string;
+		unidad: Ajustes['unidad'];
 		metrica: MetricaPr;
 		pasoPeso: number;
 		maquinaPlacas: boolean;
@@ -43,7 +43,9 @@
 		puntosReps: []
 	};
 
-	const datosStore = $derived(estadoLiveQuery(progresoPantallaObs(exerciseId, metrica), VACIO));
+	const datosStore = $derived(
+		estadoLiveQuery(progresoPantallaObs(exerciseId, metrica, unidad), VACIO)
+	);
 	const consultaDatos = $derived($datosStore);
 	const datos = $derived(consultaDatos.valor);
 	const progreso = $derived(datos.progreso);

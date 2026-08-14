@@ -16,6 +16,7 @@ import {
 	type MetricaEfectiva,
 	type ModoPr
 } from './sesion-reglas';
+import { conPesoVisible, type UnidadPeso } from './unidades';
 
 export interface SerieDeSesion {
 	set: SetSesion;
@@ -74,10 +75,14 @@ export function indexSetPr(sets: SetSesion[], pr: PrCelebrado | undefined): numb
 	return sets.findIndex(
 		(s) =>
 			serieCompleta(s) &&
-			s.peso === pr.peso &&
+			(s.pesoGramos != null || pr.pesoGramos != null
+				? s.pesoGramos === pr.pesoGramos
+				: s.peso === pr.peso) &&
 			s.reps === pr.reps &&
 			!!s.esMax === !!pr.esMax &&
-			(s.extraKg ?? 0) === (pr.extraKg ?? 0)
+			(s.extraGramos != null || pr.extraGramos != null
+				? (s.extraGramos ?? 0) === (pr.extraGramos ?? 0)
+				: (s.extraKg ?? 0) === (pr.extraKg ?? 0))
 	);
 }
 
@@ -85,7 +90,11 @@ export function indexSetPr(sets: SetSesion[], pr: PrCelebrado | undefined): numb
  * Deriva récords, set records por reps e historial completo en una sola pasada
  * sobre las sesiones (escala personal: ~300 sesiones/año).
  */
-export function crearProgresoEjercicio(sesiones: Sesion[], exerciseId: string): ProgresoEjercicio {
+export function crearProgresoEjercicio(
+	sesiones: Sesion[],
+	exerciseId: string,
+	unidad: UnidadPeso = 'kg'
+): ProgresoEjercicio {
 	// Una sesión marcada para una fecha futura sigue siendo planificación, no un récord histórico.
 	const sesionesPasadas = sesiones
 		.filter((sesion) => sesion.fecha <= hoyStr())
@@ -106,8 +115,9 @@ export function crearProgresoEjercicio(sesiones: Sesion[], exerciseId: string): 
 		const series: SerieDeSesion[] = [];
 		e.sets.forEach((set, setIndex) => {
 			if (!serieCompleta(set)) return;
+			const setVisible = conPesoVisible(set, unidad);
 			series.push({
-				set,
+				set: setVisible,
 				setIndex,
 				sesionId: s.id,
 				fecha: s.fecha,
@@ -117,29 +127,34 @@ export function crearProgresoEjercicio(sesiones: Sesion[], exerciseId: string): 
 			});
 			totalSeries++;
 			const candidato = (valor: number): MejorSet => ({
-				peso: set.peso,
+				peso: setVisible.peso,
 				reps: set.reps,
 				esMax: !!set.esMax,
-				extraKg: set.extraKg,
+				extraKg: setVisible.extraKg,
 				fecha: s.fecha,
 				valor,
 				sesionId: s.id,
 				setIndex
 			});
-			const vPeso = valorSet(set, 'peso');
+			const vPeso = valorSet(set, 'peso', 'peso', unidad);
 			if (vPeso != null) {
 				mejorPeso = mejorSet(mejorPeso, candidato(vPeso));
-				const vE1rm = valorSet(set, 'e1rm');
+				const vE1rm = valorSet(set, 'e1rm', 'peso', unidad);
 				if (vE1rm != null) mejorE1rm = mejorSet(mejorE1rm, candidato(vE1rm));
 				if (set.reps != null) {
 					const previo = records.get(set.reps);
 					// Empate de peso → se conserva la primera vez que se logró.
 					if (!previo || vPeso > previo.efectivo) {
-						records.set(set.reps, { reps: set.reps, set, fecha: s.fecha, efectivo: vPeso });
+						records.set(set.reps, {
+							reps: set.reps,
+							set: setVisible,
+							fecha: s.fecha,
+							efectivo: vPeso
+						});
 					}
 				}
 			}
-			const vReps = valorSet(set, 'peso', 'reps');
+			const vReps = valorSet(set, 'peso', 'reps', unidad);
 			if (vReps != null) mejorReps = mejorSet(mejorReps, candidato(vReps));
 		});
 		if (series.length) porSesion.push({ sesionId: s.id, fecha: s.fecha, diaId: s.diaId, series });
@@ -157,17 +172,22 @@ export function crearProgresoEjercicio(sesiones: Sesion[], exerciseId: string): 
 export function crearDatosProgresoEjercicio(
 	sesiones: Sesion[],
 	exerciseId: string,
-	metrica: MetricaPr
+	metrica: MetricaPr,
+	unidad: UnidadPeso = 'kg'
 ): DatosProgresoEjercicio {
 	return {
-		progreso: crearProgresoEjercicio(sesiones, exerciseId),
-		puntosCarga: historialPorModo(sesiones, exerciseId, metrica, 'peso'),
-		puntosReps: historialPorModo(sesiones, exerciseId, metrica, 'reps')
+		progreso: crearProgresoEjercicio(sesiones, exerciseId, unidad),
+		puntosCarga: historialPorModo(sesiones, exerciseId, metrica, 'peso', unidad),
+		puntosReps: historialPorModo(sesiones, exerciseId, metrica, 'reps', unidad)
 	};
 }
 
-export function progresoPantallaObs(exerciseId: string, metrica: MetricaPr) {
+export function progresoPantallaObs(
+	exerciseId: string,
+	metrica: MetricaPr,
+	unidad: UnidadPeso = 'kg'
+) {
 	return liveQuery(async () =>
-		crearDatosProgresoEjercicio(await sesionesDe(exerciseId), exerciseId, metrica)
+		crearDatosProgresoEjercicio(await sesionesDe(exerciseId), exerciseId, metrica, unidad)
 	);
 }
