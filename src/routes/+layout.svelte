@@ -26,6 +26,13 @@
 		// mitad de camino: sin esto, la tarjeta arrastrada quedaba flotando en la
 		// pantalla siguiente (ver $lib/dnd-safety).
 		limpiarArrastreHuerfano();
+		// Cambiar de pantalla es el otro momento tranquilo para buscar versión nueva:
+		// sin esto, quien usa la app sin mandarla nunca al fondo dependía solo del
+		// intervalo de 30 min. Va antes de los `return` de abajo para que corra igual
+		// sin View Transitions, y no demora la navegación (no se espera nada).
+		// `entrenando` mira todavía la pantalla vieja acá, así que el destino se
+		// descarta aparte: entrar a un ejercicio no debe arrancar una descarga.
+		if (!navigation.to?.url.pathname.startsWith('/ejercicio/')) buscarVersionNueva();
 		if (!document.startViewTransition || menosMovimiento()) return;
 		if (navigation.to?.url.pathname === navigation.from?.url.pathname) return;
 		// Volver (atrás del navegador) invierte el sentido del deslizamiento.
