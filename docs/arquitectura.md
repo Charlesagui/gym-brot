@@ -40,6 +40,48 @@ mutaciones capturan la revisión al comenzar y la verifican dentro de su transac
 que quedó en cola desde la versión anterior falla explícitamente en vez de recrear datos borrados.
 Al completar el reemplazo, `BroadcastChannel` recarga las demás pestañas.
 
+## Costo de las lecturas derivadas
+
+`resumenHistorialObs`, `rachaSemanalActual` y `recordsGlobalesObs` leen la tabla `sesiones`
+entera y la recorren en JavaScript. Es deuda conocida y medida, no un descuido: IndexedDB no sabe
+agregar, así que sumar el volumen de un día obliga a traer cada sesión al hilo principal. Y como
+son `liveQuery` sobre la tabla completa, cualquier escritura las invalida.
+
+Medido con `scripts/bench-historial` en Chromium con IndexedDB nativo y la CPU frenada 4×
+(≈ Android de gama media), sobre bases sintéticas de 3,5 sesiones por semana con 6 ejercicios de
+4 series:
+
+|                                        | 3 años (549 sesiones) | 5 años (914) | 10 años (1.828) |
+| -------------------------------------- | --------------------- | ------------ | --------------- |
+| abrir `/historial` (las dos consultas) | 95 ms                 | 155 ms       | 305 ms          |
+| terminar el día (`rachaSemanalActual`) | 50 ms                 | 90 ms        | 180 ms          |
+| toque de −/+ tal como se siente        | 16 ms                 | 24 ms        | 51 ms           |
+| marcar una serie y decidir el PR       | 11 ms                 | 17 ms        | 33 ms           |
+
+Son medianas de cinco corridas y varían alrededor de un 10% entre corridas; sirven para el orden
+de magnitud, no para comparar cambios chicos.
+
+Todo crece lineal y las constantes son chicas, así que **por ahora no se optimiza**. Dos cosas
+que el número suelto no dice: el toque de −/+ no cuesta lo que cuesta escribir (1,9 ms), sino que
+la pantalla de ejercicio mantiene `historialObs` suscripta y la escritura la recalcula entera; y
+`rachaSemanalActual` ya sale fire-and-forget, así que no retrasa la celebración del día, pero sí
+bloquea el hilo mientras esa celebración anima.
+
+Conviene volver a medir con el banco cuando el historial real pase las ~900 sesiones (unos cinco
+años entrenando), o antes si alguna vez se importan historiales largos de otra app.
+
+Si el proyecto migra a servidor y base compartida, esto se resuelve solo: el término que domina es
+deserializar la tabla, y un `GROUP BY` con índice no lo paga. Lo que sobrevive a esa migración son
+las reglas puras de `sesion-reglas.ts` y los invariantes de este documento, no las consultas.
+
+**Cachear el récord vigente por ejercicio está descartado.** Es la optimización obvia para
+`recordsGlobalesObs` y la única de esta lista que puede hacer daño real: `max` no es invertible,
+así que bajar o borrar la serie que tenía el récord obliga a recomputar ese ejercicio completo, y
+el día que esa invalidación falle el récord no se degrada, desaparece. Un PR mostrado siempre se
+calcula a partir de sets hechos. Una tabla derivada con volúmenes y contadores por sesión sí sería
+aceptable —un error ahí desajusta un número, no borra un logro— y se mantendría donde ya se
+mantiene `exerciseIds`: dentro de `guardarSesion`, en la misma transacción.
+
 ## Datos locales y video
 
 `Dias`, `Sesiones`, `Notas` y `Ajustes` forman una única transacción durante importación o borrado. El índice derivado `exerciseIds` se recalcula antes de persistir una sesión.
