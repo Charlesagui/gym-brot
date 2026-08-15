@@ -40,13 +40,27 @@ export const AJUSTES_DEFAULT: Ajustes = {
 	unidad: 'kg',
 	timer: { activo: true, minutos: 2 },
 	sonido: true,
+	sonidoLogros: true,
+	volumen: 1,
 	vibracion: true,
 	descansoPantallaCompleta: true,
 	metricaPr: 'peso',
 	pasoPeso: 5,
 	pasosPesoEjercicio: {},
+	descansosEjercicio: {},
 	seedInicialHecho: false
 };
+
+/** Volúmenes ofrecidos. Ninguno es 0: para silenciar están los interruptores. */
+export const VOLUMENES = [
+	{ valor: 0.35, label: 'Bajo' },
+	{ valor: 0.7, label: 'Medio' },
+	{ valor: 1, label: 'Alto' }
+] as const;
+
+function volumenValido(volumen: unknown): volumen is number {
+	return typeof volumen === 'number' && Number.isFinite(volumen) && volumen > 0 && volumen <= 1;
+}
 
 export function normalizarAjustes(a?: Ajustes | null): Ajustes {
 	return {
@@ -54,12 +68,17 @@ export function normalizarAjustes(a?: Ajustes | null): Ajustes {
 		...(a ?? {}),
 		timer: { ...AJUSTES_DEFAULT.timer, ...(a?.timer ?? {}) },
 		sonido: a?.sonido ?? AJUSTES_DEFAULT.sonido,
+		// Los ajustes anteriores a la separación de canales no traen `sonidoLogros`:
+		// heredan el maestro, así nadie se queda de golpe sin el beep que ya tenía.
+		sonidoLogros: a?.sonidoLogros ?? a?.sonido ?? AJUSTES_DEFAULT.sonidoLogros,
+		volumen: volumenValido(a?.volumen) ? a!.volumen : AJUSTES_DEFAULT.volumen,
 		vibracion: a?.vibracion ?? AJUSTES_DEFAULT.vibracion,
 		descansoPantallaCompleta:
 			a?.descansoPantallaCompleta ?? AJUSTES_DEFAULT.descansoPantallaCompleta,
 		metricaPr: a?.metricaPr ?? AJUSTES_DEFAULT.metricaPr,
 		pasoPeso: a?.pasoPeso ?? AJUSTES_DEFAULT.pasoPeso,
 		pasosPesoEjercicio: a?.pasosPesoEjercicio ?? {},
+		descansosEjercicio: a?.descansosEjercicio ?? {},
 		seedInicialHecho: a?.seedInicialHecho ?? AJUSTES_DEFAULT.seedInicialHecho
 	};
 }
@@ -103,6 +122,20 @@ export async function toggleSonido(): Promise<void> {
 	});
 }
 
+export async function toggleSonidoLogros(): Promise<void> {
+	await actualizarAjustes((a) => {
+		a.sonidoLogros = !a.sonidoLogros;
+	});
+}
+
+export async function setVolumen(volumen: number): Promise<void> {
+	if (!volumenValido(volumen))
+		throw new RangeError('El volumen debe estar entre 0 (exclusivo) y 1.');
+	await actualizarAjustes((a) => {
+		a.volumen = volumen;
+	});
+}
+
 export async function setVibracion(vibracion: boolean): Promise<void> {
 	await actualizarAjustes((a) => {
 		a.vibracion = vibracion;
@@ -140,6 +173,21 @@ export async function setPasoPeso(pasoPeso: number): Promise<void> {
 		throw new RangeError('El paso de peso debe ser un número positivo.');
 	await actualizarAjustes((a) => {
 		a.pasoPeso = pasoPeso;
+	});
+}
+
+/**
+ * Guarda o vuelve a automático el descanso de un ejercicio. `0` lo apaga solo acá;
+ * `undefined` borra la sobrescritura y devuelve el ejercicio al descanso general.
+ */
+export async function setDescansoEjercicio(exerciseId: string, minutos?: number): Promise<void> {
+	if (minutos != null && (!Number.isFinite(minutos) || minutos < 0))
+		throw new RangeError('El descanso del ejercicio no puede ser negativo.');
+	await actualizarAjustes((a) => {
+		const todos = { ...(a.descansosEjercicio ?? {}) };
+		if (minutos == null) delete todos[exerciseId];
+		else todos[exerciseId] = minutos;
+		a.descansosEjercicio = todos;
 	});
 }
 
@@ -377,6 +425,11 @@ function esPasosPesoEjercicio(value: unknown): boolean {
 	);
 }
 
+function esDescansosEjercicio(value: unknown): boolean {
+	// 0 es válido a propósito: significa "sin descanso en este ejercicio".
+	return esRecord(value) && Object.values(value).every((minutos) => esNumeroNoNegativo(minutos));
+}
+
 function esAjustes(value: unknown): value is Ajustes {
 	if (!esRecord(value) || value.id !== 'app') return false;
 	const timer = value.timer;
@@ -387,11 +440,14 @@ function esAjustes(value: unknown): value is Ajustes {
 		esBoolean(timer.activo) &&
 		esNumeroNoNegativo(timer.minutos) &&
 		(value.sonido === undefined || esBoolean(value.sonido)) &&
+		(value.sonidoLogros === undefined || esBoolean(value.sonidoLogros)) &&
+		(value.volumen === undefined || esNumeroNoNegativo(value.volumen)) &&
 		(value.vibracion === undefined || esBoolean(value.vibracion)) &&
 		(value.descansoPantallaCompleta === undefined || esBoolean(value.descansoPantallaCompleta)) &&
 		(value.metricaPr === undefined || value.metricaPr === 'peso' || value.metricaPr === 'e1rm') &&
 		(value.pasoPeso === undefined || esNumeroNoNegativo(value.pasoPeso)) &&
 		(value.pasosPesoEjercicio === undefined || esPasosPesoEjercicio(value.pasosPesoEjercicio)) &&
+		(value.descansosEjercicio === undefined || esDescansosEjercicio(value.descansosEjercicio)) &&
 		(value.ultimoBackup === undefined || esString(value.ultimoBackup)) &&
 		(value.seedInicialHecho === undefined || esBoolean(value.seedInicialHecho))
 	);

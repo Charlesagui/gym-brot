@@ -88,7 +88,16 @@ export interface Ajustes {
 	id: string;
 	unidad: 'kg' | 'lb';
 	timer: { activo: boolean; minutos: number };
+	/** Interruptor maestro: apagado, la app no suena nunca. */
 	sonido: boolean;
+	/**
+	 * Beeps de serie hecha, PR, ejercicio y día terminado. Separado del maestro porque
+	 * la alarma de descanso es funcional (te dice cuándo volver) y esto es celebratorio:
+	 * querer una sin la otra es un pedido razonable y antes compartían un solo botón.
+	 */
+	sonidoLogros: boolean;
+	/** Volumen general (0–1) aplicado al master de audio. */
+	volumen: number;
 	vibracion: boolean;
 	/** Abre el descanso como pantalla enfocada al marcar una serie. */
 	descansoPantallaCompleta: boolean;
@@ -97,11 +106,22 @@ export interface Ajustes {
 	pasoPeso: number;
 	/** Sobrescrituras por ejercicio y unidad; no alteran los pesos ya registrados. */
 	pasosPesoEjercicio?: Record<string, Partial<Record<'kg' | 'lb', number>>>;
+	/**
+	 * Descanso propio de un ejercicio, en minutos, que pisa a `timer`. Un press pesado
+	 * y unas elevaciones laterales no descansan lo mismo, y antes cambiar uno cambiaba
+	 * el otro. `0` significa "sin descanso en este ejercicio"; ausente = usa `timer`.
+	 */
+	descansosEjercicio?: Record<string, number>;
 	/** ISO del último export de backup: alimenta el recordatorio en /historial. */
 	ultimoBackup?: string;
 	/** Evita volver a crear rutinas de ejemplo si el usuario borró todas. */
 	seedInicialHecho?: boolean;
 }
+
+/** Violeta que no llegaba a AA como texto; se conserva solo para migrar el valor viejo. */
+const VIOLETA_LEGADO = '124 92 255';
+/** Violeta de rutina accesible: mismo tono que `--accent-text` (5,12:1 sobre --surface). */
+export const VIOLETA_RUTINA = '130 104 255';
 
 export const db = new Dexie('gym-brot') as Dexie & {
 	dias: EntityTable<Dia, 'id'>;
@@ -297,6 +317,45 @@ db.version(7)
 				}
 			});
 	});
+
+/**
+ * v8: el violeta por defecto de las rutinas (124 92 255) daba 4,21:1 sobre la superficie
+ * oscura, por debajo del 4,5 que pide AA para texto normal — y es justo el color con el
+ * que se pintan "Hoy entrenás" y el contador de ejercicios a 11-12 px. Se sube al mismo
+ * tono que la app ya usaba como tinta de acento (130 104 255 = --accent-text, 5,12:1).
+ * Solo se toca el valor viejo exacto: un color elegido a mano por el usuario no se pisa.
+ */
+db.version(8).upgrade(async (tx) =>
+	tx
+		.table('dias')
+		.toCollection()
+		.modify((dia: Dia) => {
+			if (dia.color === VIOLETA_LEGADO) dia.color = VIOLETA_RUTINA;
+		})
+);
+
+/**
+ * v9: rellena `nombreSnapshot` en las sesiones anteriores a que existiera. Sin esto, la
+ * pantalla de historial no puede dejar de importar el catálogo (193 KB solo para resolver
+ * nombres): un ejercicio entrenado antes de los snapshots aparecería como "Ejercicio
+ * archivado" aunque siga estando en el catálogo.
+ *
+ * El catálogo se importa de forma dinámica a propósito: `db.ts` lo carga toda la app y
+ * meterlo como import estático devolvería al bundle principal el peso que se quiere sacar.
+ */
+db.version(9).upgrade(async (tx) => {
+	const { ejercicioPorId } = await import('./catalog');
+	await tx
+		.table('sesiones')
+		.toCollection()
+		.modify((sesion: Sesion) => {
+			for (const ejercicio of sesion.ejercicios) {
+				// Un ejercicio ya borrado del catálogo se queda sin nombre y la pantalla lo
+				// rotula como archivado: es la verdad, no una degradación.
+				ejercicio.nombreSnapshot ??= ejercicioPorId(ejercicio.exerciseId)?.nombre;
+			}
+		});
+});
 
 /** Orden cronológico estable usado por progreso y PR, incluida la misma fecha. */
 export function compararSesiones(a: Sesion, b: Sesion): number {

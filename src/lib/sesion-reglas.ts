@@ -26,6 +26,12 @@ export interface RecordEjercicio extends MejorSet {
 	exerciseId: string;
 	/** Con qué se midió el récord, para que la UI siempre rotule (kg vs reps). */
 	modo: ModoPr;
+	/**
+	 * Nombre congelado en la sesión más reciente que lo registró. Va en el récord para
+	 * que la pantalla de historial no tenga que cargar el catálogo entero (193 KB) solo
+	 * para resolver un puñado de nombres.
+	 */
+	nombre?: string;
 }
 
 /** Epley sobreestima fuerte con reps altas → tope en 12 (por encima puntúa como 12). */

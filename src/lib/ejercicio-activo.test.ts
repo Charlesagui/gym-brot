@@ -4,6 +4,7 @@ import {
 	metricaEfectivaEjercicio,
 	metricaLabelEjercicio,
 	modoEjercicioActivo,
+	proximoEjercicioPendiente,
 	unidadValorEjercicio
 } from './ejercicio-activo';
 
@@ -61,5 +62,96 @@ describe('labels de ejercicio activo', () => {
 		expect(metricaLabelEjercicio('reps', 'peso')).toBe('reps máximas');
 		expect(unidadValorEjercicio('reps', 'kg')).toBe('reps');
 		expect(unidadValorEjercicio('peso', 'lb')).toBe('lb');
+	});
+});
+
+describe('proximoEjercicioPendiente', () => {
+	const nombres: Record<string, string> = {
+		a: 'Prensa',
+		b: 'Curl femoral',
+		c: 'Gemelos'
+	};
+	const nombreDe = (id: string) => nombres[id];
+	const dia = {
+		ejercicios: [
+			{ exerciseId: 'a', seriesObjetivo: 3, orden: 0 },
+			{ exerciseId: 'b', seriesObjetivo: 3, orden: 1 },
+			{ exerciseId: 'c', seriesObjetivo: 3, orden: 2 }
+		]
+	};
+	const hecho = (exerciseId: string) => ({
+		exerciseId,
+		sets: [{ reps: 10, hecha: true }],
+		saltado: false
+	});
+	const pendiente = (exerciseId: string) => ({
+		exerciseId,
+		sets: [{ reps: 10, hecha: false }],
+		saltado: false
+	});
+
+	it('propone el siguiente de la rutina, no el primero de la lista', () => {
+		expect(proximoEjercicioPendiente(dia, { ejercicios: [hecho('a')] }, 'a', nombreDe)).toEqual({
+			exerciseId: 'b',
+			nombre: 'Curl femoral'
+		});
+	});
+
+	it('da la vuelta cuando terminaste el último y quedó algo arriba', () => {
+		// 'a' ya está hecho: el que quedó colgado arriba es 'b', y es el que toca.
+		const sesion = { ejercicios: [hecho('a'), pendiente('b'), hecho('c')] };
+		expect(proximoEjercicioPendiente(dia, sesion, 'c', nombreDe)).toEqual({
+			exerciseId: 'b',
+			nombre: 'Curl femoral'
+		});
+	});
+
+	it('saltea lo ya hecho, lo saltado y lo parcial: nada resuelto vuelve a proponerse', () => {
+		const sesion = {
+			ejercicios: [
+				hecho('b'),
+				{ exerciseId: 'c', sets: [{ reps: 10, hecha: true }, { hecha: false }], saltado: true }
+			]
+		};
+		expect(proximoEjercicioPendiente(dia, sesion, 'a', nombreDe)).toBeNull();
+	});
+
+	it('devuelve null cuando no queda nada por hacer', () => {
+		const sesion = { ejercicios: [hecho('a'), hecho('b'), hecho('c')] };
+		expect(proximoEjercicioPendiente(dia, sesion, 'a', nombreDe)).toBeNull();
+	});
+
+	it('nunca se propone a sí mismo, ni siquiera si sigue pendiente', () => {
+		const sesion = { ejercicios: [pendiente('a'), hecho('b'), hecho('c')] };
+		expect(proximoEjercicioPendiente(dia, sesion, 'a', nombreDe)).toBeNull();
+	});
+
+	it('sin sesión todavía, el siguiente es simplemente el que sigue en la rutina', () => {
+		expect(proximoEjercicioPendiente(dia, undefined, 'a', nombreDe)).toEqual({
+			exerciseId: 'b',
+			nombre: 'Curl femoral'
+		});
+	});
+
+	it('si te quitaron el ejercicio de la rutina, recorre desde el principio', () => {
+		const sesion = { ejercicios: [hecho('a')] };
+		expect(proximoEjercicioPendiente(dia, sesion, 'borrado', nombreDe)).toEqual({
+			exerciseId: 'b',
+			nombre: 'Curl femoral'
+		});
+	});
+
+	it('un ejercicio archivado cae al nombre congelado en la sesión', () => {
+		const sesion = {
+			ejercicios: [hecho('a'), { exerciseId: 'b', nombreSnapshot: 'Femoral viejo', sets: [] }]
+		};
+		expect(proximoEjercicioPendiente(dia, sesion, 'a', () => undefined)).toEqual({
+			exerciseId: 'b',
+			nombre: 'Femoral viejo'
+		});
+	});
+
+	it('sin día no hay nada que proponer', () => {
+		expect(proximoEjercicioPendiente(undefined, undefined, 'a', nombreDe)).toBeNull();
 	});
 });

@@ -6,7 +6,6 @@
 		resumenHistorialObs,
 		type HistorialResumen
 	} from '$lib/historial';
-	import { ejercicioPorId } from '$lib/catalog';
 	import { estadoLiveQuery } from '$lib/live';
 	import { hoyStr, recordsGlobalesObs } from '$lib/sesion';
 	import type { RecordEjercicio } from '$lib/sesion-reglas';
@@ -293,16 +292,18 @@
 			</div>
 			<div class="space-y-1.5">
 				{#each records.slice(0, recordsVisibles) as record (record.exerciseId)}
-					{@const ejercicio = ejercicioPorId(record.exerciseId)}
-					<!-- Fila compacta: el detalle del set vive en la pantalla del ejercicio. -->
+					{@const nombre = record.nombre ?? 'Ejercicio archivado'}
+					<!-- Fila compacta: el detalle del set vive en la pantalla del ejercicio.
+					     El nombre viene congelado en la sesión, así esta pantalla no arrastra
+					     el catálogo entero (193 KB) para resolver un puñado de textos. -->
 					<a
 						href={`/ejercicio/${record.exerciseId}`}
 						class="flex min-h-11 items-center gap-2 rounded-xl border border-white/10 px-3 py-2"
 						style="background: var(--surface)"
-						aria-label={`Ver progreso de ${ejercicio?.nombre ?? 'ejercicio archivado'}`}
+						aria-label={`Ver progreso de ${nombre}`}
 					>
 						<p class="min-w-0 flex-1 truncate text-sm font-semibold">
-							{ejercicio?.nombre ?? 'Ejercicio archivado'}
+							{nombre}
 						</p>
 						<span class="shrink-0 text-[11px]" style="color: var(--muted)"
 							>{fechaCorta(record.fecha)}</span

@@ -7,8 +7,12 @@
 		toggleSonido,
 		toggleVibracion,
 		toggleDescansoPantallaCompleta,
+		toggleSonidoLogros,
 		setMetricaPr,
 		setPasoPeso,
+		setTimer,
+		setVolumen,
+		VOLUMENES,
 		exportarJSON,
 		parseBackup,
 		prepararImport,
@@ -18,6 +22,8 @@
 		AJUSTES_DEFAULT
 	} from '$lib/extras';
 	import { reiniciarAyudas } from '$lib/preferencias-ui';
+	import { PRESETS_DESCANSO, etiquetaCortaDescanso, etiquetaDescanso } from '$lib/descanso-preset';
+	import { vibracionSoportada } from '$lib/vibracion';
 	import {
 		borrarVideosGuardados,
 		cachearVideoCompleto,
@@ -39,6 +45,8 @@
 	let backupPendienteConfirmacion = $state(false);
 	let avisosImport = $state<string[]>([]);
 	let persistido = $state<boolean | null>(null);
+	// Se lee en el cliente: en el prerender de `adapter-static` no hay `navigator`.
+	let hayVibracion = $state(true);
 	let confirmacion = $state<{
 		titulo: string;
 		mensaje: string;
@@ -48,6 +56,7 @@
 	} | null>(null);
 
 	onMount(() => {
+		hayVibracion = vibracionSoportada();
 		void navigator.storage?.persisted?.().then((v) => (persistido = v));
 		void refrescarVideosGuardados();
 		return () => {
@@ -350,6 +359,39 @@
 
 		<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
 			<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+				Descanso por defecto
+			</p>
+			<div class="mt-3 flex flex-wrap gap-2">
+				<button
+					onclick={() => guardarAjuste(setTimer(false, ajustes.timer.minutos), 'el descanso')}
+					class="min-h-11 rounded-xl px-3.5 py-2.5 text-sm font-semibold"
+					aria-pressed={!ajustes.timer.activo}
+					aria-label="Sin descanso automático"
+					style={!ajustes.timer.activo
+						? 'background: var(--accent); color: var(--on-accent)'
+						: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Off</button
+				>
+				{#each PRESETS_DESCANSO as minutos (minutos)}
+					<button
+						onclick={() => guardarAjuste(setTimer(true, minutos), 'el descanso')}
+						class="min-h-11 min-w-11 rounded-xl px-3.5 py-2.5 text-sm font-semibold tabular-nums"
+						aria-pressed={ajustes.timer.activo && ajustes.timer.minutos === minutos}
+						aria-label={`Descanso de ${etiquetaDescanso(minutos)}`}
+						style={ajustes.timer.activo && ajustes.timer.minutos === minutos
+							? 'background: var(--accent); color: var(--on-accent)'
+							: 'background: rgba(255,255,255,.06); color: var(--muted)'}
+						>{etiquetaCortaDescanso(minutos)}</button
+					>
+				{/each}
+			</div>
+			<p class="mt-2 text-xs leading-relaxed" style="color: var(--muted)">
+				El que se usa cuando el ejercicio no tiene uno propio. Cada ejercicio puede fijar el suyo
+				desde su pantalla, sin tocar este.
+			</p>
+		</section>
+
+		<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+			<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
 				Métrica de PR
 			</p>
 			<div class="mt-3 grid grid-cols-2 gap-2">
@@ -381,7 +423,7 @@
 					<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
 						Sonido
 					</p>
-					<p class="mt-1 text-xs" style="color: var(--muted)">Sets, PR y descansos</p>
+					<p class="mt-1 text-xs" style="color: var(--muted)">Alarma de descanso y logros</p>
 				</div>
 				<button
 					onclick={() => guardarAjuste(toggleSonido(), 'el sonido')}
@@ -393,7 +435,45 @@
 					>{ajustes.sonido ? 'On' : 'Off'}</button
 				>
 			</div>
-			<p class="mt-2 text-xs leading-relaxed" style="color: var(--muted)">
+
+			{#if ajustes.sonido}
+				<div class="mt-3 flex items-center justify-between gap-4 border-t border-white/10 pt-3">
+					<div class="min-w-0">
+						<p class="text-sm font-semibold">Sonido de logros</p>
+						<p class="mt-0.5 text-xs leading-relaxed" style="color: var(--muted)">
+							Serie hecha, PR y cierres. La alarma de descanso suena igual.
+						</p>
+					</div>
+					<button
+						onclick={() => guardarAjuste(toggleSonidoLogros(), 'el sonido de logros')}
+						aria-pressed={ajustes.sonidoLogros}
+						class="min-h-11 min-w-18 shrink-0 rounded-full px-4 py-2 text-sm font-bold"
+						style={ajustes.sonidoLogros
+							? 'background: var(--accent); color: var(--on-accent)'
+							: 'background: rgba(255,255,255,.06); color: var(--muted)'}
+						>{ajustes.sonidoLogros ? 'On' : 'Off'}</button
+					>
+				</div>
+
+				<div class="mt-3 border-t border-white/10 pt-3">
+					<p class="text-sm font-semibold">Volumen</p>
+					<div class="mt-2 flex gap-2">
+						{#each VOLUMENES as opcion (opcion.valor)}
+							<button
+								onclick={() => guardarAjuste(setVolumen(opcion.valor), 'el volumen')}
+								class="min-h-11 flex-1 rounded-xl py-2.5 text-sm font-semibold"
+								aria-pressed={ajustes.volumen === opcion.valor}
+								aria-label={`Volumen ${opcion.label}`}
+								style={ajustes.volumen === opcion.valor
+									? 'background: var(--accent); color: var(--on-accent)'
+									: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{opcion.label}</button
+							>
+						{/each}
+					</div>
+				</div>
+			{/if}
+
+			<p class="mt-3 text-xs leading-relaxed" style="color: var(--muted)">
 				Mientras corre un descanso, la app mantiene tomada la salida de audio para que la alarma
 				suene sí o sí al volver de la pantalla bloqueada. En iPhone eso puede pausar la música
 				durante el descanso.
@@ -430,14 +510,23 @@
 				</div>
 				<button
 					onclick={() => guardarAjuste(toggleVibracion(), 'la vibración')}
-					aria-pressed={ajustes.vibracion}
-					class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold"
-					style={ajustes.vibracion
+					aria-pressed={hayVibracion && ajustes.vibracion}
+					disabled={!hayVibracion}
+					class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold disabled:opacity-45"
+					style={hayVibracion && ajustes.vibracion
 						? 'background: var(--accent); color: var(--on-accent)'
 						: 'background: rgba(255,255,255,.06); color: var(--muted)'}
-					>{ajustes.vibracion ? 'On' : 'Off'}</button
+					>{hayVibracion && ajustes.vibracion ? 'On' : 'Off'}</button
 				>
 			</div>
+			{#if !hayVibracion}
+				<!-- iOS no expone la Vibration API: el interruptor estaba prometiendo algo que
+				     en ese teléfono nunca pasaba. Mejor decirlo que fingir que se puede. -->
+				<p class="mt-2 text-xs leading-relaxed" style="color: rgb(var(--max))">
+					Este navegador no permite vibrar (es el caso de iPhone). Las señales llegan igual por
+					pantalla y por sonido.
+				</p>
+			{/if}
 		</section>
 
 		<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">

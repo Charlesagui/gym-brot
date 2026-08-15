@@ -22,8 +22,8 @@ describe('migración de esquema', () => {
 		legacy.version(2).stores({ registros: null });
 		await legacy.open();
 		await legacy.table('dias').bulkPut([
-			{ id: 'd1', nombre: 'Piernas', diaSemana: 1, orden: 0, ejercicios: [] },
-			{ id: 'd2', nombre: 'Empuje', orden: 1, ejercicios: [] }
+			{ id: 'd1', nombre: 'Piernas', diaSemana: 1, orden: 0, ejercicios: [], color: '124 92 255' },
+			{ id: 'd2', nombre: 'Empuje', orden: 1, ejercicios: [], color: '52 211 153' }
 		]);
 		await legacy.table('sesiones').put({
 			id: '2026-06-10__d1',
@@ -73,6 +73,11 @@ describe('migración de esquema', () => {
 			hecha: false
 		});
 		expect((await db.sesiones.get('2026-06-10__d1'))?.ejercicios[0]?.prCelebrado).toBeUndefined();
+		// v8: el violeta que no llegaba a AA se sube al tono accesible, y un color
+		// elegido a mano por el usuario no se toca.
+		expect(d1?.color).toBe('130 104 255');
+		expect(d2?.color).toBe('52 211 153');
+
 		const { sesionesDe } = await import('./sesion');
 		expect((await sesionesDe('press')).map((s) => s.id)).toEqual(['2026-06-10__d1']);
 		db.close();

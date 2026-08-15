@@ -41,10 +41,14 @@ export default defineConfig({
 				// entre instancias: quedaba sin tests y fuera del informe justo donde más
 				// barato salía un bug (ver descanso.test.ts).
 				'src/lib/descanso.svelte.ts',
+				// Qué descanso manda (ejercicio > general) y cómo se escribe: reglas puras
+				// que antes vivían como números sueltos dentro de la pantalla de ejercicio.
+				'src/lib/descanso-preset.ts',
 				// Entrada numérica y búsqueda del catálogo: lógica pura que antes vivía
 				// duplicada dentro de los componentes, sin forma de testearla.
 				'src/lib/numeros.ts',
-				'src/lib/catalog.ts'
+				'src/lib/catalog.ts',
+				'src/lib/catalogo-propios.ts'
 			],
 			thresholds: {
 				lines: 80,

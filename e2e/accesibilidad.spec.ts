@@ -157,7 +157,7 @@ test('la fecha de sesión sobrevive medianoche, regreso, cierre y una sesión nu
 	await page.clock.setFixedTime(new Date('2026-08-14T00:01:00-03:00'));
 	await page.getByRole('textbox', { name: 'Peso de la serie 1 en kg' }).fill('100');
 	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
-	await page.getByRole('button', { name: 'Apagar descanso' }).click();
+	await page.getByRole('button', { name: 'Sin descanso en este ejercicio' }).click();
 	await page.getByRole('button', { name: 'Marcar serie 1' }).click();
 	await page.getByRole('link', { name: 'Volver' }).click();
 	await expect(page).toHaveURL(/\/dia\/dia-piernas\?fecha=2026-08-13/);
@@ -237,7 +237,7 @@ test('el editor histórico comparte el aislamiento modal y devuelve el foco', as
 	await page.goto('/ejercicio/prensa-pierna-45?dia=dia-piernas&fecha=2026-08-13');
 	await page.getByRole('textbox', { name: 'Peso de la serie 1 en kg' }).fill('100');
 	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
-	await page.getByRole('button', { name: 'Apagar descanso' }).click();
+	await page.getByRole('button', { name: 'Sin descanso en este ejercicio' }).click();
 	await page.getByRole('button', { name: 'Marcar serie 1' }).click();
 	await page.goto('/historial/dia/2026-08-13');
 
@@ -287,12 +287,18 @@ test('el progreso completo incluye hoy en todos sus rangos y el calendario conse
 	await page.goto('/');
 	const hoy = await page.evaluate(() => new Date().toLocaleDateString('sv'));
 	await page.goto(`/ejercicio/prensa-pierna-45?dia=dia-piernas&fecha=${hoy}`);
-	for (const nombre of ['Apagar descanso', 'Descanso 1 minuto', 'Descanso 2 minutos']) {
+	for (const nombre of [
+		'Usar el descanso general en este ejercicio',
+		'Sin descanso en este ejercicio',
+		'Descanso de 45 segundos en este ejercicio',
+		'Descanso de 90 segundos en este ejercicio',
+		'Descanso de 2 minutos en este ejercicio'
+	]) {
 		const caja = await page.getByRole('button', { name: nombre }).boundingBox();
 		expect(caja?.width).toBeGreaterThanOrEqual(44);
 		expect(caja?.height).toBeGreaterThanOrEqual(44);
 	}
-	await page.getByRole('button', { name: 'Apagar descanso' }).click();
+	await page.getByRole('button', { name: 'Sin descanso en este ejercicio' }).click();
 	await page.getByRole('textbox', { name: 'Peso de la serie 1 en kg' }).fill('100');
 	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
 	await page.getByRole('button', { name: 'Marcar serie 1' }).click();
@@ -344,4 +350,97 @@ test('393 px, horizontal y texto ampliado no generan scroll lateral', async ({ p
 
 	await page.setViewportSize({ width: 852, height: 393 });
 	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(852);
+});
+
+/**
+ * El camino que se recorre todos los días y el único que no estaba cubierto de punta
+ * a punta: marcar una serie, ganar el PR, descansar, verificar lo cargado sin desarmar
+ * el descanso, encadenar con el siguiente ejercicio y cerrar el día.
+ *
+ * El reloj va instalado: sin eso habría que esperar 45 segundos reales de descanso.
+ */
+test('el loop de entrenamiento encadena serie, PR, descanso y siguiente ejercicio', async ({
+	page
+}) => {
+	await page.clock.install({ time: new Date('2026-08-15T10:00:00-03:00') });
+	await page.goto('/ejercicio/prensa-pierna-45?dia=dia-piernas&fecha=2026-08-15');
+
+	// Descanso propio de este ejercicio: el más corto, para que el test no dependa
+	// del valor general ni de esperas largas.
+	await page.getByRole('button', { name: 'Descanso de 45 segundos en este ejercicio' }).click();
+	await expect(page.getByText('Propio de este ejercicio: 45 segundos')).toBeVisible();
+
+	await page.getByRole('textbox', { name: 'Peso de la serie 1 en kg' }).fill('100');
+	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
+	await page.getByRole('button', { name: 'Marcar serie 1' }).click();
+
+	// Primera serie registrada de este ejercicio: es récord, y se celebra sin bloquear.
+	await expect(page.getByLabel('Nuevo PR')).toBeVisible();
+
+	// El descanso tapa la lista: tiene que dejar verificar lo que se acaba de guardar.
+	const descanso = page.getByRole('dialog', { name: 'Descanso' });
+	await expect(descanso).toBeVisible();
+	await expect(descanso.getByText('Serie 1 · 100 kg × 10')).toBeVisible();
+	await descanso.getByRole('button', { name: /Tocá para corregir/ }).click();
+	await expect(descanso).toBeHidden();
+	await expect(page.getByRole('textbox', { name: 'Reps de la serie 1' })).toBeFocused();
+
+	// El descanso sigue corriendo detrás y vence solo.
+	await page.clock.runFor('00:46');
+	await expect(page.getByText('⏰ ¡A la serie!')).toBeVisible();
+	await page.getByRole('button', { name: '✓ Listo' }).click();
+	await expect(page.getByText('⏰ ¡A la serie!')).toBeHidden();
+
+	// Resto de las series de la rutina sembrada (4 objetivo), sin descanso en el medio.
+	await page.getByRole('button', { name: 'Sin descanso en este ejercicio' }).click();
+	for (const serie of [2, 3, 4]) {
+		await page.getByRole('textbox', { name: `Peso de la serie ${serie} en kg` }).fill('100');
+		await page.getByRole('textbox', { name: `Reps de la serie ${serie}` }).fill('10');
+		await page.getByRole('button', { name: `Marcar serie ${serie}` }).click();
+	}
+	await expect(page.getByLabel('4 de 4 series hechas')).toBeVisible();
+
+	// Con el ejercicio completo, el cierre encadena con lo que sigue en la rutina.
+	const siguiente = page.getByRole('button', { name: /Siguiente: Extensión de cuádriceps/ });
+	await expect(siguiente).toBeVisible();
+	await siguiente.click();
+
+	// La celebración no encierra: un toque sigue de largo.
+	const celebracion = page.getByRole('button', { name: 'Continuar' });
+	await expect(celebracion).toBeVisible();
+	await celebracion.click();
+	await expect(page).toHaveURL(/\/ejercicio\/extension-cuadriceps\?dia=dia-piernas/);
+
+	await expect
+		.poll(async () => (await leerSesiones(page)).find((s) => s.id === '2026-08-15__dia-piernas'))
+		.toMatchObject({ fecha: '2026-08-15', hechas: 4 });
+});
+
+/**
+ * El descanso a pantalla completa tapa todo mientras corre: sus salidas por botón son
+ * la vía principal para volver a la lista. El arrastre del panel llegó a robarles el
+ * click (la captura de puntero retargetea el `pointerup`), lo que dejaba el overlay
+ * sin más salida que el gesto de arrastrar hacia abajo.
+ */
+test('las salidas del descanso a pantalla completa responden al toque', async ({ page }) => {
+	await page.clock.install({ time: new Date('2026-08-15T10:00:00-03:00') });
+	await page.goto('/ejercicio/prensa-pierna-45?dia=dia-piernas&fecha=2026-08-15');
+	await page.getByRole('button', { name: 'Descanso de 90 segundos en este ejercicio' }).click();
+	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
+	await page.getByRole('button', { name: 'Marcar serie 1' }).click();
+
+	const dialogo = page.getByRole('dialog', { name: 'Descanso' });
+	await expect(dialogo).toBeVisible();
+	await dialogo.getByRole('button', { name: 'Minimizar' }).click();
+	await expect(dialogo).toBeHidden();
+
+	// Minimizar no corta el descanso: la barra sigue abajo y puede volver a abrirlo.
+	const barra = page.getByRole('button', { name: 'Abrir descanso en pantalla completa' });
+	await expect(barra).toBeVisible();
+	await barra.click();
+	await expect(dialogo).toBeVisible();
+
+	await dialogo.getByRole('button', { name: 'Saltar descanso' }).click();
+	await expect(dialogo).toBeHidden();
+	await expect(barra).toBeHidden();
 });

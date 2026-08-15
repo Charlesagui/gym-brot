@@ -13,10 +13,13 @@
 import {
 	desbloquearAudio,
 	mantenerAudioDespierto,
+	setVolumenMaestro,
 	soltarAudioDespierto,
+	sonarCuentaRegresiva,
 	sonarDescansoTerminado
 } from './audio';
 import { ajustesObs } from './extras';
+import { vibrar } from './vibracion';
 
 const DESCANSO_KEY = 'gb-descanso';
 const NOTIF_PEDIDA_KEY = 'gb-notif-pedida';
@@ -26,12 +29,22 @@ const MAX_VENCIDO_MS = 10 * 60_000;
 const VIBRA_ALARMA = [300, 100, 300, 100, 500];
 /** La alarma suena en loop con esta cadencia hasta que se atienda (el patrón dura ~1.7s). */
 const ALARMA_CADA_MS = 2200;
+/** Desde cuántos segundos restantes empieza la cuenta regresiva audible. */
+const TIC_DESDE_SEG = 3;
+
+/** La serie que arrancó este descanso, para poder verificarla (y corregirla) sin cerrarlo. */
+export interface SerieRegistrada {
+	/** Ya formateada por la pantalla: "Serie 2 · 60 kg × 10". */
+	texto: string;
+	setIndex: number;
+}
 
 interface Persistido {
 	inicio: number;
 	hasta: number;
 	glow?: string;
 	siguiente?: string;
+	registrada?: SerieRegistrada;
 }
 
 /** El descanso sigue funcionando sin persistencia si el navegador bloquea Storage. */
@@ -50,6 +63,13 @@ function guardarStorage(clave: string, valor: string): boolean {
 	} catch {
 		return false;
 	}
+}
+
+/** El storage lo puede haber escrito una versión anterior (o cualquiera): se verifica. */
+function serieRegistradaValida(valor: unknown): valor is SerieRegistrada {
+	if (typeof valor !== 'object' || valor === null) return false;
+	const s = valor as Partial<SerieRegistrada>;
+	return typeof s.texto === 'string' && Number.isInteger(s.setIndex) && s.setIndex! >= 0;
 }
 
 function borrarStorage(clave: string): void {
@@ -75,11 +95,26 @@ class Descanso {
 	glow = $state('124 92 255');
 	/** Qué viene después del descanso (ej. "Press pecho · serie 3/4"), para no perder el hilo. */
 	siguiente = $state('');
+	/**
+	 * La serie que acaba de registrarse. El descanso tapa la lista justo cuando el dato
+	 * está más fresco y menos verificado: mostrarla acá permite ver que quedó bien —y
+	 * pedir corregirla— sin tener que desarmar el descanso a mano.
+	 */
+	registrada = $state<SerieRegistrada | null>(null);
+	/**
+	 * Contador que sube cuando el usuario pide corregir la serie. La pantalla de
+	 * ejercicio lo observa y enfoca la fila; se hace con un contador y no con un
+	 * callback guardado para que navegar no deje una función apuntando a una pantalla
+	 * que ya no existe.
+	 */
+	correccionPedida = $state(0);
 
 	#inicio: number | null = null;
 	#hasta: number | null = null;
 	/** Última vez que sonó la alarma del loop de vencido. */
 	#ultimaAlarma = 0;
+	/** Último segundo en el que sonó el tic de cuenta regresiva (evita repetir). */
+	#ultimoTic: number | null = null;
 	#intId: ReturnType<typeof setInterval> | null = null;
 	#finId: ReturnType<typeof setTimeout> | null = null;
 	#wakeLock: WakeLockSentinel | null = null;
@@ -100,6 +135,9 @@ class Descanso {
 		ajustesObs().subscribe((a) => {
 			const sonidoAnterior = this.#sonido;
 			this.#sonido = a.sonido;
+			// Único suscriptor vivo de los ajustes que existe siempre que puede sonar algo:
+			// desde acá se mantiene el volumen del master al día para toda la app.
+			setVolumenMaestro(a.volumen);
 			this.#vibracion = a.vibracion ?? true;
 			this.#focusHabilitado = a.descansoPantallaCompleta ?? true;
 			if (this.#hasta != null && this.#sonido && !sonidoAnterior) mantenerAudioDespierto();
@@ -151,7 +189,12 @@ class Descanso {
 	}
 
 	/** Arranca un descanso de `minutos`, teñido con `glow`. */
-	iniciar(minutos: number, glow: string, siguiente = '') {
+	iniciar(
+		minutos: number,
+		glow: string,
+		siguiente = '',
+		registrada: SerieRegistrada | null = null
+	) {
 		this.#pararTimers();
 		this.vencido = false;
 		this.vencidoSeg = 0;
@@ -159,7 +202,9 @@ class Descanso {
 		this.focusAbierto = this.#focusHabilitado;
 		this.#notificado = false;
 		this.#ultimaAlarma = 0;
+		this.#ultimoTic = null;
 		this.siguiente = siguiente;
+		this.registrada = registrada;
 		this.glow = glow;
 		this.#inicio = Date.now();
 		this.#hasta = this.#inicio + minutos * 60_000;
@@ -196,6 +241,15 @@ class Descanso {
 		this.focusAbierto = false;
 	}
 
+	/**
+	 * El usuario quiere revisar la serie que acaba de cargar: se minimiza el descanso
+	 * (que sigue corriendo) y se avisa a la pantalla para que enfoque esa fila.
+	 */
+	pedirCorreccion() {
+		this.focusAbierto = false;
+		this.correccionPedida++;
+	}
+
 	/** Vuelve a abrir el descanso grande si sigue siendo accionable. */
 	expandirFocus() {
 		if (this.restoSeg > 0 || this.vencido) this.focusAbierto = true;
@@ -217,12 +271,14 @@ class Descanso {
 			if (this.#inicio !== d.inicio || this.#hasta !== d.hasta) {
 				this.#notificado = false;
 				this.#ultimaAlarma = 0;
+				this.#ultimoTic = null;
 			}
 			this.#inicio = d.inicio!;
 			this.#hasta = d.hasta!;
 			this.totalSeg = Math.max(1, Math.round((this.#hasta - this.#inicio) / 1000));
 			if (typeof d.glow === 'string') this.glow = d.glow;
 			if (typeof d.siguiente === 'string') this.siguiente = d.siguiente;
+			this.registrada = serieRegistradaValida(d.registrada) ? d.registrada : null;
 			this.#armarTimers();
 			// Si ya venció, #recalc marca el estado y dispara la señal que corresponda.
 			this.#recalc();
@@ -247,7 +303,8 @@ class Descanso {
 				inicio: this.#inicio,
 				hasta: this.#hasta,
 				glow: this.glow,
-				siguiente: this.siguiente || undefined
+				siguiente: this.siguiente || undefined,
+				registrada: this.registrada ?? undefined
 			})
 		);
 	}
@@ -307,6 +364,7 @@ class Descanso {
 			this.vencido = false;
 			this.vencidoSeg = 0;
 			this.restoSeg = resto;
+			this.#ticCuentaRegresiva(resto);
 			return;
 		}
 		// Vencido hace demasiado: dejar de insistir y limpiar en silencio.
@@ -330,9 +388,22 @@ class Descanso {
 		}
 	}
 
+	/**
+	 * Un tic por segundo en los últimos `TIC_DESDE_SEG`: el descanso termina cuando ya
+	 * estás mirando, en vez de sobresaltarte. `#recalc` corre cada 500 ms, así que el
+	 * segundo se recuerda para no sonar dos veces; y solo con la app a la vista, para no
+	 * ponerse a hacer ruido desde el bolsillo antes de la alarma.
+	 */
+	#ticCuentaRegresiva(resto: number) {
+		if (resto > TIC_DESDE_SEG || resto === this.#ultimoTic) return;
+		this.#ultimoTic = resto;
+		if (!this.#sonido || document.visibilityState !== 'visible') return;
+		void sonarCuentaRegresiva().catch(() => {});
+	}
+
 	#sonarYVibrar() {
 		if (this.#sonido) void sonarDescansoTerminado().catch(() => {});
-		if (this.#vibracion && 'vibrate' in navigator) navigator.vibrate(VIBRA_ALARMA);
+		vibrar(VIBRA_ALARMA, this.#vibracion);
 	}
 
 	/**
@@ -388,7 +459,9 @@ class Descanso {
 		this.totalSeg = 0;
 		this.focusAbierto = false;
 		this.siguiente = '';
+		this.registrada = null;
 		this.#ultimaAlarma = 0;
+		this.#ultimoTic = null;
 		borrarStorage(DESCANSO_KEY);
 		this.#soltarWakeLock();
 		soltarAudioDespierto();
