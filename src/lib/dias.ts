@@ -1,9 +1,9 @@
-import { db, guardarSesion, type Dia } from './db';
+import { db, guardarSesion, VIOLETA_RUTINA, type Dia } from './db';
 import { capturarRevisionDatos, exigirRevisionDatos } from './revision-datos';
 
 /** Paleta de colores para los días. */
 export const coloresDia: { nombre: string; rgb: string }[] = [
-	{ nombre: 'Violeta', rgb: '124 92 255' },
+	{ nombre: 'Violeta', rgb: VIOLETA_RUTINA },
 	{ nombre: 'Rosa', rgb: '255 111 174' },
 	{ nombre: 'Coral', rgb: '255 122 92' },
 	{ nombre: 'Verde', rgb: '52 211 153' },
@@ -40,7 +40,7 @@ export async function crearDia(): Promise<string> {
 		await db.dias.add({
 			id,
 			nombre: 'Nuevo día',
-			color: '124 92 255',
+			color: VIOLETA_RUTINA,
 			orden: (ultimo?.orden ?? -1) + 1,
 			ejercicios: []
 		});

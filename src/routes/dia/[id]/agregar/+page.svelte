@@ -12,6 +12,7 @@
 		type Ejercicio
 	} from '$lib/catalog';
 	import { agregarEjercicio, quitarEjercicio } from '$lib/dias';
+	import { ejerciciosPropios } from '$lib/catalogo-propios';
 	import { demostracionActiva, reproducirEnVista } from '$lib/video';
 	import { dur } from '$lib/motion';
 	import { estadoLiveQuery } from '$lib/live';
@@ -37,6 +38,23 @@
 	let q = $state('');
 	let filtro = $state<Grupo | 'todos'>('todos');
 	let filtroInicialAplicado = $state(false);
+	// "Tus ejercicios": lo que ya está en alguna rutina o entrenaste. Sobre 962 ítems,
+	// los que una persona usa son veinte, y llegar a ellos era scrollear o acordarse
+	// del nombre exacto del catálogo.
+	let soloPropios = $state(false);
+
+	const propiosStore = estadoLiveQuery(
+		liveQuery(async () => {
+			const [dias, sesiones] = await Promise.all([
+				db.dias.toArray(),
+				// Alcanza con lo reciente: el índice por fecha evita leer todo el historial.
+				db.sesiones.orderBy('fecha').reverse().limit(60).toArray()
+			]);
+			return ejerciciosPropios(dias, sesiones);
+		}),
+		new Set<string>()
+	);
+	const propios = $derived($propiosStore.valor);
 	const gruposList: Grupo[] = ['piernas', 'pecho', 'espalda', 'hombros', 'brazos', 'core'];
 	let confirmacion = $state<{
 		titulo: string;
@@ -79,13 +97,15 @@
 
 	// Con término buscamos en todo el catálogo (por índice normalizado, ver catalog.ts);
 	// sin término manda el filtro de grupo.
-	const filtrados = $derived.by(() =>
-		buscando
+	const filtrados = $derived.by(() => {
+		const base = buscando
 			? buscarEjercicios(q)
 			: filtro === 'todos'
 				? catalogo
-				: catalogo.filter((e) => e.grupo === filtro)
-	);
+				: catalogo.filter((e) => e.grupo === filtro);
+		// "Tus ejercicios" acota lo que ya se eligió por grupo o por búsqueda, no lo pisa.
+		return soloPropios ? base.filter((e) => propios.has(e.id)) : base;
+	});
 
 	// El catálogo tiene 962 ejercicios: montarlos todos es un <video> y un
 	// IntersectionObserver por fila. Se renderiza de a tandas y el contador vuelve a
@@ -95,6 +115,7 @@
 	$effect(() => {
 		q;
 		filtro;
+		soloPropios;
 		visibles = POR_TANDA;
 	});
 	const mostrados = $derived(filtrados.slice(0, visibles));
@@ -216,6 +237,29 @@
 			class="mb-3 w-full rounded-xl bg-white/5 px-4 py-2.5 outline-none"
 		/>
 
+		{#if propios.size > 0}
+			<div class="gb-filter-row mb-2 flex flex-wrap gap-2">
+				<button
+					onclick={() => (soloPropios = false)}
+					class="min-h-11 rounded-full px-3.5 py-2 text-xs font-semibold"
+					aria-pressed={!soloPropios}
+					style={!soloPropios
+						? 'background: rgba(255,255,255,.14); color: var(--text)'
+						: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Todo el catálogo</button
+				>
+				<button
+					onclick={() => (soloPropios = true)}
+					class="min-h-11 rounded-full px-3.5 py-2 text-xs font-semibold tabular-nums"
+					aria-pressed={soloPropios}
+					aria-label={`Solo tus ejercicios, ${propios.size} en total`}
+					style={soloPropios
+						? 'background: rgba(255,255,255,.14); color: var(--text)'
+						: 'background: rgba(255,255,255,.06); color: var(--muted)'}
+					>⭐ Tus ejercicios ({propios.size})</button
+				>
+			</div>
+		{/if}
+
 		<div class="gb-filter-row mb-4 flex flex-wrap gap-2">
 			<button
 				onclick={() => ((filtro = 'todos'), (q = ''))}
@@ -300,7 +344,11 @@
 
 			{#if filtrados.length === 0}
 				<p class="py-8 text-center text-sm" style="color: var(--muted)">
-					Nada coincide con tu búsqueda.
+					{#if soloPropios}
+						Ninguno de tus ejercicios coincide. Probá con todo el catálogo.
+					{:else}
+						Nada coincide con tu búsqueda.
+					{/if}
 				</p>
 			{/if}
 		</div>

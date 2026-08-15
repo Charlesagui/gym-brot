@@ -11,6 +11,7 @@ import {
 	normalizarAjustes,
 	parseBackup,
 	prepararImport,
+	setDescansoEjercicio,
 	setSonido,
 	setPasoPesoEjercicio,
 	setUnidad,
@@ -83,6 +84,42 @@ describe('normalizarAjustes', () => {
 			timer: { activo: false, minutos: 1 }
 		});
 	});
+
+	it('un ajuste anterior a los canales de sonido hereda el maestro en los logros', () => {
+		// Sin esto, quien tenía el sonido apagado se encontraba de golpe con los beeps.
+		const apagado = normalizarAjustes({
+			id: 'app',
+			unidad: 'kg',
+			timer: { activo: true, minutos: 2 },
+			sonido: false
+		} as Ajustes);
+		expect(apagado.sonidoLogros).toBe(false);
+
+		const encendido = normalizarAjustes({
+			id: 'app',
+			unidad: 'kg',
+			timer: { activo: true, minutos: 2 },
+			sonido: true
+		} as Ajustes);
+		expect(encendido.sonidoLogros).toBe(true);
+	});
+
+	it('un volumen fuera de rango cae al predeterminado en vez de dejar la app muda', () => {
+		const con = (volumen: unknown) =>
+			normalizarAjustes({
+				id: 'app',
+				unidad: 'kg',
+				timer: { activo: true, minutos: 2 },
+				volumen
+			} as unknown as Ajustes).volumen;
+
+		expect(con(0.35)).toBe(0.35);
+		expect(con(0)).toBe(AJUSTES_DEFAULT.volumen);
+		expect(con(-1)).toBe(AJUSTES_DEFAULT.volumen);
+		expect(con(4)).toBe(AJUSTES_DEFAULT.volumen);
+		expect(con(Number.NaN)).toBe(AJUSTES_DEFAULT.volumen);
+		expect(con('alto')).toBe(AJUSTES_DEFAULT.volumen);
+	});
 });
 
 describe('backup', () => {
@@ -123,6 +160,46 @@ describe('backup', () => {
 
 		expect(await db.sesiones.toArray()).toEqual(historialAntes);
 		expect((await db.ajustes.get('app'))?.pasosPesoEjercicio).toEqual({ press: { kg: 1 } });
+	});
+
+	it('el descanso de un ejercicio no toca el de los demás ni el general', async () => {
+		await db.ajustes.put(ajustes);
+
+		await setDescansoEjercicio('elevaciones-laterales', 0.75);
+		await setDescansoEjercicio('press', 3);
+
+		const guardados = await db.ajustes.get('app');
+		expect(guardados?.descansosEjercicio).toEqual({
+			'elevaciones-laterales': 0.75,
+			press: 3
+		});
+		// El general queda intacto: era justo lo que antes se pisaba sin querer.
+		expect(guardados?.timer).toEqual(ajustes.timer);
+	});
+
+	it('0 apaga el descanso de un ejercicio y undefined lo devuelve a automático', async () => {
+		await db.ajustes.put(ajustes);
+
+		await setDescansoEjercicio('abdominales', 0);
+		expect((await db.ajustes.get('app'))?.descansosEjercicio).toEqual({ abdominales: 0 });
+
+		await setDescansoEjercicio('abdominales');
+		expect((await db.ajustes.get('app'))?.descansosEjercicio).toEqual({});
+	});
+
+	it('rechaza un descanso negativo en vez de guardarlo', async () => {
+		await db.ajustes.put(ajustes);
+		await expect(setDescansoEjercicio('press', -1)).rejects.toThrow(RangeError);
+		expect((await db.ajustes.get('app'))?.descansosEjercicio ?? {}).toEqual({});
+	});
+
+	it('el descanso por ejercicio viaja en el backup y vuelve igual', async () => {
+		await db.ajustes.put(ajustes);
+		await setDescansoEjercicio('press', 1.5);
+
+		const backup = parseBackup(await exportarJSON());
+
+		expect(backup.ajustes?.[0]?.descansosEjercicio).toEqual({ press: 1.5 });
 	});
 
 	it('setUnidad lb -> kg no reescribe el historial', async () => {

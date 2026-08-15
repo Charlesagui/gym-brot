@@ -12,7 +12,8 @@
 		unidad,
 		metricaLabel,
 		hechas,
-		total
+		total,
+		onClose
 	}: {
 		exito: 'normal' | 'pr' | 'parcial';
 		prExito: MejorSet | null;
@@ -22,11 +23,16 @@
 		metricaLabel: string;
 		hechas: number;
 		total: number;
+		/** Salir ya, sin esperar la fanfarria: celebrar no puede ser encerrar. */
+		onClose: () => void;
 	} = $props();
 </script>
 
-<div
-	class="fixed inset-0 z-[60] grid place-items-center px-8"
+<!-- Celebratorio pero no carcelero: un toque en cualquier lado sigue de largo. -->
+<button
+	onclick={onClose}
+	aria-label="Continuar"
+	class="gb-no-press fixed inset-0 z-[60] grid w-full cursor-default place-items-center px-8"
 	style="background: {exito === 'parcial'
 		? 'rgb(var(--scrim) / .82)'
 		: `radial-gradient(70% 50% at 50% 42%, rgb(${glow} / .26), transparent 72%), rgb(var(--scrim) / .82)`}; backdrop-filter: blur(8px)"
@@ -77,10 +83,9 @@
 		{:else if exito === 'parcial'}
 			<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
 				{hechas}/{total}
-				{total === 1 ? 'serie' : 'series'} · volviendo al día…
+				{total === 1 ? 'serie' : 'series'} guardadas
 			</p>
-		{:else}
-			<p class="mt-1 text-sm font-medium" style="color: var(--muted)">Volviendo al día…</p>
 		{/if}
+		<p class="mt-5 text-[11px] font-semibold" style="color: var(--muted)">Tocá para continuar</p>
 	</div>
-</div>
+</button>

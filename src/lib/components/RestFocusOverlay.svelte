@@ -29,6 +29,12 @@
 	function empezarArrastre(event: PointerEvent) {
 		if (!activo) return;
 		if (event.pointerType === 'mouse' && event.button !== 0) return;
+		// Un arrastre que arranca sobre un botón le roba el click: `setPointerCapture`
+		// en el panel hace que el `pointerup` se retargetee al panel, y el navegador
+		// dispara el `click` ahí y no en el botón. Con esto, Minimizar, Saltar descanso
+		// y Listo quedaban muertos y la única salida del descanso a pantalla completa
+		// era el gesto de arrastrar hacia abajo.
+		if ((event.target as Element | null)?.closest('button')) return;
 		arrastrando = true;
 		inicioY = event.clientY;
 		dragY = 0;
@@ -150,6 +156,24 @@
 						{descanso.siguiente}
 					</p>
 				{/if}
+
+				{#if descanso.registrada}
+					<!-- El descanso tapa la lista justo cuando el peso recién tipeado todavía no
+					     se verificó: acá se lee, y con un toque se vuelve a la fila a corregirlo. -->
+					<button
+						onclick={() => descanso.pedirCorreccion()}
+						class="rest-focus-done-set mt-5 flex max-w-full items-center gap-2.5 rounded-2xl border border-white/10 px-4 py-2.5 text-left"
+						style="background: rgba(255,255,255,.05)"
+					>
+						<span class="text-sm" aria-hidden="true">✓</span>
+						<span class="min-w-0">
+							<span class="block truncate text-sm font-bold">{descanso.registrada.texto}</span>
+							<span class="block text-[11px] font-semibold" style="color: var(--muted)"
+								>Tocá para corregir</span
+							>
+						</span>
+					</button>
+				{/if}
 			</div>
 
 			<div
@@ -227,6 +251,11 @@
 			margin-top: 0.75rem !important;
 			max-width: 17rem;
 			font-size: 0.875rem;
+		}
+
+		.rest-focus-done-set {
+			margin-top: 0.6rem !important;
+			padding-block: 0.4rem !important;
 		}
 
 		.rest-focus-actions {

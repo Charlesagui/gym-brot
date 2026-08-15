@@ -1,4 +1,5 @@
 import { ajustesObs } from './extras';
+import { vibrar } from './vibracion';
 
 /**
  * Estado de presión global.
@@ -78,7 +79,7 @@ export function iniciarPresion(): () => void {
 	function alSoltarDedo(evento: PointerEvent) {
 		const confirmado = apretado !== null && evento.pointerId === idPuntero && conDedo;
 		soltar();
-		if (confirmado && vibracion && 'vibrate' in navigator) navigator.vibrate(TIC_MS);
+		if (confirmado) vibrar(TIC_MS, vibracion);
 	}
 
 	// Captura: el acuse tiene que soltarse aunque el handler del elemento frene

@@ -30,6 +30,7 @@
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
 	import { resumenDiaSesion, rachaSemanalActual } from '$lib/historial';
 	import { sonarDiaTerminado } from '$lib/audio';
+	import { vibrar } from '$lib/vibracion';
 	import { reproducirEnVista } from '$lib/video';
 	import { dur } from '$lib/motion';
 	import { estadoLiveQuery, fromLiveQuery } from '$lib/live';
@@ -135,7 +136,9 @@
 	const totalEjercicios = $derived(dia?.ejercicios.length ?? 0);
 	const diaListo = $derived(totalEjercicios > 0 && ejerciciosResueltos === totalEjercicios);
 	const diaTerminado = $derived(!!sesion?.diaTerminado);
-	const sonidoActivo = $derived(ajustes.sonido);
+	// Los logros tienen su propio canal: la alarma de descanso es funcional y esto
+	// es celebratorio, así que se puede querer una sin la otra.
+	const sonidoActivo = $derived(ajustes.sonido && ajustes.sonidoLogros);
 	const resumenDia = $derived(resumenDiaSesion(sesion, ajustes.unidad));
 
 	function abrirEdicion() {
@@ -186,8 +189,7 @@
 		rachaSemanal = 0;
 		const conActividadReal = resumenDia.setsHechos > 0;
 		if (conActividadReal && sonidoActivo) void sonarDiaTerminado().catch(() => {});
-		if (conActividadReal && (ajustes.vibracion ?? true) && 'vibrate' in navigator)
-			navigator.vibrate([120, 70, 120, 70, 220]);
+		if (conActividadReal) vibrar([120, 70, 120, 70, 220], ajustes.vibracion ?? true);
 		if (conActividadReal) {
 			// Puntual, no suscripta: ver el comentario en rachaSemanalActual().
 			void rachaSemanalActual()

@@ -128,7 +128,14 @@ export function modal(node: HTMLElement, opciones: OpcionesModal) {
 			document.body.style.overflow = overflowBody;
 			document.documentElement.style.overflow = overflowHtml;
 			if (focoPrevio?.isConnected)
-				requestAnimationFrame(() => focoPrevio?.focus({ preventScroll: true }));
+				requestAnimationFrame(() => {
+					// Si al cerrar algo se llevó el foco a propósito —cerrar el descanso para
+					// corregir la serie recién cargada, por ejemplo— devolverlo al disparador
+					// sería pelearle al usuario. Solo se restaura cuando el foco quedó huérfano.
+					const activo = document.activeElement;
+					if (activo && activo !== document.body && !node.contains(activo)) return;
+					focoPrevio?.focus({ preventScroll: true });
+				});
 		}
 	};
 }

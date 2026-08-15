@@ -20,11 +20,33 @@ function getAudioContext(): AudioContext | null {
 	return audioCtx;
 }
 
+/**
+ * Volumen general (0–1). Vive acá y no se pasa por parámetro en cada beep porque es
+ * una propiedad de la salida, no de cada sonido: así los cinco puntos que suenan no
+ * tienen que acordarse de leer los ajustes. Quien lo mantiene sincronizado es la
+ * suscripción de `descanso.init()`, la única que existe siempre que algo puede sonar.
+ * El tope sigue siendo 0,95 para dejarle margen al compresor: la alarma entra al
+ * máximo a propósito y no queremos que recorte sucio.
+ */
+const GANANCIA_MAXIMA = 0.95;
+let volumenMaestro = 1;
+
+/** Cambia el volumen general; si el contexto ya existe, se aplica en el acto. */
+export function setVolumenMaestro(volumen: number): void {
+	volumenMaestro = Math.min(1, Math.max(0, volumen));
+	if (masterGain) {
+		masterGain.gain.setValueAtTime(
+			GANANCIA_MAXIMA * volumenMaestro,
+			masterGain.context.currentTime
+		);
+	}
+}
+
 function getMaster(ctx: AudioContext): GainNode {
 	if (masterGain && masterCompressor && masterGain.context === ctx) return masterGain;
 	masterGain = ctx.createGain();
 	masterCompressor = ctx.createDynamicsCompressor();
-	masterGain.gain.setValueAtTime(0.95, ctx.currentTime);
+	masterGain.gain.setValueAtTime(GANANCIA_MAXIMA * volumenMaestro, ctx.currentTime);
 	masterCompressor.threshold.setValueAtTime(-22, ctx.currentTime);
 	masterCompressor.knee.setValueAtTime(20, ctx.currentTime);
 	masterCompressor.ratio.setValueAtTime(6, ctx.currentTime);
@@ -164,6 +186,16 @@ export function sonarDescansoTerminado(): Promise<void> {
 			beep(ctx, t, 1568, 0.18, 1, 'square');
 			beep(ctx, t + 0.2, 1976, 0.28, 1, 'square');
 		}
+	});
+}
+
+/**
+ * Tic de los últimos segundos del descanso. Corto y seco a propósito: sirve para
+ * levantar la vista justo antes de que termine, no para competir con la alarma.
+ */
+export function sonarCuentaRegresiva(): Promise<void> {
+	return conContexto((ctx, now) => {
+		beep(ctx, now, 880, 0.07, 0.11, 'triangle');
 	});
 }
 

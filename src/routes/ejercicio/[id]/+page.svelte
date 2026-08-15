@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, untrack } from 'svelte';
 	import { fly } from 'svelte/transition';
-	import { type SetSesion, type PrCelebrado } from '$lib/db';
+	import { liveQuery } from 'dexie';
+	import { db, type Dia, type Sesion, type SetSesion, type PrCelebrado } from '$lib/db';
 	import { ejercicioPorId, grupos } from '$lib/catalog';
 	import {
 		historialObs,
@@ -37,13 +38,21 @@
 		notaObs,
 		setNota,
 		ajustesObs,
-		setTimer,
+		setDescansoEjercicio,
 		setPasoPesoEjercicio,
 		AJUSTES_DEFAULT
 	} from '$lib/extras';
+	import {
+		PRESETS_DESCANSO,
+		descansoEfectivo,
+		descansoPersonalizado,
+		etiquetaCortaDescanso,
+		etiquetaDescanso
+	} from '$lib/descanso-preset';
 	import { sonarSetHecho, sonarExito } from '$lib/audio';
+	import { vibrar } from '$lib/vibracion';
 	import { descanso } from '$lib/descanso.svelte';
-	import { dur, DUR_BASE, DUR_SLOW } from '$lib/motion';
+	import { dur, menosMovimiento, DUR_BASE, DUR_SLOW } from '$lib/motion';
 	import { fromLiveQuery } from '$lib/live';
 	import { formatoNumero, formatoSet, fechaCorta } from '$lib/formato';
 	import { fechaSesionDesdeUrl } from '$lib/fechas';
@@ -53,6 +62,7 @@
 		metricaEfectivaEjercicio,
 		metricaLabelEjercicio,
 		modoEjercicioActivo,
+		proximoEjercicioPendiente,
 		unidadValorEjercicio
 	} from '$lib/ejercicio-activo';
 	import { leerPeso, leerReps, sumarPeso, sumarReps } from '$lib/numeros';
@@ -202,6 +212,38 @@
 	);
 	const puntos = $derived($historial);
 	const notaStore = $derived(fromLiveQuery(notaObs($page.params.id!), undefined));
+
+	/**
+	 * Rutina y sesión del día, solo para saber qué ejercicio viene después. Terminar
+	 * uno devolvía siempre a la lista del día: con siete ejercicios son siete viajes de
+	 * ida y vuelta. El orden ya estaba en la base; faltaba usarlo para navegar.
+	 */
+	const contextoDia = $derived(
+		fromLiveQuery(
+			liveQuery(async (): Promise<{ dia?: Dia; sesion?: Sesion }> => {
+				if (!diaId || !fechaSolicitada) return {};
+				const [dia, sesion] = await Promise.all([
+					db.dias.get(diaId),
+					db.sesiones.get(sesionId(diaId, fechaSolicitada))
+				]);
+				return { dia, sesion };
+			}),
+			{} as { dia?: Dia; sesion?: Sesion }
+		)
+	);
+	const proximo = $derived(
+		diaId
+			? proximoEjercicioPendiente(
+					$contextoDia.dia,
+					$contextoDia.sesion,
+					$page.params.id!,
+					(id) => ejercicioPorId(id)?.nombre
+				)
+			: null
+	);
+	const hrefProximo = $derived(
+		proximo ? `/ejercicio/${proximo.exerciseId}?dia=${diaId}&fecha=${fechaSesion}` : null
+	);
 	$effect(() => {
 		const exerciseId = $page.params.id!;
 		// Una escritura demorada de esta misma nota no puede volver el textarea a la
@@ -308,7 +350,9 @@
 	});
 	const completo = $derived(sets.length > 0 && sets.every(serieCompleta));
 	const unidad = $derived(ajustes.unidad);
-	const sonidoActivo = $derived(ajustes.sonido);
+	// Los logros tienen su propio canal: la alarma de descanso es funcional y esto
+	// es celebratorio, así que se puede querer una sin la otra.
+	const sonidoActivo = $derived(ajustes.sonido && ajustes.sonidoLogros);
 	const vibracionActiva = $derived(ajustes.vibracion ?? true);
 	const metrica = $derived(ajustes.metricaPr);
 	const modo = $derived<ModoPr>(modoEjercicioActivo(puntos, sets));
@@ -344,6 +388,9 @@
 			(mejorPrevio == null || valorMejorHoy > mejorPrevio) &&
 			(valorCelebrado == null || valorMejorHoy > valorCelebrado)
 	);
+	// Descanso: el del ejercicio manda sobre el general (ver $lib/descanso-preset).
+	const descansoEj = $derived(descansoEfectivo(ej?.id, ajustes));
+	const descansoPropio = $derived(descansoPersonalizado(ej?.id, ajustes));
 	const pasoPeso = $derived(
 		ej ? pasoPesoEfectivo(ej, ajustes) : (ajustes.pasoPeso ?? AJUSTES_DEFAULT.pasoPeso)
 	);
@@ -552,7 +599,7 @@
 		avisoSerie = null;
 		// Antes de cualquier await: iOS exige gesto vivo para desbloquear el audio y
 		// para pedir el permiso de notificaciones.
-		if (objetivo && ajustes.timer.activo) descanso.prepararDesdeGesto();
+		if (objetivo && descansoEj.activo) descanso.prepararDesdeGesto();
 		// Respuesta óptima al toque: el check se ve marcado ya, antes de que confirme la base.
 		// Si la escritura falla, se revierte más abajo junto con el aviso de error.
 		sets[i].hecha = objetivo;
@@ -601,21 +648,29 @@
 		} else {
 			if (sonidoActivo) void sonarSetHecho().catch(() => {});
 			// Háptica breve: el switch de silencio de iOS puede mutear el audio, la vibra no.
-			if (vibracionActiva && 'vibrate' in navigator) navigator.vibrate(20);
+			vibrar(20, vibracionActiva);
 		}
 
 		if (resultado.ejercicioCompleto) {
 			mostrarHintTimer = false;
 			descanso.saltar();
-		} else if (ajustes.timer.activo) {
+		} else if (descansoEj.activo) {
 			// El check y el glow de la fila necesitan un instante para percibirse antes
 			// de que el descanso tape la pantalla con su propia barra.
 			if (restoId) clearTimeout(restoId);
+			// Se congela acá lo que quedó guardado: el overlay lo muestra para que el
+			// peso recién tipeado pueda verificarse sin desarmar el descanso.
+			const registrada = {
+				texto: `Serie ${i + 1} · ${formatoSet(sets[i]!, unidad)}`,
+				setIndex: i
+			};
+			const minutos = descansoEj.minutos;
 			restoId = setTimeout(() => {
 				descanso.iniciar(
-					ajustes.timer.minutos,
+					minutos,
 					g?.glow ?? '124 92 255',
-					etiquetaProximaSerie(sets, i, ej?.nombre ?? '')
+					etiquetaProximaSerie(sets, i, ej?.nombre ?? ''),
+					registrada
 				);
 			}, 220);
 		} else if (debeMostrarHintTimer()) {
@@ -625,9 +680,38 @@
 	}
 
 	function activarDescansoDesdeHint() {
-		cambiarTimer(ajustes.timer.minutos || 2);
+		cambiarDescansoEjercicio(ajustes.timer.minutos || 2);
 		descartarHintTimer();
 	}
+
+	/**
+	 * El usuario tocó "corregir" en el descanso: vuelve a la fila de esa serie y le
+	 * pone el foco en las reps, que es donde suele estar el error.
+	 */
+	$effect(() => {
+		const pedido = descanso.correccionPedida;
+		if (pedido === 0) return;
+		const indice = untrack(() => descanso.registrada?.setIndex);
+		if (indice == null) return;
+		let intentos = 0;
+		let frame = 0;
+		const enfocarFila = () => {
+			const campo = document.querySelector<HTMLInputElement>(
+				`[aria-label="Reps de la serie ${indice + 1}"]`
+			);
+			// El overlay se va con transición y, hasta que termina, `modal` mantiene el
+			// fondo `inert`: un focus() sobre la fila se descarta en silencio. Se reintenta
+			// por frame hasta que la fila vuelve a ser enfocable.
+			if (campo && !campo.closest('[inert]')) {
+				campo.scrollIntoView({ block: 'center', behavior: menosMovimiento() ? 'auto' : 'smooth' });
+				campo.focus({ preventScroll: true });
+				return;
+			}
+			if (++intentos < 40) frame = requestAnimationFrame(enfocarFila);
+		};
+		frame = requestAnimationFrame(enfocarFila);
+		return () => cancelAnimationFrame(frame);
+	});
 
 	function descartarHintTimer() {
 		ocultarHintTimer();
@@ -638,19 +722,31 @@
 	function celebrarPrFlash(mejor: MejorSet) {
 		prFlash = mejor;
 		if (sonidoActivo) void sonarExito(true).catch(() => {});
-		if (vibracionActiva && 'vibrate' in navigator) navigator.vibrate([120, 70, 180]);
+		vibrar([120, 70, 180], vibracionActiva);
 		if (prFlashId) clearTimeout(prFlashId);
 		prFlashId = setTimeout(() => (prFlash = null), 1700);
 	}
 
-	async function terminarEjercicio() {
+	/** A dónde se va al cerrar: al siguiente ejercicio si lo hay, o de vuelta al día. */
+	let destinoCierre = $state('');
+
+	/** Cerrar con el toque: no esperar los 2,3 s de la fanfarria si ya la viste. */
+	function cerrarCelebracion() {
+		if (!exito) return;
+		if (exitoId) clearTimeout(exitoId);
+		exitoId = null;
+		goto(destinoCierre || volver);
+	}
+
+	async function terminarEjercicio(destino?: string) {
 		if (!diaId || exito) return;
 		descanso.saltar();
 		if (prFlashId) clearTimeout(prFlashId);
 		prFlash = null;
+		destinoCierre = destino ?? volver;
 		// Sin series hechas no hay nada que celebrar: salida directa y en silencio.
 		if (hechas === 0) {
-			goto(volver);
+			goto(destinoCierre);
 			return;
 		}
 		// PR honesto: solo cuentan las series realmente marcadas ✓ (no fabrica nada).
@@ -675,22 +771,42 @@
 		prExito = ganado;
 		if (exito !== 'parcial') {
 			if (sonidoActivo) void sonarExito(esPr).catch(() => {});
-			if (vibracionActiva && 'vibrate' in navigator) navigator.vibrate(esPr ? [120, 70, 180] : 80);
+			vibrar(esPr ? [120, 70, 180] : 80, vibracionActiva);
 		}
 		if (exitoId) clearTimeout(exitoId);
-		exitoId = setTimeout(() => goto(volver), esPr ? 2300 : exito === 'parcial' ? 900 : 1200);
-	}
-
-	function apagarTimer() {
-		descanso.saltar();
-		guardarDatoSecundario(
-			setTimer(false, ajustes.timer.minutos),
-			'No se pudo guardar el temporizador.'
+		exitoId = setTimeout(
+			() => goto(destinoCierre || volver),
+			esPr ? 2300 : exito === 'parcial' ? 900 : 1200
 		);
 	}
 
-	function cambiarTimer(minutos: number) {
-		guardarDatoSecundario(setTimer(true, minutos), 'No se pudo guardar el temporizador.');
+	/** Sin descanso en ESTE ejercicio (0), sin tocar el de los demás. */
+	function apagarDescansoEjercicio() {
+		if (!ej) return;
+		descanso.saltar();
+		guardarDatoSecundario(
+			setDescansoEjercicio(ej.id, 0),
+			'No se pudo guardar el descanso del ejercicio.'
+		);
+	}
+
+	/** Sin valor propio: este ejercicio vuelve a seguir el descanso general. */
+	function descansoAutomatico() {
+		if (!ej) return;
+		guardarDatoSecundario(
+			setDescansoEjercicio(ej.id),
+			'No se pudo guardar el descanso del ejercicio.'
+		);
+		if (ajustes.timer.activo) descanso.ajustarFin(ajustes.timer.minutos);
+		else descanso.saltar();
+	}
+
+	function cambiarDescansoEjercicio(minutos: number) {
+		if (!ej) return;
+		guardarDatoSecundario(
+			setDescansoEjercicio(ej.id, minutos),
+			'No se pudo guardar el descanso del ejercicio.'
+		);
 		// Si hay un descanso en curso, ajusta su fin en vez de reiniciarlo desde cero.
 		descanso.ajustarFin(minutos);
 	}
@@ -1044,23 +1160,46 @@
 							<span class="mr-1 text-xs font-semibold" style="color: var(--muted)">⏱️ Descanso</span
 							>
 							<button
-								onclick={apagarTimer}
+								onclick={descansoAutomatico}
 								class="min-h-11 rounded-full px-3.5 py-2 text-xs font-semibold"
-								aria-label="Apagar descanso"
-								style={!ajustes.timer.activo
+								aria-pressed={descansoPropio == null}
+								aria-label="Usar el descanso general en este ejercicio"
+								style={descansoPropio == null
+									? 'background: var(--accent); color: var(--on-accent)'
+									: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Auto</button
+							>
+							<button
+								onclick={apagarDescansoEjercicio}
+								class="min-h-11 rounded-full px-3.5 py-2 text-xs font-semibold"
+								aria-pressed={descansoPropio === 0}
+								aria-label="Sin descanso en este ejercicio"
+								style={descansoPropio === 0
 									? 'background: var(--accent); color: var(--on-accent)'
 									: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Off</button
 							>
-							{#each [1, 2, 3, 4, 5] as m (m)}
+							{#each PRESETS_DESCANSO as minutos (minutos)}
 								<button
-									onclick={() => cambiarTimer(m)}
-									class="min-h-11 min-w-11 rounded-full px-3.5 py-2 text-xs font-semibold"
-									aria-label={`Descanso ${m} ${m === 1 ? 'minuto' : 'minutos'}`}
-									style={ajustes.timer.activo && ajustes.timer.minutos === m
+									onclick={() => cambiarDescansoEjercicio(minutos)}
+									class="min-h-11 min-w-11 rounded-full px-3.5 py-2 text-xs font-semibold tabular-nums"
+									aria-pressed={descansoPropio === minutos}
+									aria-label={`Descanso de ${etiquetaDescanso(minutos)} en este ejercicio`}
+									style={descansoPropio === minutos
 										? 'background: var(--accent); color: var(--on-accent)'
-										: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{m}'</button
+										: 'background: rgba(255,255,255,.06); color: var(--muted)'}
+									>{etiquetaCortaDescanso(minutos)}</button
 								>
 							{/each}
+							<p class="mt-1 w-full text-[11px] leading-relaxed" style="color: var(--muted)">
+								{#if descansoPropio == null}
+									Auto sigue el descanso general: {ajustes.timer.activo
+										? etiquetaDescanso(ajustes.timer.minutos)
+										: 'apagado'}. Elegí uno acá y solo cambia en este ejercicio.
+								{:else if descansoPropio === 0}
+									Sin descanso en este ejercicio. Los demás siguen con el suyo.
+								{:else}
+									Propio de este ejercicio: {etiquetaDescanso(descansoPropio)}.
+								{/if}
+							</p>
 						</div>
 						{#if mostrarHintTimer}
 							<div
@@ -1168,28 +1307,62 @@
 					</details>
 
 					{#if completo && descanso.restoSeg === 0 && !descanso.vencido}
-						<!-- Con todo hecho, el cierre queda fijo al alcance del pulgar -->
+						<!-- Con todo hecho, el cierre queda fijo al alcance del pulgar. Si queda
+						     algo pendiente en la rutina, el primario encadena directo con eso:
+						     volver a la lista para buscar el siguiente era un viaje por ejercicio. -->
 						<div
 							transition:fly={{ y: 40, duration: dur(200) }}
 							class="gb-exercise-finish-bar fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md px-5 pt-6"
 							style="padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgb(var(--scrim) / .92) 55%)"
 						>
-							<button
-								onclick={terminarEjercicio}
-								disabled={!!exito}
-								class="block w-full rounded-2xl py-4 text-center font-bold"
-								style="background: rgb({g.glow}); color: var(--on-bright)"
-								>{exito ? 'Cerrando…' : '✓ Volver al día'}</button
-							>
+							{#if proximo && hrefProximo}
+								<button
+									onclick={() => terminarEjercicio(hrefProximo)}
+									disabled={!!exito}
+									class="block w-full rounded-2xl px-4 py-4 text-center font-bold"
+									style="background: rgb({g.glow}); color: var(--on-bright)"
+								>
+									{#if exito}
+										Cerrando…
+									{:else}
+										<span class="block truncate">Siguiente: {proximo.nombre} →</span>
+									{/if}
+								</button>
+								<button
+									onclick={() => terminarEjercicio()}
+									disabled={!!exito}
+									class="mt-2 block w-full rounded-2xl py-3 text-center text-sm font-bold"
+									style="background: rgba(255,255,255,.08); color: var(--muted)"
+									>Volver al día</button
+								>
+							{:else}
+								<button
+									onclick={() => terminarEjercicio()}
+									disabled={!!exito}
+									class="block w-full rounded-2xl py-4 text-center font-bold"
+									style="background: rgb({g.glow}); color: var(--on-bright)"
+									>{exito ? 'Cerrando…' : '✓ Volver al día'}</button
+								>
+							{/if}
 						</div>
 					{:else}
 						<button
-							onclick={terminarEjercicio}
+							onclick={() => terminarEjercicio()}
 							disabled={!!exito}
 							class="mt-4 block w-full rounded-2xl py-4 text-center font-bold"
 							style="background: var(--accent); color: var(--on-accent)"
 							>{exito ? 'Cerrando…' : 'Terminar ejercicio'}</button
 						>
+						{#if proximo && hrefProximo && hechas > 0}
+							<button
+								onclick={() => terminarEjercicio(hrefProximo)}
+								disabled={!!exito}
+								class="mt-2 block w-full rounded-2xl border border-white/10 px-4 py-3 text-center text-sm font-bold"
+								style="color: rgb({g.glow})"
+							>
+								<span class="block truncate">Siguiente: {proximo.nombre} →</span>
+							</button>
+						{/if}
 					{/if}
 				</div>
 			{/if}
@@ -1215,6 +1388,7 @@
 			{metricaLabel}
 			{hechas}
 			total={sets.length}
+			onClose={cerrarCelebracion}
 		/>
 	{/if}
 

@@ -165,6 +165,12 @@ export function recordsGlobalesObs(metrica: MetricaPr = 'peso', unidad: UnidadPe
 				for (const set of e.sets)
 					if (serieCompleta(set) && (set.peso != null || set.pesoGramos != null))
 						conPeso.add(e.exerciseId);
+		// `todas` viene en orden ascendente: el último snapshot que se ve es el más
+		// reciente, que es el nombre con el que la persona conoce hoy ese ejercicio.
+		const nombres = new Map<string, string>();
+		for (const s of todas)
+			for (const e of s.ejercicios)
+				if (e.nombreSnapshot) nombres.set(e.exerciseId, e.nombreSnapshot);
 		const mejores = new Map<string, RecordEjercicio>();
 		for (const s of todas) {
 			for (const ejercicio of s.ejercicios) {
@@ -172,7 +178,12 @@ export function recordsGlobalesObs(metrica: MetricaPr = 'peso', unidad: UnidadPe
 				const candidato = mejorSetDeSeries(ejercicio.sets, s.fecha, metrica, s.id, modo, unidad);
 				if (!candidato) continue;
 				const mejor = mejorSet(mejores.get(ejercicio.exerciseId) ?? null, candidato);
-				mejores.set(ejercicio.exerciseId, { ...mejor, exerciseId: ejercicio.exerciseId, modo });
+				mejores.set(ejercicio.exerciseId, {
+					...mejor,
+					exerciseId: ejercicio.exerciseId,
+					modo,
+					nombre: nombres.get(ejercicio.exerciseId)
+				});
 			}
 		}
 		// Récord más reciente primero: así los récords chicos también aparecen
