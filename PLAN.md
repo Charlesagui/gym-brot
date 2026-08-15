@@ -41,12 +41,10 @@ te guiás por un **video MP4 liviano** de cada ejercicio, que muestra el movimie
 
 - **iOS puede borrar los datos locales** tras semanas sin abrir la app. Mitigado con
   almacenamiento persistente y backup a archivo, pero no eliminado.
-- **Licencia de las animaciones** (ExerciseDB): uso personal está bien; si la app se publica
-  o se vende hay que pasar a licencia oficial o a un set propio.
-- ⚠️ **El repo está público en GitHub** (verificado 2026-08-14) mientras el `LICENSE` es
-  propietario y el README pide mantenerlo privado. Los 962 MP4 de `static/videos` (22 MB)
-  derivan de ExerciseDB. Decidir una de dos: pasar el repo a privado, o revisar las licencias
-  y ajustar `LICENSE` y README para que digan la verdad.
+- **Licencia de las animaciones** (ExerciseDB): los 962 MP4 de `static/videos` (22 MB) derivan
+  de ahí. Para uso personal está bien, y hoy el repo es privado (verificado 2026-08-15), así
+  que `LICENSE` propietario, README y realidad coinciden. Si alguna vez se publica o se vende,
+  esto vuelve a ser un prerrequisito: licencia oficial o un set propio, antes de nada más.
 
 ---
 
