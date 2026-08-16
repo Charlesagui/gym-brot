@@ -176,6 +176,15 @@
 		// El pop del contador es para un toque en ESTE ejercicio, no para el salto de
 		// "hechas" que trae cargar uno nuevo.
 		hechasPrevias = null;
+		// La celebración es del ejercicio anterior: "Siguiente" navega a esta misma
+		// ruta con otro id sin destruir el componente, así que si no se apaga acá
+		// queda encendida sobre el ejercicio nuevo. Y como `destinoCierre` apuntaba
+		// a la URL a la que justo se llegó, el toque de "continuar" hacía goto() al
+		// lugar donde ya se está: no navegaba a ningún lado y quedaba trabada.
+		if (exitoId) clearTimeout(exitoId);
+		exitoId = null;
+		exito = null;
+		prExito = null;
 	});
 
 	function setVideoGrande(valor: boolean) {
