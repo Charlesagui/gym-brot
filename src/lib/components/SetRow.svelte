@@ -408,7 +408,13 @@
 				<span class="text-sm font-bold">Desmarcar serie</span>
 			{:else}
 				<Icono nombre="hecha" tamano={22} />
-				<span class="cifra text-2xl uppercase tracking-wide">Hecha</span>
+				<!--
+					Verbo, no estado: "Hecha" a secas se lee como un cartel que informa que la
+					serie ya está registrada, justo lo contrario de lo que hace el botón. Dice
+					lo mismo que su `aria-label`, y no "Terminar", que en esta pantalla ya es
+					terminar el ejercicio.
+				-->
+				<span class="cifra text-2xl uppercase tracking-wide">Marcar hecha</span>
 			{/if}
 		</button>
 
