@@ -401,20 +401,27 @@
 			aria-busy={pendiente}
 			aria-label={etiquetaToggle}
 		>
-			{#if pendiente}
-				<span class="gb-set-spinner" aria-hidden="true"></span>
-				<span class="text-sm font-bold">Guardando…</span>
-			{:else if set.hecha}
+			{#if set.hecha}
 				<span class="text-sm font-bold">Desmarcar serie</span>
 			{:else}
-				<Icono nombre="hecha" tamano={22} />
 				<!--
-					Verbo, no estado: "Hecha" a secas se lee como un cartel que informa que la
-					serie ya está registrada, justo lo contrario de lo que hace el botón. Dice
-					lo mismo que su `aria-label`, y no "Terminar", que en esta pantalla ya es
-					terminar el ejercicio.
+					Casillero, no cartel: el aro vacío es lo que dice que falta hacerlo, y al
+					marcarla la fila se contrae a ese mismo aro ya lleno de verde con el número
+					adentro. Respira despacio para señalar que es lo próximo que hay que tocar;
+					mientras guarda, el anillo del spinner ocupa su lugar.
 				-->
-				<span class="cifra text-2xl uppercase tracking-wide">Marcar hecha</span>
+				<span
+					class="grid size-11 place-items-center rounded-full border-[2.5px] border-current {pendiente
+						? ''
+						: 'gb-respira'}"
+					aria-hidden="true"
+				>
+					{#if pendiente}
+						<span class="gb-set-spinner gb-set-spinner--oscuro"></span>
+					{:else}
+						<Icono nombre="hecha" tamano={24} />
+					{/if}
+				</span>
 			{/if}
 		</button>
 
@@ -464,6 +471,12 @@
 		border: 2px solid rgba(255, 255, 255, 0.3);
 		border-top-color: var(--text);
 		animation: gb-spin 0.7s linear infinite;
+	}
+
+	/* Dentro del confirmar el fondo es el color del grupo: la tinta va oscura. */
+	.gb-set-spinner--oscuro {
+		border-color: rgb(0 0 0 / 0.25);
+		border-top-color: var(--on-bright);
 	}
 
 	@keyframes gb-spin {
