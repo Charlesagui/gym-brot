@@ -3,6 +3,14 @@
 	import { descanso } from '$lib/descanso.svelte';
 	import { dur } from '$lib/motion';
 	import { modal } from '$lib/modal';
+	import RuedaTiempo from './RuedaTiempo.svelte';
+	import Icono from './Icono.svelte';
+	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
+	import { fromLiveQuery } from '$lib/live';
+
+	const ajustes = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
+	/** La rueda solo aparece si la pedís: el descanso normal no necesita que la toques. */
+	let mostrarRueda = $state(false);
 
 	const RADIO = 44;
 	const CIRCUNFERENCIA = 2 * Math.PI * RADIO;
@@ -34,7 +42,9 @@
 		// dispara el `click` ahí y no en el botón. Con esto, Minimizar, Saltar descanso
 		// y Listo quedaban muertos y la única salida del descanso a pantalla completa
 		// era el gesto de arrastrar hacia abajo.
-		if ((event.target as Element | null)?.closest('button')) return;
+		// La rueda es un gesto de arrastre propio: si el panel se lo lleva, girar cierra
+		// el descanso en vez de cambiarlo.
+		if ((event.target as Element | null)?.closest('button, [data-sin-arrastre]')) return;
 		arrastrando = true;
 		inicioY = event.clientY;
 		dragY = 0;
@@ -98,55 +108,89 @@
 					{descanso.vencido ? 'Descanso terminado' : 'Descanso'}
 				</p>
 
-				<div
-					class="rest-focus-ring relative mt-8 grid size-72 max-h-[42dvh] max-w-[72vw] place-items-center"
-				>
-					<svg
-						viewBox="0 0 100 100"
-						class="absolute inset-0 size-full -rotate-90"
-						aria-hidden="true"
-					>
-						<circle
-							cx="50"
-							cy="50"
-							r={RADIO}
-							fill="none"
-							stroke="rgba(255,255,255,.09)"
-							stroke-width="5"
+				<!--
+					El anillo y la rueda son el mismo círculo con dos trabajos: mostrar cuánto
+					falta y cambiarlo. Se turnan; los dos juntos eran dos relojes iguales, uno
+					arriba del otro, y empujaban los botones de salida fuera de la pantalla.
+				-->
+				{#if mostrarRueda && !descanso.vencido}
+					<div class="mt-8 flex flex-col items-center gap-4" data-sin-arrastre>
+						<RuedaTiempo
+							segundos={descanso.restoSeg}
+							min={15}
+							max={900}
+							paso={15}
+							glow={descanso.glow}
+							vibracion={$ajustes.vibracion ?? true}
+							etiqueta="Ajustar lo que falta de descanso"
+							onCambio={(segundos) => descanso.ajustarResto(segundos)}
 						/>
-						<circle
-							cx="50"
-							cy="50"
-							r={RADIO}
-							fill="none"
-							stroke="rgb(var(--rest-glow))"
-							stroke-linecap="round"
-							stroke-width="5"
-							stroke-dasharray={CIRCUNFERENCIA}
-							stroke-dashoffset={dashOffset}
-						/>
-					</svg>
-
-					<div aria-live="polite">
-						{#if descanso.vencido}
-							<p
-								class="rest-focus-done text-5xl font-black leading-none"
-								style="color: rgb(var(--rest-glow))"
-							>
-								A la serie
-							</p>
-							<p class="rest-focus-over mt-4 text-4xl font-black tabular-nums">
-								+{mmss(descanso.vencidoSeg)}
-							</p>
-						{:else}
-							<p
-								class="rest-focus-time text-7xl font-black leading-none tracking-normal tabular-nums"
-							>
-								{mmss(descanso.restoSeg)}
-							</p>
-						{/if}
+						<button
+							onclick={() => (mostrarRueda = false)}
+							class="min-h-11 rounded-full px-5 text-sm font-bold"
+							style="background: rgba(255,255,255,.08); color: var(--muted)">Listo</button
+						>
 					</div>
-				</div>
+				{:else}
+					<div
+						class="rest-focus-ring relative mt-8 grid size-72 max-h-[42dvh] max-w-[72vw] place-items-center"
+					>
+						<svg
+							viewBox="0 0 100 100"
+							class="absolute inset-0 size-full -rotate-90"
+							aria-hidden="true"
+						>
+							<circle
+								cx="50"
+								cy="50"
+								r={RADIO}
+								fill="none"
+								stroke="rgba(255,255,255,.09)"
+								stroke-width="5"
+							/>
+							<circle
+								cx="50"
+								cy="50"
+								r={RADIO}
+								fill="none"
+								stroke="rgb(var(--rest-glow))"
+								stroke-linecap="round"
+								stroke-width="5"
+								stroke-dasharray={CIRCUNFERENCIA}
+								stroke-dashoffset={dashOffset}
+							/>
+						</svg>
+
+						<div aria-live="polite">
+							{#if descanso.vencido}
+								<p
+									class="rest-focus-done text-5xl font-black leading-none"
+									style="color: rgb(var(--rest-glow))"
+								>
+									A la serie
+								</p>
+								<p class="rest-focus-over cifra mt-4 text-5xl">
+									+{mmss(descanso.vencidoSeg)}
+								</p>
+							{:else}
+								<p class="rest-focus-time cifra text-[5.5rem]">
+									{mmss(descanso.restoSeg)}
+								</p>
+							{/if}
+						</div>
+					</div>
+
+					{#if !descanso.vencido}
+						<button
+							onclick={() => (mostrarRueda = true)}
+							class="mt-6 flex min-h-11 items-center gap-2 rounded-full border border-white/10 px-4 text-sm font-bold"
+							style="background: rgba(255,255,255,.05); color: var(--muted)"
+							aria-label="Ajustar lo que falta de descanso con la rueda"
+						>
+							<Icono nombre="rueda" tamano={16} /> Ajustar
+						</button>
+					{/if}
+				{/if}
 
 				{#if descanso.siguiente}
 					<p
@@ -165,7 +209,7 @@
 						class="rest-focus-done-set mt-5 flex max-w-full items-center gap-2.5 rounded-2xl border border-white/10 px-4 py-2.5 text-left"
 						style="background: rgba(255,255,255,.05)"
 					>
-						<span class="text-sm" aria-hidden="true">✓</span>
+						<span style="color: rgb(var(--exito))"><Icono nombre="hecha" tamano={16} /></span>
 						<span class="min-w-0">
 							<span class="block truncate text-sm font-bold">{descanso.registrada.texto}</span>
 							<span class="block text-[11px] font-semibold" style="color: var(--muted)"

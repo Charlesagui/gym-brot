@@ -115,6 +115,36 @@ describe('descanso', () => {
 		expect(descanso.totalSeg).toBe(60);
 	});
 
+	it('ajustarResto cambia lo que falta y estira el total, sin mover el inicio', () => {
+		descanso.iniciar(3, GLOW);
+		vi.advanceTimersByTime(30_000);
+		expect(descanso.restoSeg).toBe(150);
+
+		// La rueda del descanso a pantalla completa pide "un minuto más desde ahora".
+		descanso.ajustarResto(60);
+		expect(descanso.restoSeg).toBe(60);
+		// Ya pasaron 30 s: el total es lo corrido más lo que queda, para que el anillo
+		// siga contando la misma historia.
+		expect(descanso.totalSeg).toBe(90);
+	});
+
+	it('ajustarResto respeta el piso y el techo de la rueda', () => {
+		descanso.iniciar(3, GLOW);
+		descanso.ajustarResto(1);
+		expect(descanso.restoSeg).toBe(15);
+		descanso.ajustarResto(60 * 60);
+		expect(descanso.restoSeg).toBe(15 * 60);
+	});
+
+	it('ajustarResto no revive un descanso ya vencido', () => {
+		descanso.iniciar(1, GLOW);
+		vi.advanceTimersByTime(61_000);
+		expect(descanso.vencido).toBe(true);
+		descanso.ajustarResto(120);
+		expect(descanso.vencido).toBe(true);
+		expect(descanso.restoSeg).toBe(0);
+	});
+
 	it('expandir y minimizar la pantalla enfocada no cortan el timer', () => {
 		descanso.iniciar(2, GLOW);
 		descanso.expandirFocus();

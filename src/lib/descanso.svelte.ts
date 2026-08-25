@@ -32,6 +32,9 @@ const VIBRA_ALARMA = [300, 100, 300, 100, 500];
 const ALARMA_CADA_MS = 2200;
 /** Desde cuántos segundos restantes empieza la cuenta regresiva audible. */
 const TIC_DESDE_SEG = 3;
+/** Límites de lo que puede quedar tras girar la rueda del descanso en curso. */
+const MIN_RESTO_SEG = 15;
+const MAX_RESTO_SEG = 15 * 60;
 
 /** La serie que arrancó este descanso, para poder verificarla (y corregirla) sin cerrarlo. */
 export interface SerieRegistrada {
@@ -220,6 +223,24 @@ class Descanso {
 	ajustarFin(minutos: number) {
 		if (this.#inicio == null || this.#hasta == null || this.vencido) return;
 		this.#hasta = this.#inicio + minutos * 60_000;
+		this.totalSeg = Math.max(1, Math.round((this.#hasta - this.#inicio) / 1000));
+		this.#armarTimers();
+		this.#guardar();
+		this.#recalc();
+	}
+
+	/**
+	 * Cambia lo que FALTA del descanso en curso, sin tocar cuándo empezó.
+	 *
+	 * Es lo que pide la rueda del descanso a pantalla completa: ahí no se elige "cuánto
+	 * dura este descanso" en abstracto, se decide "necesito medio minuto más". El total
+	 * se estira junto con el resto para que el anillo siga contando la misma historia.
+	 */
+	ajustarResto(segundos: number) {
+		if (this.#inicio == null || this.#hasta == null || this.vencido) return;
+		const resto = Math.min(MAX_RESTO_SEG, Math.max(MIN_RESTO_SEG, Math.round(segundos)));
+		const ahora = Date.now();
+		this.#hasta = ahora + resto * 1000;
 		this.totalSeg = Math.max(1, Math.round((this.#hasta - this.#inicio) / 1000));
 		this.#armarTimers();
 		this.#guardar();
