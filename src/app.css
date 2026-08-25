@@ -337,6 +337,29 @@ body {
 	animation: gb-tick var(--dur-fast) var(--ease-spring);
 }
 
+/*
+ * Respiración del confirmar: el botón de marcar la serie no lleva texto, así que el
+ * aro vacío es todo lo que dice "falta esto". Un pulso lento y de poca amplitud lo
+ * señala sin titilar —dos segundos y medio por ciclo, opacidad entre .5 y 1— y solo
+ * hay uno en pantalla, porque solo la serie en curso está abierta.
+ *
+ * La opacidad de reposo (.85) es la que queda bajo movimiento reducido, donde la regla
+ * global corta la animación: el aro tiene que seguir viéndose, nada más que quieto.
+ */
+@keyframes gb-respirar {
+	0%,
+	100% {
+		opacity: 0.5;
+	}
+	50% {
+		opacity: 1;
+	}
+}
+.gb-respira {
+	opacity: 0.85;
+	animation: gb-respirar 2.6s ease-in-out infinite;
+}
+
 /* Glow localizado breve (fila que acaba de confirmar un cambio) */
 @keyframes gb-glow-flash {
 	0% {
