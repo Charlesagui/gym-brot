@@ -20,6 +20,7 @@ import {
 } from './audio';
 import { ajustesObs } from './extras';
 import { vibrar } from './vibracion';
+import { WakeLockSeguro } from './wake-lock';
 
 const DESCANSO_KEY = 'gb-descanso';
 const NOTIF_PEDIDA_KEY = 'gb-notif-pedida';
@@ -117,8 +118,7 @@ class Descanso {
 	#ultimoTic: number | null = null;
 	#intId: ReturnType<typeof setInterval> | null = null;
 	#finId: ReturnType<typeof setTimeout> | null = null;
-	#wakeLock: WakeLockSentinel | null = null;
-	#wakeLockSolicitando = false;
+	#wakeLock = new WakeLockSeguro();
 	// Valores seguros hasta que IndexedDB entrega las preferencias reales: nunca
 	// queremos sorprender al usuario con audio, vibración o fullscreen al restaurar.
 	#sonido = false;
@@ -154,7 +154,7 @@ class Descanso {
 			this.#recalc();
 			if (document.visibilityState !== 'visible') return;
 			if (this.#hasta != null && this.#sonido) desbloquearAudio();
-			if (this.#hasta != null && !this.vencido) void this.#pedirWakeLock();
+			if (this.#hasta != null && !this.vencido) void this.#wakeLock.reanudar();
 			void this.#cerrarNotificacion();
 		};
 		document.addEventListener('visibilitychange', refrescar);
@@ -211,7 +211,7 @@ class Descanso {
 		this.restoSeg = Math.ceil((this.#hasta - Date.now()) / 1000);
 		this.#armarTimers();
 		this.#guardar();
-		void this.#pedirWakeLock();
+		void this.#wakeLock.activar();
 		this.#pedirPermisoNotificacion();
 		if (this.#sonido) mantenerAudioDespierto();
 	}
@@ -284,7 +284,7 @@ class Descanso {
 			this.#recalc();
 			if (!this.vencido) {
 				this.restoSeg = Math.ceil((this.#hasta - Date.now()) / 1000);
-				void this.#pedirWakeLock();
+				void this.#wakeLock.activar();
 			}
 			if (this.#sonido) mantenerAudioDespierto();
 			if (abrirFocus) {
@@ -307,31 +307,6 @@ class Descanso {
 				registrada: this.registrada ?? undefined
 			})
 		);
-	}
-
-	async #pedirWakeLock() {
-		// Ya hay uno vivo: pedir otro deja el anterior tomado sin referencia para soltarlo.
-		if ((this.#wakeLock && !this.#wakeLock.released) || this.#wakeLockSolicitando) return;
-		this.#wakeLockSolicitando = true;
-		try {
-			if (!('wakeLock' in navigator)) return;
-			const sentinel = await navigator.wakeLock.request('screen');
-			// Saltar/cerrar pudo ocurrir mientras el navegador resolvía la promesa.
-			if (this.#hasta == null || this.vencido) {
-				void sentinel.release().catch(() => {});
-				return;
-			}
-			this.#wakeLock = sentinel;
-		} catch {
-			// Denegado o sin soporte: el timer por timestamps sigue siendo correcto igual.
-		} finally {
-			this.#wakeLockSolicitando = false;
-		}
-	}
-
-	#soltarWakeLock() {
-		void this.#wakeLock?.release().catch(() => {});
-		this.#wakeLock = null;
 	}
 
 	/** Interval de refresco + timeout puntual al vencimiento (más preciso en background). */
@@ -375,6 +350,7 @@ class Descanso {
 		if (!this.vencido) {
 			this.vencido = true;
 			this.restoSeg = 0;
+			this.#wakeLock.desactivar();
 			// Vencido en background: notificación del sistema (la web no puede sonar oculta).
 			if (document.visibilityState !== 'visible') void this.#notificar();
 		}
@@ -463,7 +439,7 @@ class Descanso {
 		this.#ultimaAlarma = 0;
 		this.#ultimoTic = null;
 		borrarStorage(DESCANSO_KEY);
-		this.#soltarWakeLock();
+		this.#wakeLock.desactivar();
 		soltarAudioDespierto();
 		void this.#cerrarNotificacion();
 	}

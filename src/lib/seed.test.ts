@@ -6,7 +6,13 @@ import { seedSiVacio } from './seed';
 
 async function limpiarDb() {
 	await db.open();
-	await Promise.all([db.dias.clear(), db.sesiones.clear(), db.notas.clear(), db.ajustes.clear()]);
+	await Promise.all([
+		db.dias.clear(),
+		db.sesiones.clear(),
+		db.notas.clear(),
+		db.ajustes.clear(),
+		db.pesosCorporales.clear()
+	]);
 }
 
 describe('seedSiVacio', () => {

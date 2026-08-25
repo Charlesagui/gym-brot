@@ -1,0 +1,218 @@
+import { liveQuery } from 'dexie';
+import { catalogo } from './catalog';
+import { MUSCULOS_COMPACTOS } from './data/exercise-muscles';
+import { db, type Sesion } from './db';
+import { serieCompleta } from './sesion-reglas';
+
+export type MusculoMapa =
+	| 'chest'
+	| 'abs'
+	| 'obliques'
+	| 'biceps'
+	| 'triceps'
+	| 'deltoids'
+	| 'forearms'
+	| 'quadriceps'
+	| 'adductors'
+	| 'calves'
+	| 'tibialis'
+	| 'serratus'
+	| 'hip-flexors'
+	| 'trapezius'
+	| 'upper-back'
+	| 'lower-back'
+	| 'glutes'
+	| 'hamstrings';
+
+export interface MetadataMuscular {
+	principal: MusculoMapa | null;
+	secundarios: MusculoMapa[];
+	aliasesNoRepresentados: string[];
+}
+
+const MUSCULO_POR_CODIGO: Record<string, MusculoMapa> = {
+	a: 'abs',
+	b: 'biceps',
+	c: 'chest',
+	d: 'deltoids',
+	f: 'forearms',
+	g: 'glutes',
+	h: 'hamstrings',
+	i: 'hip-flexors',
+	l: 'lower-back',
+	o: 'obliques',
+	q: 'quadriceps',
+	r: 'adductors',
+	s: 'serratus',
+	t: 'triceps',
+	u: 'upper-back',
+	v: 'calves',
+	w: 'tibialis',
+	z: 'trapezius'
+};
+
+export const METADATA_MUSCULAR = Object.fromEntries(
+	catalogo.map((ejercicio, indice) => {
+		const [principal, secundarios, noRepresentados] = MUSCULOS_COMPACTOS[indice] ?? ['', '', ''];
+		return [
+			ejercicio.id,
+			{
+				principal: MUSCULO_POR_CODIGO[principal] ?? null,
+				secundarios: [...secundarios].map((codigo) => MUSCULO_POR_CODIGO[codigo]!),
+				aliasesNoRepresentados: noRepresentados ? noRepresentados.split('|') : []
+			}
+		];
+	})
+) as Record<string, MetadataMuscular>;
+
+export const MUSCULOS: Record<MusculoMapa, { label: string; geometria: string }> = {
+	chest: { label: 'Pectorales', geometria: 'chest' },
+	abs: { label: 'Abdominales', geometria: 'abs' },
+	obliques: { label: 'Oblicuos', geometria: 'obliques' },
+	biceps: { label: 'Bíceps', geometria: 'biceps' },
+	triceps: { label: 'Tríceps', geometria: 'triceps' },
+	deltoids: { label: 'Deltoides', geometria: 'deltoids' },
+	forearms: { label: 'Antebrazos', geometria: 'forearm' },
+	quadriceps: { label: 'Cuádriceps', geometria: 'quadriceps' },
+	adductors: { label: 'Aductores', geometria: 'adductors' },
+	calves: { label: 'Gemelos', geometria: 'calves' },
+	tibialis: { label: 'Tibial anterior', geometria: 'tibialis' },
+	serratus: { label: 'Serrato anterior', geometria: 'serratus' },
+	'hip-flexors': { label: 'Flexores de cadera', geometria: 'hipFlexors' },
+	trapezius: { label: 'Trapecios', geometria: 'trapezius' },
+	'upper-back': { label: 'Espalda alta y dorsales', geometria: 'upperBack' },
+	'lower-back': { label: 'Espalda baja', geometria: 'lowerBack' },
+	glutes: { label: 'Glúteos', geometria: 'gluteal' },
+	hamstrings: { label: 'Isquiotibiales', geometria: 'hamstring' }
+};
+
+export interface CargaMuscular {
+	musculo: MusculoMapa;
+	label: string;
+	seriesEstimadas: number;
+	seriesPrimarias: number;
+	seriesSecundarias: number;
+}
+
+export interface DistribucionMuscular {
+	desde: string;
+	hasta: string;
+	semanas: number;
+	soloDuras: boolean;
+	/** Todas las series completas del período: es el denominador de `coberturaRir`. */
+	seriesCompletadas: number;
+	/** Las que el filtro vigente deja pasar y por lo tanto sostienen el mapa. */
+	seriesConsideradas: number;
+	seriesConRir: number;
+	coberturaRir: number;
+	puedeFiltrarDuras: boolean;
+	seriesSinRepresentacion: number;
+	maximo: number;
+	cargas: CargaMuscular[];
+}
+
+function sumarDias(fecha: string, delta: number): string {
+	const date = new Date(`${fecha}T12:00:00`);
+	date.setDate(date.getDate() + delta);
+	return date.toLocaleDateString('sv');
+}
+
+/** Primer día del período, para que la consulta pueda acotarse por el índice `fecha`. */
+export function desdeDistribucion(hasta: string, semanas: 1 | 4 | 12): string {
+	return sumarDias(hasta, -(semanas * 7 - 1));
+}
+
+/** Distribución estimada: 1 serie al músculo principal y 0,4 a cada secundario. */
+export function crearDistribucionMuscular(
+	sesiones: Sesion[],
+	hasta: string,
+	semanas: 1 | 4 | 12,
+	soloDuras = false,
+	metadata: Record<string, MetadataMuscular> = METADATA_MUSCULAR
+): DistribucionMuscular {
+	const desde = desdeDistribucion(hasta, semanas);
+	const cargas = new Map<MusculoMapa, Omit<CargaMuscular, 'musculo' | 'label'>>();
+	let seriesCompletadas = 0;
+	let seriesConsideradas = 0;
+	let seriesConRir = 0;
+	let seriesSinRepresentacion = 0;
+
+	for (const sesion of sesiones) {
+		if (sesion.fecha < desde || sesion.fecha > hasta) continue;
+		for (const ejercicio of sesion.ejercicios) {
+			const meta = metadata[ejercicio.exerciseId];
+			for (const set of ejercicio.sets) {
+				if (!serieCompleta(set)) continue;
+				seriesCompletadas++;
+				if (set.rir != null) seriesConRir++;
+				if (soloDuras && (set.rir == null || set.rir > 2)) continue;
+				seriesConsideradas++;
+				if (!meta || (!meta.principal && meta.secundarios.length === 0)) {
+					seriesSinRepresentacion++;
+					continue;
+				}
+				if (meta.principal) {
+					const actual = cargas.get(meta.principal) ?? {
+						seriesEstimadas: 0,
+						seriesPrimarias: 0,
+						seriesSecundarias: 0
+					};
+					actual.seriesEstimadas += 1;
+					actual.seriesPrimarias += 1;
+					cargas.set(meta.principal, actual);
+				}
+				for (const secundario of meta.secundarios) {
+					const actual = cargas.get(secundario) ?? {
+						seriesEstimadas: 0,
+						seriesPrimarias: 0,
+						seriesSecundarias: 0
+					};
+					actual.seriesEstimadas += 0.4;
+					actual.seriesSecundarias += 1;
+					cargas.set(secundario, actual);
+				}
+			}
+		}
+	}
+
+	const lista = [...cargas].map(([musculo, carga]) => ({
+		musculo,
+		label: MUSCULOS[musculo].label,
+		seriesEstimadas: Number(carga.seriesEstimadas.toFixed(1)),
+		seriesPrimarias: carga.seriesPrimarias,
+		seriesSecundarias: carga.seriesSecundarias
+	}));
+	lista.sort((a, b) => b.seriesEstimadas - a.seriesEstimadas || a.label.localeCompare(b.label));
+	const coberturaRir = seriesCompletadas ? seriesConRir / seriesCompletadas : 0;
+	return {
+		desde,
+		hasta,
+		semanas,
+		soloDuras,
+		seriesCompletadas,
+		seriesConsideradas,
+		seriesConRir,
+		coberturaRir,
+		puedeFiltrarDuras: seriesConRir >= 3 && coberturaRir >= 0.5,
+		seriesSinRepresentacion,
+		maximo: Math.max(0, ...lista.map((item) => item.seriesEstimadas)),
+		cargas: lista
+	};
+}
+
+/**
+ * Live query separada del bundle inicial: el componente que la usa se importa dinámicamente.
+ * El período se acota con el índice `fecha`, así que un historial largo no se deserializa
+ * entero en cada toque de período ni en cada escritura que invalida la consulta.
+ */
+export function distribucionMuscularObs(hasta: string, semanas: 1 | 4 | 12, soloDuras = false) {
+	const desde = desdeDistribucion(hasta, semanas);
+	return liveQuery(async () =>
+		crearDistribucionMuscular(
+			await db.sesiones.where('fecha').between(desde, hasta, true, true).toArray(),
+			hasta,
+			semanas,
+			soloDuras
+		)
+	);
+}

@@ -25,15 +25,23 @@ import {
 	setExtra,
 	setPeso,
 	setReps,
+	setRir,
 	toggleMax,
 	ultimaSesion
 } from './sesion';
 import { resumenDiaSesion, rachaSemanalActual } from './historial';
 import { agregarEjercicio } from './dias';
+import { decidirRecomendacionDoble, setProgresionDoble } from './dias';
 
 async function limpiarDb() {
 	await db.open();
-	await Promise.all([db.dias.clear(), db.sesiones.clear(), db.notas.clear(), db.ajustes.clear()]);
+	await Promise.all([
+		db.dias.clear(),
+		db.sesiones.clear(),
+		db.notas.clear(),
+		db.ajustes.clear(),
+		db.pesosCorporales.clear()
+	]);
 }
 
 function primerValor<T>(obs: { subscribe: (next: (value: T) => void) => { unsubscribe(): void } }) {
@@ -96,6 +104,58 @@ describe('sesion con IndexedDB', () => {
 		expect(estado).toEqual({
 			sets: [{ hecha: false }, { hecha: false }],
 			prCelebrado: null
+		});
+	});
+
+	it('aplica una recomendación aceptada una sola vez sin modificar el pasado', async () => {
+		await db.dias.add({
+			id: 'push',
+			nombre: 'Push',
+			orden: 0,
+			ejercicios: [{ exerciseId: 'press', seriesObjetivo: 2, orden: 0 }]
+		});
+		await setProgresionDoble('push', 'press', { activa: true, repsMin: 8, repsMax: 12 });
+		await prepararEjercicioSesion('push', 'press', '2026-01-05');
+		for (const indice of [0, 1]) {
+			await setPeso('push', 'press', indice, 80, '2026-01-05');
+			await setReps('push', 'press', indice, 12, '2026-01-05');
+			await setSerieHecha('push', 'press', indice, true, '2026-01-05');
+		}
+		const pasada = structuredClone(await db.sesiones.get('2026-01-05__push'));
+
+		await decidirRecomendacionDoble(
+			'push',
+			'press',
+			{
+				sesionId: '2026-01-05__push',
+				seriesEvaluadas: 2,
+				repsMax: 12,
+				incrementoGramos: 2_500,
+				pesoActualGramos: 80_000,
+				pesoObjetivoGramos: 82_500,
+				esMax: false,
+				extraActualGramos: 0,
+				extraObjetivoGramos: 0,
+				explicacion: 'Dos series en el techo.'
+			},
+			'aceptada'
+		);
+
+		await prepararEjercicioSesion('push', 'press', '2026-01-12');
+		expect((await db.sesiones.get('2026-01-12__push'))?.ejercicios[0]?.sets).toEqual([
+			{ peso: 82.5, pesoGramos: 82_500, reps: 8, hecha: false },
+			{ peso: 82.5, pesoGramos: 82_500, reps: 8, hecha: false }
+		]);
+		expect(await db.sesiones.get('2026-01-05__push')).toEqual(pasada);
+		expect((await db.dias.get('push'))?.ejercicios[0]?.progresion).not.toHaveProperty(
+			'proximoPesoGramos'
+		);
+
+		await prepararEjercicioSesion('push', 'press', '2026-01-19');
+		expect((await db.sesiones.get('2026-01-19__push'))?.ejercicios[0]?.sets[0]).toMatchObject({
+			peso: 80,
+			reps: 12,
+			hecha: false
 		});
 	});
 
@@ -468,7 +528,8 @@ describe('sesion con IndexedDB', () => {
 				valor: 88.7,
 				sesionId: '2026-01-02__pull',
 				setIndex: 0,
-				modo: 'peso'
+				modo: 'peso',
+				metrica: 'e1rm'
 			},
 			{
 				exerciseId: 'press',
@@ -480,9 +541,37 @@ describe('sesion con IndexedDB', () => {
 				valor: 106.7,
 				sesionId: '2026-01-01__push',
 				setIndex: 0,
-				modo: 'peso'
+				modo: 'peso',
+				metrica: 'e1rm'
 			}
 		]);
+	});
+
+	it('recordsGlobalesObs aplica el override solamente al ejercicio elegido', async () => {
+		await ensureEjercicio('push', 'press', 2, '2026-01-01');
+		await setPeso('push', 'press', 0, 80, '2026-01-01');
+		await setReps('push', 'press', 0, 10, '2026-01-01');
+		await setPeso('push', 'press', 1, 90, '2026-01-01');
+		await setReps('push', 'press', 1, 3, '2026-01-01');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01');
+		await setSerieHecha('push', 'press', 1, true, '2026-01-01');
+
+		await ensureEjercicio('pull', 'remo', 1, '2026-01-02');
+		await setPeso('pull', 'remo', 0, 70, '2026-01-02');
+		await setReps('pull', 'remo', 0, 8, '2026-01-02');
+		await setSerieHecha('pull', 'remo', 0, true, '2026-01-02');
+
+		const records = await primerValor(
+			recordsGlobalesObs({ metricaPr: 'peso', metricasPrEjercicio: { press: 'e1rm' } })
+		);
+		expect(records.find((record) => record.exerciseId === 'press')).toMatchObject({
+			valor: 106.7,
+			metrica: 'e1rm'
+		});
+		expect(records.find((record) => record.exerciseId === 'remo')).toMatchObject({
+			valor: 70,
+			metrica: 'peso'
+		});
 	});
 
 	it('no celebra un falso PR de e1RM cuando dos fórmulas dan el mismo decimal visible', async () => {
@@ -580,7 +669,8 @@ describe('sesion con IndexedDB', () => {
 				valor: 10,
 				sesionId: '2026-01-01__pull',
 				setIndex: 1,
-				modo: 'reps'
+				modo: 'reps',
+				metrica: 'reps'
 			}
 		]);
 	});
@@ -828,6 +918,26 @@ describe('sesion con IndexedDB', () => {
 				setIndex: 0
 			}
 		]);
+	});
+
+	it('RIR es opcional, valida pasos y se puede editar desde historial', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-01');
+		await setReps('push', 'press', 0, 8, '2026-01-01');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01');
+		await setRir('push', 'press', 0, 2.5, '2026-01-01');
+		expect((await db.sesiones.get('2026-01-01__push'))?.ejercicios[0]?.sets[0]?.rir).toBe(2.5);
+		await expect(setRir('push', 'press', 0, 2.25, '2026-01-01')).rejects.toThrow();
+
+		await actualizarSetHistorial('2026-01-01__push', 'press', 0, { reps: 8, rir: 1 }, 'peso');
+		expect((await db.sesiones.get('2026-01-01__push'))?.ejercicios[0]?.sets[0]).toMatchObject({
+			hecha: true,
+			rir: 1
+		});
+
+		await setRir('push', 'press', 0, undefined, '2026-01-01');
+		expect(
+			(await db.sesiones.get('2026-01-01__push'))?.ejercicios[0]?.sets[0]?.rir
+		).toBeUndefined();
 	});
 
 	it('vaciar las reps al editar una serie histórica la deja pendiente', async () => {

@@ -3,7 +3,7 @@
 		sesionId: string;
 		exerciseId: string;
 		setIndex: number;
-		set: { peso?: number; reps?: number; esMax?: boolean; extraKg?: number };
+		set: { peso?: number; reps?: number; esMax?: boolean; extraKg?: number; rir?: number };
 		fecha?: string;
 		/** Máquina con pila de placas: habilita MAX + kg extra. */
 		maquinaPlacas: boolean;
@@ -12,13 +12,14 @@
 
 <script lang="ts">
 	import { fade, fly } from 'svelte/transition';
-	import type { Ajustes, MetricaPr } from '$lib/db';
+	import type { Ajustes, MetricaPr, ModoEsfuerzo } from '$lib/db';
 	import { actualizarSetHistorial, borrarSetHistorial } from '$lib/sesion';
 	import { dur } from '$lib/motion';
 	import { formatoNumero, fechaCorta } from '$lib/formato';
 	import { leerPeso, leerReps, sumarPeso, sumarReps } from '$lib/numeros';
 	import Stepper from './Stepper.svelte';
 	import { modal } from '$lib/modal';
+	import { etiquetaEsfuerzo, rpeARir } from '$lib/esfuerzo';
 
 	let {
 		serie,
@@ -26,6 +27,7 @@
 		unidad,
 		pasoPeso,
 		metrica,
+		modoEsfuerzo,
 		onClose
 	}: {
 		serie: SerieEditable;
@@ -33,6 +35,7 @@
 		unidad: Ajustes['unidad'];
 		pasoPeso: number;
 		metrica: MetricaPr;
+		modoEsfuerzo: ModoEsfuerzo;
 		onClose: () => void;
 	} = $props();
 
@@ -46,9 +49,25 @@
 	let esMax = $state(!!serie.set.esMax);
 	// svelte-ignore state_referenced_locally
 	let extraKg = $state(serie.set.extraKg);
+	// svelte-ignore state_referenced_locally
+	let rir = $state(serie.set.rir);
 	let confirmandoBorrado = $state(false);
 	let ocupado = $state(false);
 	let error = $state<string | null>(null);
+	const escalaEsfuerzo = $derived(modoEsfuerzo === 'rpe' ? 'rpe' : 'rir');
+	const opcionesEsfuerzo = $derived(
+		Array.from({ length: 11 }, (_, indice) =>
+			escalaEsfuerzo === 'rir' ? indice / 2 : 10 - indice / 2
+		)
+	);
+
+	function cambiarEsfuerzo(valor: string) {
+		if (!valor) rir = undefined;
+		else {
+			const numero = Number(valor);
+			rir = escalaEsfuerzo === 'rir' ? numero : rpeARir(numero);
+		}
+	}
 
 	const NO_ENCONTRADA =
 		'No se encontró esta serie: puede haberse editado en otra pestaña o restaurado un backup. Volvé atrás y abrila de nuevo.';
@@ -110,7 +129,8 @@
 					peso,
 					reps,
 					esMax: esMax || undefined,
-					extraKg: esMax ? extraKg : undefined
+					extraKg: esMax ? extraKg : undefined,
+					rir
 				},
 				metrica,
 				unidad
@@ -218,6 +238,28 @@
 						/>
 					</div>
 				{/if}
+			</div>
+		{/if}
+
+		{#if modoEsfuerzo !== 'off' || rir != null}
+			<div class="mt-3 rounded-xl bg-white/[0.035] p-3">
+				<label class="text-xs font-bold" style="color: var(--muted)">
+					Esfuerzo opcional
+					<select
+						value={rir == null ? '' : escalaEsfuerzo === 'rir' ? rir : 10 - rir}
+						onchange={(evento) => cambiarEsfuerzo(evento.currentTarget.value)}
+						class="mt-2 min-h-11 w-full rounded-xl bg-white/[0.06] px-3 text-sm font-bold"
+						aria-label="Esfuerzo de la serie histórica"
+					>
+						<option value="">Sin registrar</option>
+						{#each opcionesEsfuerzo as opcion (opcion)}<option value={opcion}
+								>{escalaEsfuerzo.toUpperCase()} {opcion}</option
+							>{/each}
+					</select>
+				</label>
+				{#if rir != null}<p class="mt-1 text-xs" style="color: var(--accent-text)">
+						{etiquetaEsfuerzo(rir, escalaEsfuerzo)}
+					</p>{/if}
 			</div>
 		{/if}
 

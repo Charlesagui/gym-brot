@@ -4,7 +4,7 @@
 	import { page } from '$app/stores';
 	import { onNavigate } from '$app/navigation';
 	import { useRegisterSW } from 'virtual:pwa-register/svelte';
-	import { db, onDbBloqueada } from '$lib/db';
+	import { completarNombresSnapshotFaltantes, db, onDbBloqueada } from '$lib/db';
 	import { seedSiVacio } from '$lib/seed';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import RestBar from '$lib/components/RestBar.svelte';
@@ -174,6 +174,9 @@
 				dbLenta = false;
 				dbBloqueada = false;
 				await seedSiVacio();
+				// Después del seed: así la fila de ajustes ya existe y el backfill puede
+				// dejar marcado que corrió, en vez de repetir el barrido en cada arranque.
+				await completarNombresSnapshotFaltantes();
 				// Pide almacenamiento persistente: reduce el riesgo de que el navegador
 				// (sobre todo iOS) borre los datos locales por presión de espacio.
 				void navigator.storage?.persist?.();

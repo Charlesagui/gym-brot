@@ -9,7 +9,32 @@ export interface Dia {
 	/** Días de la semana agendados, 0 (dom) - 6 (sáb). Una rutina puede repetirse. */
 	diasSemana?: number[];
 	orden: number;
-	ejercicios: { exerciseId: string; seriesObjetivo: number; orden: number }[];
+	ejercicios: EjercicioRutina[];
+}
+
+/** Doble progresión configurada para una aparición concreta dentro de una rutina. */
+export interface ProgresionDoble {
+	activa: boolean;
+	tipo: 'doble';
+	repsMin: number;
+	repsMax: number;
+	/** Incremento canónico opcional. Ausente = usa el paso del ejercicio/ajuste global. */
+	incrementoGramos?: number;
+	/** Carga aceptada para precargar la próxima sesión; nunca modifica el pasado. */
+	proximoPesoGramos?: number;
+	proximoEsMax?: boolean;
+	proximoExtraGramos?: number;
+	/** Sesión que originó la recomendación aceptada, para no aplicarla dos veces. */
+	desdeSesionId?: string;
+	decision?: 'aceptada' | 'pospuesta' | 'descartada';
+	decisionSesionId?: string;
+}
+
+export interface EjercicioRutina {
+	exerciseId: string;
+	seriesObjetivo: number;
+	orden: number;
+	progresion?: ProgresionDoble;
 }
 
 /** Una serie hecha, con su propio peso (permite rampa/pirámide). */
@@ -23,6 +48,8 @@ export interface SetSesion {
 	/** Kg sumados encima de la placa full cuando es MAX (progresión más allá del tope). */
 	extraKg?: number;
 	extraGramos?: number;
+	/** Esfuerzo canónico opcional: repeticiones en reserva, de 0 a 5 en pasos de 0,5. */
+	rir?: number;
 }
 
 /** Snapshot del set que ya disparó la celebración de PR en esta sesión (anti-repetición). */
@@ -82,6 +109,15 @@ export interface Nota {
 
 /** Métrica con la que se calcula el PR: peso máximo o 1RM estimado (Epley). */
 export type MetricaPr = 'peso' | 'e1rm';
+export type ModoEsfuerzo = 'off' | 'rir' | 'rpe';
+
+/** Una medición principal de peso corporal por fecha local. */
+export interface PesoCorporal {
+	fecha: string;
+	/** Fuente de verdad: gramos enteros; la unidad visible es solo presentación. */
+	pesoGramos: number;
+	registradoAt: string;
+}
 
 /** Ajustes globales (única fila, id = 'app'). */
 export interface Ajustes {
@@ -102,6 +138,12 @@ export interface Ajustes {
 	/** Abre el descanso como pantalla enfocada al marcar una serie. */
 	descansoPantallaCompleta: boolean;
 	metricaPr: MetricaPr;
+	/** Sobrescritura por ejercicio; ausente = usa `metricaPr`. */
+	metricasPrEjercicio?: Record<string, MetricaPr>;
+	/** Captura de esfuerzo desactivada por defecto; el dato persistido siempre es RIR. */
+	modoEsfuerzo?: ModoEsfuerzo;
+	/** Meta de peso personal opcional en gramos canónicos. */
+	metaPesoGramos?: number;
 	/** Cuánto suma/resta cada toque de −/+ al cargar peso. */
 	pasoPeso: number;
 	/** Sobrescrituras por ejercicio y unidad; no alteran los pesos ya registrados. */
@@ -116,6 +158,8 @@ export interface Ajustes {
 	ultimoBackup?: string;
 	/** Evita volver a crear rutinas de ejemplo si el usuario borró todas. */
 	seedInicialHecho?: boolean;
+	/** El backfill de `nombreSnapshot` ya corrió: no hace falta recorrer sesiones al abrir. */
+	snapshotsCompletados?: boolean;
 }
 
 /** Violeta que no llegaba a AA como texto; se conserva solo para migrar el valor viejo. */
@@ -128,6 +172,7 @@ export const db = new Dexie('gym-brot') as Dexie & {
 	sesiones: EntityTable<Sesion, 'id'>;
 	notas: EntityTable<Nota, 'exerciseId'>;
 	ajustes: EntityTable<Ajustes, 'id'>;
+	pesosCorporales: EntityTable<PesoCorporal, 'fecha'>;
 };
 
 db.version(1).stores({
@@ -334,28 +379,62 @@ db.version(8).upgrade(async (tx) =>
 		})
 );
 
-/**
- * v9: rellena `nombreSnapshot` en las sesiones anteriores a que existiera. Sin esto, la
- * pantalla de historial no puede dejar de importar el catálogo (193 KB solo para resolver
- * nombres): un ejercicio entrenado antes de los snapshots aparecería como "Ejercicio
- * archivado" aunque siga estando en el catálogo.
- *
- * El catálogo se importa de forma dinámica a propósito: `db.ts` lo carga toda la app y
- * meterlo como import estático devolvería al bundle principal el peso que se quiere sacar.
- */
-db.version(9).upgrade(async (tx) => {
-	const { ejercicioPorId } = await import('./catalog');
-	await tx
-		.table('sesiones')
-		.toCollection()
-		.modify((sesion: Sesion) => {
-			for (const ejercicio of sesion.ejercicios) {
-				// Un ejercicio ya borrado del catálogo se queda sin nombre y la pantalla lo
-				// rotula como archivado: es la verdad, no una degradación.
-				ejercicio.nombreSnapshot ??= ejercicioPorId(ejercicio.exerciseId)?.nombre;
-			}
-		});
+/** v9: el índice por ejercicio ya estaba; la versión sólo la consume la migración. */
+db.version(9).stores({
+	sesiones: 'id, diaId, fecha, *exerciseIds'
 });
+
+/**
+ * v10: seguimiento de peso corporal separado de las sesiones. RIR, overrides de PR y
+ * progresión viven en objetos ya persistidos, por lo que no requieren índices nuevos.
+ */
+db.version(10).stores({
+	dias: 'id, orden',
+	sesiones: 'id, diaId, fecha, *exerciseIds',
+	notas: 'exerciseId',
+	ajustes: 'id',
+	pesosCorporales: 'fecha, registradoAt'
+});
+
+/**
+ * Rellena `nombreSnapshot` en las sesiones anteriores a que existiera. Sin esto, el
+ * historial no puede dejar de importar el catálogo (193 KB solo para resolver nombres):
+ * un ejercicio entrenado antes de los snapshots aparecería como "Ejercicio archivado"
+ * aunque siga estando en el catálogo.
+ *
+ * Corre fuera de la transacción de migración a propósito: importar un chunk durante
+ * `versionchange` puede dejar IndexedDB esperando indefinidamente si esa ruta todavía no
+ * cargó el catálogo (por ejemplo, al abrir `/peso` directamente).
+ *
+ * Y corre una sola vez. Detectar si falta algún snapshot obliga a un cursor con predicado
+ * en JS sobre `sesiones`: cuando no falta ninguno —el estado permanente después de la
+ * primera pasada— eso deserializa la tabla entera, y esto está en el camino del arranque.
+ * El flag lo convierte en una lectura por clave primaria.
+ */
+export async function completarNombresSnapshotFaltantes(): Promise<void> {
+	const ajustes = await db.ajustes.get('app');
+	if (ajustes?.snapshotsCompletados) return;
+
+	const faltaAlguno = await db.sesiones
+		.filter((sesion) => sesion.ejercicios.some((ejercicio) => !ejercicio.nombreSnapshot))
+		.first();
+
+	if (faltaAlguno) {
+		const { ejercicioPorId } = await import('./catalog');
+		await db.transaction('rw', db.sesiones, async () => {
+			await db.sesiones.toCollection().modify((sesion) => {
+				for (const ejercicio of sesion.ejercicios) {
+					// Un ejercicio ya borrado del catálogo se queda sin nombre y la pantalla lo
+					// rotula como archivado: es la verdad, no una degradación.
+					ejercicio.nombreSnapshot ??= ejercicioPorId(ejercicio.exerciseId)?.nombre;
+				}
+			});
+		});
+	}
+	// Si todavía no hay fila de ajustes (primera apertura, antes del seed) esto no hace
+	// nada y el backfill se vuelve a intentar: sobre una base recién creada es gratis.
+	await db.ajustes.update('app', { snapshotsCompletados: true });
+}
 
 /** Orden cronológico estable usado por progreso y PR, incluida la misma fecha. */
 export function compararSesiones(a: Sesion, b: Sesion): number {

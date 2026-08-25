@@ -25,6 +25,11 @@ compatibilidad y como valor de entrada, pero cambiar kg/lb solo cambia una prefe
 reescribe el historial. Las repeticiones, cantidades de series y posiciones sí son discretas y
 deben ser enteras.
 
+El backfill de `nombreSnapshot` para bases anteriores a v9 corre fuera de la transacción de
+migración —importar el catálogo durante `versionchange` puede colgar IndexedDB— y una sola vez:
+detectar si falta algún snapshot obliga a recorrer `sesiones` entera, así que
+`Ajustes.snapshotsCompletados` lo saca del camino del arranque.
+
 Cada sesión congela `diaNombre` y cada ejercicio nuevo `nombreSnapshot`. El historial usa esos
 snapshots antes que el catálogo o la rutina actuales, de modo que renombrar o archivar no cambia
 retroactivamente lo entrenado.
@@ -46,6 +51,10 @@ Al completar el reemplazo, `BroadcastChannel` recarga las demás pestañas.
 entera y la recorren en JavaScript. Es deuda conocida y medida, no un descuido: IndexedDB no sabe
 agregar, así que sumar el volumen de un día obliga a traer cada sesión al hilo principal. Y como
 son `liveQuery` sobre la tabla completa, cualquier escritura las invalida.
+
+La regla, igual, es acotar por índice siempre que se pueda: esas tres no pueden porque su alcance
+es "todo el historial". La distribución muscular sí puede —su período es un rango de fechas
+conocido— y por eso consulta `where('fecha').between(...)` en vez de traer la tabla entera.
 
 Medido con `scripts/bench-historial` en Chromium con IndexedDB nativo y la CPU frenada 4×
 (≈ Android de gama media), sobre bases sintéticas de 3,5 sesiones por semana con 6 ejercicios de
@@ -84,7 +93,7 @@ mantiene `exerciseIds`: dentro de `guardarSesion`, en la misma transacción.
 
 ## Datos locales y video
 
-`Dias`, `Sesiones`, `Notas` y `Ajustes` forman una única transacción durante importación o borrado. El índice derivado `exerciseIds` se recalcula antes de persistir una sesión.
+`Dias`, `Sesiones`, `Notas`, `Ajustes` y `PesosCorporales` forman una única transacción durante importación o borrado. El índice derivado `exerciseIds` se recalcula antes de persistir una sesión. El peso corporal usa una fila por fecha local y gramos enteros; no se mezcla con el peso levantado en una sesión.
 
 Los backups se validan antes de escribir: tamaño máximo de 25 MB, límites de colecciones, fechas e
 ids coherentes, enteros donde el dominio es discreto y pesos decimales no negativos. La preparación

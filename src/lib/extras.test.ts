@@ -12,6 +12,7 @@ import {
 	parseBackup,
 	prepararImport,
 	setDescansoEjercicio,
+	setMetricaPrEjercicio,
 	setSonido,
 	setPasoPesoEjercicio,
 	setUnidad,
@@ -26,7 +27,24 @@ const dia: Dia = {
 	color: '255 122 92',
 	diasSemana: [1, 4],
 	orden: 1,
-	ejercicios: [{ exerciseId: 'press', seriesObjetivo: 3, orden: 1 }]
+	ejercicios: [
+		{
+			exerciseId: 'press',
+			seriesObjetivo: 3,
+			orden: 1,
+			progresion: {
+				activa: true,
+				tipo: 'doble',
+				repsMin: 8,
+				repsMax: 12,
+				incrementoGramos: 2_500,
+				decision: 'aceptada',
+				decisionSesionId: '2026-01-05__push',
+				proximoPesoGramos: 102_500,
+				desdeSesionId: '2026-01-05__push'
+			}
+		}
+	]
 };
 
 const sesion: Sesion = {
@@ -52,7 +70,10 @@ const nota: Nota = { exerciseId: 'press', texto: 'Banco en 4' };
 const ajustes: Ajustes = {
 	...AJUSTES_DEFAULT,
 	unidad: 'kg',
-	pasoPeso: 2.5
+	pasoPeso: 2.5,
+	metaPesoGramos: 78_000,
+	modoEsfuerzo: 'rir',
+	metricasPrEjercicio: { press: 'e1rm' }
 };
 
 function sesionCanonica(origen = sesion, unidad: Ajustes['unidad'] = 'kg'): Sesion {
@@ -67,7 +88,13 @@ function sesionCanonica(origen = sesion, unidad: Ajustes['unidad'] = 'kg'): Sesi
 
 async function limpiarDb() {
 	await db.open();
-	await Promise.all([db.dias.clear(), db.sesiones.clear(), db.notas.clear(), db.ajustes.clear()]);
+	await Promise.all([
+		db.dias.clear(),
+		db.sesiones.clear(),
+		db.notas.clear(),
+		db.ajustes.clear(),
+		db.pesosCorporales.clear()
+	]);
 }
 
 describe('normalizarAjustes', () => {
@@ -132,6 +159,11 @@ describe('backup', () => {
 		await db.sesiones.put(sesion);
 		await db.notas.put(nota);
 		await db.ajustes.put(ajustes);
+		await db.pesosCorporales.put({
+			fecha: '2026-01-05',
+			pesoGramos: 80_500,
+			registradoAt: '2026-01-05T08:00:00.000Z'
+		});
 
 		const backup = parseBackup(await exportarJSON());
 		await limpiarDb();
@@ -140,6 +172,13 @@ describe('backup', () => {
 		expect(await db.dias.toArray()).toEqual([dia]);
 		expect(await db.notas.toArray()).toEqual([nota]);
 		expect(await db.ajustes.toArray()).toEqual([ajustes]);
+		expect(await db.pesosCorporales.toArray()).toEqual([
+			{
+				fecha: '2026-01-05',
+				pesoGramos: 80_500,
+				registradoAt: '2026-01-05T08:00:00.000Z'
+			}
+		]);
 		// El backup no guarda `exerciseIds` (es índice derivado): se reconstruye al importar.
 		expect(JSON.parse(await exportarJSON()).sesiones[0].exerciseIds).toBeUndefined();
 		expect(await db.sesiones.toArray()).toMatchObject([
@@ -151,6 +190,55 @@ describe('backup', () => {
 		});
 	});
 
+	it('un backup v1 sin pesos corporales sigue siendo aceptado', () => {
+		expect(
+			parseBackup(
+				JSON.stringify({
+					app: 'gym-brot',
+					version: 1,
+					dias: [],
+					sesiones: [],
+					notas: [],
+					ajustes: []
+				})
+			).pesosCorporales
+		).toBeUndefined();
+	});
+
+	it('el import elimina RIR fuera de rango sin descartar la serie', () => {
+		const preparada = prepararImport({
+			dias: [dia],
+			notas: [],
+			ajustes: [ajustes],
+			pesosCorporales: [],
+			sesiones: [
+				{
+					...sesion,
+					ejercicios: [{ exerciseId: 'press', sets: [{ peso: 80, reps: 10, hecha: true, rir: 8 }] }]
+				}
+			]
+		});
+		expect(preparada.datos.sesiones[0]?.ejercicios[0]?.sets[0]?.rir).toBeUndefined();
+		expect(preparada.avisos.join(' ')).toContain('RIR');
+	});
+
+	it('el import descarta mediciones de peso con fecha imposible', () => {
+		const preparada = prepararImport({
+			dias: [],
+			sesiones: [],
+			notas: [],
+			ajustes: [ajustes],
+			pesosCorporales: [
+				{ fecha: 'no-es-una-fecha', pesoGramos: 80_000, registradoAt: '2026-08-24T10:00:00.000Z' },
+				{ fecha: '2026-02-30', pesoGramos: 81_000, registradoAt: '2026-08-24T10:00:00.000Z' },
+				{ fecha: '', pesoGramos: 82_000, registradoAt: '2026-08-24T10:00:00.000Z' },
+				{ fecha: '2026-08-24', pesoGramos: 83_000, registradoAt: '2026-08-24T10:00:00.000Z' }
+			]
+		});
+		expect(preparada.datos.pesosCorporales.map((peso) => peso.fecha)).toEqual(['2026-08-24']);
+		expect(preparada.avisos.join(' ')).toContain('fecha inválida');
+	});
+
 	it('personalizar el paso de un ejercicio no modifica ninguna sesión histórica', async () => {
 		await db.sesiones.put(sesionCanonica());
 		await db.ajustes.put(ajustes);
@@ -160,6 +248,19 @@ describe('backup', () => {
 
 		expect(await db.sesiones.toArray()).toEqual(historialAntes);
 		expect((await db.ajustes.get('app'))?.pasosPesoEjercicio).toEqual({ press: { kg: 1 } });
+	});
+
+	it('quitar el override de PR vuelve al ajuste global sin tocar sesiones', async () => {
+		await db.sesiones.put(sesionCanonica());
+		await db.ajustes.put({ ...ajustes, metricasPrEjercicio: {} });
+		const historialAntes = structuredClone(await db.sesiones.toArray());
+
+		await setMetricaPrEjercicio('press', 'e1rm');
+		expect((await db.ajustes.get('app'))?.metricasPrEjercicio).toEqual({ press: 'e1rm' });
+		await setMetricaPrEjercicio('press');
+
+		expect((await db.ajustes.get('app'))?.metricasPrEjercicio).toEqual({});
+		expect(await db.sesiones.toArray()).toEqual(historialAntes);
 	});
 
 	it('el descanso de un ejercicio no toca el de los demás ni el general', async () => {

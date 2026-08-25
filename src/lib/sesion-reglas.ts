@@ -1,4 +1,4 @@
-import type { MetricaPr, PrCelebrado, Sesion, SetSesion } from './db';
+import type { Ajustes, MetricaPr, PrCelebrado, Sesion, SetSesion } from './db';
 import { conPesoCanonico, conPesoVisible, gramosAPeso, type UnidadPeso } from './unidades';
 
 /** Cómo puntúa un ejercicio: por peso o por reps si nunca registró peso. */
@@ -26,6 +26,7 @@ export interface RecordEjercicio extends MejorSet {
 	exerciseId: string;
 	/** Con qué se midió el récord, para que la UI siempre rotule (kg vs reps). */
 	modo: ModoPr;
+	metrica: MetricaEfectiva;
 	/**
 	 * Nombre congelado en la sesión más reciente que lo registró. Va en el récord para
 	 * que la pantalla de historial no tenga que cargar el catálogo entero (193 KB) solo
@@ -43,6 +44,32 @@ function normalizarValorPr(valor: number): number {
 }
 
 export const METRICAS_EFECTIVAS: MetricaEfectiva[] = ['peso', 'e1rm', 'reps'];
+
+/**
+ * Métrica configurada para un ejercicio con carga: su override si lo tiene y, si no, el
+ * ajuste global. Separada de `resolverMetricaPr` porque algunas pantallas necesitan la
+ * métrica antes de saber si el ejercicio puntúa por peso o por reps: el modo depende del
+ * historial, que a su vez se consulta con esta métrica. Es la única búsqueda del override.
+ */
+export function metricaConfigurada(
+	ajustes: Pick<Ajustes, 'metricaPr' | 'metricasPrEjercicio'>,
+	exerciseId: string
+): MetricaPr {
+	return ajustes.metricasPrEjercicio?.[exerciseId] ?? ajustes.metricaPr;
+}
+
+/**
+ * Única resolución de métrica para todo el producto: ejercicios sin carga siempre
+ * usan reps; el resto toma primero el override y después el ajuste global.
+ */
+export function resolverMetricaPr(
+	ajustes: Pick<Ajustes, 'metricaPr' | 'metricasPrEjercicio'>,
+	exerciseId: string,
+	modo: ModoPr
+): MetricaEfectiva {
+	if (modo === 'reps') return 'reps';
+	return metricaConfigurada(ajustes, exerciseId);
+}
 
 /** Peso ingresado más lo que haya encima de la placa si el set es MAX. */
 export function pesoEfectivo(

@@ -4,6 +4,7 @@ import {
 	conIndice,
 	db,
 	guardarSesion,
+	type Ajustes,
 	type MetricaPr,
 	type PrCelebrado,
 	type Sesion,
@@ -15,7 +16,9 @@ import {
 	mejorSetDeSeries,
 	metricaDeSnapshot,
 	modoDeMetrica,
+	metricaConfigurada,
 	modoEjercicio,
+	resolverMetricaPr,
 	repeticionesValidas,
 	serieCompleta,
 	snapPr,
@@ -26,8 +29,15 @@ import {
 	type RecordEjercicio
 } from './sesion-reglas';
 import { ejercicioPorId } from './catalog';
-import { conPesoCanonico, conPesoVisible, pesoAGramos, type UnidadPeso } from './unidades';
+import {
+	conPesoCanonico,
+	conPesoVisible,
+	gramosAPeso,
+	pesoAGramos,
+	type UnidadPeso
+} from './unidades';
 import { capturarRevisionDatos, exigirRevisionDatos } from './revision-datos';
+import { rirValido } from './esfuerzo';
 
 export {
 	DESCRIPCION_METRICA,
@@ -153,8 +163,15 @@ export function historialObs(
 	});
 }
 
-export function recordsGlobalesObs(metrica: MetricaPr = 'peso', unidad: UnidadPeso = 'kg') {
+export function recordsGlobalesObs(
+	configuracion: MetricaPr | Pick<Ajustes, 'metricaPr' | 'metricasPrEjercicio'> = 'peso',
+	unidad: UnidadPeso = 'kg'
+) {
 	return liveQuery(async () => {
+		const ajustes =
+			typeof configuracion === 'string'
+				? { metricaPr: configuracion, metricasPrEjercicio: {} }
+				: configuracion;
 		const todas = (await db.sesiones.orderBy('fecha').toArray())
 			.filter((sesion) => sesion.fecha <= hoyStr())
 			.sort(compararSesiones);
@@ -175,6 +192,10 @@ export function recordsGlobalesObs(metrica: MetricaPr = 'peso', unidad: UnidadPe
 		for (const s of todas) {
 			for (const ejercicio of s.ejercicios) {
 				const modo: ModoPr = conPeso.has(ejercicio.exerciseId) ? 'peso' : 'reps';
+				const metricaEfectiva = resolverMetricaPr(ajustes, ejercicio.exerciseId, modo);
+				// En modo reps `valorSet` ignora la métrica; se pasa la configurada igual para
+				// no tener dos maneras de leer el override.
+				const metrica = metricaConfigurada(ajustes, ejercicio.exerciseId);
 				const candidato = mejorSetDeSeries(ejercicio.sets, s.fecha, metrica, s.id, modo, unidad);
 				if (!candidato) continue;
 				const mejor = mejorSet(mejores.get(ejercicio.exerciseId) ?? null, candidato);
@@ -182,6 +203,7 @@ export function recordsGlobalesObs(metrica: MetricaPr = 'peso', unidad: UnidadPe
 					...mejor,
 					exerciseId: ejercicio.exerciseId,
 					modo,
+					metrica: metricaEfectiva,
 					nombre: nombres.get(ejercicio.exerciseId)
 				});
 			}
@@ -307,15 +329,41 @@ export async function prepararEjercicioSesion(
 		}
 		if (!sesion.ejercicios.some((item) => item.exerciseId === exerciseId)) {
 			const anterior = await ultimaDe(diaId, exerciseId, fecha, unidad);
+			const progresion = configuracion.progresion;
+			const usarRecomendacion =
+				progresion?.proximoPesoGramos != null &&
+				progresion.desdeSesionId != null &&
+				progresion.desdeSesionId !== sesion.id;
 			sesion.ejercicios.push({
 				exerciseId,
 				nombreSnapshot: ejercicioPorId(exerciseId)?.nombre,
-				sets: Array.from({ length: Math.max(1, configuracion.seriesObjetivo) }, (_, indice) => ({
-					...conPesoCanonico({ peso: anterior?.[indice]?.peso }, unidad),
-					reps: anterior?.[indice]?.reps,
-					hecha: false
-				}))
+				sets: Array.from({ length: Math.max(1, configuracion.seriesObjetivo) }, (_, indice) =>
+					usarRecomendacion
+						? {
+								peso: gramosAPeso(progresion.proximoPesoGramos, unidad),
+								pesoGramos: progresion.proximoPesoGramos,
+								reps: progresion.repsMin,
+								hecha: false,
+								esMax: progresion.proximoEsMax,
+								extraKg: gramosAPeso(progresion.proximoExtraGramos, unidad),
+								extraGramos: progresion.proximoExtraGramos
+							}
+						: {
+								...conPesoCanonico({ peso: anterior?.[indice]?.peso }, unidad),
+								reps: anterior?.[indice]?.reps,
+								hecha: false
+							}
+				)
 			});
+			if (usarRecomendacion && progresion) {
+				delete progresion.proximoPesoGramos;
+				delete progresion.proximoEsMax;
+				delete progresion.proximoExtraGramos;
+				delete progresion.desdeSesionId;
+				delete progresion.decision;
+				delete progresion.decisionSesionId;
+				await db.dias.put(dia);
+			}
 			await guardarSesion(sesion);
 		} else if (snapshotsActualizados) await guardarSesion(sesion);
 
@@ -433,6 +481,7 @@ export interface CambiosSetHistorial {
 	reps?: number;
 	esMax?: boolean;
 	extraKg?: number;
+	rir?: number;
 }
 
 /**
@@ -451,7 +500,8 @@ export function actualizarSetHistorial(
 	if (
 		(cambios.peso != null && (!Number.isFinite(cambios.peso) || cambios.peso < 0)) ||
 		(cambios.extraKg != null && (!Number.isFinite(cambios.extraKg) || cambios.extraKg < 0)) ||
-		(cambios.reps != null && !repeticionesValidas(cambios.reps))
+		(cambios.reps != null && !repeticionesValidas(cambios.reps)) ||
+		(cambios.rir != null && !rirValido(cambios.rir))
 	)
 		return Promise.reject(new RangeError('La serie contiene un peso o repeticiones inválidos.'));
 	const revision = capturarRevisionDatos();
@@ -468,6 +518,7 @@ export function actualizarSetHistorial(
 		set.reps = cambios.reps;
 		set.esMax = cambios.esMax;
 		set.extraKg = cambios.extraKg;
+		set.rir = cambios.rir;
 		const extraCanonico = pesoAGramos(cambios.extraKg, unidad);
 		if (extraCanonico == null) delete set.extraGramos;
 		else set.extraGramos = extraCanonico;
@@ -635,6 +686,25 @@ export function setReps(
 		fecha,
 		metrica,
 		true
+	);
+}
+
+export function setRir(
+	diaId: string,
+	exerciseId: string,
+	i: number,
+	rir?: number,
+	fecha = hoyStr()
+) {
+	if (rir != null && !rirValido(rir))
+		return Promise.reject(new RangeError('RIR debe estar entre 0 y 5 en pasos de 0,5.'));
+	return mutar(
+		diaId,
+		exerciseId,
+		(sets) => {
+			if (sets[i]) sets[i].rir = rir;
+		},
+		fecha
 	);
 }
 /** Kg encima de la placa full (solo aplica al PR cuando el set es MAX). */

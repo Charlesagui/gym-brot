@@ -5,6 +5,7 @@ import {
 	modoEjercicio,
 	pesoEfectivo,
 	serieCompleta,
+	resolverMetricaPr,
 	valorMetrica,
 	valorSet,
 	type MejorSet
@@ -19,6 +20,19 @@ describe('serieCompleta', () => {
 		expect(serieCompleta({ hecha: true, peso: 80, reps: 0 })).toBe(false);
 		expect(serieCompleta({ hecha: true, peso: 80, reps: 2.5 })).toBe(false);
 		expect(serieCompleta({ hecha: false, reps: 10 })).toBe(false);
+	});
+});
+
+describe('resolverMetricaPr', () => {
+	const ajustes = {
+		metricaPr: 'peso' as const,
+		metricasPrEjercicio: { press: 'e1rm' as const }
+	};
+
+	it('prioriza override, vuelve al global y fuerza reps sin carga', () => {
+		expect(resolverMetricaPr(ajustes, 'press', 'peso')).toBe('e1rm');
+		expect(resolverMetricaPr(ajustes, 'remo', 'peso')).toBe('peso');
+		expect(resolverMetricaPr(ajustes, 'press', 'reps')).toBe('reps');
 	});
 });
 

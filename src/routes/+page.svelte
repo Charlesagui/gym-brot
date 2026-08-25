@@ -13,8 +13,15 @@
 	import { mantener } from '$lib/mantener';
 	import { bienvenidaVisible, cerrarBienvenida } from '$lib/preferencias-ui';
 	import { guardarSinBloquear, reportarErrorDatos } from '$lib/errores-datos';
+	import { ajustesObs } from '$lib/extras';
+	import { pesosCorporalesObs } from '$lib/peso-corporal';
+	import { gramosAPeso } from '$lib/unidades';
+	import { formatoNumero } from '$lib/formato';
 
 	const dias = liveQuery(() => db.dias.orderBy('orden').toArray());
+	const ajustes = ajustesObs();
+	const pesosCorporales = pesosCorporalesObs();
+	const ultimoPeso = $derived($pesosCorporales?.at(-1));
 	let fechaHoy = $state(hoyStr());
 	let hoy = $state(new Date().getDay());
 	// Sesiones de hoy, para reflejar el progreso del día en la portada.
@@ -149,6 +156,30 @@
 		</h1>
 		<p class="mt-1 text-xs capitalize" style="color: var(--muted)">{nombresDia[hoy]}</p>
 	</header>
+
+	<a
+		href="/peso"
+		class="mb-4 flex min-h-16 items-center gap-3 rounded-2xl border border-white/10 p-3"
+		style="background: linear-gradient(90deg, rgb(var(--exito) / .10), transparent 65%), var(--surface)"
+	>
+		<span
+			class="grid size-11 place-items-center rounded-full bg-white/[0.06] text-xl"
+			aria-hidden="true">⚖️</span
+		>
+		<div class="min-w-0 flex-1">
+			<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
+				Peso corporal
+			</p>
+			<p class="mt-0.5 text-sm font-bold">
+				{#if ultimoPeso}
+					{formatoNumero(gramosAPeso(ultimoPeso.pesoGramos, $ajustes.unidad)!)} {$ajustes.unidad}
+				{:else}
+					Registrar primera medición
+				{/if}
+			</p>
+		</div>
+		<span class="text-xs font-bold" style="color: var(--accent-text)">Registrar →</span>
+	</a>
 
 	{#if mostrarWelcome}
 		<div

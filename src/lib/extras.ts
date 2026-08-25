@@ -6,9 +6,13 @@ import {
 	type Sesion,
 	type Nota,
 	type Ajustes,
-	type MetricaPr
+	type MetricaPr,
+	type ModoEsfuerzo,
+	type PesoCorporal
 } from './db';
 import { fechaCalendarioValida } from './fechas';
+import { PESO_CORPORAL_MAX_GRAMOS, PESO_CORPORAL_MIN_GRAMOS } from './peso-corporal';
+import { rirValido } from './esfuerzo';
 import { repeticionesValidas, serieCompleta } from './sesion-reglas';
 import { conPesoCanonico } from './unidades';
 import {
@@ -45,10 +49,13 @@ export const AJUSTES_DEFAULT: Ajustes = {
 	vibracion: true,
 	descansoPantallaCompleta: true,
 	metricaPr: 'peso',
+	metricasPrEjercicio: {},
+	modoEsfuerzo: 'off',
 	pasoPeso: 5,
 	pasosPesoEjercicio: {},
 	descansosEjercicio: {},
-	seedInicialHecho: false
+	seedInicialHecho: false,
+	snapshotsCompletados: false
 };
 
 /** Volúmenes ofrecidos. Ninguno es 0: para silenciar están los interruptores. */
@@ -76,10 +83,13 @@ export function normalizarAjustes(a?: Ajustes | null): Ajustes {
 		descansoPantallaCompleta:
 			a?.descansoPantallaCompleta ?? AJUSTES_DEFAULT.descansoPantallaCompleta,
 		metricaPr: a?.metricaPr ?? AJUSTES_DEFAULT.metricaPr,
+		metricasPrEjercicio: a?.metricasPrEjercicio ?? {},
+		modoEsfuerzo: a?.modoEsfuerzo ?? 'off',
 		pasoPeso: a?.pasoPeso ?? AJUSTES_DEFAULT.pasoPeso,
 		pasosPesoEjercicio: a?.pasosPesoEjercicio ?? {},
 		descansosEjercicio: a?.descansosEjercicio ?? {},
-		seedInicialHecho: a?.seedInicialHecho ?? AJUSTES_DEFAULT.seedInicialHecho
+		seedInicialHecho: a?.seedInicialHecho ?? AJUSTES_DEFAULT.seedInicialHecho,
+		snapshotsCompletados: a?.snapshotsCompletados ?? AJUSTES_DEFAULT.snapshotsCompletados
 	};
 }
 
@@ -165,6 +175,39 @@ export async function toggleDescansoPantallaCompleta(): Promise<void> {
 export async function setMetricaPr(metricaPr: MetricaPr): Promise<void> {
 	await actualizarAjustes((a) => {
 		a.metricaPr = metricaPr;
+	});
+}
+
+/** Guarda o elimina la métrica propia de un ejercicio. */
+export async function setMetricaPrEjercicio(
+	exerciseId: string,
+	metricaPr?: MetricaPr
+): Promise<void> {
+	await actualizarAjustes((a) => {
+		const metricas = { ...(a.metricasPrEjercicio ?? {}) };
+		if (metricaPr == null) delete metricas[exerciseId];
+		else metricas[exerciseId] = metricaPr;
+		a.metricasPrEjercicio = metricas;
+	});
+}
+
+export async function setModoEsfuerzo(modoEsfuerzo: ModoEsfuerzo): Promise<void> {
+	await actualizarAjustes((a) => {
+		a.modoEsfuerzo = modoEsfuerzo;
+	});
+}
+
+export async function setMetaPesoGramos(metaPesoGramos?: number): Promise<void> {
+	if (
+		metaPesoGramos != null &&
+		(!Number.isInteger(metaPesoGramos) ||
+			metaPesoGramos < PESO_CORPORAL_MIN_GRAMOS ||
+			metaPesoGramos > PESO_CORPORAL_MAX_GRAMOS)
+	) {
+		throw new RangeError('La meta de peso debe estar entre 20 y 500 kg.');
+	}
+	await actualizarAjustes((a) => {
+		a.metaPesoGramos = metaPesoGramos;
 	});
 }
 
@@ -262,29 +305,32 @@ export interface Backup {
 	sesiones?: Sesion[];
 	notas?: Nota[];
 	ajustes?: Ajustes[];
+	pesosCorporales?: PesoCorporal[];
 }
 
 export async function exportarJSON(): Promise<string> {
 	// Las cuatro tablas tienen que representar el mismo instante: sin la
 	// transacción de solo lectura un toque concurrente podía dejar, por ejemplo,
 	// una rutina nueva apuntando a una sesión que todavía no entró al archivo.
-	const { dias, sesiones, notas, ajustes } = await db.transaction(
+	const { dias, sesiones, notas, ajustes, pesosCorporales } = await db.transaction(
 		'r',
 		db.dias,
 		db.sesiones,
 		db.notas,
 		db.ajustes,
+		db.pesosCorporales,
 		async () => ({
 			dias: await db.dias.toArray(),
 			sesiones: await db.sesiones.toArray(),
 			notas: await db.notas.toArray(),
-			ajustes: await db.ajustes.toArray()
+			ajustes: await db.ajustes.toArray(),
+			pesosCorporales: await db.pesosCorporales.toArray()
 		})
 	);
 	return JSON.stringify(
 		{
 			app: 'gym-brot',
-			version: 1,
+			version: 2,
 			exportado: new Date().toISOString(),
 			dias,
 			// `exerciseIds` es un índice derivado de `ejercicios`: no viaja en el backup.
@@ -292,7 +338,8 @@ export async function exportarJSON(): Promise<string> {
 			// ni puede reinstalar un índice desfasado.
 			sesiones: sesiones.map(({ exerciseIds: _exerciseIds, ...sesion }) => sesion),
 			notas,
-			ajustes: ajustes.map(normalizarAjustes)
+			ajustes: ajustes.map(normalizarAjustes),
+			pesosCorporales
 		},
 		null,
 		2
@@ -329,6 +376,31 @@ function esDiaSemanaValido(n: unknown): n is number {
 	return esNumero(n) && n >= 0 && n <= 6 && Number.isInteger(n);
 }
 
+function esProgresionDoble(value: unknown): boolean {
+	return (
+		esRecord(value) &&
+		value.tipo === 'doble' &&
+		esBoolean(value.activa) &&
+		esNumero(value.repsMin) &&
+		Number.isInteger(value.repsMin) &&
+		value.repsMin > 0 &&
+		esNumero(value.repsMax) &&
+		Number.isInteger(value.repsMax) &&
+		value.repsMax >= value.repsMin &&
+		(value.incrementoGramos === undefined ||
+			(esEnteroNoNegativo(value.incrementoGramos) && value.incrementoGramos > 0)) &&
+		(value.proximoPesoGramos === undefined || esEnteroNoNegativo(value.proximoPesoGramos)) &&
+		(value.proximoEsMax === undefined || esBoolean(value.proximoEsMax)) &&
+		(value.proximoExtraGramos === undefined || esEnteroNoNegativo(value.proximoExtraGramos)) &&
+		(value.desdeSesionId === undefined || esString(value.desdeSesionId)) &&
+		(value.decision === undefined ||
+			value.decision === 'aceptada' ||
+			value.decision === 'pospuesta' ||
+			value.decision === 'descartada') &&
+		(value.decisionSesionId === undefined || esString(value.decisionSesionId))
+	);
+}
+
 function esDia(value: unknown): value is Dia {
 	if (!esRecord(value)) return false;
 	const ejercicios = value.ejercicios;
@@ -347,7 +419,8 @@ function esDia(value: unknown): value is Dia {
 				esRecord(e) &&
 				esString(e.exerciseId) &&
 				esEnteroNoNegativo(e.seriesObjetivo) &&
-				esEnteroNoNegativo(e.orden)
+				esEnteroNoNegativo(e.orden) &&
+				(e.progresion === undefined || esProgresionDoble(e.progresion))
 		)
 	);
 }
@@ -402,7 +475,8 @@ function esSesion(value: unknown): value is Sesion {
 							(esNumeroNoNegativo(set.reps) && Number.isInteger(set.reps))) &&
 						(set.esMax === undefined || esBoolean(set.esMax)) &&
 						(set.extraKg === undefined || esNumeroNoNegativo(set.extraKg)) &&
-						(set.extraGramos === undefined || esEnteroNoNegativo(set.extraGramos))
+						(set.extraGramos === undefined || esEnteroNoNegativo(set.extraGramos)) &&
+						(set.rir === undefined || esNumero(set.rir))
 				)
 			);
 		})
@@ -430,6 +504,13 @@ function esDescansosEjercicio(value: unknown): boolean {
 	return esRecord(value) && Object.values(value).every((minutos) => esNumeroNoNegativo(minutos));
 }
 
+function esMetricasPrEjercicio(value: unknown): boolean {
+	return (
+		esRecord(value) &&
+		Object.values(value).every((metrica) => metrica === 'peso' || metrica === 'e1rm')
+	);
+}
+
 function esAjustes(value: unknown): value is Ajustes {
 	if (!esRecord(value) || value.id !== 'app') return false;
 	const timer = value.timer;
@@ -445,11 +526,31 @@ function esAjustes(value: unknown): value is Ajustes {
 		(value.vibracion === undefined || esBoolean(value.vibracion)) &&
 		(value.descansoPantallaCompleta === undefined || esBoolean(value.descansoPantallaCompleta)) &&
 		(value.metricaPr === undefined || value.metricaPr === 'peso' || value.metricaPr === 'e1rm') &&
+		(value.metricasPrEjercicio === undefined || esMetricasPrEjercicio(value.metricasPrEjercicio)) &&
+		(value.modoEsfuerzo === undefined ||
+			value.modoEsfuerzo === 'off' ||
+			value.modoEsfuerzo === 'rir' ||
+			value.modoEsfuerzo === 'rpe') &&
+		(value.metaPesoGramos === undefined || esEnteroNoNegativo(value.metaPesoGramos)) &&
 		(value.pasoPeso === undefined || esNumeroNoNegativo(value.pasoPeso)) &&
 		(value.pasosPesoEjercicio === undefined || esPasosPesoEjercicio(value.pasosPesoEjercicio)) &&
 		(value.descansosEjercicio === undefined || esDescansosEjercicio(value.descansosEjercicio)) &&
 		(value.ultimoBackup === undefined || esString(value.ultimoBackup)) &&
-		(value.seedInicialHecho === undefined || esBoolean(value.seedInicialHecho))
+		(value.seedInicialHecho === undefined || esBoolean(value.seedInicialHecho)) &&
+		(value.snapshotsCompletados === undefined || esBoolean(value.snapshotsCompletados))
+	);
+}
+
+function esPesoCorporal(value: unknown): value is PesoCorporal {
+	return (
+		esRecord(value) &&
+		esString(value.fecha) &&
+		esNumero(value.pesoGramos) &&
+		Number.isInteger(value.pesoGramos) &&
+		value.pesoGramos >= PESO_CORPORAL_MIN_GRAMOS &&
+		value.pesoGramos <= PESO_CORPORAL_MAX_GRAMOS &&
+		esString(value.registradoAt) &&
+		Number.isFinite(Date.parse(value.registradoAt))
 	);
 }
 
@@ -471,7 +572,7 @@ export function parseBackup(texto: string): Backup {
 	if (!esRecord(data) || data.app !== 'gym-brot') {
 		throw new Error('No parece un backup de gym-brot');
 	}
-	if (data.version !== undefined && (!esNumero(data.version) || data.version > 1)) {
+	if (data.version !== undefined && (!esNumero(data.version) || data.version > 2)) {
 		throw new Error('Backup inválido: version');
 	}
 	if (data.exportado !== undefined && !esString(data.exportado)) {
@@ -480,16 +581,22 @@ export function parseBackup(texto: string): Backup {
 	for (const nombre of ['dias', 'sesiones', 'notas', 'ajustes'] as const) {
 		if (!Array.isArray(data[nombre])) throw new Error(`Backup inválido: ${nombre}`);
 	}
+	// v1 no tenía seguimiento de peso corporal.
+	if (data.pesosCorporales !== undefined && !Array.isArray(data.pesosCorporales))
+		throw new Error('Backup inválido: pesosCorporales');
 	if ((data.dias as unknown[]).length > 1_000)
 		throw new Error('Backup inválido: demasiadas rutinas');
 	if ((data.sesiones as unknown[]).length > 50_000)
 		throw new Error('Backup inválido: demasiadas sesiones');
 	if ((data.notas as unknown[]).length > 10_000)
 		throw new Error('Backup inválido: demasiadas notas');
+	if ((data.pesosCorporales as unknown[] | undefined)?.length! > 50_000)
+		throw new Error('Backup inválido: demasiados pesos corporales');
 	validarLista(data, 'dias', esDia);
 	validarLista(data, 'sesiones', esSesion);
 	validarLista(data, 'notas', esNota);
 	validarLista(data, 'ajustes', esAjustes);
+	if (data.pesosCorporales !== undefined) validarLista(data, 'pesosCorporales', esPesoCorporal);
 	return data as Backup;
 }
 
@@ -501,7 +608,7 @@ function normalizarDiaBackup(dia: Dia & { diaSemana?: number }): Dia {
 }
 
 export interface ImportPreparado {
-	datos: Required<Pick<Backup, 'dias' | 'sesiones' | 'notas' | 'ajustes'>>;
+	datos: Required<Pick<Backup, 'dias' | 'sesiones' | 'notas' | 'ajustes' | 'pesosCorporales'>>;
 	/** Qué se reparó o se descartó, para decírselo al usuario antes de confirmar. */
 	avisos: string[];
 }
@@ -561,6 +668,7 @@ export function prepararImport(data: Backup): ImportPreparado {
 	let prsReubicados = 0;
 	let prsDescartados = 0;
 	let seriesInvalidasReparadas = 0;
+	let esfuerzosInvalidosReparados = 0;
 	let ejerciciosDuplicados = 0;
 	let seriesTruncadas = 0;
 	for (const sesion of data.sesiones ?? []) {
@@ -594,10 +702,15 @@ export function prepararImport(data: Backup): ImportPreparado {
 				};
 				if (actual.sets.length > 500) seriesTruncadas += actual.sets.length - 500;
 				const sets = actual.sets.slice(0, 500).map((set) => {
-					set = conPesoCanonico(set, ajustes.unidad);
-					if (!set.hecha || repeticionesValidas(set.reps)) return set;
+					let reparado = conPesoCanonico(set, ajustes.unidad);
+					if (reparado.rir != null && !rirValido(reparado.rir)) {
+						const { rir: _rirInvalido, ...sinRir } = reparado;
+						reparado = sinRir;
+						esfuerzosInvalidosReparados++;
+					}
+					if (!reparado.hecha || repeticionesValidas(reparado.reps)) return reparado;
 					seriesInvalidasReparadas++;
-					return { ...set, reps: undefined, hecha: false };
+					return { ...reparado, reps: undefined, hecha: false };
 				});
 				const actualConSeries = {
 					...actual,
@@ -642,6 +755,10 @@ export function prepararImport(data: Backup): ImportPreparado {
 		avisos.push(
 			`${seriesInvalidasReparadas} serie(s) sin repeticiones válidas: se marcaron pendientes`
 		);
+	if (esfuerzosInvalidosReparados)
+		avisos.push(
+			`${esfuerzosInvalidosReparados} valor(es) RIR inválidos: se eliminaron de las series`
+		);
 	if (ejerciciosDuplicados)
 		avisos.push(
 			`${ejerciciosDuplicados} ejercicio(s) duplicados dentro de una sesión: se ignoraron`
@@ -682,6 +799,30 @@ export function prepararImport(data: Backup): ImportPreparado {
 		notas.push(nota);
 	}
 
+	const pesosCorporales: PesoCorporal[] = [];
+	const fechasPeso = new Set<string>();
+	let pesosDuplicados = 0;
+	let pesosFechaInvalida = 0;
+	for (const peso of data.pesosCorporales ?? []) {
+		// La fecha es la clave de la tabla: una que no existe en el calendario desordena el
+		// historial, envenena el peso actual y los cambios de 7/30 días, y llega al gráfico.
+		// Se descarta igual que una sesión con fecha imposible.
+		if (!fechaCalendarioValida(peso.fecha)) {
+			pesosFechaInvalida++;
+			continue;
+		}
+		if (fechasPeso.has(peso.fecha)) {
+			pesosDuplicados++;
+			continue;
+		}
+		fechasPeso.add(peso.fecha);
+		pesosCorporales.push(peso);
+	}
+	if (pesosFechaInvalida)
+		avisos.push(`${pesosFechaInvalida} medición(es) de peso con fecha inválida: se descartaron`);
+	if (pesosDuplicados)
+		avisos.push(`${pesosDuplicados} medición(es) de peso repetidas: se conservó la primera`);
+
 	let ajustesReparados = false;
 	if (!(ajustes.timer.minutos > 0)) {
 		ajustes.timer.minutos = AJUSTES_DEFAULT.timer.minutos;
@@ -695,6 +836,15 @@ export function prepararImport(data: Backup): ImportPreparado {
 		ajustes.ultimoBackup = undefined;
 		ajustesReparados = true;
 	}
+	if (
+		ajustes.metaPesoGramos != null &&
+		(!Number.isInteger(ajustes.metaPesoGramos) ||
+			ajustes.metaPesoGramos < PESO_CORPORAL_MIN_GRAMOS ||
+			ajustes.metaPesoGramos > PESO_CORPORAL_MAX_GRAMOS)
+	) {
+		ajustes.metaPesoGramos = undefined;
+		ajustesReparados = true;
+	}
 	// Restaurar una lista de rutinas vacía es deliberado. Sin este flag, un backup
 	// vacío y antiguo recibía las rutinas de ejemplo al recargar. Si sí trae días,
 	// conservamos el valor original para que el ida y vuelta no altere datos sanos.
@@ -705,7 +855,7 @@ export function prepararImport(data: Backup): ImportPreparado {
 		avisos.push('Había ajustes inválidos: se repararon con valores seguros');
 
 	return {
-		datos: { dias, sesiones, notas, ajustes: [ajustes] },
+		datos: { dias, sesiones, notas, ajustes: [ajustes], pesosCorporales },
 		avisos
 	};
 }
@@ -714,13 +864,28 @@ export function prepararImport(data: Backup): ImportPreparado {
 export async function importarBackup(data: Backup): Promise<ImportPreparado['avisos']> {
 	const { datos, avisos } = prepararImport(data);
 	invalidarEscriturasPendientes();
-	await db.transaction('rw', db.dias, db.sesiones, db.notas, db.ajustes, async () => {
-		await Promise.all([db.dias.clear(), db.sesiones.clear(), db.notas.clear(), db.ajustes.clear()]);
-		if (datos.dias.length) await db.dias.bulkPut(datos.dias);
-		if (datos.sesiones.length) await db.sesiones.bulkPut(datos.sesiones.map(conIndice));
-		if (datos.notas.length) await db.notas.bulkPut(datos.notas);
-		if (datos.ajustes.length) await db.ajustes.bulkPut(datos.ajustes);
-	});
+	await db.transaction(
+		'rw',
+		db.dias,
+		db.sesiones,
+		db.notas,
+		db.ajustes,
+		db.pesosCorporales,
+		async () => {
+			await Promise.all([
+				db.dias.clear(),
+				db.sesiones.clear(),
+				db.notas.clear(),
+				db.ajustes.clear(),
+				db.pesosCorporales.clear()
+			]);
+			if (datos.dias.length) await db.dias.bulkPut(datos.dias);
+			if (datos.sesiones.length) await db.sesiones.bulkPut(datos.sesiones.map(conIndice));
+			if (datos.notas.length) await db.notas.bulkPut(datos.notas);
+			if (datos.ajustes.length) await db.ajustes.bulkPut(datos.ajustes);
+			if (datos.pesosCorporales.length) await db.pesosCorporales.bulkPut(datos.pesosCorporales);
+		}
+	);
 	anunciarReemplazoDatos();
 	return avisos;
 }
@@ -728,8 +893,22 @@ export async function importarBackup(data: Backup): Promise<ImportPreparado['avi
 /** Borra todos los datos locales y deja la app como recién instalada. */
 export async function borrarTodo(): Promise<void> {
 	invalidarEscriturasPendientes();
-	await db.transaction('rw', db.dias, db.sesiones, db.notas, db.ajustes, async () => {
-		await Promise.all([db.dias.clear(), db.sesiones.clear(), db.notas.clear(), db.ajustes.clear()]);
-	});
+	await db.transaction(
+		'rw',
+		db.dias,
+		db.sesiones,
+		db.notas,
+		db.ajustes,
+		db.pesosCorporales,
+		async () => {
+			await Promise.all([
+				db.dias.clear(),
+				db.sesiones.clear(),
+				db.notas.clear(),
+				db.ajustes.clear(),
+				db.pesosCorporales.clear()
+			]);
+		}
+	);
 	anunciarReemplazoDatos();
 }

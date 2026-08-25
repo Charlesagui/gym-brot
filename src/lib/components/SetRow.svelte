@@ -1,8 +1,9 @@
 <script lang="ts">
-	import type { SetSesion, Ajustes } from '$lib/db';
+	import type { SetSesion, Ajustes, ModoEsfuerzo } from '$lib/db';
 	import { pulsar } from '$lib/pulsar';
 	import { formatoNumero, formatoAnterior } from '$lib/formato';
 	import Stepper from './Stepper.svelte';
+	import { etiquetaEsfuerzo, rpeARir } from '$lib/esfuerzo';
 
 	let {
 		set,
@@ -14,13 +15,15 @@
 		pasoPeso,
 		pendiente = false,
 		flash = false,
+		modoEsfuerzo = 'off',
 		onToggle,
 		onToggleMax,
 		onAjustarPeso,
 		onEscribirPeso,
 		onAjustarReps,
 		onEscribirReps,
-		onAjustarExtra
+		onAjustarExtra,
+		onSetRir
 	}: {
 		set: SetSesion;
 		index: number;
@@ -32,6 +35,7 @@
 		pendiente?: boolean;
 		/** Breve acuse visual tras confirmar el guardado (no se usa al desmarcar). */
 		flash?: boolean;
+		modoEsfuerzo?: ModoEsfuerzo;
 		onToggle: () => void;
 		onToggleMax: () => void;
 		onAjustarPeso: (delta: number) => void;
@@ -39,9 +43,24 @@
 		onAjustarReps: (delta: number) => void;
 		onEscribirReps: (el: HTMLInputElement) => void;
 		onAjustarExtra: (delta: number) => void;
+		onSetRir: (rir?: number) => void;
 	} = $props();
 
 	const ant = $derived(formatoAnterior(anterior, unidad));
+	let mostrarEsfuerzo = $state(false);
+	const escala = $derived(modoEsfuerzo === 'rpe' ? 'rpe' : 'rir');
+	const opciones = $derived(
+		Array.from({ length: 11 }, (_, indice) => (escala === 'rir' ? indice / 2 : 10 - indice / 2))
+	);
+
+	function cambiarEsfuerzo(valor: string) {
+		if (!valor) {
+			onSetRir(undefined);
+			return;
+		}
+		const numero = Number(valor);
+		onSetRir(escala === 'rir' ? numero : rpeARir(numero));
+	}
 </script>
 
 <div
@@ -152,6 +171,41 @@
 				>
 			</div>
 		</div>
+	{/if}
+	{#if modoEsfuerzo !== 'off'}
+		{#if set.rir == null && !mostrarEsfuerzo}
+			<button
+				type="button"
+				onclick={() => (mostrarEsfuerzo = true)}
+				class="mt-2 min-h-11 rounded-full px-3 text-xs font-bold"
+				style="color: var(--accent-text); background: rgba(255,255,255,.04)"
+				>+ {escala.toUpperCase()}</button
+			>
+		{:else}
+			<div
+				class="mt-2 flex min-h-11 items-center gap-2 rounded-xl px-2"
+				style="background: rgba(255,255,255,.035)"
+			>
+				<label class="min-w-0 flex-1 text-xs font-bold" style="color: var(--muted)">
+					Esfuerzo
+					<select
+						value={set.rir == null ? '' : escala === 'rir' ? set.rir : 10 - set.rir}
+						onchange={(evento) => cambiarEsfuerzo(evento.currentTarget.value)}
+						class="ml-2 min-h-11 rounded-lg bg-white/[0.06] px-3 font-bold"
+						aria-label={`${escala.toUpperCase()} de la serie ${index + 1}`}
+					>
+						<option value="">Sin registrar</option>
+						{#each opciones as opcion (opcion)}<option value={opcion}
+								>{escala.toUpperCase()} {opcion}</option
+							>{/each}
+					</select>
+				</label>
+				{#if set.rir != null}<span
+						class="shrink-0 text-xs font-semibold"
+						style="color: var(--accent-text)">{etiquetaEsfuerzo(set.rir, escala)}</span
+					>{/if}
+			</div>
+		{/if}
 	{/if}
 </div>
 

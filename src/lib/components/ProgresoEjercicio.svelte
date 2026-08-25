@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { db, type Ajustes, type MetricaPr } from '$lib/db';
+	import { db, type Ajustes, type MetricaPr, type ModoEsfuerzo } from '$lib/db';
 	import { liveQuery } from 'dexie';
 	import { DESCRIPCION_METRICA, type MetricaEfectiva } from '$lib/sesion-reglas';
 	import {
@@ -11,6 +11,7 @@
 	import { formatoNumero, formatoSet, fechaCorta } from '$lib/formato';
 	import ChartProgreso from './ChartProgreso.svelte';
 	import EditarSerieSheet, { type SerieEditable } from './EditarSerieSheet.svelte';
+	import { etiquetaEsfuerzo } from '$lib/esfuerzo';
 
 	let {
 		exerciseId,
@@ -18,7 +19,8 @@
 		unidad,
 		metrica,
 		pasoPeso,
-		maquinaPlacas
+		maquinaPlacas,
+		modoEsfuerzo
 	}: {
 		exerciseId: string;
 		glow: string;
@@ -26,6 +28,7 @@
 		metrica: MetricaPr;
 		pasoPeso: number;
 		maquinaPlacas: boolean;
+		modoEsfuerzo: ModoEsfuerzo;
 	} = $props();
 
 	const PROGRESO_VACIO: ProgresoEjercicio = {
@@ -282,6 +285,14 @@
 									<span class="min-w-0 flex-1 truncate font-semibold tabular-nums">
 										{formatoSet(serie.set, unidad)}
 									</span>
+									{#if serie.set.rir != null}<span
+											class="shrink-0 text-[10px] font-bold"
+											style="color: var(--accent-text)"
+											>{etiquetaEsfuerzo(
+												serie.set.rir,
+												modoEsfuerzo === 'rpe' ? 'rpe' : 'rir'
+											)}</span
+										>{/if}
 									{#if serie.esPr}
 										<span class="shrink-0" aria-label={etiquetaPr(serie.metricaPr)}>🏆</span>
 									{/if}
@@ -313,6 +324,7 @@
 		{unidad}
 		{pasoPeso}
 		{metrica}
+		{modoEsfuerzo}
 		onClose={() => (serieEditando = null)}
 	/>
 {/if}

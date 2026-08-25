@@ -13,6 +13,7 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"test": "vitest run --coverage",
 		"test:e2e": "npm run build && playwright test",
+		"audit:media": "node scripts/audit-media.mjs",
 		"format": "prettier --write .",
 		"format:check": "prettier --check ."
 	},

@@ -14,6 +14,7 @@
 	import { popOnChange } from '$lib/pop-on-change';
 	import EditarSerieSheet, { type SerieEditable } from '$lib/components/EditarSerieSheet.svelte';
 	import { conPesoVisible } from '$lib/unidades';
+	import { etiquetaEsfuerzo } from '$lib/esfuerzo';
 
 	// La fecha viene de la URL: si no tiene forma de YYYY-MM-DD no se consulta nada y
 	// el título no muestra "Invalid Date".
@@ -31,6 +32,11 @@
 	);
 	const pasoPesoEditando = $derived(
 		ejercicioEditando ? pasoPesoEfectivo(ejercicioEditando, ajustes) : ajustes.pasoPeso
+	);
+	const metricaEditando = $derived(
+		serieEditando
+			? (ajustes.metricasPrEjercicio?.[serieEditando.exerciseId] ?? ajustes.metricaPr)
+			: ajustes.metricaPr
 	);
 
 	// Puede haber más de una sesión (día de rutina) en la misma fecha: se muestran agrupadas.
@@ -285,6 +291,14 @@
 											<span class="min-w-0 flex-1 truncate font-semibold tabular-nums">
 												{formatoSet(set, ajustes.unidad)}
 											</span>
+											{#if set.rir != null}<span
+													class="shrink-0 text-[10px] font-bold"
+													style="color: var(--accent-text)"
+													>{etiquetaEsfuerzo(
+														set.rir,
+														ajustes.modoEsfuerzo === 'rpe' ? 'rpe' : 'rir'
+													)}</span
+												>{/if}
 											{#if i === setPr}
 												<span class="shrink-0 text-sm" aria-label="Set del PR">🏆</span>
 											{/if}
@@ -312,7 +326,8 @@
 		glow={glowEditando}
 		unidad={ajustes.unidad}
 		pasoPeso={pasoPesoEditando}
-		metrica={ajustes.metricaPr}
+		metrica={metricaEditando}
+		modoEsfuerzo={ajustes.modoEsfuerzo ?? 'off'}
 		onClose={() => (serieEditando = null)}
 	/>
 {/if}
