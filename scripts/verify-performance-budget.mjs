@@ -4,7 +4,9 @@ import { gzipSync } from 'node:zlib';
 const BUILD = new URL('../build/', import.meta.url);
 const MAX_SHELL_BYTES = 300 * 1024;
 const MAX_SHELL_GZIP_BYTES = 110 * 1024;
-const MAX_PRECACHE_BYTES = 1300 * 1024;
+// La calculadora de discos agrega una ruta offline de ~12 KiB al precache.
+// Conservamos un margen acotado sin relajar los presupuestos del shell.
+const MAX_PRECACHE_BYTES = 1320 * 1024;
 
 async function tamanio(url) {
 	return stat(url).then((archivo) => archivo.size);
