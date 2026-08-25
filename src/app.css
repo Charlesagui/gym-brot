@@ -1,11 +1,34 @@
 @import 'tailwindcss';
 
+/*
+ * Tipografía de las cifras.
+ *
+ * El peso, las reps, el descanso y el PR son el contenido de la app, y hasta acá se
+ * imprimían en la misma `system-ui` de 16 px que sus propios rótulos. Una condensada
+ * de display les da identidad y, sobre todo, deja poner el número mucho más grande
+ * sin robarle ancho a la fila.
+ *
+ * Va self-hosted y NO por CDN: la app tiene que arrancar sin red. `woff2` ya está en
+ * los globPatterns del service worker, así que entra sola al precache (ver
+ * scripts/verify-performance-budget.mjs, donde el techo subió por estos 14,9 KB).
+ * Un solo peso: el 700 es el único que se usa, y cada peso extra son ~15 KB.
+ */
+@font-face {
+	font-family: 'Barlow Condensed';
+	font-style: normal;
+	font-weight: 700;
+	font-display: swap;
+	src: url('/fonts/barlow-condensed-700-latin.woff2') format('woff2');
+}
+
 /* Tokens de diseño — color de acento y glow son PROVISIONALES (libres de cambiar) */
 :root {
 	--bg: #08080c;
 	--surface: #14141d;
 	/* Superficie elevada: tarjeta sobre tarjeta (fila dentro de una sección) */
 	--surface-2: rgba(255, 255, 255, 0.035);
+	/* Tercer nivel: la fila que estás haciendo ahora. Ver .gb-foco. */
+	--surface-3: #20202d;
 	--text: #e8e8f0;
 	--muted: #9aa0b4;
 	/* Fondo de acción y variante para texto: ambas cumplen AA en su contexto. */
@@ -27,6 +50,68 @@
 	--dur-slow: 340ms; /* celebración, entrada de overlays */
 	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 	--ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+	--fuente-cifra: 'Barlow Condensed', 'Arial Narrow', ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * Una cifra: número que el usuario vino a leer o a mover. Siempre tabular, para que
+ * al cambiar de 99 a 100 no se corra todo lo que tiene al lado.
+ */
+.cifra {
+	font-family: var(--fuente-cifra);
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.01em;
+	line-height: 0.95;
+}
+
+/* La unidad que acompaña a una cifra: chica, en mayúsculas y en tinta apagada. */
+.cifra-u {
+	font-family: inherit;
+	font-size: 0.34em;
+	font-weight: 700;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--muted);
+	margin-left: 0.12em;
+}
+
+/*
+ * Relieve: bisel arriba y sombra abajo. Es lo que hace que un botón grande parezca
+ * apretable en vez de un rectángulo pintado; sin esto, agrandar no alcanza.
+ */
+.gb-relieve {
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.1),
+		0 8px 22px rgba(0, 0, 0, 0.32);
+}
+
+/*
+ * Foco: la única fila expandida de la lista de series, la que estás haciendo ahora.
+ * `--foco-color` es el glow del grupo muscular, así que el color también dice de qué
+ * ejercicio se trata. El canto izquierdo es la señal que se ve de reojo.
+ */
+.gb-foco {
+	position: relative;
+	background:
+		linear-gradient(180deg, rgb(var(--foco-color, var(--glow)) / 0.12), rgba(255, 255, 255, 0.02)),
+		var(--surface-3);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.12),
+		inset 0 0 0 1px rgb(var(--foco-color, var(--glow)) / 0.3),
+		0 10px 26px rgba(0, 0, 0, 0.4);
+}
+
+.gb-foco::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 0.85rem;
+	bottom: 0.85rem;
+	width: 3px;
+	border-radius: 0 3px 3px 0;
+	background: rgb(var(--foco-color, var(--glow)));
 }
 
 html {
