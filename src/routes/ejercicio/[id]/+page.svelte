@@ -1355,8 +1355,8 @@
 									style="background: rgb({g.glow} / .08)"
 								>
 									<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
-										💡 Primera vez con este ejercicio. Empezá con un peso que te deje hacer ~12
-										repeticiones cómodas y ajustá la próxima.
+										💡 Todavía no hay series completadas para este ejercicio. Empezá con un peso que
+										te deje hacer ~12 repeticiones cómodas y ajustá la próxima.
 									</p>
 								</div>
 							{/if}
