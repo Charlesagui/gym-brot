@@ -350,15 +350,28 @@ class Descanso {
 		if (!this.vencido) {
 			this.vencido = true;
 			this.restoSeg = 0;
-			this.#wakeLock.desactivar();
-			// Vencido en background: notificación del sistema (la web no puede sonar oculta).
+			// El wake lock NO se suelta acá. Vencer es justo cuando hay que mirar la
+			// pantalla: soltarlo dejaba que se apagara durante la alarma, y entonces el
+			// descanso terminaba sin que nadie se enterara. Lo suelta `#limpiar()`, que
+			// corre al atender el descanso o al pasarse de `MAX_VENCIDO_MS`.
+			// Además de sonar, avisamos al sistema: si la pestaña quedó congelada, la
+			// notificación es la única señal que sobrevive.
 			if (document.visibilityState !== 'visible') void this.#notificar();
 		}
 		this.vencidoSeg = Math.floor((ahora - this.#hasta) / 1000);
 		// Alarma continua: suena en loop hasta que se atienda (✓ Listo, marcar la serie
-		// o saltar) o hasta el tope de MAX_VENCIDO_MS. Solo con la app a la vista; si se
-		// vuelve de un bloqueo con el vencido activo, el loop arranca solo acá.
-		if (document.visibilityState === 'visible' && ahora - this.#ultimaAlarma >= ALARMA_CADA_MS) {
+		// o saltar) o hasta el tope de MAX_VENCIDO_MS.
+		//
+		// Suena también con la app oculta o la pantalla apagada, que es precisamente
+		// cuando hace falta. `mantenerAudioDespierto()` ya sostiene el contexto con una
+		// fuente muda desde que arranca el descanso —ese costo ya se paga— y una pestaña
+		// con audio activo no queda congelada, así que el loop sigue corriendo. Antes
+		// esto exigía `visibilityState === 'visible'`: el contexto se mantenía vivo para
+		// nada y el descanso vencía en silencio en el bolsillo.
+		//
+		// El tic de la cuenta regresiva sí sigue pidiendo pantalla a la vista: ese es el
+		// que no tiene que hacer ruido desde el bolsillo.
+		if (ahora - this.#ultimaAlarma >= ALARMA_CADA_MS) {
 			this.#ultimaAlarma = ahora;
 			this.#sonarYVibrar();
 		}

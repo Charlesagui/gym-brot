@@ -26,6 +26,13 @@
 	import { PRESETS_DESCANSO, etiquetaCortaDescanso, etiquetaDescanso } from '$lib/descanso-preset';
 	import { vibracionSoportada } from '$lib/vibracion';
 	import {
+		estadoNotificaciones,
+		explicacionAlarma,
+		pedirNotificaciones,
+		soportaWakeLock,
+		type EstadoPermiso
+	} from '$lib/permisos';
+	import {
 		borrarVideosGuardados,
 		cachearVideoCompleto,
 		contarVideosGuardados,
@@ -56,8 +63,13 @@
 		onCancel?: () => void;
 	} | null>(null);
 
+	let permisoNotif = $state<EstadoPermiso>('sin-soporte');
+	let hayWakeLock = $state(false);
+
 	onMount(() => {
 		hayVibracion = vibracionSoportada();
+		permisoNotif = estadoNotificaciones();
+		hayWakeLock = soportaWakeLock();
 		void navigator.storage?.persisted?.().then((v) => (persistido = v));
 		void refrescarVideosGuardados();
 		return () => {
@@ -332,6 +344,55 @@
 					>
 				{/each}
 			</div>
+		</section>
+
+		<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+			<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+				Alarma del descanso
+			</p>
+			<ul class="mt-3 flex flex-col gap-2 text-sm">
+				<li class="flex min-h-11 items-center gap-3">
+					<span aria-hidden="true">{hayWakeLock ? '✅' : '⚠️'}</span>
+					<span class="min-w-0 flex-1">
+						Pantalla encendida durante el descanso
+						<span class="block text-xs" style="color: var(--muted)">
+							{hayWakeLock ? 'Disponible en este navegador' : 'Este navegador no lo permite'}
+						</span>
+					</span>
+				</li>
+				<li class="flex min-h-11 items-center gap-3">
+					<span aria-hidden="true">{permisoNotif === 'concedido' ? '✅' : '⚠️'}</span>
+					<span class="min-w-0 flex-1">
+						Notificación al terminar
+						<span class="block text-xs" style="color: var(--muted)">
+							{permisoNotif === 'concedido'
+								? 'Permitida'
+								: permisoNotif === 'bloqueado'
+									? 'Bloqueada: habilitala desde los ajustes del sitio en tu navegador'
+									: permisoNotif === 'sin-soporte'
+										? 'Este navegador no las admite'
+										: 'Sin permiso todavía'}
+						</span>
+					</span>
+					{#if permisoNotif === 'sin-pedir'}
+						<button
+							onclick={async () => {
+								permisoNotif = await pedirNotificaciones();
+								avisar(
+									permisoNotif === 'concedido'
+										? '✅ Notificaciones activadas.'
+										: 'No se activaron las notificaciones.'
+								);
+							}}
+							class="min-h-11 shrink-0 rounded-xl px-3 text-sm font-bold"
+							style="background: var(--accent); color: var(--on-accent)">Permitir</button
+						>
+					{/if}
+				</li>
+			</ul>
+			<p class="mt-2 text-xs leading-relaxed" style="color: var(--muted)">
+				{explicacionAlarma(permisoNotif, hayWakeLock)}
+			</p>
 		</section>
 
 		<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
