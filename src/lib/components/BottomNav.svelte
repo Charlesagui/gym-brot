@@ -3,6 +3,7 @@
 
 	const ruta = $derived($page.url.pathname);
 	const rutinasActivas = $derived(ruta === '/' || ruta.startsWith('/dia/'));
+	const discosActivo = $derived(ruta.startsWith('/herramientas/discos'));
 	const historialActivo = $derived(ruta === '/historial' || ruta.startsWith('/historial/'));
 	const ajustesActivo = $derived(ruta === '/ajustes');
 </script>
@@ -33,6 +34,25 @@
 			</svg>
 		</span>
 		<span class="label">Rutinas</span>
+	</a>
+	<a
+		href="/herramientas/discos"
+		class="nav-item"
+		class:active={discosActivo}
+		aria-current={discosActivo ? 'page' : undefined}
+	>
+		<span class="icono">
+			<svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+				<path d="M7 12h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+				<path
+					d="M4 9v6M7 8v8M17 8v8M20 9v6"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+				/>
+			</svg>
+		</span>
+		<span class="label">Discos</span>
 	</a>
 	<a
 		href="/historial"
