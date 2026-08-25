@@ -7,6 +7,9 @@ const config = {
 	kit: {
 		// SPA: la app es client-side (datos en Dexie), con shell de respaldo.
 		adapter: adapter({ fallback: 'index.html' }),
+		// Gym-brot se publica en la raíz. Assets absolutos evitan que el shell SPA servido
+		// para `/dia/...` intente cargar `/dia/_app/...`, especialmente desde el fallback PWA.
+		paths: { relative: false },
 		// SvelteKit emite un único script inline (el bootstrap de hidratación) y acá le
 		// calcula el sha256 en build, que va en un <meta> CSP junto al HTML. La cabecera
 		// de `static/_headers` tiene que seguir permitiendo 'unsafe-inline' para scripts

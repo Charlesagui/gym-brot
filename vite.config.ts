@@ -3,6 +3,7 @@ import { configDefaults, defineConfig } from 'vitest/config';
 import tailwindcss from '@tailwindcss/vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
 /** Netlify expone COMMIT_REF; en desarrollo usamos el HEAD local como respaldo. */
 function commitActual(): string {
@@ -44,6 +45,12 @@ export default defineConfig({
 				// Qué descanso manda (ejercicio > general) y cómo se escribe: reglas puras
 				// que antes vivían como números sueltos dentro de la pantalla de ejercicio.
 				'src/lib/descanso-preset.ts',
+				'src/lib/esfuerzo.ts',
+				'src/lib/heatmap.ts',
+				'src/lib/musculos.ts',
+				'src/lib/peso-corporal.ts',
+				'src/lib/progresion.ts',
+				'src/lib/wake-lock.ts',
 				// Entrada numérica y búsqueda del catálogo: lógica pura que antes vivía
 				// duplicada dentro de los componentes, sin forma de testearla.
 				'src/lib/numeros.ts',
@@ -107,11 +114,36 @@ export default defineConfig({
 				]
 			},
 			workbox: {
-				// Los 962 mp4 del catálogo pesan ~22 MB: precachearlos hacía que la primera
+				// Los 962 mp4 del catálogo pesan ~20 MB: precachearlos hacía que la primera
 				// visita se bajara la videoteca entera (y la revalidara en cada deploy).
 				// El shell precacheado queda en ~1 MB; la videoteca se descarga solo desde Ajustes.
 				globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}'],
+				// El preview de SvelteKit (y algunos hosts con fallback SPA) sirve `/` pero
+				// responde 404 a `/index.html`. Precachear el documento bajo su URL pública
+				// real evita que la instalación completa del service worker quede pendiente.
+				//
+				// La revisión se deriva del resto del manifest y no puede ser `null`: Workbox
+				// usa URL + revisión como clave de caché, así que un `/` sin revisión tiene la
+				// misma clave en todos los deploys. El service worker nuevo entonces nunca
+				// vuelve a bajar el shell, pero sí borra del precache los bundles del deploy
+				// anterior: queda un documento viejo pidiendo archivos que ya no existen y la
+				// app arranca en blanco, con o sin conexión. `index.html` todavía no existe
+				// acá (lo escribe `adapter-static` después), así que su hash no sirve; el del
+				// manifest sí, porque si cambió cualquier asset cambió el documento que los
+				// referencia.
+				manifestTransforms: [
+					async (entries) => {
+						const revision = createHash('sha256')
+							.update(entries.map((entry) => `${entry.url}:${entry.revision ?? ''}`).join('\n'))
+							.digest('hex')
+							.slice(0, 16);
+						// `size` sólo alimenta el reporte de tamaño del precache; el documento todavía
+						// no está en disco, así que no hay nada que medir y queda en 0.
+						return { manifest: [...entries, { url: '/', revision, size: 0 }], warnings: [] };
+					}
+				],
 				modifyURLPrefix: { 'client/': '' },
+				navigateFallback: '/',
 				maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
 				runtimeCaching: [
 					{
