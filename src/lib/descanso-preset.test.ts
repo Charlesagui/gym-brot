@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
 	PRESETS_DESCANSO,
+	RUEDA_DESCANSO,
+	segundosAMinutos,
 	descansoEfectivo,
 	descansoEnSegundos,
 	descansoPersonalizado,
@@ -96,16 +98,20 @@ describe('etiquetas', () => {
 });
 
 describe('PRESETS_DESCANSO', () => {
-	it('cubre los descansos reales del gym, de accesorio a compuesto pesado', () => {
-		expect([...PRESETS_DESCANSO]).toEqual([0.75, 1, 1.5, 2, 3, 5]);
+	it('deja cuatro atajos redondos y delega el resto en la rueda', () => {
+		expect([...PRESETS_DESCANSO]).toEqual([1, 2, 4, 5]);
 		// Todos tienen que poder escribirse sin ambigüedad en un chip angosto.
-		expect(PRESETS_DESCANSO.map(etiquetaCortaDescanso)).toEqual([
-			'45s',
-			'1′',
-			'90s',
-			'2′',
-			'3′',
-			'5′'
-		]);
+		expect(PRESETS_DESCANSO.map(etiquetaCortaDescanso)).toEqual(['1′', '2′', '4′', '5′']);
+	});
+
+	it('la rueda alcanza los descansos que salieron de la fila', () => {
+		const { min, max, paso } = RUEDA_DESCANSO;
+		for (const segundos of [45, 90, 180]) {
+			expect(segundos).toBeGreaterThanOrEqual(min);
+			expect(segundos).toBeLessThanOrEqual(max);
+			expect(segundos % paso).toBe(0);
+			// Y siguen guardándose en minutos, como todo lo demás.
+			expect(descansoEnSegundos(segundosAMinutos(segundos))).toBe(segundos);
+		}
 	});
 });

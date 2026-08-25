@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icono from './Icono.svelte';
 	import { db, type Ajustes, type MetricaPr, type ModoEsfuerzo } from '$lib/db';
 	import { liveQuery } from 'dexie';
 	import { DESCRIPCION_METRICA, type MetricaEfectiva } from '$lib/sesion-reglas';
@@ -66,6 +67,8 @@
 
 	// Historial completo paginado de a 15 sesiones.
 	let visibles = $state(15);
+	/** La explicación de la métrica: útil una vez, no en cada visita. */
+	let mostrarQueMide = $state(false);
 	// Serie en edición → bottom sheet (sin prompt/confirm nativos).
 	let serieEditando = $state<SerieEditable | null>(null);
 	const diasStore = estadoLiveQuery(
@@ -140,12 +143,18 @@
 				</div>
 			</div>
 		{/if}
-		<p
-			class="mt-3 border-t border-white/5 pt-2 text-[11px] leading-relaxed"
-			style="color: var(--muted)"
+		<button
+			type="button"
+			onclick={() => (mostrarQueMide = !mostrarQueMide)}
+			aria-expanded={mostrarQueMide}
+			class="mt-2 min-h-11 border-t border-white/5 pt-2 text-[11px] font-bold uppercase tracking-wider"
+			style="color: var(--muted)">{mostrarQueMide ? 'Ocultar' : '¿Qué mide?'}</button
 		>
-			💡 {DESCRIPCION_METRICA[metricaEfectiva]}
-		</p>
+		{#if mostrarQueMide}
+			<p class="text-[11px] leading-relaxed" style="color: var(--muted)">
+				{DESCRIPCION_METRICA[metricaEfectiva]}
+			</p>
+		{/if}
 	</section>
 
 	{#if !cargandoDatos && (progreso.mejorPeso || progreso.mejorReps)}
@@ -159,9 +168,8 @@
 						<p class="text-[11px] font-bold uppercase tracking-wider" style="color: var(--muted)">
 							Reps máximas
 						</p>
-						<p class="mt-1 text-xl font-extrabold tabular-nums">
-							🏆 {formatoNumero(progreso.mejorReps.valor)}
-							<span class="ml-1 text-sm font-semibold" style="color: var(--muted)">reps</span>
+						<p class="cifra mt-1 text-4xl">
+							{formatoNumero(progreso.mejorReps.valor)}<span class="cifra-u">reps</span>
 						</p>
 						<p class="mt-0.5 text-[11px]" style="color: var(--muted)">
 							{fechaCorta(progreso.mejorReps.fecha, true)}
@@ -173,9 +181,8 @@
 							<p class="text-[11px] font-bold uppercase tracking-wider" style="color: var(--muted)">
 								Peso máximo
 							</p>
-							<p class="mt-1 text-xl font-extrabold tabular-nums">
-								{formatoNumero(progreso.mejorPeso.valor)}
-								<span class="ml-1 text-sm font-semibold" style="color: var(--muted)">{unidad}</span>
+							<p class="cifra mt-1 text-4xl">
+								{formatoNumero(progreso.mejorPeso.valor)}<span class="cifra-u">{unidad}</span>
 							</p>
 							<p class="mt-0.5 text-[11px]" style="color: var(--muted)">
 								{formatoSet(progreso.mejorPeso, unidad)} · {fechaCorta(
@@ -190,9 +197,8 @@
 							<p class="text-[11px] font-bold uppercase tracking-wider" style="color: var(--muted)">
 								1RM estimado
 							</p>
-							<p class="mt-1 text-xl font-extrabold tabular-nums">
-								{formatoNumero(progreso.mejorE1rm.valor)}
-								<span class="ml-1 text-sm font-semibold" style="color: var(--muted)">{unidad}</span>
+							<p class="cifra mt-1 text-4xl">
+								{formatoNumero(progreso.mejorE1rm.valor)}<span class="cifra-u">{unidad}</span>
 							</p>
 							<p class="mt-0.5 text-[11px]" style="color: var(--muted)">
 								{formatoSet(progreso.mejorE1rm, unidad)} · {fechaCorta(
@@ -294,9 +300,15 @@
 											)}</span
 										>{/if}
 									{#if serie.esPr}
-										<span class="shrink-0" aria-label={etiquetaPr(serie.metricaPr)}>🏆</span>
+										<span
+											class="shrink-0"
+											aria-label={etiquetaPr(serie.metricaPr)}
+											style="color: rgb(var(--max))"><Icono nombre="record" tamano={14} /></span
+										>
 									{/if}
-									<span class="shrink-0 text-[10px]" style="color: var(--muted)">✎</span>
+									<span class="shrink-0" style="color: var(--muted)"
+										><Icono nombre="editar" tamano={13} /></span
+									>
 								</button>
 							{/each}
 						</div>

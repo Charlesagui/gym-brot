@@ -14,7 +14,9 @@
 		onCommit,
 		ariaDown,
 		ariaUp,
-		ariaInput
+		ariaInput,
+		grande = false,
+		unidad
 	}: {
 		value: number | undefined;
 		format: (n: number) => string;
@@ -26,6 +28,14 @@
 		ariaDown: string;
 		ariaUp: string;
 		ariaInput: string;
+		/**
+		 * Versión de la serie en curso: botones de 56 px y la cifra en grande. El resto
+		 * de la app (editar una serie del historial) sigue con la compacta, que convive
+		 * con otros controles y no es lo que estás tocando entre repeticiones.
+		 */
+		grande?: boolean;
+		/** Unidad debajo de la cifra, solo en la versión grande ("kg", "reps"). */
+		unidad?: string;
 	} = $props();
 
 	let campo: HTMLInputElement | undefined;
@@ -63,28 +73,43 @@
 
 <svelte:document onvisibilitychange={commitSiEstaEditando} />
 
-<div class="flex min-h-12 items-stretch rounded-xl bg-white/5 p-1">
+<div class="flex items-stretch rounded-xl bg-white/5 p-1 {grande ? 'min-h-[4.5rem]' : 'min-h-12'}">
 	<button
 		use:pulsar={() => paso(-step)}
-		class="grid min-h-11 w-11 shrink-0 touch-manipulation select-none place-items-center rounded-lg text-lg font-bold"
+		class="grid shrink-0 touch-manipulation select-none place-items-center rounded-lg font-bold {grande
+			? 'min-h-16 w-14 text-3xl'
+			: 'min-h-11 w-11 text-lg'}"
 		style="background: rgba(255,255,255,.06); color: var(--muted)"
 		aria-label={ariaDown}>−</button
 	>
-	<input
-		bind:this={campo}
-		type="text"
-		{inputmode}
-		value={value != null ? format(value) : ''}
-		placeholder="—"
-		onfocus={(e) => e.currentTarget.select()}
-		onchange={(e) => onCommit(e.currentTarget)}
-		onkeydown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-		class="min-h-11 w-full min-w-0 rounded-lg bg-white/[0.035] px-1 text-center text-base font-bold tabular-nums outline-none focus:bg-white/[0.08]"
-		aria-label={ariaInput}
-	/>
+	<div class="flex min-w-0 flex-1 flex-col justify-center">
+		<input
+			bind:this={campo}
+			type="text"
+			{inputmode}
+			value={value != null ? format(value) : ''}
+			placeholder="—"
+			onfocus={(e) => e.currentTarget.select()}
+			onchange={(e) => onCommit(e.currentTarget)}
+			onkeydown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+			class="w-full min-w-0 rounded-lg bg-white/[0.035] px-1 text-center outline-none focus:bg-white/[0.08] {grande
+				? 'cifra min-h-12 text-[2.35rem]'
+				: 'min-h-11 text-base font-bold tabular-nums'}"
+			aria-label={ariaInput}
+		/>
+		{#if grande && unidad}
+			<span
+				class="pointer-events-none pb-0.5 text-center text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+				style="color: var(--muted)"
+				aria-hidden="true">{unidad}</span
+			>
+		{/if}
+	</div>
 	<button
 		use:pulsar={() => paso(step)}
-		class="grid min-h-11 w-11 shrink-0 touch-manipulation select-none place-items-center rounded-lg text-lg font-bold"
+		class="grid shrink-0 touch-manipulation select-none place-items-center rounded-lg font-bold {grande
+			? 'min-h-16 w-14 text-3xl'
+			: 'min-h-11 w-11 text-lg'}"
 		style="background: rgb({glow} / .18); color: rgb({glow})"
 		aria-label={ariaUp}>+</button
 	>

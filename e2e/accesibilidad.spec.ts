@@ -290,9 +290,11 @@ test('el progreso completo incluye hoy en todos sus rangos y el calendario conse
 	for (const nombre of [
 		'Usar el descanso general en este ejercicio',
 		'Sin descanso en este ejercicio',
-		'Descanso de 45 segundos en este ejercicio',
-		'Descanso de 90 segundos en este ejercicio',
-		'Descanso de 2 minutos en este ejercicio'
+		'Descanso de 1 minuto en este ejercicio',
+		'Descanso de 2 minutos en este ejercicio',
+		'Descanso de 4 minutos en este ejercicio',
+		'Descanso de 5 minutos en este ejercicio',
+		'Elegir otro descanso con la rueda'
 	]) {
 		const caja = await page.getByRole('button', { name: nombre }).boundingBox();
 		expect(caja?.width).toBeGreaterThanOrEqual(44);
@@ -302,7 +304,7 @@ test('el progreso completo incluye hoy en todos sus rangos y el calendario conse
 	await page.getByRole('textbox', { name: 'Peso de la serie 1 en kg' }).fill('100');
 	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
 	await page.getByRole('button', { name: 'Marcar serie 1' }).click();
-	await page.getByRole('link', { name: 'Ver progreso completo →' }).click();
+	await page.getByRole('link', { name: 'Progreso completo →' }).click();
 
 	for (const rango of ['3 meses', '1 año', 'Todo']) {
 		await page.getByRole('button', { name: rango }).click();
@@ -365,10 +367,10 @@ test('el loop de entrenamiento encadena serie, PR, descanso y siguiente ejercici
 	await page.clock.install({ time: new Date('2026-08-15T10:00:00-03:00') });
 	await page.goto('/ejercicio/prensa-pierna-45?dia=dia-piernas&fecha=2026-08-15');
 
-	// Descanso propio de este ejercicio: el más corto, para que el test no dependa
-	// del valor general ni de esperas largas.
-	await page.getByRole('button', { name: 'Descanso de 45 segundos en este ejercicio' }).click();
-	await expect(page.getByText('Propio de este ejercicio: 45 segundos')).toBeVisible();
+	// Descanso propio de este ejercicio: el más corto de la fila, para que el test no
+	// dependa del valor general ni de esperas largas.
+	await page.getByRole('button', { name: 'Descanso de 1 minuto en este ejercicio' }).click();
+	await expect(page.getByText('Propio de este ejercicio: 1 minuto')).toBeVisible();
 
 	await page.getByRole('textbox', { name: 'Peso de la serie 1 en kg' }).fill('100');
 	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
@@ -386,7 +388,7 @@ test('el loop de entrenamiento encadena serie, PR, descanso y siguiente ejercici
 	await expect(page.getByRole('textbox', { name: 'Reps de la serie 1' })).toBeFocused();
 
 	// El descanso sigue corriendo detrás y vence solo.
-	await page.clock.runFor('00:46');
+	await page.clock.runFor('01:01');
 	await expect(page.getByText('¡A la serie!')).toBeVisible();
 	await page.getByRole('button', { name: 'Listo', exact: true }).click();
 	await expect(page.getByText('¡A la serie!')).toBeHidden();
@@ -422,10 +424,34 @@ test('el loop de entrenamiento encadena serie, PR, descanso y siguiente ejercici
  * click (la captura de puntero retargetea el `pointerup`), lo que dejaba el overlay
  * sin más salida que el gesto de arrastrar hacia abajo.
  */
+test('la rueda alcanza los descansos que ya no tienen chip propio', async ({ page }) => {
+	await page.goto('/ejercicio/prensa-pierna-45?dia=dia-piernas&fecha=2026-08-16');
+
+	const otro = page.getByRole('button', { name: 'Elegir otro descanso con la rueda' });
+	await otro.click();
+
+	// Se opera con teclado además del giro: es un slider, no solo un gesto.
+	const rueda = page.getByRole('slider', { name: 'Descanso de este ejercicio' });
+	await expect(rueda).toBeVisible();
+	await rueda.focus();
+	// Hasta el piso (15 s) desde cualquier valor inicial, y de ahí a 45 s.
+	for (let i = 0; i < 40; i++) await page.keyboard.press('ArrowDown');
+	await expect(rueda).toHaveAttribute('aria-valuenow', '15');
+	await page.keyboard.press('ArrowUp');
+	await page.keyboard.press('ArrowUp');
+
+	await expect(rueda).toHaveAttribute('aria-valuenow', '45');
+	await expect(rueda).toHaveAttribute('aria-valuetext', '45 segundos');
+	await expect(page.getByText('Propio de este ejercicio: 45 segundos')).toBeVisible();
+	// El botón deja de decir "Otro" y muestra el valor elegido.
+	await expect(otro).toHaveAttribute('aria-pressed', 'true');
+	await expect(otro).toContainText('45s');
+});
+
 test('las salidas del descanso a pantalla completa responden al toque', async ({ page }) => {
 	await page.clock.install({ time: new Date('2026-08-15T10:00:00-03:00') });
 	await page.goto('/ejercicio/prensa-pierna-45?dia=dia-piernas&fecha=2026-08-15');
-	await page.getByRole('button', { name: 'Descanso de 90 segundos en este ejercicio' }).click();
+	await page.getByRole('button', { name: 'Descanso de 2 minutos en este ejercicio' }).click();
 	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
 	await page.getByRole('button', { name: 'Marcar serie 1' }).click();
 
