@@ -13,6 +13,10 @@
 	import { scale } from 'svelte/transition';
 	import { dur } from '$lib/motion';
 	import { popOnChange } from '$lib/pop-on-change';
+	import HeatmapActividad from '$lib/components/HeatmapActividad.svelte';
+	let MapaCorporal = $state<typeof import('$lib/components/MapaCorporal.svelte').default | null>(
+		null
+	);
 
 	const VACIO: HistorialResumen = crearHistorialResumen([], []);
 
@@ -23,7 +27,7 @@
 	const consultaHistorial = $derived($historialStore);
 	const historial = $derived(consultaHistorial.valor);
 	const recordsStore = $derived(
-		estadoLiveQuery(recordsGlobalesObs(ajustes.metricaPr, ajustes.unidad), [] as RecordEjercicio[])
+		estadoLiveQuery(recordsGlobalesObs(ajustes, ajustes.unidad), [] as RecordEjercicio[])
 	);
 	const consultaRecords = $derived($recordsStore);
 	const records = $derived(consultaRecords.valor);
@@ -37,7 +41,13 @@
 			consultaHistorial.estado === 'error' ||
 			consultaRecords.estado === 'error'
 	);
-	const metricaLabel = $derived(ajustes.metricaPr === 'e1rm' ? '1RM estimado' : 'peso máximo');
+	const metricaLabel = $derived(
+		Object.keys(ajustes.metricasPrEjercicio ?? {}).length
+			? 'métrica según cada ejercicio'
+			: ajustes.metricaPr === 'e1rm'
+				? '1RM estimado'
+				: 'peso máximo'
+	);
 
 	const diasEntrenados = $derived(new Set(historial.dias.map((d) => d.fecha)));
 	const semanas = $derived(historial.semanas.slice(0, 8));
@@ -57,6 +67,16 @@
 		return () => {
 			document.removeEventListener('visibilitychange', refrescarHoy);
 			window.removeEventListener('focus', refrescarHoy);
+		};
+	});
+
+	onMount(() => {
+		let activo = true;
+		void import('$lib/components/MapaCorporal.svelte').then((modulo) => {
+			if (activo) MapaCorporal = modulo.default;
+		});
+		return () => {
+			activo = false;
 		};
 	});
 
@@ -182,6 +202,26 @@
 			{/if}
 		</section>
 
+		<div class="mb-4">
+			<HeatmapActividad dias={historial.dias} {hoy} />
+		</div>
+
+		<div class="mb-4">
+			{#if MapaCorporal}
+				<MapaCorporal {hoy} />
+			{:else}
+				<section
+					class="min-h-36 animate-pulse rounded-2xl border border-white/10 p-4"
+					style="background: var(--surface)"
+					aria-busy="true"
+					aria-label="Cargando distribución estimada de series"
+				>
+					<div class="h-4 w-48 rounded bg-white/10"></div>
+					<div class="mt-3 h-24 rounded-xl bg-white/[0.035]"></div>
+				</section>
+			{/if}
+		</div>
+
 		<section
 			class="-mx-5 mb-4 rounded-none border-y border-white/10 px-1.5 py-4 sm:mx-0 sm:rounded-2xl sm:border sm:p-4"
 			style="background: var(--surface)"
@@ -306,7 +346,11 @@
 							{nombre}
 						</p>
 						<span class="shrink-0 text-[11px]" style="color: var(--muted)"
-							>{fechaCorta(record.fecha)}</span
+							>{record.metrica === 'reps'
+								? 'reps'
+								: record.metrica === 'e1rm'
+									? '1RM est.'
+									: 'peso máx.'} · {fechaCorta(record.fecha)}</span
 						>
 						<p
 							class="shrink-0 text-right text-sm font-extrabold tabular-nums"

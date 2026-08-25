@@ -25,13 +25,17 @@ describe('migración de esquema', () => {
 			{ id: 'd1', nombre: 'Piernas', diaSemana: 1, orden: 0, ejercicios: [], color: '124 92 255' },
 			{ id: 'd2', nombre: 'Empuje', orden: 1, ejercicios: [], color: '52 211 153' }
 		]);
+		// Una base real de esa época ya tenía su fila de ajustes.
+		await legacy
+			.table('ajustes')
+			.put({ id: 'app', unidad: 'kg', timer: { activo: true, minutos: 2 } });
 		await legacy.table('sesiones').put({
 			id: '2026-06-10__d1',
 			fecha: '2026-06-10',
 			diaId: 'd1',
 			ejercicios: [
 				{
-					exerciseId: 'press',
+					exerciseId: 'extension-cuadriceps',
 					prCelebrado: { peso: 90, reps: 0, setIndex: 1 },
 					sets: [
 						{ peso: 80, reps: 10, hecha: true },
@@ -43,9 +47,10 @@ describe('migración de esquema', () => {
 		});
 		legacy.close();
 
-		const { db } = await import('./db');
+		const { completarNombresSnapshotFaltantes, db } = await import('./db');
 		// Si la migración se cuelga, este open() no resuelve y el test vence por timeout.
 		await db.open();
+		await completarNombresSnapshotFaltantes();
 
 		const d1 = await db.dias.get('d1');
 		const d2 = await db.dias.get('d2');
@@ -59,7 +64,12 @@ describe('migración de esquema', () => {
 		// v4: la sesión vieja quedó indexada por ejercicio. Se comprueba el campo Y la
 		// consulta: si el índice no se hubiera poblado, esa sesión sería invisible para
 		// el historial y para el cálculo de PR, que es el peor fallo posible acá.
-		expect((await db.sesiones.get('2026-06-10__d1'))?.exerciseIds).toEqual(['press']);
+		expect((await db.sesiones.get('2026-06-10__d1'))?.exerciseIds).toEqual([
+			'extension-cuadriceps'
+		]);
+		expect((await db.sesiones.get('2026-06-10__d1'))?.ejercicios[0]?.nombreSnapshot).toBe(
+			'Extensión de cuádriceps'
+		);
 		expect((await db.sesiones.get('2026-06-10__d1'))?.ordenEnDia).toBe(0);
 		expect((await db.sesiones.get('2026-06-10__d1'))?.ejercicios[0]?.sets[1]).toMatchObject({
 			peso: 90,
@@ -73,13 +83,18 @@ describe('migración de esquema', () => {
 			hecha: false
 		});
 		expect((await db.sesiones.get('2026-06-10__d1'))?.ejercicios[0]?.prCelebrado).toBeUndefined();
+		// v10: la tabla nueva existe y la migración no inventa mediciones.
+		expect(await db.pesosCorporales.count()).toBe(0);
+		// El backfill deja marca: detectar snapshots faltantes obliga a recorrer `sesiones`
+		// entera, y eso no puede pagarse en cada arranque.
+		expect((await db.ajustes.get('app'))?.snapshotsCompletados).toBe(true);
 		// v8: el violeta que no llegaba a AA se sube al tono accesible, y un color
 		// elegido a mano por el usuario no se toca.
 		expect(d1?.color).toBe('130 104 255');
 		expect(d2?.color).toBe('52 211 153');
 
 		const { sesionesDe } = await import('./sesion');
-		expect((await sesionesDe('press')).map((s) => s.id)).toEqual(['2026-06-10__d1']);
+		expect((await sesionesDe('extension-cuadriceps')).map((s) => s.id)).toEqual(['2026-06-10__d1']);
 		db.close();
 	});
 });

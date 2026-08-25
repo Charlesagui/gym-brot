@@ -9,6 +9,7 @@
 		toggleDescansoPantallaCompleta,
 		toggleSonidoLogros,
 		setMetricaPr,
+		setModoEsfuerzo,
 		setPasoPeso,
 		setTimer,
 		setVolumen,
@@ -331,6 +332,33 @@
 					>
 				{/each}
 			</div>
+		</section>
+
+		<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+			<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+				Esfuerzo por serie
+			</p>
+			<div class="mt-3 grid grid-cols-3 gap-2">
+				{#each [{ id: 'off', label: 'Off' }, { id: 'rir', label: 'RIR' }, { id: 'rpe', label: 'RPE' }] as opcion (opcion.id)}
+					<button
+						onclick={() =>
+							guardarAjuste(
+								setModoEsfuerzo(opcion.id as 'off' | 'rir' | 'rpe'),
+								'el modo de esfuerzo'
+							)}
+						class="min-h-11 rounded-xl px-2 py-2.5 text-sm font-semibold"
+						aria-pressed={ajustes.modoEsfuerzo === opcion.id}
+						style={ajustes.modoEsfuerzo === opcion.id
+							? 'background: var(--accent); color: var(--on-accent)'
+							: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{opcion.label}</button
+					>
+				{/each}
+			</div>
+			<p class="mt-2 text-xs leading-relaxed" style="color: var(--muted)">
+				Opcional: no hace falta registrarlo para completar una serie. RIR 0 significa que no
+				quedaban repeticiones; RIR 2, que quedaban aproximadamente dos. RPE se muestra como 10 −
+				RIR.
+			</p>
 		</section>
 
 		<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
