@@ -47,11 +47,16 @@
 	} from '$lib/extras';
 	import {
 		PRESETS_DESCANSO,
+		RUEDA_DESCANSO,
 		descansoEfectivo,
+		descansoEnSegundos,
 		descansoPersonalizado,
 		etiquetaCortaDescanso,
-		etiquetaDescanso
+		etiquetaDescanso,
+		segundosAMinutos
 	} from '$lib/descanso-preset';
+	import Icono from '$lib/components/Icono.svelte';
+	import RuedaTiempo from '$lib/components/RuedaTiempo.svelte';
 	import { sonarSetHecho, sonarExito } from '$lib/audio';
 	import { vibrar } from '$lib/vibracion';
 	import { descanso } from '$lib/descanso.svelte';
@@ -407,6 +412,18 @@
 	// Descanso: el del ejercicio manda sobre el general (ver $lib/descanso-preset).
 	const descansoEj = $derived(descansoEfectivo(ej?.id, ajustes));
 	const descansoPropio = $derived(descansoPersonalizado(ej?.id, ajustes));
+	let mostrarRuedaDescanso = $state(false);
+	/** La explicación de la métrica y la equivalencia: útiles una vez, no en cada serie. */
+	let mostrarQueMide = $state(false);
+	/** Fila que el descanso pidió abrir para corregir (índice de la serie). */
+	let correccionIndice = $state<number | null>(null);
+	let segundosRueda = $state(90);
+	/** Un descanso propio que no es ninguno de los cuatro atajos: lo eligió la rueda. */
+	const descansoDeRueda = $derived(
+		descansoPropio != null &&
+			descansoPropio > 0 &&
+			!PRESETS_DESCANSO.includes(descansoPropio as (typeof PRESETS_DESCANSO)[number])
+	);
 	const pasoPeso = $derived(
 		ej ? pasoPesoEfectivo(ej, ajustes) : (ajustes.pasoPeso ?? AJUSTES_DEFAULT.pasoPeso)
 	);
@@ -426,6 +443,12 @@
 		)
 	);
 	// Sin PR ni serie previa: es la primera vez con este ejercicio → hint de peso inicial.
+	/**
+	 * La serie en curso es la primera sin hacer: es la única que se muestra abierta,
+	 * con relieve y con el color del grupo. Las hechas se contraen a un renglón y las
+	 * que faltan quedan cerradas detrás de ella.
+	 */
+	const indiceActiva = $derived(sets.findIndex((serie) => !serie.hecha));
 	const sinHistorial = $derived(!cargandoSeries && puntos.length === 0 && anteriores.length === 0);
 
 	function abrirTecnica() {
@@ -609,6 +632,12 @@
 		);
 	}
 
+	/** Chips de memoria: fija la carga de la vez pasada (o un paso arriba/abajo). */
+	function ponerPeso(i: number, peso: number) {
+		if (sets[i]) sets[i].peso = peso;
+		escribir(setPeso(diaId!, $page.params.id!, i, peso, fechaSesion, unidad));
+	}
+
 	function escribirPeso(i: number, el: HTMLInputElement) {
 		const peso = leerPeso(el.value);
 		if (sets[i]) sets[i].peso = peso;
@@ -776,6 +805,9 @@
 		if (pedido === 0) return;
 		const indice = untrack(() => descanso.registrada?.setIndex);
 		if (indice == null) return;
+		// La serie ya está hecha, así que su fila está contraída: hay que abrirla antes
+		// de buscarle el campo de reps.
+		correccionIndice = indice;
 		let intentos = 0;
 		let frame = 0;
 		const enfocarFila = () => {
@@ -894,6 +926,20 @@
 		descanso.ajustarFin(minutos);
 	}
 
+	/**
+	 * "Otro": la rueda para cualquier descanso de 15 s a 10 min. Arranca en el valor
+	 * que hoy está en uso, así girar es corregir y no empezar de cero.
+	 */
+	function alternarRuedaDescanso() {
+		if (!mostrarRuedaDescanso) segundosRueda = descansoEnSegundos(descansoEj.minutos);
+		mostrarRuedaDescanso = !mostrarRuedaDescanso;
+	}
+
+	function girarDescanso(segundos: number) {
+		segundosRueda = segundos;
+		cambiarDescansoEjercicio(segundosAMinutos(segundos));
+	}
+
 	function cambiarPasoEjercicio(paso?: number) {
 		if (!ej) return;
 		guardarDatoSecundario(
@@ -946,8 +992,8 @@
 				<header class="gb-exercise-header mb-4 flex items-center gap-3">
 					<a
 						href={volver}
-						class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
-						aria-label="Volver">←</a
+						class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10"
+						aria-label="Volver"><Icono nombre="volver" /></a
 					>
 					{#if !videoGrande}
 						<button
@@ -1001,7 +1047,8 @@
 							onclick={abrirTecnica}
 							class="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold"
 							style="color: rgb({g.glow})"
-							aria-label={`Ver video de técnica para ${ej.nombre}`}>▶ Ver técnica</button
+							aria-label={`Ver video de técnica para ${ej.nombre}`}
+							><Icono nombre="tecnica" tamano={16} /> Ver técnica</button
 						>
 					</div>
 				{/if}
@@ -1150,9 +1197,9 @@
 									{#if ej.maquinaPlacas && !mostrarHintMax}
 										<button
 											onclick={() => (mostrarHintMax = true)}
-											class="ml-1 inline-grid size-11 place-items-center align-middle text-[11px] font-bold normal-case"
+											class="ml-1 inline-grid size-11 place-items-center align-middle"
 											style="color: var(--muted)"
-											aria-label="Qué es MAX">ⓘ</button
+											aria-label="Qué es MAX"><Icono nombre="info" tamano={16} /></button
 										>
 									{/if}
 								</p>
@@ -1197,6 +1244,252 @@
 								</div>
 							{/if}
 						</div>
+						{#if cargandoSeries}
+							<p
+								class="mt-3 rounded-xl bg-white/[0.025] p-4 text-center text-sm"
+								style="color: var(--muted)"
+							>
+								Preparando series…
+							</p>
+						{:else}
+							{#if avisoSerie}
+								<p
+									class="mt-3 rounded-xl px-3 py-2.5 text-xs font-semibold leading-relaxed"
+									style="background: rgb(var(--max) / .1); color: rgb(var(--max))"
+									role="alert"
+								>
+									{avisoSerie}
+								</p>
+							{/if}
+							<div class="mt-3 space-y-2">
+								{#each sets as s, i (i)}
+									<SetRow
+										set={s}
+										index={i}
+										anterior={anteriores[i]}
+										maquinaPlacas={!!ej.maquinaPlacas}
+										glow={g.glow}
+										{unidad}
+										{pasoPeso}
+										activa={i === indiceActiva}
+										abrirParaCorregir={i === correccionIndice}
+										pendiente={seriesPendientes.has(i)}
+										flash={filasFlash.has(i)}
+										onToggle={() => onToggle(i)}
+										onToggleMax={() => escribir(toggleMax(diaId, $page.params.id!, i, fechaSesion))}
+										onAjustarPeso={(d) => ajustarPeso(i, d)}
+										onPonerPeso={(peso) => ponerPeso(i, peso)}
+										onEscribirPeso={(el) => escribirPeso(i, el)}
+										onAjustarReps={(d) => ajustarReps(i, d)}
+										onEscribirReps={(el) => escribirReps(i, el)}
+										onAjustarExtra={(d) => ajustarExtra(i, d)}
+										modoEsfuerzo={ajustes.modoEsfuerzo}
+										onSetRir={(rir) => guardarRir(i, rir)}
+									/>
+								{/each}
+							</div>
+							{#if sinHistorial}
+								<div
+									class="mt-2 flex items-start gap-2 rounded-xl p-2.5"
+									style="background: rgb({g.glow} / .08)"
+								>
+									<Icono nombre="consejo" tamano={16} clase="mt-0.5 shrink-0" />
+									<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
+										Todavía no hay series completadas para este ejercicio. Empezá con un peso que te
+										deje hacer ~12 repeticiones cómodas y ajustá la próxima.
+									</p>
+								</div>
+							{/if}
+							{#if evaluacionProgresion.recomendacion}
+								{@const recomendacion = evaluacionProgresion.recomendacion}
+								<section
+									class="mt-3 rounded-xl border p-3"
+									style="background: rgb({g.glow} / .09); border-color: rgb({g.glow} / .3)"
+								>
+									<p
+										class="text-xs font-bold uppercase tracking-wider"
+										style="color: rgb({g.glow})"
+									>
+										Recomendación de progresión
+									</p>
+									<p class="mt-1 text-sm font-bold">
+										{recomendacion.esMax
+											? `MAX + ${formatoNumero(gramosAPeso(recomendacion.extraObjetivoGramos, unidad)!)} ${unidad}`
+											: `${formatoNumero(gramosAPeso(recomendacion.pesoObjetivoGramos, unidad)!)} ${unidad}`}
+										para la próxima sesión
+									</p>
+									<p class="mt-1 text-xs leading-relaxed" style="color: var(--muted)">
+										{recomendacion.explicacion} La próxima empieza en {progresion?.repsMin} reps.
+									</p>
+									<div class="mt-3 grid grid-cols-3 gap-2">
+										<button
+											type="button"
+											onclick={() => decidirProgresion('aceptada')}
+											class="min-h-11 rounded-xl px-2 text-xs font-bold"
+											style="background: var(--accent); color: var(--on-accent)">Aceptar</button
+										>
+										<button
+											type="button"
+											onclick={() => decidirProgresion('pospuesta')}
+											class="min-h-11 rounded-xl bg-white/[0.06] px-2 text-xs font-bold"
+											>Posponer</button
+										>
+										<button
+											type="button"
+											onclick={() => decidirProgresion('descartada')}
+											class="min-h-11 rounded-xl bg-white/[0.06] px-2 text-xs font-bold"
+											style="color: var(--muted)">Descartar</button
+										>
+									</div>
+								</section>
+							{:else if progresion?.decisionSesionId === sesionId(diaId, fechaSesion)}
+								<p
+									class="mt-2 rounded-xl bg-white/[0.035] px-3 py-2 text-xs"
+									style="color: var(--muted)"
+								>
+									Recomendación {progresion.decision === 'aceptada'
+										? 'aceptada para la próxima sesión'
+										: progresion.decision === 'pospuesta'
+											? 'pospuesta'
+											: 'descartada'}.
+								</p>
+							{/if}
+							{#if mostrarHintMax}
+								<div
+									class="mt-2 flex items-start gap-2 rounded-xl p-2.5"
+									style="background: rgb(var(--max) / .08)"
+								>
+									<Icono nombre="consejo" tamano={16} clase="mt-0.5 shrink-0" />
+									<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
+										¿Llegaste al tope de la pila de placas? Marcá <b style="color: rgb(var(--max))"
+											>MAX</b
+										> en esa serie y anotá los kg extra que pongas encima.
+									</p>
+									<button
+										onclick={entendidoHintMax}
+										class="min-h-11 shrink-0 px-2 text-xs font-bold"
+										style="color: rgb(var(--max))">Entendido</button
+									>
+								</div>
+							{/if}
+						{/if}
+
+						<div
+							class="gb-rest-presets mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/10 pt-3"
+						>
+							<span
+								class="mr-1 flex items-center gap-1.5 text-xs font-semibold"
+								style="color: var(--muted)"
+							>
+								<Icono nombre="descanso" tamano={15} /> Descanso
+							</span>
+							<button
+								onclick={descansoAutomatico}
+								class="min-h-11 rounded-full px-3.5 py-2 text-xs font-semibold"
+								aria-pressed={descansoPropio == null}
+								aria-label="Usar el descanso general en este ejercicio"
+								style={descansoPropio == null
+									? 'background: var(--accent); color: var(--on-accent)'
+									: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Auto</button
+							>
+							<button
+								onclick={apagarDescansoEjercicio}
+								class="min-h-11 rounded-full px-3.5 py-2 text-xs font-semibold"
+								aria-pressed={descansoPropio === 0}
+								aria-label="Sin descanso en este ejercicio"
+								style={descansoPropio === 0
+									? 'background: var(--accent); color: var(--on-accent)'
+									: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Off</button
+							>
+							{#each PRESETS_DESCANSO as minutos (minutos)}
+								<button
+									onclick={() => cambiarDescansoEjercicio(minutos)}
+									class="min-h-11 min-w-11 rounded-full px-3.5 py-2 text-xs font-semibold tabular-nums"
+									aria-pressed={descansoPropio === minutos}
+									aria-label={`Descanso de ${etiquetaDescanso(minutos)} en este ejercicio`}
+									style={descansoPropio === minutos
+										? 'background: var(--accent); color: var(--on-accent)'
+										: 'background: rgba(255,255,255,.06); color: var(--muted)'}
+									>{etiquetaCortaDescanso(minutos)}</button
+								>
+							{/each}
+							<button
+								onclick={alternarRuedaDescanso}
+								class="flex min-h-11 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold tabular-nums"
+								aria-pressed={descansoDeRueda}
+								aria-expanded={mostrarRuedaDescanso}
+								aria-label="Elegir otro descanso con la rueda"
+								style={descansoDeRueda
+									? 'background: var(--accent); color: var(--on-accent)'
+									: 'background: rgba(255,255,255,.06); color: var(--muted)'}
+							>
+								<Icono nombre="rueda" tamano={14} />
+								{descansoDeRueda && descansoPropio ? etiquetaCortaDescanso(descansoPropio) : 'Otro'}
+							</button>
+							{#if mostrarRuedaDescanso}
+								<div class="mt-2 flex w-full flex-col items-center gap-2">
+									<RuedaTiempo
+										segundos={segundosRueda}
+										min={RUEDA_DESCANSO.min}
+										max={RUEDA_DESCANSO.max}
+										paso={RUEDA_DESCANSO.paso}
+										glow={g.glow}
+										vibracion={vibracionActiva}
+										etiqueta="Descanso de este ejercicio"
+										onCambio={girarDescanso}
+									/>
+									<button
+										onclick={() => (mostrarRuedaDescanso = false)}
+										class="min-h-11 rounded-full px-4 text-xs font-bold"
+										style="background: rgba(255,255,255,.06); color: var(--muted)">Listo</button
+									>
+								</div>
+							{/if}
+							<p class="mt-1 w-full text-[11px] leading-relaxed" style="color: var(--muted)">
+								{#if descansoPropio == null}
+									Auto sigue el descanso general: {ajustes.timer.activo
+										? etiquetaDescanso(ajustes.timer.minutos)
+										: 'apagado'}. Elegí uno acá y solo cambia en este ejercicio.
+								{:else if descansoPropio === 0}
+									Sin descanso en este ejercicio. Los demás siguen con el suyo.
+								{:else}
+									Propio de este ejercicio: {etiquetaDescanso(descansoPropio)}.
+								{/if}
+							</p>
+						</div>
+						{#if mostrarHintTimer}
+							<div
+								class="mt-2 flex items-center gap-2 rounded-xl p-2.5"
+								style="background: rgb({g.glow} / .08)"
+							>
+								<Icono nombre="consejo" tamano={16} clase="shrink-0" />
+								<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
+									¿Activar el descanso? Te avisa cuándo volver a la serie.
+								</p>
+								<button
+									onclick={activarDescansoDesdeHint}
+									class="min-h-11 shrink-0 rounded-full px-3 text-xs font-bold"
+									style="background: var(--accent); color: var(--on-accent)">Activar</button
+								>
+								<button
+									onclick={descartarHintTimer}
+									class="min-h-11 shrink-0 px-2 text-xs font-bold"
+									style="color: var(--muted)">Ahora no</button
+								>
+							</div>
+						{/if}
+
+						<!--
+							Configuración al pie, no en el medio: el paso del ± y la doble progresión se
+							definen una vez y no se vuelven a tocar, pero estaban entre el encabezado y la
+							primera serie, empujando hacia abajo lo único que se usa entre repeticiones.
+						-->
+						<p
+							class="mt-4 border-t border-white/10 pt-3 text-[11px] font-bold uppercase tracking-wider"
+							style="color: var(--muted)"
+						>
+							Ajustes de este ejercicio
+						</p>
 						<details class="mt-3 rounded-xl border border-white/5 bg-white/[0.025] px-3 py-1">
 							<summary
 								class="flex min-h-11 cursor-pointer items-center text-xs font-semibold"
@@ -1307,199 +1600,6 @@
 								{/if}
 							</div>
 						</details>
-
-						{#if cargandoSeries}
-							<p
-								class="mt-3 rounded-xl bg-white/[0.025] p-4 text-center text-sm"
-								style="color: var(--muted)"
-							>
-								Preparando series…
-							</p>
-						{:else}
-							{#if avisoSerie}
-								<p
-									class="mt-3 rounded-xl px-3 py-2.5 text-xs font-semibold leading-relaxed"
-									style="background: rgb(var(--max) / .1); color: rgb(var(--max))"
-									role="alert"
-								>
-									{avisoSerie}
-								</p>
-							{/if}
-							<div class="mt-3 space-y-2">
-								{#each sets as s, i (i)}
-									<SetRow
-										set={s}
-										index={i}
-										anterior={anteriores[i]}
-										maquinaPlacas={!!ej.maquinaPlacas}
-										glow={g.glow}
-										{unidad}
-										{pasoPeso}
-										pendiente={seriesPendientes.has(i)}
-										flash={filasFlash.has(i)}
-										onToggle={() => onToggle(i)}
-										onToggleMax={() => escribir(toggleMax(diaId, $page.params.id!, i, fechaSesion))}
-										onAjustarPeso={(d) => ajustarPeso(i, d)}
-										onEscribirPeso={(el) => escribirPeso(i, el)}
-										onAjustarReps={(d) => ajustarReps(i, d)}
-										onEscribirReps={(el) => escribirReps(i, el)}
-										onAjustarExtra={(d) => ajustarExtra(i, d)}
-										modoEsfuerzo={ajustes.modoEsfuerzo}
-										onSetRir={(rir) => guardarRir(i, rir)}
-									/>
-								{/each}
-							</div>
-							{#if sinHistorial}
-								<div
-									class="mt-2 flex items-start gap-2 rounded-xl p-2.5"
-									style="background: rgb({g.glow} / .08)"
-								>
-									<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
-										💡 Todavía no hay series completadas para este ejercicio. Empezá con un peso que
-										te deje hacer ~12 repeticiones cómodas y ajustá la próxima.
-									</p>
-								</div>
-							{/if}
-							{#if evaluacionProgresion.recomendacion}
-								{@const recomendacion = evaluacionProgresion.recomendacion}
-								<section
-									class="mt-3 rounded-xl border p-3"
-									style="background: rgb({g.glow} / .09); border-color: rgb({g.glow} / .3)"
-								>
-									<p
-										class="text-xs font-bold uppercase tracking-wider"
-										style="color: rgb({g.glow})"
-									>
-										Recomendación de progresión
-									</p>
-									<p class="mt-1 text-sm font-bold">
-										{recomendacion.esMax
-											? `MAX + ${formatoNumero(gramosAPeso(recomendacion.extraObjetivoGramos, unidad)!)} ${unidad}`
-											: `${formatoNumero(gramosAPeso(recomendacion.pesoObjetivoGramos, unidad)!)} ${unidad}`}
-										para la próxima sesión
-									</p>
-									<p class="mt-1 text-xs leading-relaxed" style="color: var(--muted)">
-										{recomendacion.explicacion} La próxima empieza en {progresion?.repsMin} reps.
-									</p>
-									<div class="mt-3 grid grid-cols-3 gap-2">
-										<button
-											type="button"
-											onclick={() => decidirProgresion('aceptada')}
-											class="min-h-11 rounded-xl px-2 text-xs font-bold"
-											style="background: var(--accent); color: var(--on-accent)">Aceptar</button
-										>
-										<button
-											type="button"
-											onclick={() => decidirProgresion('pospuesta')}
-											class="min-h-11 rounded-xl bg-white/[0.06] px-2 text-xs font-bold"
-											>Posponer</button
-										>
-										<button
-											type="button"
-											onclick={() => decidirProgresion('descartada')}
-											class="min-h-11 rounded-xl bg-white/[0.06] px-2 text-xs font-bold"
-											style="color: var(--muted)">Descartar</button
-										>
-									</div>
-								</section>
-							{:else if progresion?.decisionSesionId === sesionId(diaId, fechaSesion)}
-								<p
-									class="mt-2 rounded-xl bg-white/[0.035] px-3 py-2 text-xs"
-									style="color: var(--muted)"
-								>
-									Recomendación {progresion.decision === 'aceptada'
-										? 'aceptada para la próxima sesión'
-										: progresion.decision === 'pospuesta'
-											? 'pospuesta'
-											: 'descartada'}.
-								</p>
-							{/if}
-							{#if mostrarHintMax}
-								<div
-									class="mt-2 flex items-start gap-2 rounded-xl p-2.5"
-									style="background: rgb(var(--max) / .08)"
-								>
-									<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
-										💡 ¿Llegaste al tope de la pila de placas? Marcá <b
-											style="color: rgb(var(--max))">MAX</b
-										> en esa serie y anotá los kg extra que pongas encima.
-									</p>
-									<button
-										onclick={entendidoHintMax}
-										class="min-h-11 shrink-0 px-2 text-xs font-bold"
-										style="color: rgb(var(--max))">Entendido</button
-									>
-								</div>
-							{/if}
-						{/if}
-
-						<div
-							class="gb-rest-presets mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/10 pt-3"
-						>
-							<span class="mr-1 text-xs font-semibold" style="color: var(--muted)">⏱️ Descanso</span
-							>
-							<button
-								onclick={descansoAutomatico}
-								class="min-h-11 rounded-full px-3.5 py-2 text-xs font-semibold"
-								aria-pressed={descansoPropio == null}
-								aria-label="Usar el descanso general en este ejercicio"
-								style={descansoPropio == null
-									? 'background: var(--accent); color: var(--on-accent)'
-									: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Auto</button
-							>
-							<button
-								onclick={apagarDescansoEjercicio}
-								class="min-h-11 rounded-full px-3.5 py-2 text-xs font-semibold"
-								aria-pressed={descansoPropio === 0}
-								aria-label="Sin descanso en este ejercicio"
-								style={descansoPropio === 0
-									? 'background: var(--accent); color: var(--on-accent)'
-									: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Off</button
-							>
-							{#each PRESETS_DESCANSO as minutos (minutos)}
-								<button
-									onclick={() => cambiarDescansoEjercicio(minutos)}
-									class="min-h-11 min-w-11 rounded-full px-3.5 py-2 text-xs font-semibold tabular-nums"
-									aria-pressed={descansoPropio === minutos}
-									aria-label={`Descanso de ${etiquetaDescanso(minutos)} en este ejercicio`}
-									style={descansoPropio === minutos
-										? 'background: var(--accent); color: var(--on-accent)'
-										: 'background: rgba(255,255,255,.06); color: var(--muted)'}
-									>{etiquetaCortaDescanso(minutos)}</button
-								>
-							{/each}
-							<p class="mt-1 w-full text-[11px] leading-relaxed" style="color: var(--muted)">
-								{#if descansoPropio == null}
-									Auto sigue el descanso general: {ajustes.timer.activo
-										? etiquetaDescanso(ajustes.timer.minutos)
-										: 'apagado'}. Elegí uno acá y solo cambia en este ejercicio.
-								{:else if descansoPropio === 0}
-									Sin descanso en este ejercicio. Los demás siguen con el suyo.
-								{:else}
-									Propio de este ejercicio: {etiquetaDescanso(descansoPropio)}.
-								{/if}
-							</p>
-						</div>
-						{#if mostrarHintTimer}
-							<div
-								class="mt-2 flex items-center gap-2 rounded-xl p-2.5"
-								style="background: rgb({g.glow} / .08)"
-							>
-								<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
-									💡 ¿Activar el descanso? Te avisa cuándo volver a la serie.
-								</p>
-								<button
-									onclick={activarDescansoDesdeHint}
-									class="min-h-11 shrink-0 rounded-full px-3 text-xs font-bold"
-									style="background: var(--accent); color: var(--on-accent)">Activar</button
-								>
-								<button
-									onclick={descartarHintTimer}
-									class="min-h-11 shrink-0 px-2 text-xs font-bold"
-									style="color: var(--muted)">Ahora no</button
-								>
-							</div>
-						{/if}
 					</section>
 
 					{#if pr}
@@ -1507,60 +1607,75 @@
 							class="mt-3 rounded-2xl border border-white/10 p-4"
 							style="background: var(--surface)"
 						>
-							<div class="flex items-center justify-between">
+							<!--
+								Tres cosas a la vista: qué récord es, cuánto, y de qué serie salió. La
+								explicación de la métrica y la equivalencia con la otra son útiles una vez
+								y estorban en todas las demás: viven detrás de "¿Qué mide?".
+							-->
+							<div class="flex items-center justify-between gap-2">
 								<p
-									class="text-xs font-semibold uppercase tracking-wider"
+									class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider"
 									style="color: var(--muted)"
 								>
-									PR {metricaLabel}
+									<Icono nombre="record" tamano={14} /> Récord · {metricaLabel}
 								</p>
 								{#if superado}
 									<span
 										class="rounded-full px-2 py-0.5 text-xs font-bold"
-										style="background: rgb({g.glow} / .2); color: rgb({g.glow})">🏆 Nuevo PR</span
+										style="background: rgb({g.glow} / .2); color: rgb({g.glow})">Nuevo</span
 									>
 								{/if}
 							</div>
-							<p class="mt-1 text-3xl font-extrabold">
-								🏆 {formatoNumero(pr.valor)}<span
-									class="ml-1 text-lg font-semibold"
-									style="color: var(--muted)"
-								>
-									{unidadValor}</span
-								>
+							<p class="cifra mt-1.5 text-[3.4rem]">
+								{formatoNumero(pr.valor)}<span class="cifra-u">{unidadValor}</span>
 							</p>
-							<p class="mt-0.5 text-xs font-medium" style="color: var(--muted)">
-								Mejor set: {formatoSet(pr, unidad)} · {fechaCorta(pr.fecha)}
-							</p>
-							{#if valorOtraPr != null}
-								<p class="mt-0.5 text-[11px] font-medium" style="color: var(--muted)">
-									Ese mismo set equivale a ≈ {formatoNumero(valorOtraPr)}
-									{unidad} como {otraLabel}
-								</p>
-							{/if}
 							<p
-								class="mt-2.5 text-[11px] leading-relaxed border-t border-white/5 pt-2"
+								class="mt-1 flex flex-wrap items-baseline gap-x-2 text-xs"
 								style="color: var(--muted)"
 							>
-								💡 {DESCRIPCION_METRICA[metricaEfectiva]}
+								<span class="cifra text-lg" style="color: var(--text)"
+									>{formatoSet(pr, unidad)}</span
+								>
+								<span>· {fechaCorta(pr.fecha)}</span>
 							</p>
 							<MiniChart {puntos} glow={g.glow} {metricaLabel} unidad={unidadValor} />
-							<!-- Link discreto: la operación manda, el progreso completo se consulta aparte. -->
-							<a
-								href={`/ejercicio/${$page.params.id}?desde=${diaId}&fecha=${fechaSesion}`}
-								class="mt-2.5 block min-h-11 text-right text-xs font-bold leading-[2.75rem]"
-								style="color: rgb({g.glow})">Ver progreso completo →</a
-							>
+							<div class="mt-1 flex items-center justify-between gap-2">
+								<button
+									type="button"
+									onclick={() => (mostrarQueMide = !mostrarQueMide)}
+									aria-expanded={mostrarQueMide}
+									class="min-h-11 text-[11px] font-bold uppercase tracking-wider"
+									style="color: var(--muted)">{mostrarQueMide ? 'Ocultar' : '¿Qué mide?'}</button
+								>
+								<!-- Link discreto: la operación manda, el progreso completo se consulta aparte. -->
+								<a
+									href={`/ejercicio/${$page.params.id}?desde=${diaId}&fecha=${fechaSesion}`}
+									class="min-h-11 text-xs font-bold leading-[2.75rem]"
+									style="color: rgb({g.glow})">Progreso completo →</a
+								>
+							</div>
+							{#if mostrarQueMide}
+								<p
+									class="border-t border-white/5 pt-2 text-[11px] leading-relaxed"
+									style="color: var(--muted)"
+								>
+									{DESCRIPCION_METRICA[metricaEfectiva]}{#if valorOtraPr != null}
+										Ese mismo set equivale a ≈ {formatoNumero(valorOtraPr)}
+										{unidad} como {otraLabel}.{/if}
+								</p>
+							{/if}
 						</section>
 					{:else if !cargandoSeries}
 						<section
 							class="mt-3 rounded-2xl border border-dashed border-white/15 p-4 text-center"
 							style="background: var(--surface)"
 						>
-							<p class="text-3xl">🏆</p>
+							<div class="flex justify-center" style="color: var(--muted)">
+								<Icono nombre="record" tamano={26} />
+							</div>
 							<p class="mt-1 text-sm font-semibold">Todavía sin PR</p>
 							<p class="mt-0.5 text-xs" style="color: var(--muted)">
-								Marcá una serie con ✓ para registrar tu primer récord de {metricaLabel}.
+								Marcá una serie como hecha para registrar tu primer récord de {metricaLabel}.
 							</p>
 						</section>
 					{/if}
@@ -1573,7 +1688,8 @@
 							class="flex min-h-11 cursor-pointer items-center text-sm font-medium"
 							style="color: var(--muted)"
 						>
-							📝 Notas {#if tieneNota}<span style="color: rgb({g.glow})">●</span>{/if}
+							<Icono nombre="notas" tamano={17} clase="mr-2" /> Notas
+							{#if tieneNota}<span class="ml-1.5" style="color: rgb({g.glow})">●</span>{/if}
 						</summary>
 						<textarea
 							bind:value={notaTexto}

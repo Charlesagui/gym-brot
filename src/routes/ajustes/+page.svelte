@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icono from '$lib/components/Icono.svelte';
 	import type { Ajustes } from '$lib/db';
 	import { DESCRIPCION_METRICA } from '$lib/sesion';
 	import {
@@ -23,7 +24,15 @@
 		AJUSTES_DEFAULT
 	} from '$lib/extras';
 	import { reiniciarAyudas } from '$lib/preferencias-ui';
-	import { PRESETS_DESCANSO, etiquetaCortaDescanso, etiquetaDescanso } from '$lib/descanso-preset';
+	import {
+		PRESETS_DESCANSO,
+		RUEDA_DESCANSO,
+		descansoEnSegundos,
+		etiquetaCortaDescanso,
+		etiquetaDescanso,
+		segundosAMinutos
+	} from '$lib/descanso-preset';
+	import RuedaTiempo from '$lib/components/RuedaTiempo.svelte';
 	import { vibracionSoportada } from '$lib/vibracion';
 	import {
 		estadoNotificaciones,
@@ -82,6 +91,27 @@
 		msg = texto;
 		if (msgId) clearTimeout(msgId);
 		msgId = setTimeout(() => (msg = ''), 6000);
+	}
+
+	/**
+	 * "Otro": los descansos que no son ninguno de los cuatro atajos (45 s, 90 s, 3 min…)
+	 * se eligen girando, con el mismo control que la pantalla del ejercicio.
+	 */
+	let mostrarRuedaDescanso = $state(false);
+	let segundosRueda = $state(90);
+	const descansoDeRueda = $derived(
+		ajustes.timer.activo &&
+			!PRESETS_DESCANSO.includes(ajustes.timer.minutos as (typeof PRESETS_DESCANSO)[number])
+	);
+
+	function alternarRuedaDescanso() {
+		if (!mostrarRuedaDescanso) segundosRueda = descansoEnSegundos(ajustes.timer.minutos);
+		mostrarRuedaDescanso = !mostrarRuedaDescanso;
+	}
+
+	function girarDescanso(segundos: number) {
+		segundosRueda = segundos;
+		guardarAjuste(setTimer(true, segundosAMinutos(segundos)), 'el descanso');
 	}
 
 	function guardarAjuste(operacion: Promise<unknown>, nombre: string) {
@@ -352,7 +382,9 @@
 			</p>
 			<ul class="mt-3 flex flex-col gap-2 text-sm">
 				<li class="flex min-h-11 items-center gap-3">
-					<span aria-hidden="true">{hayWakeLock ? '✅' : '⚠️'}</span>
+					<span style="color: {hayWakeLock ? 'rgb(var(--exito))' : 'rgb(var(--max))'}">
+						<Icono nombre={hayWakeLock ? 'hecha' : 'aviso'} tamano={18} />
+					</span>
 					<span class="min-w-0 flex-1">
 						Pantalla encendida durante el descanso
 						<span class="block text-xs" style="color: var(--muted)">
@@ -361,7 +393,11 @@
 					</span>
 				</li>
 				<li class="flex min-h-11 items-center gap-3">
-					<span aria-hidden="true">{permisoNotif === 'concedido' ? '✅' : '⚠️'}</span>
+					<span
+						style="color: {permisoNotif === 'concedido' ? 'rgb(var(--exito))' : 'rgb(var(--max))'}"
+					>
+						<Icono nombre={permisoNotif === 'concedido' ? 'hecha' : 'aviso'} tamano={18} />
+					</span>
 					<span class="min-w-0 flex-1">
 						Notificación al terminar
 						<span class="block text-xs" style="color: var(--muted)">
@@ -472,7 +508,39 @@
 						>{etiquetaCortaDescanso(minutos)}</button
 					>
 				{/each}
+				<button
+					onclick={alternarRuedaDescanso}
+					class="flex min-h-11 items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-sm font-semibold tabular-nums"
+					aria-pressed={descansoDeRueda}
+					aria-expanded={mostrarRuedaDescanso}
+					aria-label="Elegir otro descanso con la rueda"
+					style={descansoDeRueda
+						? 'background: var(--accent); color: var(--on-accent)'
+						: 'background: rgba(255,255,255,.06); color: var(--muted)'}
+				>
+					<Icono nombre="rueda" tamano={15} />
+					{descansoDeRueda ? etiquetaCortaDescanso(ajustes.timer.minutos) : 'Otro'}
+				</button>
 			</div>
+			{#if mostrarRuedaDescanso}
+				<div class="mt-3 flex flex-col items-center gap-2">
+					<RuedaTiempo
+						segundos={segundosRueda}
+						min={RUEDA_DESCANSO.min}
+						max={RUEDA_DESCANSO.max}
+						paso={RUEDA_DESCANSO.paso}
+						glow="124 92 255"
+						vibracion={ajustes.vibracion ?? true}
+						etiqueta="Descanso por defecto"
+						onCambio={girarDescanso}
+					/>
+					<button
+						onclick={() => (mostrarRuedaDescanso = false)}
+						class="min-h-11 rounded-full px-4 text-xs font-bold"
+						style="background: rgba(255,255,255,.06); color: var(--muted)">Listo</button
+					>
+				</div>
+			{/if}
 			<p class="mt-2 text-xs leading-relaxed" style="color: var(--muted)">
 				El que se usa cuando el ejercicio no tiene uno propio. Cada ejercicio puede fijar el suyo
 				desde su pantalla, sin tocar este.
@@ -657,8 +725,9 @@
 			{:else}
 				<button
 					onclick={descargarVideos}
-					class="mt-3 min-h-12 w-full rounded-xl py-3 font-semibold"
-					style="background: rgba(255,255,255,.08)">⬇️ Descargar todos los videos</button
+					class="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold"
+					style="background: rgba(255,255,255,.08)"
+					><Icono nombre="backup" tamano={17} /> Descargar todos los videos</button
 				>
 				{#if videosGuardados}
 					<button
@@ -679,22 +748,24 @@
 				locales).
 			</p>
 			{#if persistido === false}
-				<p class="mt-2 text-xs leading-relaxed" style="color: rgb(var(--max))">
-					⚠️ El navegador no marcó tus datos como persistentes: puede borrarlos si necesita espacio.
-					Exportá seguido.
+				<p class="mt-2 flex gap-2 text-xs leading-relaxed" style="color: rgb(var(--max))">
+					<Icono nombre="aviso" tamano={16} clase="mt-0.5 shrink-0" />
+					El navegador no marcó tus datos como persistentes: puede borrarlos si necesita espacio. Exportá
+					seguido.
 				</p>
 			{/if}
 			<button
 				onclick={exportar}
-				class="mt-3 min-h-12 w-full rounded-xl py-3 font-semibold"
+				class="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold"
 				style="background: var(--accent); color: var(--on-accent)"
-				>⬇️ Guardar copia de seguridad</button
+				><Icono nombre="backup" tamano={17} /> Guardar copia de seguridad</button
 			>
 			{#if backupPendienteConfirmacion}
 				<button
 					onclick={() => void confirmarBackupGuardado()}
-					class="mt-2 min-h-11 w-full rounded-xl border border-white/15 py-2 text-sm font-semibold"
-					style="color: var(--muted)">✅ Ya guardé el archivo</button
+					class="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/15 py-2 text-sm font-semibold"
+					style="color: var(--muted)"
+					><Icono nombre="hecha" tamano={16} /> Ya guardé el archivo</button
 				>
 			{/if}
 			<label
@@ -724,13 +795,14 @@
 			</p>
 			<button
 				onclick={confirmarReiniciarAyudas}
-				class="mt-3 min-h-12 w-full rounded-xl border border-white/10 py-3 text-sm font-semibold"
-				style="color: var(--muted)">💡 Volver a mostrar los carteles de ayuda</button
+				class="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/10 py-3 text-sm font-semibold"
+				style="color: var(--muted)"
+				><Icono nombre="consejo" tamano={16} /> Volver a mostrar los carteles de ayuda</button
 			>
 			<button
 				onclick={confirmarBorrarTodo}
-				class="mt-2 min-h-12 w-full rounded-xl border border-white/10 py-3 text-sm font-semibold"
-				style="color: #ff6b6b">🗑 Borrar todos mis datos</button
+				class="mt-2 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/10 py-3 text-sm font-semibold"
+				style="color: #ff6b6b"><Icono nombre="borrar" tamano={16} /> Borrar todos mis datos</button
 			>
 		</section>
 	{/if}

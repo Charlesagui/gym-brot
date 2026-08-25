@@ -45,6 +45,21 @@
 		return points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
 	}
 
+	/**
+	 * Misma línea, cerrada contra el piso. Una polilínea sola sobre fondo oscuro se lee
+	 * como un alambre; con el relleno se ve de reojo si la curva sube o baja.
+	 */
+	function chartArea(points: ChartPoint[]): string {
+		if (points.length < 2) return '';
+		const primero = points[0]!;
+		const ultimo = points[points.length - 1]!;
+		return `${chartLine(points)} ${ultimo.x.toFixed(1)},28 ${primero.x.toFixed(1)},28`;
+	}
+
+	// Un id por instancia: en la pantalla de progreso puede haber más de un gráfico, y
+	// dos degradados con el mismo id hacen que el segundo se pinte con el primero.
+	const idRelleno = `gb-mini-${Math.random().toString(36).slice(2, 8)}`;
+
 	const chart = $derived(chartPoints(puntos));
 	const ultimoChart = $derived(chart[chart.length - 1]);
 	const chartMax = $derived(chart.length ? Math.max(...chart.map((p) => p.valor)) : null);
@@ -95,6 +110,15 @@
 					vector-effect="non-scaling-stroke"
 				/>
 			{/if}
+			<defs>
+				<linearGradient id={idRelleno} x1="0" x2="0" y1="0" y2="1">
+					<stop offset="0%" stop-color="rgb({glow})" stop-opacity="0.26" />
+					<stop offset="100%" stop-color="rgb({glow})" stop-opacity="0" />
+				</linearGradient>
+			</defs>
+			{#if chart.length > 1}
+				<polygon points={chartArea(chart)} fill="url(#{idRelleno})" stroke="none" />
+			{/if}
 			<polyline
 				points={chartLine(chart)}
 				fill="none"
@@ -119,7 +143,7 @@
 	</div>
 	<div class="mt-1 flex items-center justify-between gap-2 text-[11px]" style="color: var(--muted)">
 		<span
-			>📈 {metricaLabel} · últimas {Math.min(puntos.length, 10)}
+			>{metricaLabel} · últimas {Math.min(puntos.length, 10)}
 			{Math.min(puntos.length, 10) === 1 ? 'sesión' : 'sesiones'}</span
 		>
 		<span>Último {ultimoChart.label} {unidad}</span>

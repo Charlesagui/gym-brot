@@ -10,12 +10,24 @@ import type { Ajustes } from './db';
  */
 
 /**
- * 45 y 90 segundos existen porque son los descansos reales de los accesorios: antes
- * el mínimo era 1 minuto y no había forma de pedir menos. El 1 y el 4 conviven: se
- * conserva el 1 porque ya se podía elegir, y se deja fuera el 4 porque entre 3 y 5
- * nadie lo pedía y la fila tiene que seguir entrando de un vistazo.
+ * Cuatro atajos redondos, no seis. La fila anterior (45s, 1′, 90s, 2′, 3′, 5′) más
+ * Auto y Off eran ocho botones que se envolvían en tres renglones: había que leerla
+ * entera para encontrar el que se buscaba.
+ *
+ * 45 s y 90 s siguen siendo descansos reales de accesorio, pero ya no necesitan chip
+ * propio: cualquier valor de 15 s a 10 min se elige girando la rueda ("Otro"), que es
+ * exactamente el caso para el que sirve un control rotatorio — rango corto, paso
+ * grueso y ninguna necesidad de apuntar a un número exacto.
  */
-export const PRESETS_DESCANSO = [0.75, 1, 1.5, 2, 3, 5] as const;
+export const PRESETS_DESCANSO = [1, 2, 4, 5] as const;
+
+/** Rango y paso de la rueda de descanso, en segundos. */
+export const RUEDA_DESCANSO = { min: 15, max: 600, paso: 15 } as const;
+
+/** Segundos → minutos, para guardar lo que elige la rueda con la unidad de siempre. */
+export function segundosAMinutos(segundos: number): number {
+	return segundos / 60;
+}
 
 /** Duración efectiva de un descanso resuelto (minutos), con su interruptor ya aplicado. */
 export interface DescansoEfectivo {
