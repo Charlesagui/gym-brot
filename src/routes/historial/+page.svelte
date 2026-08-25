@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icono from '$lib/components/Icono.svelte';
 	import { ajustesObs, diasDesde, necesitaBackup, AJUSTES_DEFAULT } from '$lib/extras';
 	import { formatoNumero, fechaCorta } from '$lib/formato';
 	import {
@@ -147,7 +148,7 @@
 				class="mb-4 flex items-center gap-3 rounded-2xl border border-white/10 p-3.5"
 				style="background: var(--surface)"
 			>
-				<span class="text-lg">💾</span>
+				<span style="color: var(--muted)"><Icono nombre="backup" tamano={20} /></span>
 				<span class="min-w-0 flex-1 text-xs leading-relaxed" style="color: var(--muted)">
 					Tu historial vive solo en este teléfono ·
 					{ajustes.ultimoBackup

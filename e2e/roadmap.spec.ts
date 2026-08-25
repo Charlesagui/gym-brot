@@ -102,7 +102,7 @@ test('el mapa corporal comparte datos con la lista y responde a borrar historial
 
 	await page.goto('/historial/dia/2026-08-24');
 	await page.getByRole('button', { name: /Editar serie 1/ }).click();
-	await page.getByRole('button', { name: '🗑 Borrar serie' }).click();
+	await page.getByRole('button', { name: 'Borrar serie' }).click();
 	await page.getByRole('button', { name: 'Borrar', exact: true }).click();
 	await expect(page.getByRole('dialog', { name: 'Editar serie histórica' })).toBeHidden();
 	await page.goto('/historial');

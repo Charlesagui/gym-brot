@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icono from '$lib/components/Icono.svelte';
 	import { page } from '$app/stores';
 	import { fly } from 'svelte/transition';
 	import { liveQuery } from 'dexie';
@@ -255,7 +256,9 @@
 					style={soloPropios
 						? 'background: rgba(255,255,255,.14); color: var(--text)'
 						: 'background: rgba(255,255,255,.06); color: var(--muted)'}
-					>⭐ Tus ejercicios ({propios.size})</button
+					><span class="inline-flex items-center gap-1.5"
+						><Icono nombre="favorito" tamano={15} /> Tus ejercicios ({propios.size})</span
+					></button
 				>
 			</div>
 		{/if}

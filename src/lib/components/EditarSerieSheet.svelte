@@ -11,6 +11,7 @@
 </script>
 
 <script lang="ts">
+	import Icono from './Icono.svelte';
 	import { fade, fly } from 'svelte/transition';
 	import type { Ajustes, ModoEsfuerzo } from '$lib/db';
 	import { actualizarSetHistorial, borrarSetHistorial } from '$lib/sesion';
@@ -301,7 +302,7 @@
 			<button
 				onclick={() => (confirmandoBorrado = true)}
 				class="mt-2 block w-full rounded-2xl border border-white/10 py-3 text-center text-sm font-semibold"
-				style="color: #ff6b6b">🗑 Borrar serie</button
+				style="color: #ff6b6b"><Icono nombre="borrar" tamano={16} /> Borrar serie</button
 			>
 		{/if}
 	</div>
