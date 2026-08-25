@@ -239,6 +239,21 @@ describe('backup', () => {
 		expect(preparada.avisos.join(' ')).toContain('fecha inválida');
 	});
 
+	it('el import descarta mediciones de peso con fecha futura', () => {
+		const preparada = prepararImport({
+			dias: [],
+			sesiones: [],
+			notas: [],
+			ajustes: [ajustes],
+			pesosCorporales: [
+				{ fecha: '9999-12-31', pesoGramos: 80_000, registradoAt: '2026-08-24T10:00:00.000Z' },
+				{ fecha: '2026-08-24', pesoGramos: 83_000, registradoAt: '2026-08-24T10:00:00.000Z' }
+			]
+		});
+		expect(preparada.datos.pesosCorporales.map((peso) => peso.fecha)).toEqual(['2026-08-24']);
+		expect(preparada.avisos.join(' ')).toContain('fecha futura');
+	});
+
 	it('personalizar el paso de un ejercicio no modifica ninguna sesión histórica', async () => {
 		await db.sesiones.put(sesionCanonica());
 		await db.ajustes.put(ajustes);

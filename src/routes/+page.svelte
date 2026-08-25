@@ -13,15 +13,18 @@
 	import { mantener } from '$lib/mantener';
 	import { bienvenidaVisible, cerrarBienvenida } from '$lib/preferencias-ui';
 	import { guardarSinBloquear, reportarErrorDatos } from '$lib/errores-datos';
-	import { ajustesObs } from '$lib/extras';
+	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
 	import { pesosCorporalesObs } from '$lib/peso-corporal';
 	import { gramosAPeso } from '$lib/unidades';
 	import { formatoNumero } from '$lib/formato';
+	import { fromLiveQuery } from '$lib/live';
 
 	const dias = liveQuery(() => db.dias.orderBy('orden').toArray());
-	const ajustes = ajustesObs();
-	const pesosCorporales = pesosCorporalesObs();
-	const ultimoPeso = $derived($pesosCorporales?.at(-1));
+	// Ambas consultas resuelven de forma independiente. Sin valores iniciales, el peso
+	// podía llegar antes que los ajustes y el render fallaba al leer `$ajustes.unidad`.
+	const ajustes = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
+	const pesosCorporales = fromLiveQuery(pesosCorporalesObs(), []);
+	const ultimoPeso = $derived($pesosCorporales.filter((peso) => peso.fecha <= hoyStr()).at(-1));
 	let fechaHoy = $state(hoyStr());
 	let hoy = $state(new Date().getDay());
 	// Sesiones de hoy, para reflejar el progreso del día en la portada.

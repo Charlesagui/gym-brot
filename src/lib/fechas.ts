@@ -1,5 +1,10 @@
 const FECHA_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Fecha local de hoy en el mismo formato estable que usan las claves calendario. */
+export function hoyCalendarioLocal(): string {
+	return new Date().toLocaleDateString('sv');
+}
+
 /** Valida una fecha calendario real en formato local estable YYYY-MM-DD. */
 export function fechaCalendarioValida(fecha: string): boolean {
 	if (!FECHA_RE.test(fecha)) return false;

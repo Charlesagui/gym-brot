@@ -4,10 +4,12 @@
 	import {
 		borrarPesoCorporal,
 		guardarPesoCorporal,
+		PESO_CORPORAL_MAX_GRAMOS,
+		PESO_CORPORAL_MIN_GRAMOS,
 		pesosCorporalesObs,
 		resumirPesoCorporal
 	} from '$lib/peso-corporal';
-	import { gramosAPeso, pesoAGramos } from '$lib/unidades';
+	import { gramosAPeso, pesoAGramos, type UnidadPeso } from '$lib/unidades';
 	import { formatoNumero, fechaCorta } from '$lib/formato';
 	import ChartPesoCorporal from '$lib/components/ChartPesoCorporal.svelte';
 	import { reportarErrorDatos } from '$lib/errores-datos';
@@ -16,7 +18,11 @@
 	const ajustesStore = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
 	const pesosStore = fromLiveQuery(pesosCorporalesObs(), []);
 	let fecha = $state(hoyStr());
-	let pesoTexto = $state<string | number>('');
+	let pesoEntero = $state(70);
+	let pesoDecimal = $state(0);
+	let selectorUnidad = $state<UnidadPeso>('kg');
+	let selectorTocado = $state(false);
+	let ultimoPesoSincronizado = $state<number | null>(null);
 	let metaTexto = $state<string | number>('');
 	let editandoFecha = $state<string | null>(null);
 	let confirmarBorrado = $state<string | null>(null);
@@ -26,6 +32,59 @@
 	const ajustes = $derived($ajustesStore);
 	const pesos = $derived($pesosStore);
 	const resumen = $derived(resumirPesoCorporal(pesos, ajustes.metaPesoGramos));
+	const minimoVisible = $derived(gramosAPeso(PESO_CORPORAL_MIN_GRAMOS, ajustes.unidad)!);
+	const maximoVisible = $derived(gramosAPeso(PESO_CORPORAL_MAX_GRAMOS, ajustes.unidad)!);
+	const enterosPeso = $derived(
+		Array.from(
+			{ length: Math.floor(maximoVisible) - Math.floor(minimoVisible) + 1 },
+			(_, indice) => Math.floor(minimoVisible) + indice
+		)
+	);
+	const decimalesPeso = $derived(
+		Array.from({ length: 10 }, (_, decimal) => decimal).filter((decimal) => {
+			const valor = pesoEntero + decimal / 10;
+			return valor >= minimoVisible && valor <= maximoVisible;
+		})
+	);
+	const pesoSeleccionado = $derived(pesoEntero + pesoDecimal / 10);
+
+	function fijarSelector(valor: number) {
+		const decimas = Math.round(valor * 10);
+		pesoEntero = Math.floor(decimas / 10);
+		pesoDecimal = decimas % 10;
+	}
+
+	function tocarSelector() {
+		selectorTocado = true;
+		mensaje = '';
+	}
+
+	$effect(() => {
+		const unidadActual = ajustes.unidad;
+		const pesoActualGramos = resumen.actual?.pesoGramos;
+		if (selectorUnidad !== unidadActual) {
+			const gramosSeleccionados = pesoAGramos(pesoSeleccionado, selectorUnidad);
+			fijarSelector(
+				gramosAPeso(gramosSeleccionados ?? pesoActualGramos ?? 70_000, unidadActual) ?? 70
+			);
+			selectorUnidad = unidadActual;
+		}
+		if (
+			!selectorTocado &&
+			editandoFecha == null &&
+			pesoActualGramos != null &&
+			pesoActualGramos !== ultimoPesoSincronizado
+		) {
+			fijarSelector(gramosAPeso(pesoActualGramos, unidadActual)!);
+			ultimoPesoSincronizado = pesoActualGramos;
+		}
+	});
+
+	$effect(() => {
+		if (decimalesPeso.length && !decimalesPeso.includes(pesoDecimal)) {
+			pesoDecimal = decimalesPeso[0]!;
+		}
+	});
 
 	function texto(valor: string | number): string {
 		return String(valor).trim();
@@ -36,34 +95,24 @@
 		return Number.isFinite(valor) ? valor : undefined;
 	}
 
-	function cambio(gramos: number | null): string {
-		if (gramos == null) return 'Sin datos suficientes';
-		const visible = gramosAPeso(Math.abs(gramos), ajustes.unidad)!;
-		if (gramos === 0) return `Sin cambio`;
-		return `${gramos > 0 ? '+' : '−'}${formatoNumero(visible)} ${ajustes.unidad}`;
-	}
-
-	function distanciaMeta(gramos: number | null): string {
-		if (gramos == null) return 'Sin meta configurada';
-		const visible = gramosAPeso(Math.abs(gramos), ajustes.unidad)!;
-		if (gramos === 0) return 'En la meta';
-		return `${formatoNumero(visible)} ${ajustes.unidad} ${gramos > 0 ? 'por encima' : 'por debajo'}`;
-	}
-
 	async function guardar() {
-		const visible = numero(pesoTexto);
-		const gramos = visible == null ? undefined : pesoAGramos(visible, ajustes.unidad);
+		const gramos = pesoAGramos(pesoSeleccionado, ajustes.unidad);
 		if (gramos == null) {
 			mensaje = 'Ingresá un peso válido.';
+			return;
+		}
+		if (fecha > hoyStr()) {
+			mensaje = 'No podés registrar una medición futura.';
 			return;
 		}
 		guardando = true;
 		mensaje = '';
 		try {
 			await guardarPesoCorporal(fecha, gramos);
-			pesoTexto = '';
 			editandoFecha = null;
 			fecha = hoyStr();
+			selectorTocado = false;
+			ultimoPesoSincronizado = null;
 			mensaje = 'Medición guardada.';
 		} catch (error) {
 			reportarErrorDatos('No se pudo guardar la medición.', error);
@@ -75,14 +124,16 @@
 	function editar(fechaEditar: string, gramos: number) {
 		editandoFecha = fechaEditar;
 		fecha = fechaEditar;
-		pesoTexto = String(gramosAPeso(gramos, ajustes.unidad) ?? '');
+		fijarSelector(gramosAPeso(gramos, ajustes.unidad) ?? 70);
+		selectorTocado = true;
 		mensaje = '';
 	}
 
 	function cancelarEdicion() {
 		editandoFecha = null;
 		fecha = hoyStr();
-		pesoTexto = '';
+		selectorTocado = false;
+		ultimoPesoSincronizado = null;
 	}
 
 	async function borrar(fechaBorrar: string) {
@@ -136,64 +187,78 @@
 		</div>
 	</header>
 
-	<section class="grid grid-cols-2 gap-2" aria-label="Resumen de peso corporal">
-		<div
-			class="col-span-2 rounded-2xl border border-white/10 p-4"
-			style="background: var(--surface)"
-		>
-			<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
-				Peso actual
-			</p>
-			<p class="mt-1 text-3xl font-extrabold tabular-nums">
+	<section
+		class="flex items-center justify-between rounded-2xl border border-white/10 px-4 py-3"
+		style="background: var(--surface)"
+		aria-label="Peso corporal actual"
+	>
+		<div>
+			<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">Actual</p>
+			<p class="mt-0.5 text-2xl font-extrabold tabular-nums">
 				{resumen.actual
 					? formatoNumero(gramosAPeso(resumen.actual.pesoGramos, ajustes.unidad)!)
 					: '—'}
 				<span class="text-sm" style="color: var(--muted)">{ajustes.unidad}</span>
 			</p>
-			<p class="mt-1 text-xs" style="color: var(--muted)">
-				{distanciaMeta(resumen.distanciaMetaGramos)}
-			</p>
 		</div>
-		<div class="rounded-2xl border border-white/10 p-3" style="background: var(--surface)">
-			<p class="text-[11px] font-bold uppercase tracking-wider" style="color: var(--muted)">
-				Cambio 7 días
+		{#if resumen.actual}
+			<p class="text-right text-xs" style="color: var(--muted)">
+				{fechaCorta(resumen.actual.fecha, true)}
 			</p>
-			<p class="mt-1 text-sm font-bold tabular-nums">{cambio(resumen.cambio7DiasGramos)}</p>
-		</div>
-		<div class="rounded-2xl border border-white/10 p-3" style="background: var(--surface)">
-			<p class="text-[11px] font-bold uppercase tracking-wider" style="color: var(--muted)">
-				Cambio 30 días
-			</p>
-			<p class="mt-1 text-sm font-bold tabular-nums">{cambio(resumen.cambio30DiasGramos)}</p>
-		</div>
+		{/if}
 	</section>
 
 	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
-		<h2 class="text-sm font-bold">{editandoFecha ? 'Editar medición' : 'Registrar hoy'}</h2>
-		<div class="mt-3 grid grid-cols-[1fr_1fr] gap-2">
-			<label class="text-xs font-semibold" style="color: var(--muted)"
-				>Fecha
-				<input
-					type="date"
-					bind:value={fecha}
-					disabled={editandoFecha != null}
-					max={hoyStr()}
-					class="mt-1 min-h-11 w-full rounded-xl bg-white/[0.06] px-3 text-base disabled:opacity-60"
-				/>
-			</label>
-			<label class="text-xs font-semibold" style="color: var(--muted)"
-				>Peso ({ajustes.unidad})
-				<input
-					type="number"
-					inputmode="decimal"
-					min="20"
-					step="0.1"
-					bind:value={pesoTexto}
-					placeholder="—"
-					class="mt-1 min-h-11 w-full rounded-xl bg-white/[0.06] px-3 text-base"
-				/>
-			</label>
+		<div class="flex items-center justify-between gap-3">
+			<div>
+				<h2 class="text-sm font-bold">{editandoFecha ? 'Editar medición' : 'Registrar peso'}</h2>
+				<p class="mt-0.5 text-xs" style="color: var(--muted)">Tocá cada rueda para girarla</p>
+			</div>
+			<span class="text-xs font-bold uppercase tracking-wider" style="color: var(--accent-text)"
+				>{ajustes.unidad}</span
+			>
 		</div>
+
+		<div
+			class="mt-3 grid grid-cols-[1fr_auto_1fr_auto] items-center gap-2"
+			aria-label="Elegir peso"
+		>
+			<label class="sr-only" for="peso-entero">Peso entero en {ajustes.unidad}</label>
+			<select
+				id="peso-entero"
+				bind:value={pesoEntero}
+				onchange={tocarSelector}
+				class="min-h-16 w-full appearance-none rounded-2xl border border-white/10 bg-white/[0.06] px-2 text-center text-3xl font-extrabold tabular-nums"
+			>
+				{#each enterosPeso as entero (entero)}
+					<option value={entero}>{entero}</option>
+				{/each}
+			</select>
+			<span class="text-3xl font-extrabold" style="color: var(--muted)">,</span>
+			<label class="sr-only" for="peso-decimal">Décima de peso</label>
+			<select
+				id="peso-decimal"
+				bind:value={pesoDecimal}
+				onchange={tocarSelector}
+				class="min-h-16 w-full appearance-none rounded-2xl border border-white/10 bg-white/[0.06] px-2 text-center text-3xl font-extrabold tabular-nums"
+			>
+				{#each decimalesPeso as decimal (decimal)}
+					<option value={decimal}>{decimal}</option>
+				{/each}
+			</select>
+			<span class="text-sm font-bold" style="color: var(--muted)">{ajustes.unidad}</span>
+		</div>
+
+		<label class="mt-3 block text-xs font-semibold" style="color: var(--muted)"
+			>Fecha
+			<input
+				type="date"
+				bind:value={fecha}
+				disabled={editandoFecha != null}
+				max={hoyStr()}
+				class="mt-1 min-h-11 w-full rounded-xl bg-white/[0.06] px-3 text-base disabled:opacity-60"
+			/>
+		</label>
 		<div class="mt-3 flex gap-2">
 			{#if editandoFecha}<button
 					type="button"
@@ -216,53 +281,62 @@
 	</section>
 
 	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
-		<h2 class="text-sm font-bold">Meta opcional</h2>
-		<p class="mt-1 text-xs leading-relaxed" style="color: var(--muted)">
-			Puede servir para subir, bajar o mantener. No cambia tu historial.
-		</p>
-		<div class="mt-3 flex gap-2">
-			<input
-				type="number"
-				inputmode="decimal"
-				min="20"
-				step="0.1"
-				bind:value={metaTexto}
-				placeholder={ajustes.metaPesoGramos == null
-					? `Peso en ${ajustes.unidad}`
-					: `${formatoNumero(gramosAPeso(ajustes.metaPesoGramos, ajustes.unidad)!)} ${ajustes.unidad}`}
-				class="min-h-11 min-w-0 flex-1 rounded-xl bg-white/[0.06] px-3 text-base"
-				aria-label={`Meta de peso en ${ajustes.unidad}`}
-			/>
-			<button
-				type="button"
-				onclick={() => void guardarMeta()}
-				class="min-h-11 rounded-xl px-4 text-sm font-bold"
-				style="background: rgba(255,255,255,.08)"
-				>{texto(metaTexto)
-					? 'Guardar'
-					: ajustes.metaPesoGramos == null
-						? 'Guardar'
-						: 'Quitar'}</button
-			>
-		</div>
-	</section>
-
-	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
 		<h2 class="mb-3 text-sm font-bold">Evolución</h2>
 		<ChartPesoCorporal {pesos} metaPesoGramos={ajustes.metaPesoGramos} unidad={ajustes.unidad} />
 	</section>
 
-	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
-		<h2 class="text-sm font-bold">Mediciones</h2>
+	<details class="mt-3 rounded-2xl border border-white/10 px-4" style="background: var(--surface)">
+		<summary class="flex min-h-14 cursor-pointer items-center justify-between text-sm font-bold">
+			<span>Meta opcional</span>
+			<span class="text-xs" style="color: var(--muted)">
+				{ajustes.metaPesoGramos == null
+					? 'Sin configurar'
+					: `${formatoNumero(gramosAPeso(ajustes.metaPesoGramos, ajustes.unidad)!)} ${ajustes.unidad}`}
+			</span>
+		</summary>
+		<div class="pb-4">
+			<div class="flex gap-2">
+				<input
+					type="number"
+					inputmode="decimal"
+					min="20"
+					step="0.1"
+					bind:value={metaTexto}
+					placeholder={ajustes.metaPesoGramos == null
+						? `Peso en ${ajustes.unidad}`
+						: `${formatoNumero(gramosAPeso(ajustes.metaPesoGramos, ajustes.unidad)!)} ${ajustes.unidad}`}
+					class="min-h-11 min-w-0 flex-1 rounded-xl bg-white/[0.06] px-3 text-base"
+					aria-label={`Meta de peso en ${ajustes.unidad}`}
+				/>
+				<button
+					type="button"
+					onclick={() => void guardarMeta()}
+					class="min-h-11 rounded-xl px-4 text-sm font-bold"
+					style="background: rgba(255,255,255,.08)"
+					>{texto(metaTexto)
+						? 'Guardar'
+						: ajustes.metaPesoGramos == null
+							? 'Guardar'
+							: 'Quitar'}</button
+				>
+			</div>
+		</div>
+	</details>
+
+	<details class="mt-3 rounded-2xl border border-white/10 px-4" style="background: var(--surface)">
+		<summary class="flex min-h-14 cursor-pointer items-center justify-between text-sm font-bold">
+			<span>Mediciones</span>
+			<span class="text-xs" style="color: var(--muted)">{pesos.length}</span>
+		</summary>
 		{#if pesos.length === 0}
 			<p
-				class="mt-3 rounded-xl border border-dashed border-white/15 p-4 text-center text-sm"
+				class="mb-4 rounded-xl border border-dashed border-white/15 p-4 text-center text-sm"
 				style="color: var(--muted)"
 			>
 				Registrá una medición para empezar a ver cambios.
 			</p>
 		{:else}
-			<ul class="mt-2 divide-y divide-white/10">
+			<ul class="divide-y divide-white/10 pb-2">
 				{#each [...pesos].reverse() as peso (peso.fecha)}
 					<li class="flex min-h-14 items-center gap-2 py-2">
 						<div class="min-w-0 flex-1">
@@ -289,5 +363,5 @@
 				{/each}
 			</ul>
 		{/if}
-	</section>
+	</details>
 </main>
