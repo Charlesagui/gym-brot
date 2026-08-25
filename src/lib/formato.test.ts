@@ -22,6 +22,10 @@ describe('formato', () => {
 			'100 +2.5 kg × 8 · MAX'
 		);
 		expect(formatoAnterior({ peso: 40, reps: 12, hecha: false }, 'kg')).toBe('40 kg × 12');
+		// La referencia tiene que decir la carga entera: la placa base sola miente por omision.
+		expect(
+			formatoAnterior({ peso: 100, reps: 8, esMax: true, extraKg: 2.5, hecha: false }, 'kg')
+		).toBe('100 +2.5 kg × 8 · MAX');
 		expect(formatoAnterior({ reps: 10, hecha: false }, 'kg')).toBe('— × 10');
 		expect(formatoAnterior(undefined, 'kg')).toBeNull();
 	});

@@ -203,7 +203,7 @@
 		</section>
 
 		<div class="mb-4">
-			<HeatmapActividad dias={historial.dias} {hoy} />
+			<HeatmapActividad dias={historial.dias} {hoy} unidad={ajustes.unidad} />
 		</div>
 
 		<div class="mb-4">

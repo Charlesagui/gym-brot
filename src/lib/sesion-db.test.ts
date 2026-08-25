@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { conIndice, db } from './db';
+import { conIndice, db, guardarSesion } from './db';
 import {
 	addSet,
 	actualizarSetHistorial,
@@ -30,6 +30,8 @@ import {
 	ultimaSesion
 } from './sesion';
 import { resumenDiaSesion, rachaSemanalActual } from './historial';
+import { pesoEfectivo } from './sesion-reglas';
+import { gramosAPeso } from './unidades';
 import { agregarEjercicio } from './dias';
 import { decidirRecomendacionDoble, setProgresionDoble } from './dias';
 
@@ -627,7 +629,7 @@ describe('sesion con IndexedDB', () => {
 		await setSerieHecha('push', 'press', 0, true, '2026-01-02');
 		await registrarPrSiSupera('push', 'press', 0, 'e1rm', '2026-01-02');
 
-		await actualizarSetHistorial('2026-01-01__push', 'press', 0, { peso: 100, reps: 10 }, 'peso');
+		await actualizarSetHistorial('2026-01-01__push', 'press', 0, { peso: 100, reps: 10 });
 		expect((await db.sesiones.get('2026-01-01__push'))?.ejercicios[0]?.prCelebrado?.metrica).toBe(
 			'e1rm'
 		);
@@ -723,13 +725,11 @@ describe('sesion con IndexedDB', () => {
 		await setSerieHecha('push', 'press', 0, true, '2026-01-01', 'peso');
 		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-01');
 
-		await actualizarSetHistorial(
-			'2026-01-01__push',
-			'press',
-			0,
-			{ peso: 90, reps: 6, esMax: false },
-			'peso'
-		);
+		await actualizarSetHistorial('2026-01-01__push', 'press', 0, {
+			peso: 90,
+			reps: 6,
+			esMax: false
+		});
 
 		expect((await primerValor(historialObs('press', 'peso')))[0]).toMatchObject({
 			peso: 90,
@@ -741,7 +741,7 @@ describe('sesion con IndexedDB', () => {
 			reps: 6
 		});
 
-		await borrarSetHistorial('2026-01-01__push', 'press', 0, 'peso');
+		await borrarSetHistorial('2026-01-01__push', 'press', 0);
 
 		expect(await primerValor(historialObs('press', 'peso'))).toEqual([]);
 		expect((await db.sesiones.get('2026-01-01__push'))?.ejercicios[0]?.prCelebrado).toBeUndefined();
@@ -780,13 +780,11 @@ describe('sesion con IndexedDB', () => {
 		await setReps('push', 'press', 0, 5, '2026-01-02');
 		await setSerieHecha('push', 'press', 0, true, '2026-01-02');
 
-		await actualizarSetHistorial(
-			'2026-01-01__push',
-			'press',
-			0,
-			{ peso: 105, reps: 5, esMax: false },
-			'peso'
-		);
+		await actualizarSetHistorial('2026-01-01__push', 'press', 0, {
+			peso: 105,
+			reps: 5,
+			esMax: false
+		});
 
 		expect((await db.sesiones.get('2026-01-01__push'))?.ejercicios[0]?.prCelebrado).toMatchObject({
 			peso: 105
@@ -808,13 +806,11 @@ describe('sesion con IndexedDB', () => {
 
 		// El 1 de enero en realidad habían sido 120: con 120 antes, los 110 del día 2
 		// dejan de ser récord y no pueden seguir mostrándose como PR de ese día.
-		await actualizarSetHistorial(
-			'2026-01-01__push',
-			'press',
-			0,
-			{ peso: 120, reps: 5, esMax: false },
-			'peso'
-		);
+		await actualizarSetHistorial('2026-01-01__push', 'press', 0, {
+			peso: 120,
+			reps: 5,
+			esMax: false
+		});
 
 		const enero1 = await db.sesiones.get('2026-01-01__push');
 		const enero2 = await db.sesiones.get('2026-01-02__push');
@@ -838,13 +834,11 @@ describe('sesion con IndexedDB', () => {
 		await setSerieHecha('push', 'press', 0, true, '2026-01-02');
 		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-02');
 
-		await actualizarSetHistorial(
-			'2026-01-01__push',
-			'press',
-			0,
-			{ peso: 105, reps: 5, esMax: false },
-			'peso'
-		);
+		await actualizarSetHistorial('2026-01-01__push', 'press', 0, {
+			peso: 105,
+			reps: 5,
+			esMax: false
+		});
 
 		expect((await db.sesiones.get('2026-01-02__push'))?.ejercicios[0]?.prCelebrado).toMatchObject({
 			peso: 110
@@ -865,13 +859,11 @@ describe('sesion con IndexedDB', () => {
 		await setSerieHecha('push', 'press', 0, true, '2026-01-02');
 		expect(await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-02')).toBeNull();
 
-		await actualizarSetHistorial(
-			'2026-01-01__push',
-			'press',
-			0,
-			{ peso: 80, reps: 5, esMax: false },
-			'peso'
-		);
+		await actualizarSetHistorial('2026-01-01__push', 'press', 0, {
+			peso: 80,
+			reps: 5,
+			esMax: false
+		});
 
 		// Retroactivamente los 90 pasan a ser el mayor, pero la app no fabrica una
 		// celebración que el usuario nunca vio: solo degrada, nunca promueve.
@@ -891,7 +883,7 @@ describe('sesion con IndexedDB', () => {
 		await setSerieHecha('push', 'press', 0, true, '2026-01-02', 'peso');
 		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-02');
 
-		await setPeso('push', 'press', 0, 95, '2026-01-02', 'peso');
+		await setPeso('push', 'press', 0, 95, '2026-01-02');
 
 		const actual = await db.sesiones.get('2026-01-02__push');
 		expect(actual?.ejercicios[0]?.prCelebrado).toBeUndefined();
@@ -928,7 +920,7 @@ describe('sesion con IndexedDB', () => {
 		expect((await db.sesiones.get('2026-01-01__push'))?.ejercicios[0]?.sets[0]?.rir).toBe(2.5);
 		await expect(setRir('push', 'press', 0, 2.25, '2026-01-01')).rejects.toThrow();
 
-		await actualizarSetHistorial('2026-01-01__push', 'press', 0, { reps: 8, rir: 1 }, 'peso');
+		await actualizarSetHistorial('2026-01-01__push', 'press', 0, { reps: 8, rir: 1 });
 		expect((await db.sesiones.get('2026-01-01__push'))?.ejercicios[0]?.sets[0]).toMatchObject({
 			hecha: true,
 			rir: 1
@@ -946,13 +938,11 @@ describe('sesion con IndexedDB', () => {
 		await setReps('push', 'press', 0, 5, '2026-01-01');
 		await setSerieHecha('push', 'press', 0, true, '2026-01-01');
 
-		await actualizarSetHistorial(
-			'2026-01-01__push',
-			'press',
-			0,
-			{ peso: 100, reps: undefined, esMax: false },
-			'peso'
-		);
+		await actualizarSetHistorial('2026-01-01__push', 'press', 0, {
+			peso: 100,
+			reps: undefined,
+			esMax: false
+		});
 
 		expect((await db.sesiones.get('2026-01-01__push'))?.ejercicios[0]?.sets[0]).toMatchObject({
 			hecha: false,
@@ -1118,5 +1108,66 @@ describe('sesion con IndexedDB', () => {
 			setIndex: 1,
 			metrica: 'peso'
 		});
+	});
+
+	it('saltar un ejercicio prellena en la unidad activa y con gramos canonicos', async () => {
+		await db.dias.put({
+			id: 'push',
+			nombre: 'Push',
+			orden: 0,
+			ejercicios: [{ exerciseId: 'press', seriesObjetivo: 1, orden: 0 }]
+		});
+		await guardarSesion({
+			id: '2026-01-01__push',
+			fecha: '2026-01-01',
+			diaId: 'push',
+			ejercicios: [
+				{
+					exerciseId: 'press',
+					// 100 kg = 220,5 lb: el numero visible depende de la unidad, los gramos no.
+					sets: [
+						{
+							peso: 220.5,
+							pesoGramos: 100_000,
+							reps: 8,
+							hecha: true,
+							esMax: true,
+							extraKg: 11,
+							extraGramos: 5000
+						}
+					]
+				}
+			]
+		});
+
+		expect(await saltarEjercicio('push', 'press', '2026-01-02', 'lb')).toBe(true);
+
+		const set = (await db.sesiones.get('2026-01-02__push'))?.ejercicios[0]?.sets[0];
+		// Prellena en la unidad activa: antes copiaba el numero en kg y lo rotulaba lb.
+		expect(set).toMatchObject({ peso: 220.5, reps: 8, hecha: false });
+		// Y con gramos: sin ellos el set deja de significar lo mismo en las dos unidades.
+		// El prellenado parte del valor visible, asi que la igualdad es a la precision que
+		// el producto muestra (una decima), no al gramo.
+		expect(gramosAPeso(set?.pesoGramos, 'lb')).toBe(220.5);
+		expect(gramosAPeso(set?.pesoGramos, 'kg')).toBe(100);
+		// El MAX y su extra son parte de la carga que se esta repitiendo.
+		expect(set).toMatchObject({ esMax: true, extraKg: 11 });
+		expect(gramosAPeso(set?.extraGramos, 'lb')).toBe(11);
+	});
+
+	it('la serie agregada conserva el MAX y su extra', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-05');
+		await setPeso('push', 'press', 0, 100, '2026-01-05');
+		await setReps('push', 'press', 0, 8, '2026-01-05');
+		await toggleMax('push', 'press', 0, '2026-01-05');
+		await setExtra('push', 'press', 0, 5, '2026-01-05');
+
+		await addSet('push', 'press', '2026-01-05');
+
+		const sets = (await db.sesiones.get('2026-01-05__push'))?.ejercicios[0]?.sets;
+		// Copiar solo la placa base registraba 100 donde se levantaron 105.
+		expect(pesoEfectivo(sets![0]!)).toBe(105);
+		expect(pesoEfectivo(sets![1]!)).toBe(105);
+		expect(sets![1]).toMatchObject({ esMax: true, extraKg: 5, extraGramos: 5000, hecha: false });
 	});
 });

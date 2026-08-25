@@ -536,7 +536,7 @@
 	function ajustarPeso(i: number, delta: number) {
 		const peso = sumarPeso(sets[i]?.peso, delta);
 		if (sets[i]) sets[i].peso = peso;
-		escribir(setPeso(diaId!, $page.params.id!, i, peso, fechaSesion, metrica, unidad));
+		escribir(setPeso(diaId!, $page.params.id!, i, peso, fechaSesion, unidad));
 	}
 
 	function ajustarReps(i: number, delta: number) {
@@ -546,13 +546,13 @@
 			if (reps == null) sets[i].hecha = false;
 		}
 		if (reps != null) avisoSerie = null;
-		escribir(setReps(diaId!, $page.params.id!, i, reps, fechaSesion, metrica));
+		escribir(setReps(diaId!, $page.params.id!, i, reps, fechaSesion));
 	}
 
 	function ajustarExtra(i: number, delta: number) {
 		const extra = sumarPeso(sets[i]?.extraKg, delta);
 		if (sets[i]) sets[i].extraKg = extra;
-		escribir(setExtra(diaId!, $page.params.id!, i, extra, fechaSesion, metrica, unidad));
+		escribir(setExtra(diaId!, $page.params.id!, i, extra, fechaSesion, unidad));
 	}
 
 	function guardarRir(i: number, rir?: number) {
@@ -612,7 +612,7 @@
 	function escribirPeso(i: number, el: HTMLInputElement) {
 		const peso = leerPeso(el.value);
 		if (sets[i]) sets[i].peso = peso;
-		escribir(setPeso(diaId!, $page.params.id!, i, peso, fechaSesion, metrica, unidad));
+		escribir(setPeso(diaId!, $page.params.id!, i, peso, fechaSesion, unidad));
 		el.value = peso != null ? formatoNumero(peso) : '';
 	}
 
@@ -626,13 +626,13 @@
 				mensaje: `La serie ${sets.length} ya está marcada como hecha. Si la quitás, se recalcula el progreso y el PR de este ejercicio.`,
 				confirmarTexto: 'Quitar',
 				onConfirm: async () => {
-					await removeSet(diaId, $page.params.id!, sets.length - 1, fechaSesion, metrica);
+					await removeSet(diaId, $page.params.id!, sets.length - 1, fechaSesion);
 					confirmacion = null;
 				}
 			};
 			return;
 		}
-		escribir(removeSet(diaId, $page.params.id!, sets.length - 1, fechaSesion, metrica));
+		escribir(removeSet(diaId, $page.params.id!, sets.length - 1, fechaSesion));
 	}
 
 	function escribirReps(i: number, el: HTMLInputElement) {
@@ -642,7 +642,7 @@
 			if (reps == null) sets[i].hecha = false;
 		}
 		if (reps != null) avisoSerie = null;
-		escribir(setReps(diaId!, $page.params.id!, i, reps, fechaSesion, metrica));
+		escribir(setReps(diaId!, $page.params.id!, i, reps, fechaSesion));
 		el.value = reps != null ? String(reps) : '';
 	}
 
@@ -1338,8 +1338,7 @@
 										pendiente={seriesPendientes.has(i)}
 										flash={filasFlash.has(i)}
 										onToggle={() => onToggle(i)}
-										onToggleMax={() =>
-											escribir(toggleMax(diaId, $page.params.id!, i, fechaSesion, metrica))}
+										onToggleMax={() => escribir(toggleMax(diaId, $page.params.id!, i, fechaSesion))}
 										onAjustarPeso={(d) => ajustarPeso(i, d)}
 										onEscribirPeso={(el) => escribirPeso(i, el)}
 										onAjustarReps={(d) => ajustarReps(i, d)}

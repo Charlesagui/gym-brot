@@ -33,11 +33,6 @@
 	const pasoPesoEditando = $derived(
 		ejercicioEditando ? pasoPesoEfectivo(ejercicioEditando, ajustes) : ajustes.pasoPeso
 	);
-	const metricaEditando = $derived(
-		serieEditando
-			? (ajustes.metricasPrEjercicio?.[serieEditando.exerciseId] ?? ajustes.metricaPr)
-			: ajustes.metricaPr
-	);
 
 	// Puede haber más de una sesión (día de rutina) en la misma fecha: se muestran agrupadas.
 	const sesionesStore = $derived(
@@ -326,7 +321,6 @@
 		glow={glowEditando}
 		unidad={ajustes.unidad}
 		pasoPeso={pasoPesoEditando}
-		metrica={metricaEditando}
 		modoEsfuerzo={ajustes.modoEsfuerzo ?? 'off'}
 		onClose={() => (serieEditando = null)}
 	/>
