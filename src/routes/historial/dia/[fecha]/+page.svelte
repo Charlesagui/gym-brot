@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icono from '$lib/components/Icono.svelte';
 	import { page } from '$app/stores';
 	import { liveQuery } from 'dexie';
 	import { db, type Dia, type Sesion, type SetSesion } from '$lib/db';
@@ -254,7 +255,10 @@
 									<span
 										class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold"
 										style="background: rgb(var(--max) / .14); color: rgb(var(--max))"
-										>🏆 PR {labelPr(
+										><span class="inline-flex items-center gap-1"
+											><Icono nombre="record" tamano={13} /> PR</span
+										>
+										{labelPr(
 											ejercicio.prCelebrado.metrica,
 											ejercicio.prCelebrado.peso != null
 										)}</span
@@ -295,7 +299,13 @@
 													)}</span
 												>{/if}
 											{#if i === setPr}
-												<span class="shrink-0 text-sm" aria-label="Set del PR">🏆</span>
+												<span
+													class="shrink-0"
+													aria-label="Set del PR"
+													style="color: rgb(var(--max))"
+												>
+													<Icono nombre="record" tamano={14} />
+												</span>
 											{/if}
 											{#if sinVolumen(set)}
 												<span class="shrink-0 text-[10px] font-medium" style="color: var(--muted)"

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icono from './Icono.svelte';
 	import { fly } from 'svelte/transition';
 	import { descanso } from '$lib/descanso.svelte';
 	import { dur } from '$lib/motion';
@@ -48,7 +49,7 @@
 						</span>
 					{/if}
 				</span>
-				<span class="text-3xl font-extrabold tabular-nums" style="color: rgb({descanso.glow})"
+				<span class="cifra text-[2.6rem]" style="color: rgb({descanso.glow})"
 					>{mmss(descanso.restoSeg)}</span
 				>
 			</button>
@@ -65,24 +66,29 @@
 				aria-label="Abrir descanso en pantalla completa"
 			>
 				<span class="min-w-0 flex-1" aria-live="polite">
-					<span class="block text-base font-extrabold" style="color: rgb({descanso.glow})"
-						>⏰ ¡A la serie!</span
+					<span
+						class="flex items-center gap-1.5 text-base font-extrabold"
+						style="color: rgb({descanso.glow})"
 					>
+						<Icono nombre="aviso" tamano={15} /> ¡A la serie!
+					</span>
 					{#if descanso.siguiente}
 						<span class="block truncate text-[11px] font-medium" style="color: var(--muted)">
 							{descanso.siguiente}
 						</span>
 					{/if}
 				</span>
-				<span class="text-2xl font-extrabold tabular-nums" style="color: rgb({descanso.glow})"
+				<span class="cifra text-[2.2rem]" style="color: rgb({descanso.glow})"
 					>+{mmss(descanso.vencidoSeg)}</span
 				>
 			</button>
 			<button
 				onclick={() => descanso.atender()}
-				class="min-h-11 shrink-0 rounded-full px-5 text-sm font-bold"
-				style="background: rgb({descanso.glow}); color: var(--on-bright)">✓ Listo</button
+				class="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-5 text-sm font-bold"
+				style="background: rgb({descanso.glow}); color: var(--on-bright)"
 			>
+				<Icono nombre="hecha" tamano={16} /> Listo
+			</button>
 		{/if}
 	</div>
 {/if}

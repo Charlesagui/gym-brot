@@ -334,7 +334,7 @@ test('cerrar un día sin series usa un mensaje sobrio y no declara progreso', as
 			page.getByRole('button', { name: `Reanudar ${nombre} hoy`, exact: true })
 		).toBeVisible();
 	}
-	await page.getByRole('button', { name: '🏁 Terminar día' }).click();
+	await page.getByRole('button', { name: 'Terminar día' }).click();
 	const resumen = page.getByRole('button', { name: 'Cerrar resumen del día' });
 	await expect(resumen.getByText('Día cerrado · 6 saltados')).toBeVisible();
 	await expect(resumen.getByText('Sin series registradas')).toBeVisible();
@@ -387,9 +387,9 @@ test('el loop de entrenamiento encadena serie, PR, descanso y siguiente ejercici
 
 	// El descanso sigue corriendo detrás y vence solo.
 	await page.clock.runFor('00:46');
-	await expect(page.getByText('⏰ ¡A la serie!')).toBeVisible();
-	await page.getByRole('button', { name: '✓ Listo' }).click();
-	await expect(page.getByText('⏰ ¡A la serie!')).toBeHidden();
+	await expect(page.getByText('¡A la serie!')).toBeVisible();
+	await page.getByRole('button', { name: 'Listo', exact: true }).click();
+	await expect(page.getByText('¡A la serie!')).toBeHidden();
 
 	// Resto de las series de la rutina sembrada (4 objetivo), sin descanso en el medio.
 	await page.getByRole('button', { name: 'Sin descanso en este ejercicio' }).click();

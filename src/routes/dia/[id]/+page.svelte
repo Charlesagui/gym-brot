@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icono from '$lib/components/Icono.svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { onDestroy } from 'svelte';
@@ -740,7 +741,9 @@
 							: 'rgba(255,255,255,.08)'}; color: {diaListo ? 'white' : 'var(--muted)'}"
 					>
 						{#if diaListo}
-							🏁 Terminar día
+							<span class="inline-flex items-center gap-2">
+								<Icono nombre="terminar" tamano={18} /> Terminar día
+							</span>
 						{:else}
 							{@const faltan = totalEjercicios - ejerciciosResueltos}
 							Faltan {faltan} ejercicio{faltan === 1 ? '' : 's'}
@@ -759,8 +762,8 @@
 		{#if editando}
 			<button
 				onclick={eliminar}
-				class="mt-3 w-full rounded-2xl border border-white/10 p-3 text-sm"
-				style="color: #ff6b6b">🗑 Borrar día</button
+				class="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 p-3 text-sm"
+				style="color: #ff6b6b"><Icono nombre="borrar" tamano={16} /> Borrar día</button
 			>
 		{/if}
 	{/if}
@@ -785,7 +788,7 @@
 					class="relative grid size-24 place-items-center rounded-full border border-white/15 text-5xl font-extrabold"
 					style="background: rgb(var(--exito) / .18); color: rgb(var(--exito)); box-shadow: 0 0 55px rgb(var(--exito) / .24)"
 				>
-					{resumenDia.setsHechos > 0 ? '🏁' : '✓'}
+					<Icono nombre={resumenDia.setsHechos > 0 ? 'terminar' : 'hecha'} tamano={42} />
 				</div>
 			</div>
 			{#if resumenDia.setsHechos > 0}
@@ -822,7 +825,10 @@
 							class="truncate rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-bold"
 							style="color: rgb(var(--max))"
 						>
-							🏆 {pr.nombre}
+							<span class="inline-flex items-center gap-1.5">
+								<Icono nombre="record" tamano={14} />
+								{pr.nombre}
+							</span>
 						</p>
 					{/each}
 					{#if resumenDia.prs.length > 3}
