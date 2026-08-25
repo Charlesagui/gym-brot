@@ -1,6 +1,6 @@
 import { liveQuery } from 'dexie';
 import { db, type PesoCorporal } from './db';
-import { fechaCalendarioValida } from './fechas';
+import { fechaCalendarioValida, hoyCalendarioLocal } from './fechas';
 import { capturarRevisionDatos, exigirRevisionDatos } from './revision-datos';
 
 export const PESO_CORPORAL_MIN_GRAMOS = 20_000;
@@ -25,6 +25,8 @@ export async function guardarPesoCorporal(
 	registradoAt = new Date().toISOString()
 ): Promise<void> {
 	if (!fechaCalendarioValida(fecha)) throw new RangeError('La fecha de la medición no es válida.');
+	if (fecha > hoyCalendarioLocal())
+		throw new RangeError('La fecha de la medición no puede ser futura.');
 	if (!pesoCorporalValido(pesoGramos))
 		throw new RangeError('El peso corporal debe estar entre 20 y 500 kg.');
 	if (!Number.isFinite(Date.parse(registradoAt)))
@@ -77,7 +79,12 @@ export function resumirPesoCorporal(
 	pesos: PesoCorporal[],
 	metaPesoGramos?: number
 ): ResumenPesoCorporal {
-	const ordenados = [...pesos].sort((a, b) => a.fecha.localeCompare(b.fecha));
+	// Una versión anterior aceptaba fechas futuras. No dejamos que una fila heredada
+	// desplace el peso actual ni contamine los cambios mientras el usuario la elimina.
+	const hoy = hoyCalendarioLocal();
+	const ordenados = [...pesos]
+		.filter((peso) => peso.fecha <= hoy)
+		.sort((a, b) => a.fecha.localeCompare(b.fecha));
 	const actual = ordenados.at(-1) ?? null;
 	if (!actual) {
 		return {

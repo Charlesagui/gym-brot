@@ -1,21 +1,27 @@
 import { expect, test } from '@playwright/test';
 
 test('peso corporal conserva el valor canónico al alternar kg y lb', async ({ page }) => {
+	const errores: Error[] = [];
+	page.on('pageerror', (error) => errores.push(error));
 	await page.goto('/peso');
 	const registro = page
 		.locator('section')
-		.filter({ has: page.getByRole('heading', { name: 'Registrar hoy' }) });
-	await registro.getByLabel('Peso (kg)').fill('80.5');
+		.filter({ has: page.getByRole('heading', { name: 'Registrar peso' }) });
+	await registro.getByLabel('Peso entero en kg').selectOption('80');
+	await registro.getByLabel('Décima de peso').selectOption('5');
 	await registro.getByRole('button', { name: 'Guardar' }).click();
 	await expect(page.getByRole('status')).toHaveText('Medición guardada.');
 	await expect(page.getByText('80.5 kg', { exact: true }).first()).toBeVisible();
+	await page.goto('/');
+	await expect(page.getByText('80.5 kg', { exact: true })).toBeVisible();
+	await expect(page.getByText('Registrar primera medición')).toHaveCount(0);
+	await page.goto('/peso');
 
-	const meta = page
-		.locator('section')
-		.filter({ has: page.getByRole('heading', { name: 'Meta opcional' }) });
+	await page.getByText('Meta opcional', { exact: true }).click();
+	const meta = page.locator('details').filter({ hasText: 'Meta opcional' });
 	await meta.getByLabel('Meta de peso en kg').fill('78');
 	await meta.getByRole('button', { name: 'Guardar' }).click();
-	await expect(page.getByText('2.5 kg por encima')).toBeVisible();
+	await expect(meta.locator('summary')).toContainText('78 kg');
 
 	await page.goto('/ajustes');
 	const unidadLb = page.getByRole('button', { name: 'Seleccionar unidad lb' });
@@ -23,7 +29,9 @@ test('peso corporal conserva el valor canónico al alternar kg y lb', async ({ p
 	await expect(unidadLb).toHaveAttribute('aria-pressed', 'true');
 	await page.goto('/peso');
 	await expect(page.getByText('177.5 lb', { exact: true }).first()).toBeVisible();
-	await expect(page.getByText('5.5 lb por encima')).toBeVisible();
+	await expect(
+		page.locator('details').filter({ hasText: 'Meta opcional' }).locator('summary')
+	).toContainText('172 lb');
 
 	await page.goto('/ajustes');
 	const unidadKg = page.getByRole('button', { name: 'Seleccionar unidad kg' });
@@ -31,6 +39,17 @@ test('peso corporal conserva el valor canónico al alternar kg y lb', async ({ p
 	await expect(unidadKg).toHaveAttribute('aria-pressed', 'true');
 	await page.goto('/peso');
 	await expect(page.getByText('80.5 kg', { exact: true }).first()).toBeVisible();
+	const rango7Dias = page.getByRole('button', { name: '7 días' });
+	await rango7Dias.click();
+	await expect(rango7Dias).toHaveAttribute('aria-pressed', 'true');
+
+	await page.getByLabel('Fecha').fill('9999-12-31');
+	await page.getByLabel('Peso entero en kg').selectOption('81');
+	await page.getByLabel('Décima de peso').selectOption('0');
+	await page.getByRole('button', { name: 'Guardar', exact: true }).first().click();
+	await expect(page.getByRole('status')).toHaveText('No podés registrar una medición futura.');
+	await expect(page.getByText('81 kg', { exact: true })).toHaveCount(0);
+	expect(errores).toEqual([]);
 });
 
 test('RIR sigue opcional y la doble progresión requiere activación explícita', async ({ page }) => {

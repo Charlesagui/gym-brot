@@ -3,7 +3,7 @@
 	import { gramosAPeso, type UnidadPeso } from '$lib/unidades';
 	import { formatoNumero, fechaCorta } from '$lib/formato';
 
-	type Rango = '3m' | '1a' | 'todo';
+	type Rango = '7d' | '3m' | '1a' | 'todo';
 	let {
 		pesos,
 		metaPesoGramos,
@@ -12,6 +12,7 @@
 	let rango = $state<Rango>('3m');
 
 	const rangos: { id: Rango; label: string }[] = [
+		{ id: '7d', label: '7 días' },
 		{ id: '3m', label: '3 meses' },
 		{ id: '1a', label: '1 año' },
 		{ id: 'todo', label: 'Todo' }
@@ -20,15 +21,17 @@
 	function corte(valor: Rango): string | null {
 		if (valor === 'todo') return null;
 		const fecha = new Date();
-		if (valor === '3m') fecha.setMonth(fecha.getMonth() - 3);
+		if (valor === '7d') fecha.setDate(fecha.getDate() - 6);
+		else if (valor === '3m') fecha.setMonth(fecha.getMonth() - 3);
 		else fecha.setFullYear(fecha.getFullYear() - 1);
 		return fecha.toLocaleDateString('sv');
 	}
 
 	const visibles = $derived.by(() => {
 		const desde = corte(rango);
+		const hoy = new Date().toLocaleDateString('sv');
 		return [...pesos]
-			.filter((peso) => desde == null || peso.fecha >= desde)
+			.filter((peso) => peso.fecha <= hoy && (desde == null || peso.fecha >= desde))
 			.sort((a, b) => a.fecha.localeCompare(b.fecha));
 	});
 	const meta = $derived(gramosAPeso(metaPesoGramos, unidad));
@@ -59,7 +62,7 @@
 			type="button"
 			onclick={() => (rango = opcion.id)}
 			aria-pressed={rango === opcion.id}
-			class="min-h-11 flex-1 rounded-full px-3 text-xs font-bold"
+			class="min-h-11 flex-1 rounded-full px-2 text-xs font-bold"
 			style={rango === opcion.id
 				? 'background: var(--accent); color: var(--on-accent)'
 				: 'background: rgba(255,255,255,.06); color: var(--muted)'}>{opcion.label}</button

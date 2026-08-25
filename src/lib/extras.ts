@@ -10,7 +10,7 @@ import {
 	type ModoEsfuerzo,
 	type PesoCorporal
 } from './db';
-import { fechaCalendarioValida } from './fechas';
+import { fechaCalendarioValida, hoyCalendarioLocal } from './fechas';
 import { PESO_CORPORAL_MAX_GRAMOS, PESO_CORPORAL_MIN_GRAMOS } from './peso-corporal';
 import { rirValido } from './esfuerzo';
 import { repeticionesValidas, serieCompleta } from './sesion-reglas';
@@ -803,12 +803,18 @@ export function prepararImport(data: Backup): ImportPreparado {
 	const fechasPeso = new Set<string>();
 	let pesosDuplicados = 0;
 	let pesosFechaInvalida = 0;
+	let pesosFechaFutura = 0;
+	const hoy = hoyCalendarioLocal();
 	for (const peso of data.pesosCorporales ?? []) {
 		// La fecha es la clave de la tabla: una que no existe en el calendario desordena el
 		// historial, envenena el peso actual y los cambios de 7/30 días, y llega al gráfico.
 		// Se descarta igual que una sesión con fecha imposible.
 		if (!fechaCalendarioValida(peso.fecha)) {
 			pesosFechaInvalida++;
+			continue;
+		}
+		if (peso.fecha > hoy) {
+			pesosFechaFutura++;
 			continue;
 		}
 		if (fechasPeso.has(peso.fecha)) {
@@ -820,6 +826,8 @@ export function prepararImport(data: Backup): ImportPreparado {
 	}
 	if (pesosFechaInvalida)
 		avisos.push(`${pesosFechaInvalida} medición(es) de peso con fecha inválida: se descartaron`);
+	if (pesosFechaFutura)
+		avisos.push(`${pesosFechaFutura} medición(es) de peso con fecha futura: se descartaron`);
 	if (pesosDuplicados)
 		avisos.push(`${pesosDuplicados} medición(es) de peso repetidas: se conservó la primera`);
 

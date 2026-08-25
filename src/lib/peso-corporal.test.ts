@@ -64,6 +64,15 @@ describe('peso corporal', () => {
 
 	it('rechaza fechas y valores fuera de límites', async () => {
 		await expect(guardarPesoCorporal('2026-02-30', 80_000)).rejects.toThrow();
+		await expect(guardarPesoCorporal('9999-12-31', 80_000)).rejects.toThrow('no puede ser futura');
 		await expect(guardarPesoCorporal('2026-08-01', 19_999)).rejects.toThrow();
+	});
+
+	it('una fila futura heredada no reemplaza el peso actual', () => {
+		const resumen = resumirPesoCorporal([
+			{ fecha: '2026-08-24', pesoGramos: 80_000, registradoAt: '2026-08-24T12:00:00Z' },
+			{ fecha: '9999-12-31', pesoGramos: 90_000, registradoAt: '2026-08-25T12:00:00Z' }
+		]);
+		expect(resumen.actual?.pesoGramos).toBe(80_000);
 	});
 });
