@@ -96,9 +96,8 @@ export function crearProgresoEjercicio(
 	unidad: UnidadPeso = 'kg'
 ): ProgresoEjercicio {
 	// Una sesión marcada para una fecha futura sigue siendo planificación, no un récord histórico.
-	const sesionesPasadas = sesiones
-		.filter((sesion) => sesion.fecha <= hoyStr())
-		.sort(compararSesiones);
+	const hoy = hoyStr();
+	const sesionesPasadas = sesiones.filter((sesion) => sesion.fecha <= hoy).sort(compararSesiones);
 	const modo = modoEjercicio(sesionesPasadas, exerciseId);
 	let mejorPeso: MejorSet | null = null;
 	let mejorE1rm: MejorSet | null = null;

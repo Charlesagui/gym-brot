@@ -323,7 +323,6 @@
 		{glow}
 		{unidad}
 		{pasoPeso}
-		{metrica}
 		{modoEsfuerzo}
 		onClose={() => (serieEditando = null)}
 	/>

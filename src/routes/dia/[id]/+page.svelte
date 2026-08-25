@@ -205,7 +205,7 @@
 	async function saltarEjercicioActual(exerciseId: string) {
 		if (!fechaSesion) return;
 		try {
-			if (await saltarEjercicio(diaId, exerciseId, fechaSesion)) return;
+			if (await saltarEjercicio(diaId, exerciseId, fechaSesion, ajustes.unidad)) return;
 			avisoDia = 'Este ejercicio ya no está en la rutina. No se guardó ningún cambio.';
 		} catch (error) {
 			reportarErrorDatos('No se pudo guardar que saltaste el ejercicio. Intentá de nuevo.', error);

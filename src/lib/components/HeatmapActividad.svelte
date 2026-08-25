@@ -4,7 +4,9 @@
 	import { fechaCorta, formatoNumero } from '$lib/formato';
 	import { onMount } from 'svelte';
 
-	let { dias, hoy }: { dias: DiaEntrenado[]; hoy: string } = $props();
+	// El volumen es peso × reps: sin la unidad, el único lector del heatmap (un lector de
+	// pantalla) recibía un número sin magnitud.
+	let { dias, hoy, unidad }: { dias: DiaEntrenado[]; hoy: string; unidad: string } = $props();
 	let contenedor: HTMLDivElement;
 	const heatmap = $derived(crearHeatmapAnual(dias, new Date(`${hoy}T12:00:00`)));
 
@@ -12,7 +14,7 @@
 		if (celda.futura) return `${fechaCorta(celda.fecha, true)}: fecha futura`;
 		if (celda.sets === 0) return `${fechaCorta(celda.fecha, true)}: sin series completadas`;
 		const rutinas = celda.dias.length ? celda.dias.join(', ') : 'rutina sin nombre';
-		return `${fechaCorta(celda.fecha, true)}: ${rutinas}; ${celda.sets} series completadas; volumen ${formatoNumero(celda.volumen)}`;
+		return `${fechaCorta(celda.fecha, true)}: ${rutinas}; ${celda.sets} series completadas; volumen ${formatoNumero(celda.volumen)} ${unidad}`;
 	}
 
 	onMount(() => {

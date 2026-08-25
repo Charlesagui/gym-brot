@@ -31,12 +31,17 @@ export function formatoSet(set: SetDescribible, unidad: string): string {
 	return `${formatoNumero(set.peso)}${extra} ${unidad}${set.reps ? ` × ${set.reps}` : ''}${set.esMax ? ' · MAX' : ''}`;
 }
 
-/** Resumen de una serie de la última vez, para la columna "Anterior". */
+/**
+ * Resumen de una serie de la última vez, para la columna "Anterior". Incluye el MAX y su
+ * extra: sin eso la referencia mostraba la placa base y ocultaba parte de lo levantado,
+ * justo en las máquinas donde el MAX es la única forma de progresar.
+ */
 export function formatoAnterior(set: SetSesion | undefined, unidad: Unidad): string | null {
 	if (!set || (set.peso == null && set.reps == null)) return null;
-	const peso = set.peso != null ? `${formatoNumero(set.peso)} ${unidad}` : '—';
+	const extra = set.esMax && set.extraKg ? ` +${formatoNumero(set.extraKg)}` : '';
+	const peso = set.peso != null ? `${formatoNumero(set.peso)}${extra} ${unidad}` : '—';
 	const reps = set.reps != null ? ` × ${set.reps}` : '';
-	return `${peso}${reps}`;
+	return `${peso}${reps}${set.esMax ? ' · MAX' : ''}`;
 }
 
 /** Fecha YYYY-MM-DD → "5 jun" (local, es). */

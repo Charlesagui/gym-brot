@@ -12,7 +12,7 @@
 
 <script lang="ts">
 	import { fade, fly } from 'svelte/transition';
-	import type { Ajustes, MetricaPr, ModoEsfuerzo } from '$lib/db';
+	import type { Ajustes, ModoEsfuerzo } from '$lib/db';
 	import { actualizarSetHistorial, borrarSetHistorial } from '$lib/sesion';
 	import { dur } from '$lib/motion';
 	import { formatoNumero, fechaCorta } from '$lib/formato';
@@ -26,7 +26,6 @@
 		glow,
 		unidad,
 		pasoPeso,
-		metrica,
 		modoEsfuerzo,
 		onClose
 	}: {
@@ -34,7 +33,6 @@
 		glow: string;
 		unidad: Ajustes['unidad'];
 		pasoPeso: number;
-		metrica: MetricaPr;
 		modoEsfuerzo: ModoEsfuerzo;
 		onClose: () => void;
 	} = $props();
@@ -132,16 +130,13 @@
 					extraKg: esMax ? extraKg : undefined,
 					rir
 				},
-				metrica,
 				unidad
 			)
 		);
 	}
 
 	function borrar() {
-		return conResultado(() =>
-			borrarSetHistorial(serie.sesionId, serie.exerciseId, serie.setIndex, metrica)
-		);
+		return conResultado(() => borrarSetHistorial(serie.sesionId, serie.exerciseId, serie.setIndex));
 	}
 </script>
 
