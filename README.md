@@ -1,8 +1,9 @@
 # Gym-brot 🏋️
 
 App de gimnasio **personal, mobile-first**: tus días de entrenamiento, contador de series,
-peso × reps con **PR automático** y mini-gráfico, **video MP4 liviano** de cada ejercicio (con el
-músculo en rojo), notas y timer de descanso. **100% offline** (PWA instalable), sin backend.
+peso × reps con **PR automático**, RIR/RPE opcional, doble progresión, peso corporal, heatmap y
+distribución muscular estimada. Incluye **video MP4 liviano** por ejercicio, notas y timer de
+descanso. **100% offline** (PWA instalable), sin backend.
 
 ## Stack
 
@@ -16,6 +17,8 @@ npm run dev      # http://localhost:5173
 npm run build    # genera build/ (PWA estática)
 npm run preview  # previsualiza el build de producción
 npm run check    # type-check (svelte-check)
+npm test         # tests unitarios + cobertura
+npm run audit:media -- --skip-probe # inventario local rápido del catálogo y MP4
 ```
 
 ## Desplegar gratis (Netlify)
@@ -47,7 +50,7 @@ La app es 100% estática → entra en el plan gratis de **Netlify**, Vercel o Cl
 La app (pantallas, lógica y datos) funciona **100% offline** desde la instalación: el service
 worker precachea el shell (~1 MB). Los **videos** no se descargan ni se guardan al verlos: así
 una búsqueda larga no consume el almacenamiento del teléfono. Si vas a un gym sin señal y querés
-dejarlos listos, usá **Ajustes → Descargar todos los videos** (~22 MB, cancelable y reversible).
+dejarlos listos, usá **Ajustes → Descargar todos los videos** (~20 MB, cancelable y reversible).
 
 Cuando hay una versión nueva, la app **avisa y espera**: nunca se actualiza sola en medio de un
 ejercicio o de un descanso.
@@ -55,10 +58,14 @@ ejercicio o de un descanso.
 ## Datos y backup
 
 Todo se guarda en tu teléfono (IndexedDB vía Dexie). Desde **Ajustes** podés
-**exportar/importar** un JSON con tus rutinas y progreso. No hay nube: cada dispositivo es su
-propio perfil.
+**exportar/importar** un JSON con tus rutinas, sesiones, ajustes y peso corporal. No hay nube:
+cada dispositivo es su propio perfil.
 
 ## Licencia
 
 Código **propietario — todos los derechos reservados** (ver [`LICENSE`](LICENSE)). Las animaciones
-provienen de GIFs de ExerciseDB convertidos a MP4 (uso personal). No publicar como open source sin revisar estas licencias.
+provienen de GIFs de ExerciseDB convertidos a MP4 y su uso está **autorizado** desde el
+2026-08-25, así que no hay restricción pendiente para publicar la app. La metadata y geometría
+MIT incorporadas sí exigen conservar su aviso: se detallan en
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). El inventario reproducible del catálogo y los
+MP4 está en [`docs/auditoria-assets.md`](docs/auditoria-assets.md).
