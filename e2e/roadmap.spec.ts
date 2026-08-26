@@ -28,7 +28,7 @@ test('peso corporal conserva el valor canónico al alternar kg y lb', async ({ p
 	await registro.getByRole('button', { name: 'Guardar' }).click();
 	await expect(page.getByRole('status')).toHaveText('Medición guardada.');
 	await expect(page.getByText('80.5 kg', { exact: true }).first()).toBeVisible();
-	// El peso se mudó de la portada a la sección Cuerpo, donde vive junto al objetivo
+	// El peso se mudó de la portada a la sección Macros, donde vive junto al objetivo
 	// de calorías: la portada volvió a ser solo las rutinas.
 	await page.goto('/cuerpo');
 	await expect(page.getByText('80.5kg')).toBeVisible();

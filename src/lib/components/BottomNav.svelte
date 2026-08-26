@@ -4,9 +4,9 @@
 	const ruta = $derived($page.url.pathname);
 	const rutinasActivas = $derived(ruta === '/' || ruta.startsWith('/dia/'));
 	const discosActivo = $derived(ruta.startsWith('/herramientas/discos'));
-	// `/peso` cae adentro de Cuerpo: era la única pantalla de la app sin entrada propia
+	// `/peso` cae adentro de Macros: era la única pantalla de la app sin entrada propia
 	// en la barra, y el objetivo de calorías se revisa mirando justamente esa serie.
-	const cuerpoActivo = $derived(
+	const macrosActivo = $derived(
 		ruta === '/cuerpo' || ruta === '/peso' || ruta.startsWith('/herramientas/calorias')
 	);
 	const historialActivo = $derived(ruta === '/historial' || ruta.startsWith('/historial/'));
@@ -62,8 +62,8 @@
 	<a
 		href="/cuerpo"
 		class="nav-item"
-		class:active={cuerpoActivo}
-		aria-current={cuerpoActivo ? 'page' : undefined}
+		class:active={macrosActivo}
+		aria-current={macrosActivo ? 'page' : undefined}
 	>
 		<span class="icono">
 			<svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -82,7 +82,7 @@
 				/>
 			</svg>
 		</span>
-		<span class="label">Cuerpo</span>
+		<span class="label">Macros</span>
 	</a>
 	<a
 		href="/historial"
