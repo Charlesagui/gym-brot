@@ -206,7 +206,7 @@ test('la sección dice qué esperar, y por qué esa proteína', async ({ page })
 	await completarPerfilA(page);
 	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
 	await page.getByRole('button', { name: 'Guardar como objetivo' }).click();
-	await page.getByRole('link', { name: 'Cuerpo' }).click();
+	await page.getByRole('link', { name: 'Macros' }).click();
 
 	// Sin ninguna medición, lo más útil que se puede decir es justamente eso.
 	await expect(page.getByText(/Todavía no registraste ningún peso/)).toBeVisible();
@@ -224,7 +224,7 @@ test('el objetivo se puede borrar, y hace falta confirmarlo', async ({ page }) =
 	await completarPerfilA(page);
 	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
 	await page.getByRole('button', { name: 'Guardar como objetivo' }).click();
-	await page.getByRole('link', { name: 'Cuerpo' }).click();
+	await page.getByRole('link', { name: 'Macros' }).click();
 	await expect(page.getByText('2.440kcal')).toBeVisible();
 
 	// Un solo toque no borra nada: pide confirmación en el mismo botón.
@@ -236,26 +236,26 @@ test('el objetivo se puede borrar, y hace falta confirmarlo', async ({ page }) =
 	await expect(page.getByText('2.440kcal')).toHaveCount(0);
 });
 
-test('la sección Cuerpo tiene su lugar en la barra y arranca vacía', async ({ page }) => {
+test('la sección Macros tiene su lugar en la barra y arranca vacía', async ({ page }) => {
 	await page.goto('/');
 
-	// La portada ya no lleva la tarjeta de peso: esa pantalla ahora vive en Cuerpo.
+	// La portada ya no lleva la tarjeta de peso: esa pantalla ahora vive en Macros.
 	await expect(page.getByRole('link', { name: /Peso corporal/ })).toHaveCount(0);
 
-	const abrir = page.getByRole('link', { name: 'Cuerpo' });
+	const abrir = page.getByRole('link', { name: 'Macros' });
 	await expect(abrir).toBeVisible();
 	await abrir.click();
 
 	await expect(page).toHaveURL(/\/cuerpo$/);
-	await expect(page.getByRole('link', { name: 'Cuerpo' })).toHaveAttribute('aria-current', 'page');
-	await expect(page.getByRole('heading', { name: 'Cuerpo' })).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Macros' })).toHaveAttribute('aria-current', 'page');
+	await expect(page.getByRole('heading', { name: 'Macros' })).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Calcular mi objetivo' })).toBeVisible();
 	await expect(page.getByText('Sin mediciones todavía')).toBeVisible();
 });
 
-test('/peso queda adentro de Cuerpo y deja de estar huérfano en la barra', async ({ page }) => {
+test('/peso queda adentro de Macros y deja de estar huérfano en la barra', async ({ page }) => {
 	await page.goto('/peso');
-	await expect(page.getByRole('link', { name: 'Cuerpo' })).toHaveAttribute('aria-current', 'page');
+	await expect(page.getByRole('link', { name: 'Macros' })).toHaveAttribute('aria-current', 'page');
 });
 
 test('el objetivo guardado manda en la sección', async ({ page }) => {
@@ -264,7 +264,7 @@ test('el objetivo guardado manda en la sección', async ({ page }) => {
 	await page.getByRole('button', { name: 'Guardar como objetivo' }).click();
 	await expect(page.getByText('Guardado como tu objetivo')).toBeVisible();
 
-	await page.getByRole('link', { name: 'Cuerpo' }).click();
+	await page.getByRole('link', { name: 'Macros' }).click();
 	await expect(page.getByText('Déficit moderado')).toBeVisible();
 	await expect(page.getByText('2.440kcal')).toBeVisible();
 	await expect(page.getByText(/2 de cada 3 personas/)).toBeVisible();

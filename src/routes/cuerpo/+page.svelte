@@ -161,7 +161,7 @@
 
 <main class="gb-page glow-bg min-h-[calc(100dvh-4rem)] px-4 pb-8 pt-3">
 	<header class="mb-3 flex min-h-10 items-center justify-between gap-3">
-		<h1 class="text-xl font-extrabold">Cuerpo</h1>
+		<h1 class="text-xl font-extrabold">Macros</h1>
 	</header>
 
 	<!-- ===== Revisión, cuando hay algo que decir ===== -->
