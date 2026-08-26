@@ -2,7 +2,7 @@
 	import type { SetSesion, Ajustes, ModoEsfuerzo } from '$lib/db';
 	import { pulsar } from '$lib/pulsar';
 	import { formatoNumero, formatoAnterior } from '$lib/formato';
-	import { sumarPeso } from '$lib/numeros';
+	import { redondear, sumarPeso } from '$lib/numeros';
 	import Stepper from './Stepper.svelte';
 	import Icono from './Icono.svelte';
 	import { etiquetaEsfuerzo, rpeARir } from '$lib/esfuerzo';
@@ -105,6 +105,26 @@
 		return opcionesChips;
 	});
 
+	/**
+	 * Cuánto se movió la carga respecto de la misma serie de la vez pasada.
+	 *
+	 * Vive en el renglón contraído porque ahí sobraba entre un 39 % y un 56 % del ancho:
+	 * los valores arrancan siempre en el mismo x —que es lo que deja leer la columna de
+	 * arriba abajo, y por eso no se centran— y a la derecha no había nada. En vez de
+	 * rellenar con aire, va el dato que contesta la pregunta que uno se hace mirando una
+	 * serie hecha: ¿subí?
+	 */
+	const delta = $derived.by(() => {
+		if (set.peso == null || anterior?.peso == null) return null;
+		const diferencia = redondear(set.peso - anterior.peso);
+		// El signo va explícito: "2.5" a secas se confunde con un peso, "+2.5" es un salto.
+		const texto =
+			diferencia === 0
+				? '='
+				: `${diferencia > 0 ? '+' : '−'}${formatoNumero(Math.abs(diferencia))}`;
+		return { diferencia, texto };
+	});
+
 	function cambiarEsfuerzo(valor: string) {
 		if (!valor) {
 			onSetRir(undefined);
@@ -177,6 +197,20 @@
 					{escala === 'rir' ? set.rir : 10 - set.rir}</span
 				>
 			{/if}
+			<span class="flex-1"></span>
+			{#if delta}
+				<span
+					class="cifra shrink-0 text-base"
+					style="color: {delta.diferencia > 0 ? 'rgb(var(--exito))' : 'var(--muted)'}"
+					aria-label={delta.diferencia === 0
+						? 'Igual que la vez pasada'
+						: `${delta.diferencia > 0 ? 'Más' : 'Menos'} que la vez pasada: ${formatoNumero(Math.abs(delta.diferencia))} ${unidad}`}
+					>{delta.texto}</span
+				>
+			{/if}
+			<span class="shrink-0" style="color: var(--muted)" aria-hidden="true">
+				<Icono nombre="editar" tamano={15} />
+			</span>
 		</button>
 	</div>
 {:else if porHacer}
