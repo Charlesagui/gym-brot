@@ -248,6 +248,20 @@ alto y no el ancho, duplicarlo no cambia nada: hasta 8 discos por lado el númer
 queda en los mismos 8,2 px. Recién a 10 baja a 6,8, y las cargas reales usan entre 1 y 4
 discos por lado (200 kg son 4).
 
+Dos correcciones posteriores, las dos por lo mismo: el dibujo tenía que parecerse más a una
+barra.
+
+- **Ancho mínimo de 320 en el `viewBox`, y la caja a `h-28`.** `meet` escala para que entre
+  entero, así que con pocos discos el recuadro quedaba casi cuadrado y el dibujo usaba el
+  34% del ancho de la tarjeta en un teléfono de 375, y el 29% en uno de 430. Con la
+  proporción fijada en 3,2:1 queda entre 98% y 100% en las tres medidas, y el número de la
+  placa crece de 8,2 a 9,5 px en los teléfonos grandes en vez de achicarse.
+- **El sobrante se lo lleva el eje, no las puntas.** Con el eje fijo y corto, los discos
+  quedaban amontonados contra el centro con media barra vacía por fuera — exactamente lo
+  contrario de una barra cargada. Ahora cada lado ocupa lo suyo contra la punta y el medio
+  estira: con dos discos por lado el eje queda en 64% del largo, contra el 60% de una barra
+  olímpica real. Antes era 8%, sin importar la carga.
+
 ### Un color por peso
 
 `src/lib/discos-color.ts`. Los discos reales vienen codificados por color —25 rojo, 20 azul,
@@ -267,8 +281,11 @@ Dos decisiones tomadas:
 - **El 2,5 va rosa.** En la vida real es rojo, igual que el 25, porque la escala se repite en
   las fracciones. En el dibujo el tamaño los separa; en la grilla de disponibles no, y
   quedaban dos botones rojos iguales.
-- **El naranja del tope de la pila pasa a ser un aro.** Con un color por peso el relleno ya
-  está ocupado, así que `--max` rodea la placa más pesada en vez de teñirla.
+- **El naranja del tope de la pila vive en el canto.** Con un color por peso el relleno ya
+  está ocupado. El primer intento fue un aro separado de la placa, pero el aire entre los dos
+  lo hacía leer como una calcomanía pegada encima. Ahora toda placa tiene canto —un degradado
+  claro arriba y oscuro abajo, que es como se ve un borde mecanizado— y en la más pesada ese
+  canto va naranja: misma señal, integrada al disco.
 
 Las placas pasan de teñidas a llenas: a media opacidad los siete colores se acercan entre sí
 hasta dejar de distinguirse. La tinta va oscura, que es para lo que existe `--on-bright`.
