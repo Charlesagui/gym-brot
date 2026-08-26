@@ -128,7 +128,17 @@ const MET_CARDIO: Record<TipoCardio, number> = { trotar: 7, bici: 6 };
 export const PAL_MIN = 1.35;
 export const PAL_MAX = 2.3;
 
-/** Cortes de categoría de NASEM 2023. Distintos de los de la edición 2005. */
+/**
+ * Cortes de categoría de NASEM 2023, verbatim de los pies de las tablas 7-9, 7-10,
+ * 7-13 y 7-14: «inactive: 1.0 ≤ PAL < 1.53; low active: 1.53 ≤ PAL < 1.69; active:
+ * 1.69 ≤ PAL < 1.85; very active: 1.85 ≤ PAL < 2.5».
+ *
+ * Los números son raros porque no son redondos por diseño: NASEM definió las categorías
+ * de adultos por los **percentiles 25, 50 y 75** de la base de agua doblemente marcada
+ * (19–70 años), no por los cortes de convención. Por eso son distintos de los de la
+ * edición 2005 (1,4 / 1,6 / 1,9), que sí eran redondos, y por eso no hay que
+ * "corregirlos" a esos: cambiarlos mueve el mantenimiento de todo el mundo.
+ */
 const CORTES_PAL: Array<{ hasta: number; categoria: CategoriaPal }> = [
 	{ hasta: 1.53, categoria: 'inactivo' },
 	{ hasta: 1.69, categoria: 'poco' },
@@ -618,9 +628,73 @@ export function ritmosDisponibles(meta: Meta, imc: number): OpcionRitmo[] {
  *
  * Antes acá había un 2,0 g/kg, que es el techo de la banda general del ISSN usado como
  * valor por defecto sin razón para estar arriba en vez de abajo.
+ *
+ * **El techo.** `objetivoKcal` entra para no dejar que la proteína pase del 35 % de la
+ * energía, que es el borde superior del AMDR (IOM 2002). Muerde solo arriba de IMC ~37,
+ * que es exactamente donde el peso total deja de ser un buen denominador: sin el techo,
+ * un perfil de 180 kg pedía 324 g —el 53 % de la ingesta— y dejaba los carbos en
+ * 0,46 g/kg. Es el mismo problema que el comentario de arriba evita nombrando masa
+ * magra, resuelto sin estimarla: alcanza con la energía, que ya la tenemos medida.
  */
-export function proteinaGramos(kg: number, meta: Meta): number {
-	return Math.round((meta === 'bajar' ? 1.8 : 1.6) * kg);
+export const PCT_KCAL_PROTEINA_MAX = 0.35;
+
+export function proteinaGramos(kg: number, meta: Meta, objetivoKcal: number): number {
+	const porPeso = (meta === 'bajar' ? 1.8 : 1.6) * kg;
+	return Math.round(Math.min(porPeso, (objetivoKcal * PCT_KCAL_PROTEINA_MAX) / 4));
+}
+
+/**
+ * Fracción de las kcal que va a grasa antes de aplicar el piso.
+ *
+ * 25 % es el único punto que cae a la vez dentro del AMDR general (20–35 % de la
+ * energía, IOM 2002) y del rango que la literatura de físico recomienda (10–25 %,
+ * Iraki 2019). Abajo de esa banda no hay evidencia de beneficio y sí de incomodidad
+ * sostenida; arriba, los carbos que sostienen el entrenamiento empiezan a faltar.
+ */
+const PCT_KCAL_GRASA = 0.25;
+
+/**
+ * Piso de grasa en g/kg de peso corporal. Actúa solo cuando el 25 % de un objetivo
+ * bajo se queda corto en gramos: pasa en déficit con peso alto, que es donde la
+ * proteína ya se comió media ingesta.
+ */
+const GRASA_MIN_G_KG = 0.5;
+
+export interface Macros {
+	proteinaG: number;
+	grasaG: number;
+	carbosG: number;
+}
+
+/**
+ * Los tres macros del objetivo.
+ *
+ * El orden de resolución no es arbitrario y es la única decisión de diseño que hay acá:
+ *
+ *   1. **La proteína primero**, porque es la única con un objetivo propio —sostener masa
+ *      magra— y la única cuyo número sale de un metaanálisis y no de un reparto.
+ *   2. **La grasa después**, como porcentaje de la energía con un piso en g/kg. Como
+ *      porcentaje sola se hunde en déficits agresivos; como g/kg sola crece sin razón
+ *      en objetivos altos. Las dos reglas juntas se cubren los dos bordes.
+ *   3. **Los carbos por diferencia.** No tienen requerimiento esencial y son la palanca
+ *      que sostiene el entrenamiento: lo que sobra es exactamente lo que corresponde.
+ *
+ * Todo se calcula sobre el **peso corporal total**, igual que la proteína y por la misma
+ * razón: la app no mide masa libre de grasa y estimarla con Deurenberg para repartir
+ * comida sería vender precisión que no existe.
+ *
+ * Los tres se derivan del objetivo guardado en vez de persistirse. Son función pura de
+ * (peso, kcal, meta) —los tres ya están en la fila— y guardarlos sería abrir la puerta
+ * a que una fila vieja muestre un reparto que la versión actual ya no haría.
+ */
+export function macros(kg: number, objetivoKcal: number, meta: Meta): Macros {
+	const proteinaG = proteinaGramos(kg, meta, objetivoKcal);
+	const grasaG = Math.round(Math.max((objetivoKcal * PCT_KCAL_GRASA) / 9, GRASA_MIN_G_KG * kg));
+	// El piso de grasa puede empujar el total por encima del objetivo en casos extremos
+	// (peso muy alto con ingesta muy baja). Ahí los carbos son cero, no negativos: un
+	// número negativo en pantalla es peor que un reparto apretado.
+	const carbosG = Math.max(0, Math.round((objetivoKcal - proteinaG * 4 - grasaG * 9) / 4));
+	return { proteinaG, grasaG, carbosG };
 }
 
 export interface Objetivo {
@@ -678,7 +752,7 @@ export function calcularObjetivo(
 			kgPorSemana: 0,
 			ajuste: 0,
 			objetivoKcal: tdee,
-			proteinaG: proteinaGramos(kg, meta),
+			proteinaG: proteinaGramos(kg, meta, tdee),
 			pisoKcal: Math.max(Math.round(rmr), PISO_ABSOLUTO[mantenimiento.ecuacion]),
 			umbralDisponibilidadKcal,
 			avisos
@@ -728,7 +802,7 @@ export function calcularObjetivo(
 		kgPorSemana: (ritmoReal / 100) * kg,
 		ajuste: ajusteReal,
 		objetivoKcal,
-		proteinaG: proteinaGramos(kg, meta),
+		proteinaG: proteinaGramos(kg, meta, objetivoKcal),
 		pisoKcal,
 		umbralDisponibilidadKcal,
 		avisos

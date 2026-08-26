@@ -7,6 +7,8 @@ import {
 	eerPorCategoria,
 	kcalEntrenoSesion,
 	kcalPasos,
+	macros,
+	PESO_MAX_KG,
 	proteinaGramos,
 	restricciones,
 	ritmosDisponibles,
@@ -525,11 +527,58 @@ describe('mantener y subir', () => {
 	it('la proteína sube en déficit y baja en mantenimiento o volumen', () => {
 		// 1,6 g/kg es el punto donde Morton 2018 ve que la curva se aplana; 1,8 en déficit
 		// deja a los cinco perfiles dentro de la banda de Helms sin estimar masa magra.
-		expect(proteinaGramos(82, 'bajar')).toBe(148);
-		expect(proteinaGramos(82, 'mantener')).toBe(131);
-		expect(proteinaGramos(82, 'subir')).toBe(131);
+		// Las kcal de estos casos son holgadas: mandan los g/kg, no el techo del AMDR.
+		expect(proteinaGramos(82, 'bajar', 2400)).toBe(148);
+		expect(proteinaGramos(82, 'mantener', 2800)).toBe(131);
+		expect(proteinaGramos(82, 'subir', 3000)).toBe(131);
 		// Y nunca depende de la composición corporal: mismo peso, mismo número.
-		expect(proteinaGramos(105, 'bajar')).toBe(189);
+		expect(proteinaGramos(105, 'bajar', 2600)).toBe(189);
+	});
+
+	it('el techo del AMDR corta la proteína cuando el peso total deja de servir', () => {
+		// 180 kg en déficit pedirían 324 g por la regla de g/kg. Sobre 2.440 kcal eso es
+		// el 53 % de la ingesta y deja los carbos en 0,46 g/kg: el peso total dejó de ser
+		// un denominador útil. El 35 % del AMDR lo corta sin estimar masa magra.
+		expect(1.8 * 180).toBeGreaterThan((2440 * 0.35) / 4);
+		expect(proteinaGramos(180, 'bajar', 2440)).toBe(214);
+		// Y no toca el caso normal: 148 g sobre 2.400 kcal son el 25 %, muy por debajo.
+		expect(proteinaGramos(82, 'bajar', 2400)).toBe(148);
+	});
+});
+
+describe('macros', () => {
+	it('reparte los tres macros y la suma cierra contra el objetivo', () => {
+		const { proteinaG, grasaG, carbosG } = macros(80, 2390, 'bajar');
+		expect(proteinaG).toBe(144);
+		expect(grasaG).toBe(66); // 25 % de 2.390 / 9
+		expect(carbosG).toBe(305);
+		// Cierra salvo el redondeo a gramo entero de cada macro.
+		expect(Math.abs(proteinaG * 4 + grasaG * 9 + carbosG * 4 - 2390)).toBeLessThanOrEqual(5);
+	});
+
+	it('el piso de grasa manda cuando el 25 % se queda corto en gramos', () => {
+		// 150 kg con 2.660 kcal: el 25 % son 73,9 g, menos que los 0,5 g/kg = 75 g.
+		expect(macros(150, 2660, 'bajar').grasaG).toBe(75);
+		// Con la misma ingesta y la mitad del peso manda el porcentaje, no el piso.
+		expect(macros(75, 2660, 'bajar').grasaG).toBe(74);
+	});
+
+	it('los carbos nunca salen negativos', () => {
+		// Ingesta mínima con peso máximo: el reparto queda apretado, no roto.
+		const { carbosG } = macros(PESO_MAX_KG, 1200, 'bajar');
+		expect(carbosG).toBeGreaterThanOrEqual(0);
+	});
+
+	it('la proteína del reparto es la misma que la del objetivo guardado', () => {
+		// Las dos salen de proteinaGramos con las mismas kcal. Si divergen, la sección
+		// muestra un número y la fila guardada otro.
+		const mantenimiento = calcularMantenimiento(PERFILES.A!);
+		if (mantenimiento.estado !== 'calculado') throw new Error('perfil de referencia inválido');
+		const objetivo = calcularObjetivo(mantenimiento, 'bajar', -0.5);
+		if (objetivo.estado !== 'calculado') throw new Error('objetivo de referencia inválido');
+		expect(macros(mantenimiento.kg, objetivo.objetivoKcal, 'bajar').proteinaG).toBe(
+			objetivo.proteinaG
+		);
 	});
 });
 
