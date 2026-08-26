@@ -38,9 +38,13 @@ export interface DatosFrases {
 	pesoActualGramos: number | null;
 	/** Fecha de esa medición, para saber si todavía se le puede creer. */
 	fechaUltimoPeso: string | null;
-	/** Mediciones dentro de la ventana de calibración. */
-	pesajesEnVentana: number;
-	diasVentana: number;
+	/**
+	 * Estado de la calibración. Trae adentro su propia ventana —cuántos pesajes y cuántos
+	 * días— y por eso ya no se pasan aparte: cuando los contaba la pantalla, contaba sobre
+	 * 63 días y los rotulaba con los 56 del tope, al lado de una tarjeta que mostraba el
+	 * conteo verdadero. La ventana real arranca en `creadoAt + 7`, así que los dos números
+	 * eran distintos y ninguno de los dos era el de la frase.
+	 */
 	calibracion: EstadoCalibracion | null;
 	/** Mantenimiento del objetivo que esta revisión reemplazó, si hubo una. */
 	tdeeAnteriorKcal: number | null;
@@ -184,19 +188,23 @@ export function frasesPara(datos: DatosFrases): Frase[] {
 		});
 	}
 
-	if (datos.calibracion?.estado === 'pocos-pesajes' && datos.pesajesEnVentana > 0) {
+	if (datos.calibracion?.estado === 'pocos-pesajes' && datos.calibracion.ventana.pesajes > 0) {
 		salida.push({
 			id: 'pocos-pesajes',
 			tono: 'neutro',
-			texto: `Te pesaste ${datos.pesajesEnVentana} veces en este período. Con ${datos.calibracion.minimo} puedo decirte si la cuenta era correcta.`
+			texto: `Te pesaste ${datos.calibracion.ventana.pesajes} veces en este período. Con ${datos.calibracion.minimo} puedo decirte si la cuenta era correcta.`
 		});
 	}
 
-	if (datos.pesajesEnVentana >= PESAJES_BUENA_RACHA) {
+	// Solo cuando hay una ventana de verdad. Mientras el objetivo es joven —estado
+	// `esperando`— no hay período que contar, y decir "con eso alcanza para corregir el
+	// número" sería falso: todavía no alcanza, falten los pesajes que falten.
+	const ventana = datos.calibracion && 'ventana' in datos.calibracion ? datos.calibracion.ventana : null;
+	if (ventana && ventana.pesajes >= PESAJES_BUENA_RACHA) {
 		salida.push({
 			id: 'buena-racha',
 			tono: 'exito',
-			texto: `Te pesaste ${datos.pesajesEnVentana} de los últimos ${datos.diasVentana} días. Con eso alcanza para corregir el número.`
+			texto: `Te pesaste ${ventana.pesajes} de los últimos ${ventana.dias} días. Con eso alcanza para corregir el número.`
 		});
 	}
 
