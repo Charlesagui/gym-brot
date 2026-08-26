@@ -178,7 +178,7 @@
 			class="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-lg px-1 text-left"
 			aria-label={`Corregir serie ${index + 1}`}
 		>
-			<span class="cifra shrink-0 text-2xl">
+			<span class="cifra min-w-0 truncate text-2xl">
 				{set.peso != null ? formatoNumero(set.peso) : '—'}<span class="cifra-u">{unidad}</span>
 				<span class="mx-0.5" style="color: var(--muted)">×</span>{set.reps ?? '—'}<span
 					class="cifra-u">reps</span
@@ -496,6 +496,17 @@
 	@container (max-width: 19.5rem) {
 		.gb-set-grid {
 			grid-template-columns: minmax(0, 1fr);
+		}
+	}
+
+	/*
+	 * Renglón hecho en pantalla angosta: "137.5 kg × 12 reps" con el delta y el lápiz al
+	 * lado no entra a 320 px con una cifra redonda. Lo primero que se va son las
+	 * unidades, que el `×` ya sobreentiende; los números, que son el dato, quedan.
+	 */
+	@container (max-width: 17rem) {
+		.gb-set-row--hecha :global(.cifra-u) {
+			display: none;
 		}
 	}
 
