@@ -63,6 +63,19 @@ export interface EjercicioSesion {
 	saltado?: boolean;
 }
 
+/**
+ * El plan del día, congelado: cuántos ejercicios y cuántas series tenía la rutina
+ * cuando se creó la sesión.
+ *
+ * Es el denominador de "4 de 12 series", y tiene que vivir acá porque `Dia.ejercicios`
+ * muta: calcular el cumplimiento contra la rutina de hoy haría que editar una rutina
+ * reescribiera el pasado, que es justo lo que los snapshots de nombre evitan.
+ */
+export interface PlanSesion {
+	ejercicios: number;
+	series: number;
+}
+
 /** Progreso de una sesión (id = `${fecha}__${diaId}`, se resetea por día). */
 export interface Sesion {
 	id: string;
@@ -73,8 +86,21 @@ export interface Sesion {
 	/** Orden real de creación dentro de la fecha (0..n); desempata PRs del mismo día. */
 	ordenEnDia?: number;
 	ejercicios: EjercicioSesion[];
+	/**
+	 * Plan congelado del día. Ausente en las sesiones anteriores a que existiera: esos
+	 * días no muestran porcentaje y se siguen contando como entrenados, porque estimarles
+	 * un denominador con la rutina actual es exactamente el error que este campo evita.
+	 * No hay migración que lo rellene por el mismo motivo.
+	 */
+	plan?: PlanSesion;
 	diaTerminado?: boolean;
 	diaTerminadoAt?: string;
+	/**
+	 * El día se cerró a mano dejando trabajo sin resolver. No es lo mismo que cerrarlo
+	 * con todo hecho o saltado: sirve para que el historial no le regale a un día de un
+	 * ejercicio el mismo estado que a uno completo.
+	 */
+	diaTerminadoConPendientes?: boolean;
 	/**
 	 * Por qué este día dejó de estar terminado, para que la pantalla pueda decirlo.
 	 * Sobrevive a la navegación a propósito: la reapertura casi siempre se dispara en la

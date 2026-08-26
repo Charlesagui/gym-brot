@@ -441,6 +441,12 @@ function esPrCelebrado(value: unknown): boolean {
 	);
 }
 
+function esPlanSesion(value: unknown): boolean {
+	return (
+		esRecord(value) && esEnteroNoNegativo(value.ejercicios) && esEnteroNoNegativo(value.series)
+	);
+}
+
 function esSesion(value: unknown): value is Sesion {
 	if (!esRecord(value)) return false;
 	const ejercicios = value.ejercicios;
@@ -450,6 +456,11 @@ function esSesion(value: unknown): value is Sesion {
 		esString(value.diaId) &&
 		(value.diaTerminado === undefined || esBoolean(value.diaTerminado)) &&
 		(value.diaTerminadoAt === undefined || esString(value.diaTerminadoAt)) &&
+		(value.diaTerminadoConPendientes === undefined || esBoolean(value.diaTerminadoConPendientes)) &&
+		// Un plan con basura adentro no es un dato raro que se muestra tal cual: es el
+		// denominador de "4 de 12 series" y de la calidad del día. Se exige entero no
+		// negativo o no entra.
+		(value.plan === undefined || esPlanSesion(value.plan)) &&
 		(value.reaperturaMotivo === undefined || esString(value.reaperturaMotivo)) &&
 		(value.reaperturaAt === undefined || esString(value.reaperturaAt)) &&
 		(value.diaNombre === undefined || esString(value.diaNombre)) &&

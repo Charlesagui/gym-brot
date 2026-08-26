@@ -10,7 +10,7 @@
 	import { estadoLiveQuery, fromLiveQuery } from '$lib/live';
 	import { fechaCorta, formatoSet, formatoVolumen } from '$lib/formato';
 	import { pasoPesoEfectivo } from '$lib/paso-peso';
-	import { serieCompleta } from '$lib/sesion-reglas';
+	import { estadoSesion, serieCompleta, UMBRAL_DIA_COMPLETO } from '$lib/sesion-reglas';
 	import { fechaCalendarioValida, hoyCalendarioLocal } from '$lib/fechas';
 	import { popOnChange } from '$lib/pop-on-change';
 	import EditarSerieSheet, { type SerieEditable } from '$lib/components/EditarSerieSheet.svelte';
@@ -24,6 +24,9 @@
 
 	const ajustesStore = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
 	const ajustes = $derived($ajustesStore);
+	// Aislada del resto de los ajustes: es lo único de acá que cambia la consulta, y
+	// derivar el primitivo hace que guardar cualquier otra preferencia no la rearme.
+	const unidad = $derived(ajustes.unidad);
 
 	// Serie en edición → bottom sheet; guarda también el glow del grupo del ejercicio.
 	let serieEditando = $state<SerieEditable | null>(null);
@@ -35,13 +38,28 @@
 		ejercicioEditando ? pasoPesoEfectivo(ejercicioEditando, ajustes) : ajustes.pasoPeso
 	);
 
-	// Puede haber más de una sesión (día de rutina) en la misma fecha: se muestran agrupadas.
-	const sesionesStore = $derived(
-		estadoLiveQuery(
+	/**
+	 * Puede haber más de una sesión (día de rutina) en la misma fecha: se muestran agrupadas.
+	 *
+	 * La fecha y la unidad se leen ACÁ, sincrónicamente, y recién después entran al
+	 * `liveQuery`. Antes vivían dentro del callback `async`, que corre más tarde: el
+	 * `$derived` quedaba sin ninguna dependencia rastreada, así que se calculaba una sola
+	 * vez y nunca más. La consulta seguía respondiendo a escrituras en `sesiones` —de eso
+	 * se ocupa Dexie— pero era sorda a la fecha y a la unidad.
+	 *
+	 * Con navegación del router entre dos fechas eso se veía entero: el título cambiaba al
+	 * día nuevo y abajo seguían las series del día viejo, con su volumen y su botón de
+	 * "seguir editando" apuntando a la sesión equivocada. Hoy no hay ningún enlace de un
+	 * día a otro, así que no se podía disparar; el primero que se agregue lo dispara.
+	 */
+	const sesionesStore = $derived.by(() => {
+		const consultada = fechaValida ? fecha : null;
+		const unidadConsulta = unidad;
+		return estadoLiveQuery(
 			liveQuery(async () => {
-				if (!fechaValida) return { sesiones: [] as Sesion[], dias: [] as Dia[] };
+				if (!consultada) return { sesiones: [] as Sesion[], dias: [] as Dia[] };
 				const [sesiones, dias] = await Promise.all([
-					db.sesiones.where('fecha').equals(fecha).toArray(),
+					db.sesiones.where('fecha').equals(consultada).toArray(),
 					db.dias.toArray()
 				]);
 				return {
@@ -49,9 +67,9 @@
 						...sesion,
 						ejercicios: sesion.ejercicios.map((ejercicio) => ({
 							...ejercicio,
-							sets: ejercicio.sets.map((set) => conPesoVisible(set, ajustes.unidad)),
+							sets: ejercicio.sets.map((set) => conPesoVisible(set, unidadConsulta)),
 							prCelebrado: ejercicio.prCelebrado
-								? conPesoVisible(ejercicio.prCelebrado, ajustes.unidad)
+								? conPesoVisible(ejercicio.prCelebrado, unidadConsulta)
 								: undefined
 						}))
 					})),
@@ -59,8 +77,8 @@
 				};
 			}),
 			{ sesiones: [] as Sesion[], dias: [] as Dia[] }
-		)
-	);
+		);
+	});
 	const consultaSesiones = $derived($sesionesStore);
 	const datosSesiones = $derived(consultaSesiones.valor);
 	const conEntrenamiento = $derived(
@@ -70,11 +88,13 @@
 
 	// Historial de los mismos días de rutina (para comparar contra "la vez anterior").
 	// Solo se compara cuando existe de verdad esa sesión anterior; si no, no se muestra nada.
-	const candidatasStore = $derived(
-		fromLiveQuery(
+	// La fecha se lee sincrónicamente por el mismo motivo que arriba.
+	const candidatasStore = $derived.by(() => {
+		const consultada = fechaValida ? fecha : null;
+		return fromLiveQuery(
 			liveQuery(async () => {
-				if (!fechaValida) return [] as Sesion[];
-				const deHoy = await db.sesiones.where('fecha').equals(fecha).toArray();
+				if (!consultada) return [] as Sesion[];
+				const deHoy = await db.sesiones.where('fecha').equals(consultada).toArray();
 				const diaIds = [...new Set(deHoy.map((s) => s.diaId))];
 				if (diaIds.length === 0) return [] as Sesion[];
 				const listas = await Promise.all(
@@ -83,19 +103,27 @@
 				return listas.flat();
 			}),
 			[] as Sesion[]
-		)
-	);
+		);
+	});
 	const comparaciones = $derived(
-		new Map(
-			conEntrenamiento.map((s) => [s.id, compararConAnterior(s, $candidatasStore, ajustes.unidad)])
-		)
+		new Map(conEntrenamiento.map((s) => [s.id, compararConAnterior(s, $candidatasStore, unidad)]))
 	);
 
-	const resumenes = $derived(conEntrenamiento.map((s) => resumenDiaSesion(s, ajustes.unidad)));
+	const resumenes = $derived(conEntrenamiento.map((s) => resumenDiaSesion(s, unidad)));
 	const totalSets = $derived(resumenes.reduce((n, r) => n + r.setsHechos, 0));
 	const totalVolumen = $derived(resumenes.reduce((n, r) => n + r.volumen, 0));
 	const totalSinVolumen = $derived(resumenes.reduce((n, r) => n + r.setsSinVolumen, 0));
 	const totalPrs = $derived(resumenes.reduce((n, r) => n + r.prs.length, 0));
+
+	/**
+	 * Cuál de las tres cifras manda.
+	 *
+	 * El volumen es el titular de un día de gimnasio, pero un día entero de dominadas y
+	 * abdominales tiene volumen cero: presentar un "0" gigante como resumen de un
+	 * entrenamiento real sería mentir con tipografía. Cuando no hay peso que multiplicar,
+	 * manda la cifra que sí dice algo — las series hechas.
+	 */
+	const mandaVolumen = $derived(totalVolumen > 0);
 
 	const fechaLarga = $derived(
 		fechaValida
@@ -118,6 +146,39 @@
 		return 'registrado';
 	}
 
+	/**
+	 * Cuánto de lo planeado entró ese día y si el día se cerró.
+	 *
+	 * Es el dato que el historial tenía guardado y nunca mostraba: `diaTerminado` vivía en
+	 * la sesión desde siempre y ninguna pantalla de historial lo leía, así que un día de
+	 * una serie se veía idéntico a uno entero.
+	 */
+	function estadoTexto(sesion: Sesion): string {
+		const estado = estadoSesion(sesion);
+		const partes: string[] = [];
+		partes.push(
+			estado.seriesPlan != null
+				? `${estado.seriesHechas} de ${estado.seriesPlan} series`
+				: `${estado.seriesHechas} ${estado.seriesHechas === 1 ? 'serie' : 'series'}`
+		);
+		if (sesion.diaTerminado) {
+			const hora = sesion.diaTerminadoAt
+				? new Date(sesion.diaTerminadoAt).toLocaleTimeString('es', {
+						hour: '2-digit',
+						minute: '2-digit'
+					})
+				: null;
+			partes.push(
+				sesion.diaTerminadoConPendientes
+					? `cerrado con pendientes${hora ? ` ${hora}` : ''}`
+					: `día cerrado${hora ? ` ${hora}` : ''}`
+			);
+		} else partes.push('día no cerrado');
+		return partes.join(' · ');
+	}
+
+	const PORCENTAJE_UMBRAL = Math.round(UMBRAL_DIA_COMPLETO * 100);
+
 	function sinVolumen(s: SetSesion): boolean {
 		return s.peso == null || s.reps == null;
 	}
@@ -131,7 +192,8 @@
 	/**
 	 * Sesiones de esa fecha SIN ninguna serie marcada. No tienen nada que mostrar, pero son
 	 * exactamente el caso que había que poder arreglar: cargaste el peso de todas las series
-	 * y te olvidaste de marcarlas. Sin esta salida, ese día quedaba invisible para siempre.
+	 * y te olvidaste de marcarlas. El calendario del historial ahora sí ofrece la entrada
+	 * (celda punteada); hasta entonces esta salida existía y era inalcanzable.
 	 */
 	const sinMarcar = $derived(
 		datosSesiones.sesiones.filter(
@@ -147,8 +209,8 @@
 	<header class="mb-5 flex items-center gap-3">
 		<a
 			href="/historial"
-			class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
-			aria-label="Volver al historial">←</a
+			class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10"
+			aria-label="Volver al historial"><Icono nombre="volver" /></a
 		>
 		<div class="min-w-0">
 			<p class="text-xs font-bold uppercase tracking-[0.22em]" style="color: var(--muted)">
@@ -166,7 +228,7 @@
 			</p>
 			<a
 				href="/historial"
-				class="mt-4 inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold"
+				class="gb-relieve mt-4 inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold"
 				style="background: var(--accent); color: var(--on-accent)"
 			>
 				Volver al historial
@@ -181,7 +243,7 @@
 			<p class="mt-1 text-xs" style="color: var(--muted)">No se modificó ningún dato.</p>
 			<button
 				onclick={() => location.reload()}
-				class="mt-3 min-h-11 rounded-xl px-4 text-sm font-bold"
+				class="gb-relieve mt-3 min-h-11 rounded-xl px-4 text-sm font-bold"
 				style="background: rgba(255,255,255,.1)">Reintentar</button
 			>
 		</section>
@@ -197,7 +259,7 @@
 		{#each sinMarcar as sesion (sesion.id)}
 			<a
 				href={`/dia/${sesion.diaId}?fecha=${fecha}`}
-				class="mt-3 flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 px-4 text-sm font-bold"
+				class="gb-relieve mt-3 flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 px-4 text-sm font-bold"
 				style="color: var(--accent-text)"
 			>
 				<Icono nombre="editar" tamano={15} />
@@ -205,33 +267,48 @@
 			</a>
 		{/each}
 	{:else}
+		<!-- Una cifra manda y las otras dos la acompañan: el volumen es el titular de un día
+		     de gimnasio, salvo cuando no hay peso que multiplicar (ver `mandaVolumen`). -->
 		<section
 			class="mb-4 rounded-2xl border border-white/10 p-4"
 			style="background: radial-gradient(120% 120% at 0% 0%, rgb(var(--exito) / .14), transparent 62%), var(--surface)"
 		>
-			<div class="grid grid-cols-3 gap-2 text-center">
-				<div>
-					<p class="text-2xl font-extrabold tabular-nums" use:popOnChange={totalSets}>
-						{totalSets}
+			{#if mandaVolumen}
+				<div class="text-center">
+					<p class="cifra text-[2.6rem]" use:popOnChange={totalVolumen}>
+						{formatoVolumen(totalVolumen)}<span class="cifra-u">{ajustes.unidad}</span>
 					</p>
-					<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">sets hechos</p>
-				</div>
-				<div>
-					<p class="text-2xl font-extrabold tabular-nums" use:popOnChange={totalVolumen}>
-						{formatoVolumen(totalVolumen)}
-					</p>
-					<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">
-						volumen {ajustes.unidad} (peso × reps ✓)
+					<p class="mt-2 text-[11px] font-semibold" style="color: var(--muted)">
+						volumen del día · peso × reps de las series ✓
 					</p>
 				</div>
-				<div>
-					<p class="text-2xl font-extrabold tabular-nums" use:popOnChange={totalPrs}>{totalPrs}</p>
-					<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">
+				<div class="mt-3 grid grid-cols-2 gap-2 border-t border-white/10 pt-3 text-center">
+					<div>
+						<p class="cifra text-xl" use:popOnChange={totalSets}>{totalSets}</p>
+						<p class="mt-1.5 text-[11px] font-semibold" style="color: var(--muted)">sets hechos</p>
+					</div>
+					<div>
+						<p class="cifra text-xl" use:popOnChange={totalPrs}>{totalPrs}</p>
+						<p class="mt-1.5 text-[11px] font-semibold" style="color: var(--muted)">
+							PRs registrados
+						</p>
+					</div>
+				</div>
+			{:else}
+				<div class="text-center">
+					<p class="cifra text-[2.6rem]" use:popOnChange={totalSets}>{totalSets}</p>
+					<p class="mt-2 text-[11px] font-semibold" style="color: var(--muted)">
+						sets hechos · sin peso que multiplicar, no hay volumen
+					</p>
+				</div>
+				<div class="mt-3 border-t border-white/10 pt-3 text-center">
+					<p class="cifra text-xl" use:popOnChange={totalPrs}>{totalPrs}</p>
+					<p class="mt-1.5 text-[11px] font-semibold" style="color: var(--muted)">
 						PRs registrados
 					</p>
 				</div>
-			</div>
-			{#if totalSinVolumen > 0}
+			{/if}
+			{#if mandaVolumen && totalSinVolumen > 0}
 				<p
 					class="mt-3 border-t border-white/10 pt-2.5 text-center text-xs"
 					style="color: var(--muted)"
@@ -247,11 +324,24 @@
 
 		{#each conEntrenamiento as sesion (sesion.id)}
 			{@const cmp = comparaciones.get(sesion.id) ?? null}
+			{@const parcial = estadoSesion(sesion).calidad === 'parcial'}
 			<section class="mb-4">
 				<div class="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-1">
-					<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
-						{sesion.diaNombre ?? nombreDia.get(sesion.diaId) ?? 'Rutina archivada'}
-					</p>
+					<div class="min-w-0">
+						<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
+							{sesion.diaNombre ?? nombreDia.get(sesion.diaId) ?? 'Rutina archivada'}
+							{#if parcial}
+								<span
+									class="ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold normal-case tracking-normal"
+									style="background: rgba(255,255,255,.08)"
+									title="Menos del {PORCENTAJE_UMBRAL} % de lo planeado">parcial</span
+								>
+							{/if}
+						</p>
+						<p class="mt-0.5 text-[11px] font-medium" style="color: var(--muted)">
+							{estadoTexto(sesion)}
+						</p>
+					</div>
 					{#if cmp}
 						<p class="text-[11px] font-semibold" style="color: var(--muted)">
 							vs. {fechaCorta(cmp.fechaAnterior)}:
@@ -265,7 +355,7 @@
 				{#if rutinasVigentes.has(sesion.diaId) && !esFutura}
 					<a
 						href={`/dia/${sesion.diaId}?fecha=${fecha}`}
-						class="mb-2 flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 text-sm font-bold"
+						class="gb-relieve mb-2 flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 text-sm font-bold"
 						style="color: var(--accent-text)"
 					>
 						<Icono nombre="editar" tamano={15} /> Seguir editando este entrenamiento
@@ -326,7 +416,7 @@
 												class="grid size-6 shrink-0 place-items-center rounded-full border border-white/10 text-[11px] font-bold"
 												style="color: var(--muted)">{i + 1}</span
 											>
-											<span class="min-w-0 flex-1 truncate font-semibold tabular-nums">
+											<span class="cifra min-w-0 flex-1 truncate text-sm">
 												{formatoSet(set, ajustes.unidad)}
 											</span>
 											{#if set.rir != null}<span
@@ -351,7 +441,9 @@
 													>sin volumen</span
 												>
 											{/if}
-											<span class="shrink-0 text-[10px]" style="color: var(--muted)">✎</span>
+											<span class="shrink-0" style="color: var(--muted)"
+												><Icono nombre="editar" tamano={13} /></span
+											>
 										</button>
 									{/if}
 								{/each}

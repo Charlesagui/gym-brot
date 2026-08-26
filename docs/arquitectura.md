@@ -34,6 +34,21 @@ Cada sesión congela `diaNombre` y cada ejercicio nuevo `nombreSnapshot`. El his
 snapshots antes que el catálogo o la rutina actuales, de modo que renombrar o archivar no cambia
 retroactivamente lo entrenado.
 
+Por el mismo motivo cada sesión congela `plan` (cuántos ejercicios y cuántas series tenía la
+rutina): es el denominador de "4 de 12 series". Sigue a la rutina mientras el día sea hoy y no se
+toca nunca en una fecha pasada. Las sesiones anteriores a ese campo se quedan sin denominador a
+propósito y no se juzgan — no hay migración que lo rellene, porque estimarlo con la rutina actual
+es exactamente el error que el campo evita.
+
+Qué cuenta como día entrenado lo decide una sola función, `calidadDesde` en `sesion-reglas.ts`, y
+la leen tanto el historial como el prellenado del objetivo calórico. Un día es completo si hizo
+≥60 % de las series planeadas, o si se cerró a mano habiendo trabajado en ≥60 % de los ejercicios;
+si no, es parcial. El cierre a mano sólo sube el veredicto, nunca es el único camino: cuando el
+dato dependía de tocar un botón medía disciplina con la app en vez de entrenamiento. Una fecha con
+dos rutinas toma la mejor de sus sesiones, no la suma, para que empezar una segunda no degrade el
+día ya ganado. La racha semanal es la única asimetría: la sostiene cualquier día con trabajo real,
+parcial incluido, porque protege la motivación mientras el contador de días informa.
+
 ## Reactividad y fallos
 
 Las lecturas Dexie se adaptan a stores de Svelte en `src/lib/live.ts`. Las pantallas que deben distinguir carga, vacío y fallo usan `estadoLiveQuery`; las escrituras no bloqueantes informan fallos mediante `errores-datos.ts`.
