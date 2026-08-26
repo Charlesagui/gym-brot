@@ -323,3 +323,35 @@ Lo que no se pierde:
 "Discos por lado" se leía como _cuántos_ discos vas a usar, cuando la grilla es _qué pesos de
 disco_ hay en el gimnasio. La cantidad la resuelve el cálculo. Pasó a "Pesos de disco que
 tenés".
+
+## Que entre en una pantalla
+
+La pantalla medía 813 px contra 663 disponibles: se scrolleaba siempre. Se achicó todo en
+lugar de esconder nada, que era la otra salida posible.
+
+Lo primero era un bug, no un problema de diseño: la página reservaba `100dvh-4rem` para la
+barra de navegación cuando el shell reserva `pb-20`, o sea 5rem. Ese desfasaje forzaba 16 px
+de scroll por sí solo, sin importar el contenido. El resto de las rutas ya usaba 5rem; sólo
+las de `herramientas/` estaban en 4.
+
+Después, escala compacta pareja: cifras un escalón más chicas, padding de 3 a 2,5, la unidad
+del objetivo plegada al rótulo ("Peso total en kg") en vez de ocupar su propia línea, y la
+cinta de 4,25 a 3,25 rem con las marcas recolocadas.
+
+Lo que más rindió fue pasar los siete discos disponibles de dos filas a una: 50 px por un
+dato que se configura una vez por gimnasio. Los botones quedan de 42×44 px, por debajo de
+los 56 del manifiesto, y está bien: esa regla es para lo que se toca _entre repeticiones_.
+Lo que sí se opera —la cinta y la cifra— queda en 321×52 y 321×53.
+
+Medido en los cuatro estados que cambian de alto (carga exacta, sin carga exacta, carga
+grande, y sin carga exacta con pocos discos):
+
+| Pantalla                                                | Entra                                          |
+| ------------------------------------------------------- | ---------------------------------------------- |
+| 727 px (Pixel 5 y la mayoría de los teléfonos actuales) | los cuatro estados                             |
+| 667 px (iPhone SE / 8)                                  | tres de cuatro; sin carga exacta se pasa 46 px |
+| 600 px                                                  | no entra                                       |
+
+El estado sin carga exacta es el que más mide, porque suma la tarjeta de la alternativa.
+Hacerlo entrar también en 667 pedía achicar el dibujo de la barra, que es justamente lo que
+la pantalla vino a mostrar, así que ahí se deja scrollear.

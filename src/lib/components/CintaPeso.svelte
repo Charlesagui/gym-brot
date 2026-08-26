@@ -188,7 +188,7 @@
 	 */
 	.gb-cinta {
 		position: relative;
-		height: 4.25rem;
+		height: 3.25rem;
 		overflow: hidden;
 		border-radius: 0.75rem;
 		background: rgb(255 255 255 / 0.035);
@@ -211,23 +211,23 @@
 
 	.gb-cinta-marca {
 		position: absolute;
-		bottom: 1.55rem;
+		bottom: 1.3rem;
 		width: 1px;
-		height: 0.55rem;
+		height: 0.5rem;
 		background: rgb(255 255 255 / 0.3);
 	}
 
 	.gb-cinta-mayor {
-		height: 1rem;
+		height: 0.85rem;
 		width: 2px;
 		background: rgb(255 255 255 / 0.5);
 	}
 
 	.gb-cinta-numero {
 		position: absolute;
-		bottom: 0.4rem;
+		bottom: 0.25rem;
 		transform: translateX(-50%);
-		font-size: 0.95rem;
+		font-size: 0.85rem;
 		color: var(--muted);
 		white-space: nowrap;
 	}
@@ -236,8 +236,8 @@
 	.gb-cinta-aguja {
 		position: absolute;
 		left: 50%;
-		top: 0.5rem;
-		bottom: 1.35rem;
+		top: 0.3rem;
+		bottom: 1.15rem;
 		width: 2px;
 		margin-left: -1px;
 		border-radius: 1px;

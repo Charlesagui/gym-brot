@@ -198,9 +198,9 @@
 	}
 </script>
 
-<main class="gb-page glow-bg min-h-[calc(100dvh-4rem)] px-4 pb-3 pt-3">
-	<header class="mb-3 flex min-h-10 items-center justify-between gap-3">
-		<h1 class="text-xl font-extrabold">Calculadora de discos</h1>
+<main class="gb-page glow-bg min-h-[calc(100dvh-5rem)] px-4 pb-1 pt-2">
+	<header class="mb-1.5 flex min-h-8 items-center justify-between gap-3">
+		<h1 class="text-lg font-extrabold">Calculadora de discos</h1>
 		<!-- La unidad no se cambia aca: el chip lleva al unico lugar donde se cambia. -->
 		<a
 			href="/ajustes"
@@ -210,9 +210,9 @@
 		>
 	</header>
 
-	<section class="rounded-2xl border border-white/10 p-3" style="background: var(--surface)">
-		<p class="mb-2 text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
-			Peso total
+	<section class="rounded-2xl border border-white/10 p-2.5" style="background: var(--surface)">
+		<p class="text-[11px] font-bold uppercase tracking-wider" style="color: var(--muted)">
+			Peso total en {unidad}
 		</p>
 		<!--
 			La cifra sigue siendo un campo: para saltar de 60 a 180 escribirlo gana, y la
@@ -227,16 +227,9 @@
 			onfocus={(e) => e.currentTarget.select()}
 			onchange={(e) => confirmarObjetivo(e.currentTarget)}
 			onkeydown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-			class="cifra w-full rounded-xl bg-white/[0.035] py-1 text-center text-[3.4rem] outline-none focus:bg-white/[0.08]"
+			class="cifra w-full rounded-xl bg-white/[0.035] text-center text-[2.6rem] outline-none focus:bg-white/[0.08]"
 			aria-label={`Peso total objetivo en ${unidad}`}
 		/>
-		<p
-			class="pointer-events-none -mt-1 text-center text-[0.6rem] font-bold uppercase tracking-[0.14em]"
-			style="color: var(--muted)"
-			aria-hidden="true"
-		>
-			{unidad}
-		</p>
 		<CintaPeso
 			valor={objetivo ?? config.objetivo}
 			min={config.paso}
@@ -250,7 +243,7 @@
 		/>
 	</section>
 
-	<section class="mt-3" aria-live="polite" aria-atomic="true">
+	<section class="mt-2" aria-live="polite" aria-atomic="true">
 		{#if objetivo == null || barra == null || resultado.estado === 'invalido'}
 			<div
 				class="rounded-2xl border border-white/10 p-3 text-sm"
@@ -275,14 +268,14 @@
 			</div>
 		{:else if resultado.exacta}
 			<!-- El canto verde dice "le pegaste" antes de que leas nada. -->
-			<div class="gb-foco rounded-2xl p-4 text-center" style="--foco-color: var(--exito)">
+			<div class="gb-foco rounded-2xl p-3 text-center" style="--foco-color: var(--exito)">
 				<p
 					class="text-[11px] font-bold uppercase tracking-[0.18em]"
 					style="color: rgb(var(--exito))"
 				>
 					Carga exacta · por lado
 				</p>
-				<p class="cifra mt-1.5 text-[3.4rem]">
+				<p class="cifra mt-1 text-[2.9rem]">
 					{formatoPeso(resultado.exacta.porLado)}<span class="cifra-u">{unidad}</span>
 				</p>
 				<BarraCargada carga={resultado.exacta} {pesoMaxDisco} formato={formatoPeso} {unidad} />
@@ -297,11 +290,11 @@
 				</p>
 			</div>
 		{:else if cercanas}
-			<div class="gb-foco rounded-2xl p-4 text-center">
+			<div class="gb-foco rounded-2xl p-3 text-center">
 				<p class="text-[11px] font-bold uppercase tracking-[0.18em]" style="color: var(--muted)">
 					Sin carga exacta · lo más cerca
 				</p>
-				<p class="cifra mt-1.5 text-[3.4rem]">
+				<p class="cifra mt-1 text-[2.9rem]">
 					{formatoPeso(cercanas.principal.carga.total)}<span class="cifra-u">{unidad}</span>
 				</p>
 				<p class="text-xs font-bold" style="color: var(--accent-text)">
@@ -326,17 +319,17 @@
 				{#if cercanas.alternativa}
 					<!-- La otra opción existe, pero no compite con la cifra que manda. -->
 					<div
-						class="mt-3 flex flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5 rounded-xl px-3 py-2"
+						class="mt-2 flex flex-wrap items-baseline justify-center gap-x-2 rounded-xl px-2 py-1"
 						style="background: var(--surface-2)"
 					>
 						<span class="text-[10px] font-bold uppercase tracking-wider" style="color: var(--muted)"
 							>{cercanas.alternativa.lado === 'menos' ? 'O menos' : 'O más'}</span
 						>
-						<span class="cifra text-2xl"
+						<span class="cifra text-xl"
 							>{formatoPeso(cercanas.alternativa.carga.total)}<span class="cifra-u">{unidad}</span
 							></span
 						>
-						<span class="cifra text-base" style="color: var(--muted)"
+						<span class="cifra text-sm" style="color: var(--muted)"
 							>{cercanas.alternativa.carga.discos.length === 0
 								? 'solo la barra'
 								: combinacion(cercanas.alternativa.carga)}</span
@@ -347,15 +340,15 @@
 		{/if}
 	</section>
 
-	<section class="mt-3 rounded-2xl border border-white/10 p-3" style="background: var(--surface)">
+	<section class="mt-2 rounded-2xl border border-white/10 p-2.5" style="background: var(--surface)">
 		<h2 class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">Barra</h2>
-		<div class="mt-2 grid grid-cols-4 gap-2" role="group" aria-label="Peso de la barra">
+		<div class="mt-1.5 grid grid-cols-4 gap-1.5" role="group" aria-label="Peso de la barra">
 			{#each config.barras as peso}
 				<button
 					type="button"
 					onclick={() => usarBarra(peso)}
 					aria-pressed={barra === peso}
-					class="gb-relieve cifra min-h-14 rounded-xl border text-2xl"
+					class="gb-relieve cifra min-h-11 rounded-xl border text-xl"
 					style={barra === peso
 						? 'border-color: rgb(var(--accent-rgb) / .75); background: rgb(var(--accent-rgb) / .18); color: var(--accent-text)'
 						: 'border-color: rgba(255,255,255,.10); background: rgba(255,255,255,.035); color: var(--muted)'}
@@ -369,7 +362,7 @@
 				placeholder="Otra"
 				onchange={(e) => confirmarBarra(e.currentTarget)}
 				onkeydown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-				class="gb-relieve cifra min-h-14 min-w-0 rounded-xl border border-white/10 bg-white/[0.035] px-1 text-center text-2xl outline-none placeholder:text-sm placeholder:font-bold focus:border-white/30"
+				class="gb-relieve cifra min-h-11 min-w-0 rounded-xl border border-white/10 bg-white/[0.035] px-1 text-center text-xl outline-none placeholder:text-xs placeholder:font-bold focus:border-white/30"
 				aria-label={`Otro peso de barra en ${unidad}`}
 			/>
 		</div>
@@ -379,10 +372,10 @@
 			qué pesos de disco hay en el gimnasio. La cantidad la resuelve el cálculo; acá
 			sólo se marca cuáles existen.
 		-->
-		<h2 class="mt-4 text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
+		<h2 class="mt-2 text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
 			Pesos de disco que tenés
 		</h2>
-		<div class="mt-2 grid grid-cols-4 gap-2">
+		<div class="mt-1.5 grid grid-cols-7 gap-1">
 			{#each config.discos as peso}
 				{@const tengo = disponibles.includes(peso)}
 				{@const color = colorDisco(peso, unidad)}
@@ -396,7 +389,7 @@
 					type="button"
 					onclick={() => alternarDisco(peso)}
 					aria-pressed={tengo}
-					class="cifra min-h-14 rounded-xl border px-1 text-2xl {tengo ? 'gb-relieve' : ''}"
+					class="cifra min-h-11 rounded-xl border px-0.5 text-base {tengo ? 'gb-relieve' : ''}"
 					style={tengo
 						? `border-color: rgb(${color}); background: rgb(${color}); color: var(--on-bright)`
 						: `border-style: dashed; border-color: rgb(${color} / .45); background: transparent; color: rgb(${color} / .8)`}
