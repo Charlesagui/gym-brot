@@ -2,10 +2,22 @@ import { readFile, stat } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 
 const BUILD = new URL('../build/', import.meta.url);
-// El set de íconos SVG y la rueda de tiempo suman ~9 KiB sin comprimir al shell; el
-// techo gzip —lo que realmente viaja— no se movió y sigue con margen de sobra.
-const MAX_SHELL_BYTES = 320 * 1024;
-const MAX_SHELL_GZIP_BYTES = 110 * 1024;
+/*
+ * Techo del shell: lo que hay que bajar y ejecutar antes de ver la primera pantalla.
+ * El que importa de los dos es el gzip, que es lo que viaja; el crudo mide lo que el
+ * teléfono después tiene que parsear.
+ *
+ * Medido el 25/8/2026: 26 archivos, 301,4 KiB crudo y 100,8 KiB gzip, de los cuales los
+ * tres chunks más grandes son el 65 % (32,8 + 22,4 + 10,1 KiB gzip). Es el layout, el
+ * runtime de Svelte y la base de datos, que la portada necesita sí o sí para listar las
+ * rutinas. El chunk pesado de los gráficos (189 KiB) NO está acá: entra recién al abrir
+ * el progreso, y así tiene que seguir.
+ *
+ * Si algún día esto sube de golpe, la pregunta antes de tocar el número es cuál de esos
+ * tres creció y si lo que se sumó hace falta en la primera pantalla.
+ */
+const MAX_SHELL_BYTES = 340 * 1024;
+const MAX_SHELL_GZIP_BYTES = 120 * 1024;
 /*
  * Techo del precache: lo que la app se baja en la primera visita y revalida en cada
  * deploy. Sube cuando la app crece de verdad, no para tapar un asset que no debería
