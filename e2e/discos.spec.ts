@@ -42,3 +42,36 @@ test('la calculadora vive fuera de la sesión, propone alternativas y recuerda l
 		'false'
 	);
 });
+
+test('el objetivo se barre con el dedo sin perder el toque para escribirlo', async ({ page }) => {
+	await page.goto('/herramientas/discos');
+	const cifra = page.getByRole('textbox', { name: 'Peso total objetivo en kg' });
+	await expect(cifra).toHaveValue('60');
+
+	const caja = (await cifra.boundingBox())!;
+	const centroX = caja.x + caja.width / 2;
+	const centroY = caja.y + caja.height / 2;
+
+	// Por debajo del umbral sigue siendo un toque: enfoca para escribir y no mueve el peso.
+	await page.mouse.move(centroX, centroY);
+	await page.mouse.down();
+	await page.mouse.move(centroX + 4, centroY);
+	await page.mouse.up();
+	await expect(cifra).toHaveValue('60');
+	await expect(cifra).toBeFocused();
+
+	// 12 px por paso de 2,5 kg: 60 px a la derecha son cinco pasos.
+	await page.mouse.move(centroX, centroY);
+	await page.mouse.down();
+	await page.mouse.move(centroX + 60, centroY, { steps: 12 });
+	await page.mouse.up();
+	await expect(cifra).toHaveValue('72,5');
+
+	// Y el mismo recorrido para el otro lado vuelve al punto de partida.
+	await page.mouse.move(centroX, centroY);
+	await page.mouse.down();
+	await page.mouse.move(centroX - 60, centroY, { steps: 12 });
+	await page.mouse.up();
+	await expect(cifra).toHaveValue('60');
+	await expect(page.getByText('Carga exacta')).toBeVisible();
+});

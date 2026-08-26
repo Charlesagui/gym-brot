@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import BarraCargada from '$lib/components/BarraCargada.svelte';
+	import { colorDisco } from '$lib/discos-color';
 	import Icono from '$lib/components/Icono.svelte';
 	import Stepper from '$lib/components/Stepper.svelte';
 	import { calcularDiscos, type CargaBarra } from '$lib/discos';
@@ -217,6 +218,8 @@
 			step={config.paso}
 			glow="var(--glow)"
 			grande
+			barrido
+			vibracion={$ajustesStore.vibracion ?? true}
 			{unidad}
 			onStep={cambiarObjetivo}
 			onCommit={confirmarObjetivo}
@@ -261,7 +264,7 @@
 				<p class="cifra mt-1.5 text-[3.4rem]">
 					{formatoPeso(resultado.exacta.porLado)}<span class="cifra-u">{unidad}</span>
 				</p>
-				<BarraCargada carga={resultado.exacta} {pesoMaxDisco} formato={formatoPeso} />
+				<BarraCargada carga={resultado.exacta} {pesoMaxDisco} formato={formatoPeso} {unidad} />
 				<p class="mt-1 text-sm font-bold" style="color: var(--muted)">
 					{#if resultado.exacta.discos.length === 0}
 						Solo la barra
@@ -283,7 +286,12 @@
 				<p class="text-xs font-bold" style="color: var(--accent-text)">
 					{cercanas.principal.lado === 'menos' ? 'Menos que el objetivo' : 'Más que el objetivo'}
 				</p>
-				<BarraCargada carga={cercanas.principal.carga} {pesoMaxDisco} formato={formatoPeso} />
+				<BarraCargada
+					carga={cercanas.principal.carga}
+					{pesoMaxDisco}
+					formato={formatoPeso}
+					{unidad}
+				/>
 				<p class="mt-1 text-sm font-bold" style="color: var(--muted)">
 					{#if cercanas.principal.carga.discos.length === 0}
 						Solo la barra
@@ -351,10 +359,12 @@
 		<div class="mt-2 grid grid-cols-4 gap-2">
 			{#each config.discos as peso}
 				{@const tengo = disponibles.includes(peso)}
+				{@const color = colorDisco(peso, unidad)}
 				<!--
-					El disco que no tenés es una ranura vacía, no un botón deshabilitado: el
-					contorno punteado se lee "no lo tengo" donde el 55% de opacidad se leía
-					"no anda". Y sin relleno no lleva relieve, porque no hay placa que apretar.
+					Cada botón es la placa que representa, con su color: el mismo que vas a ver
+					en el dibujo y el mismo que tiene el disco en el rack. El que no tenés queda
+					como ranura vacía —contorno punteado, sin relleno ni relieve—, que se lee
+					"no lo tengo" donde el 55% de opacidad se leía "no anda".
 				-->
 				<button
 					type="button"
@@ -362,8 +372,8 @@
 					aria-pressed={tengo}
 					class="cifra min-h-14 rounded-xl border px-1 text-2xl {tengo ? 'gb-relieve' : ''}"
 					style={tengo
-						? 'border-color: rgb(var(--accent-rgb) / .70); background: rgb(var(--accent-rgb) / .17); color: var(--accent-text)'
-						: 'border-style: dashed; border-color: rgba(255,255,255,.20); background: transparent; color: var(--muted)'}
+						? `border-color: rgb(${color}); background: rgb(${color}); color: var(--on-bright)`
+						: `border-style: dashed; border-color: rgb(${color} / .45); background: transparent; color: rgb(${color} / .8)`}
 					>{formatoPeso(peso)}</button
 				>
 			{/each}
