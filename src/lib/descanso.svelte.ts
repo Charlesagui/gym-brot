@@ -157,7 +157,9 @@ class Descanso {
 			this.#recalc();
 			if (document.visibilityState !== 'visible') return;
 			if (this.#hasta != null && this.#sonido) desbloquearAudio();
-			if (this.#hasta != null && !this.vencido) void this.#wakeLock.reanudar();
+			// El wake lock se recupera solo (WakeLockSeguro escucha la visibilidad): antes
+			// se pedía acá y solo si el descanso no había vencido, justo cuando más falta
+			// hace que la pantalla no se apague.
 			void this.#cerrarNotificacion();
 		};
 		document.addEventListener('visibilitychange', refrescar);
