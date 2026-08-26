@@ -152,7 +152,7 @@
 	}
 </script>
 
-<main class="gb-page glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-12 pt-10">
+<main class="gb-page glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-28 pt-10">
 	<header class="mb-7 text-center">
 		<h1 class="text-3xl font-extrabold tracking-tight">
 			GYM<span style="color: var(--accent-text)">·</span>BROT

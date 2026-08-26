@@ -123,7 +123,7 @@
 	}
 </script>
 
-<main class="gb-page glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-12 pt-6">
+<main class="gb-page glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-28 pt-6">
 	<header class="mb-5 flex items-center gap-3">
 		<a
 			href="/historial"

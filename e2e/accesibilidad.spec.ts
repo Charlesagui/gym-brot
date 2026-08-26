@@ -179,8 +179,13 @@ test('la fecha de sesión sobrevive medianoche, regreso, cierre y una sesión nu
 			page.getByRole('button', { name: `Reanudar ${nombre} hoy`, exact: true })
 		).toBeVisible();
 	}
-	await expect(page.getByRole('button', { name: /Terminar día/ })).toBeEnabled();
-	await page.getByRole('button', { name: /Terminar día/ }).click({ force: true });
+	const terminar = page.getByRole('button', { name: /Terminar día/ });
+	await expect(terminar).toBeEnabled();
+	// Sin `force`: la barra inferior es fija y tapa el final de la página, así que el
+	// botón tiene que quedar destapado como le queda a una persona que scrollea. Con
+	// `force` el click iba a las coordenadas igual y se lo comía la navegación.
+	await terminar.scrollIntoViewIfNeeded();
+	await terminar.click();
 	await expect
 		.poll(async () => (await leerSesiones(page)).find((s) => s.id === '2026-08-13__dia-piernas'))
 		.toMatchObject({ fecha: '2026-08-13', diaTerminado: true, hechas: 1 });
