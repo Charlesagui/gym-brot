@@ -32,6 +32,18 @@ export function formatoSet(set: SetDescribible, unidad: string): string {
 }
 
 /**
+ * La carga de un set en su forma más corta: "62.5×10", sin unidad y sin espacios.
+ *
+ * Es el formato del renglón de series anteriores, donde entran varias seguidas y la
+ * unidad ya la dice la tarjeta. En modo reps (ejercicio sin peso) queda solo el conteo.
+ */
+export function cargaCorta(set: SetDescribible): string {
+	if (set.peso == null) return set.reps != null ? `×${set.reps}` : '—';
+	const extra = set.esMax && set.extraKg ? `+${formatoNumero(set.extraKg)}` : '';
+	return `${formatoNumero(set.peso)}${extra}×${set.reps ?? '—'}`;
+}
+
+/**
  * Resumen de una serie de la última vez, para la columna "Anterior". Incluye el MAX y su
  * extra: sin eso la referencia mostraba la placa base y ocultaba parte de lo levantado,
  * justo en las máquinas donde el MAX es la única forma de progresar.

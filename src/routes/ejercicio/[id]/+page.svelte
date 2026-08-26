@@ -66,7 +66,7 @@
 	import { WakeLockSeguro } from '$lib/wake-lock';
 	import { dur, menosMovimiento, DUR_BASE, DUR_SLOW } from '$lib/motion';
 	import { fromLiveQuery } from '$lib/live';
-	import { formatoNumero, formatoSet, fechaCorta } from '$lib/formato';
+	import { formatoNumero, formatoSet, fechaCorta, cargaCorta } from '$lib/formato';
 	import { fechaSesionDesdeUrl } from '$lib/fechas';
 	import { youtubeEmbedUrl } from '$lib/youtube';
 	import {
@@ -189,12 +189,15 @@
 
 	$effect(() => {
 		$page.params.id; // dep: reinicia "grande" al cambiar de ejercicio
-		videoGrande = demoGrande();
+		// Entrenando la demo arranca chica: en grande son 402 px que empujan la serie en
+		// curso abajo del pliegue. En modo consulta arranca grande, que es a lo que se entra.
+		videoGrande = demoGrande(!!diaId);
 		// Todo lo de abajo pertenece al ejercicio que dejamos atrás. "Siguiente" navega a
 		// esta misma ruta con otro id sin destruir el componente, así que sin este barrido
 		// llegabas al ejercicio nuevo con una fila ajena desplegada y, peor, con el cartel
 		// rojo de "ingresá las repeticiones de la serie 2" del ejercicio anterior.
 		filaAbierta = null;
+		hechasDesplegadas = false;
 		avisoSerie = null;
 		mostrarRuedaDescanso = false;
 		mostrarQueMide = false;
@@ -215,7 +218,7 @@
 
 	function setVideoGrande(valor: boolean) {
 		videoGrande = valor;
-		setDemoGrande(valor);
+		setDemoGrande(valor, !!diaId);
 	}
 
 	// Hint de MAX: solo en máquinas de placas, las primeras 3 visitas o hasta "Entendido".
@@ -471,6 +474,42 @@
 	 * que faltan quedan cerradas detrás de ella.
 	 */
 	const indiceActiva = $derived(sets.findIndex((serie) => !serie.hecha));
+
+	/**
+	 * Cuántas series hechas quedan a la vista antes de juntarse en un solo renglón.
+	 *
+	 * Cada renglón hecho cuesta 60 px y se acumulan arriba de la serie en curso, que ya
+	 * mide 390: en la cuarta serie la tarjeta activa arrancaba en y≈708 de 844 y había que
+	 * scrollear para llegar a lo que estabas haciendo. Con tope, la lista mide lo mismo
+	 * hagas tres series o doce.
+	 *
+	 * Se dejan DOS a la vista y no cero: corregir una serie recién hecha tiene que seguir
+	 * costando un toque, y la que se corrige es casi siempre la última.
+	 */
+	const HECHAS_A_LA_VISTA = 2;
+	let hechasDesplegadas = $state(false);
+	const anterioresOcultables = $derived(Math.max(0, indiceActiva - HECHAS_A_LA_VISTA));
+	const anterioresOcultas = $derived(hechasDesplegadas ? 0 : anterioresOcultables);
+	/** Las dos últimas de las guardadas: alcanza para ver si la carga se sostuvo. */
+	const resumenAnteriores = $derived(
+		sets
+			.slice(0, anterioresOcultables)
+			.slice(-2)
+			.map((serie) => cargaCorta(serie))
+			.join(' · ')
+	);
+	/** El renglón resume; su nombre accesible no puede resumir, o las series se pierden. */
+	const resumenAnterioresLeido = $derived(
+		sets
+			.slice(0, anterioresOcultables)
+			.map((serie, indice) => `serie ${indice + 1}, ${formatoSet(serie, unidad)}`)
+			.join('; ')
+	);
+	$effect(() => {
+		// Volver del descanso a corregir apunta a un índice que puede haber quedado guardado
+		// en el renglón: sin esto el foco viaja a una fila que no está en pantalla.
+		if (filaAbierta != null && filaAbierta < anterioresOcultables) hechasDesplegadas = true;
+	});
 	/** Con todo hecho el cierre queda fijo al pie: el contenido tiene que dejarle lugar. */
 	const barraFija = $derived(completo && descanso.restoSeg === 0 && !descanso.vencido);
 	const sinHistorial = $derived(!cargandoSeries && puntos.length === 0 && anteriores.length === 0);
@@ -1349,34 +1388,76 @@
 								</p>
 							{/if}
 							<div class="mt-3 space-y-2">
+								{#if anterioresOcultables > 0}
+									<!--
+										Las series hechas más viejas se juntan acá en vez de empujar hacia abajo la
+										que estás haciendo. Se despliegan tocando el renglón; las dos últimas quedan
+										siempre como fila entera, que son las que se corrigen.
+									-->
+									<button
+										type="button"
+										onclick={() => (hechasDesplegadas = !hechasDesplegadas)}
+										aria-expanded={hechasDesplegadas}
+										class="flex min-h-12 w-full items-center gap-2.5 rounded-xl px-2.5 py-1 text-left"
+										style="background: rgb(var(--exito) / .07); border: 1px solid rgb(var(--exito) / .18)"
+										aria-label={hechasDesplegadas
+											? `Volver a guardar las ${anterioresOcultables} series anteriores`
+											: `Ver las ${anterioresOcultables} series anteriores: ${resumenAnterioresLeido}`}
+									>
+										<span style="color: rgb(var(--exito))" aria-hidden="true">
+											<Icono nombre="hecha" tamano={18} />
+										</span>
+										<span class="flex min-w-0 flex-1 flex-col">
+											<span
+												class="text-[10px] font-bold uppercase tracking-wider"
+												style="color: rgb(var(--exito))"
+												>{anterioresOcultables}
+												{anterioresOcultables === 1 ? 'serie anterior' : 'series anteriores'}</span
+											>
+											{#if !hechasDesplegadas}
+												<span class="cifra truncate text-base" style="color: #c2c6d6"
+													>{resumenAnteriores}</span
+												>
+											{/if}
+										</span>
+										<span
+											class="gb-caret shrink-0 {hechasDesplegadas ? 'gb-caret--abierto' : ''}"
+											style="color: var(--muted)"
+											aria-hidden="true"><Icono nombre="desplegar" tamano={18} /></span
+										>
+									</button>
+								{/if}
 								{#each sets as s, i (i)}
-									<SetRow
-										set={s}
-										index={i}
-										anterior={anteriores[i]}
-										maquinaPlacas={!!ej.maquinaPlacas}
-										glow={g.glow}
-										{unidad}
-										{pasoPeso}
-										activa={i === indiceActiva}
-										abierta={i === filaAbierta}
-										pendiente={seriesPendientes.has(i)}
-										flash={filasFlash.has(i)}
-										onToggle={() => onToggle(i)}
-										onToggleMax={() => escribir(toggleMax(diaId, $page.params.id!, i, fechaSesion))}
-										onAjustarPeso={(d) => ajustarPeso(i, d)}
-										onPonerPeso={(peso) => ponerPeso(i, peso)}
-										onEscribirPeso={(el) => escribirPeso(i, el)}
-										onAjustarReps={(d) => ajustarReps(i, d)}
-										onEscribirReps={(el) => escribirReps(i, el)}
-										onAjustarExtra={(d) => ajustarExtra(i, d)}
-										modoEsfuerzo={ajustes.modoEsfuerzo}
-										onSetRir={(rir) => guardarRir(i, rir)}
-										onAbrir={() => (filaAbierta = i)}
-										onCerrar={() => (filaAbierta = null)}
-										onQuitar={() => quitarSerie(i)}
-										puedeQuitar={sets.length > 1}
-									/>
+									{#if i >= anterioresOcultas}
+										<SetRow
+											set={s}
+											index={i}
+											anterior={anteriores[i]}
+											maquinaPlacas={!!ej.maquinaPlacas}
+											glow={g.glow}
+											{unidad}
+											{pasoPeso}
+											activa={i === indiceActiva}
+											abierta={i === filaAbierta}
+											pendiente={seriesPendientes.has(i)}
+											flash={filasFlash.has(i)}
+											onToggle={() => onToggle(i)}
+											onToggleMax={() =>
+												escribir(toggleMax(diaId, $page.params.id!, i, fechaSesion))}
+											onAjustarPeso={(d) => ajustarPeso(i, d)}
+											onPonerPeso={(peso) => ponerPeso(i, peso)}
+											onEscribirPeso={(el) => escribirPeso(i, el)}
+											onAjustarReps={(d) => ajustarReps(i, d)}
+											onEscribirReps={(el) => escribirReps(i, el)}
+											onAjustarExtra={(d) => ajustarExtra(i, d)}
+											modoEsfuerzo={ajustes.modoEsfuerzo}
+											onSetRir={(rir) => guardarRir(i, rir)}
+											onAbrir={() => (filaAbierta = i)}
+											onCerrar={() => (filaAbierta = null)}
+											onQuitar={() => quitarSerie(i)}
+											puedeQuitar={sets.length > 1}
+										/>
+									{/if}
 								{/each}
 							</div>
 							{#if completo}

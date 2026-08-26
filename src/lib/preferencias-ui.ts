@@ -10,6 +10,7 @@
 const P = 'gb-';
 const KEY = {
 	demoGrande: `${P}demo-grande`,
+	demoGrandeEntrenando: `${P}demo-grande-entrenando`,
 	hintMaxOk: `${P}hint-max-ok`,
 	hintMaxVistas: `${P}hint-max-vistas`,
 	hintTimerOk: `${P}hint-timer-ok`,
@@ -38,12 +39,25 @@ function escribir(clave: string, valor: string): void {
 	}
 }
 
-export function demoGrande(): boolean {
-	return leer(KEY.demoGrande) !== '0';
+/**
+ * Tamaño con el que arranca la demostración, con un default por modo.
+ *
+ * El marco del video ocupa 402 px arriba de todo y no se va nunca: los 962 ejercicios
+ * del catálogo tienen demo. Entrenando eso empuja la serie en curso abajo del pliegue
+ * —con tres series hechas la tarjeta activa arrancaba en y≈708 de 844—, así que ahí
+ * arranca en miniatura. Sin `?dia=` se entra justamente a mirar, y arranca grande.
+ *
+ * Cada modo recuerda su propia elección: agrandarla para revisar la técnica en el gym
+ * no tiene por qué agrandarla también cuando entrás a consultar el progreso.
+ */
+export function demoGrande(entrenando = false): boolean {
+	const guardado = leer(entrenando ? KEY.demoGrandeEntrenando : KEY.demoGrande);
+	if (guardado != null) return guardado === '1';
+	return !entrenando;
 }
 
-export function setDemoGrande(valor: boolean): void {
-	escribir(KEY.demoGrande, valor ? '1' : '0');
+export function setDemoGrande(valor: boolean, entrenando = false): void {
+	escribir(entrenando ? KEY.demoGrandeEntrenando : KEY.demoGrande, valor ? '1' : '0');
 }
 
 /** Hint de MAX: se muestra en máquinas de placas las primeras 3 visitas, o hasta "Entendido". */

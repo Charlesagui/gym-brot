@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { fechaCorta, formatoAnterior, formatoNumero, formatoSet, formatoVolumen } from './formato';
+import {
+	cargaCorta,
+	fechaCorta,
+	formatoAnterior,
+	formatoNumero,
+	formatoSet,
+	formatoVolumen
+} from './formato';
 
 describe('formato', () => {
 	it('formatea numeros sin arrastre decimal', () => {
@@ -28,6 +35,16 @@ describe('formato', () => {
 		).toBe('100 +2.5 kg × 8 · MAX');
 		expect(formatoAnterior({ reps: 10, hecha: false }, 'kg')).toBe('— × 10');
 		expect(formatoAnterior(undefined, 'kg')).toBeNull();
+	});
+
+	it('resume la carga de un set para el renglon de series anteriores', () => {
+		expect(cargaCorta({ peso: 62.5, reps: 10 })).toBe('62.5×10');
+		// El MAX suma su extra: sin eso el renglon miente por omision, igual que "Anterior".
+		expect(cargaCorta({ peso: 100, reps: 8, esMax: true, extraKg: 2.5 })).toBe('100+2.5×8');
+		// Ejercicio sin peso: el set son solo repeticiones, no "— × 12".
+		expect(cargaCorta({ reps: 12 })).toBe('×12');
+		expect(cargaCorta({})).toBe('—');
+		expect(cargaCorta({ peso: 60 })).toBe('60×—');
 	});
 
 	it('formatea fechas cortas', () => {
