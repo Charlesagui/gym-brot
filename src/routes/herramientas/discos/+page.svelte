@@ -287,11 +287,24 @@
 					{formatoPeso(resultado.exacta.porLado)}<span class="cifra-u">{unidad}</span>
 				</p>
 				<BarraCargada carga={resultado.exacta} {pesoMaxDisco} formato={formatoPeso} {unidad} />
+				<!--
+					El peso de la barra se dice aca y no dentro del dibujo: el disco se identifica
+					solo —tiene su color y su numero encima—, la barra no tenia quien la nombrara.
+					Va pegado al renglon que ya estaba y no en uno nuevo, que la pantalla entra
+					justa en 727 px, y en el orden en que se carga: primero la barra, despues lo
+					que le colgas.
+				-->
 				<p class="mt-1 text-sm font-bold" style="color: var(--muted)">
 					{#if resultado.exacta.discos.length === 0}
-						Solo la barra
+						Solo la barra de <span class="cifra" style="color: var(--text)"
+							>{formatoPeso(resultado.barra)}</span
+						>
 					{:else}
-						Discos: <span class="cifra text-lg" style="color: var(--text)"
+						Barra <span class="cifra" style="color: var(--text)"
+							>{formatoPeso(resultado.barra)}</span
+						>
+						· Discos:
+						<span class="cifra text-lg" style="color: var(--text)"
 							>{combinacion(resultado.exacta)}</span
 						>
 					{/if}
@@ -316,9 +329,15 @@
 				/>
 				<p class="mt-1 text-sm font-bold" style="color: var(--muted)">
 					{#if cercanas.principal.carga.discos.length === 0}
-						Solo la barra
+						Solo la barra de <span class="cifra" style="color: var(--text)"
+							>{formatoPeso(resultado.barra)}</span
+						>
 					{:else}
-						Por lado: <span class="cifra text-lg" style="color: var(--text)"
+						Barra <span class="cifra" style="color: var(--text)"
+							>{formatoPeso(resultado.barra)}</span
+						>
+						· Por lado:
+						<span class="cifra text-lg" style="color: var(--text)"
 							>{combinacion(cercanas.principal.carga)}</span
 						>
 					{/if}
