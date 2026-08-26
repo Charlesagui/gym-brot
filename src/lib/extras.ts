@@ -385,31 +385,6 @@ function esDiaSemanaValido(n: unknown): n is number {
 	return esNumero(n) && n >= 0 && n <= 6 && Number.isInteger(n);
 }
 
-function esProgresionDoble(value: unknown): boolean {
-	return (
-		esRecord(value) &&
-		value.tipo === 'doble' &&
-		esBoolean(value.activa) &&
-		esNumero(value.repsMin) &&
-		Number.isInteger(value.repsMin) &&
-		value.repsMin > 0 &&
-		esNumero(value.repsMax) &&
-		Number.isInteger(value.repsMax) &&
-		value.repsMax >= value.repsMin &&
-		(value.incrementoGramos === undefined ||
-			(esEnteroNoNegativo(value.incrementoGramos) && value.incrementoGramos > 0)) &&
-		(value.proximoPesoGramos === undefined || esEnteroNoNegativo(value.proximoPesoGramos)) &&
-		(value.proximoEsMax === undefined || esBoolean(value.proximoEsMax)) &&
-		(value.proximoExtraGramos === undefined || esEnteroNoNegativo(value.proximoExtraGramos)) &&
-		(value.desdeSesionId === undefined || esString(value.desdeSesionId)) &&
-		(value.decision === undefined ||
-			value.decision === 'aceptada' ||
-			value.decision === 'pospuesta' ||
-			value.decision === 'descartada') &&
-		(value.decisionSesionId === undefined || esString(value.decisionSesionId))
-	);
-}
-
 function esDia(value: unknown): value is Dia {
 	if (!esRecord(value)) return false;
 	const ejercicios = value.ejercicios;
@@ -428,8 +403,7 @@ function esDia(value: unknown): value is Dia {
 				esRecord(e) &&
 				esString(e.exerciseId) &&
 				esEnteroNoNegativo(e.seriesObjetivo) &&
-				esEnteroNoNegativo(e.orden) &&
-				(e.progresion === undefined || esProgresionDoble(e.progresion))
+				esEnteroNoNegativo(e.orden)
 		)
 	);
 }

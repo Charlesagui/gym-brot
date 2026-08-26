@@ -12,29 +12,10 @@ export interface Dia {
 	ejercicios: EjercicioRutina[];
 }
 
-/** Doble progresión configurada para una aparición concreta dentro de una rutina. */
-export interface ProgresionDoble {
-	activa: boolean;
-	tipo: 'doble';
-	repsMin: number;
-	repsMax: number;
-	/** Incremento canónico opcional. Ausente = usa el paso del ejercicio/ajuste global. */
-	incrementoGramos?: number;
-	/** Carga aceptada para precargar la próxima sesión; nunca modifica el pasado. */
-	proximoPesoGramos?: number;
-	proximoEsMax?: boolean;
-	proximoExtraGramos?: number;
-	/** Sesión que originó la recomendación aceptada, para no aplicarla dos veces. */
-	desdeSesionId?: string;
-	decision?: 'aceptada' | 'pospuesta' | 'descartada';
-	decisionSesionId?: string;
-}
-
 export interface EjercicioRutina {
 	exerciseId: string;
 	seriesObjetivo: number;
 	orden: number;
-	progresion?: ProgresionDoble;
 }
 
 /** Una serie hecha, con su propio peso (permite rampa/pirámide). */

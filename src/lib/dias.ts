@@ -1,6 +1,5 @@
-import { db, guardarSesion, VIOLETA_RUTINA, type Dia, type ProgresionDoble } from './db';
+import { db, guardarSesion, VIOLETA_RUTINA, type Dia } from './db';
 import { capturarRevisionDatos, exigirRevisionDatos } from './revision-datos';
-import type { RecomendacionDoble } from './progresion';
 
 /** Paleta de colores para los días. */
 export const coloresDia: { nombre: string; rgb: string }[] = [
@@ -165,64 +164,5 @@ export async function ajustarSeries(
 		const e = dia.ejercicios.find((x) => x.exerciseId === exerciseId);
 		if (!e) return;
 		e.seriesObjetivo = Math.max(SERIES_MIN, Math.min(SERIES_MAX, e.seriesObjetivo + delta));
-	});
-}
-
-export async function setProgresionDoble(
-	diaId: string,
-	exerciseId: string,
-	config?: Pick<ProgresionDoble, 'activa' | 'repsMin' | 'repsMax' | 'incrementoGramos'>
-): Promise<void> {
-	if (
-		config &&
-		(!Number.isInteger(config.repsMin) ||
-			config.repsMin <= 0 ||
-			!Number.isInteger(config.repsMax) ||
-			config.repsMax < config.repsMin ||
-			(config.incrementoGramos != null &&
-				(!Number.isInteger(config.incrementoGramos) || config.incrementoGramos <= 0)))
-	)
-		throw new RangeError('El rango o incremento de progresión no es válido.');
-	await modificarDia(diaId, (dia) => {
-		const ejercicio = dia.ejercicios.find((item) => item.exerciseId === exerciseId);
-		if (!ejercicio) return;
-		if (!config) {
-			ejercicio.progresion = undefined;
-			return;
-		}
-		// Retocar el rango de reps no puede descartar una recomendación ya aceptada: la carga
-		// que el usuario aceptó vive en los campos `proximo*` y es una decisión suya, no un
-		// derivado del rango. Sólo apagar la progresión (o borrarla) la da de baja.
-		const previa = ejercicio.progresion;
-		const pendiente = previa?.activa && config.activa ? previa : undefined;
-		ejercicio.progresion = { ...pendiente, tipo: 'doble', ...config };
-	});
-}
-
-export async function decidirRecomendacionDoble(
-	diaId: string,
-	exerciseId: string,
-	recomendacion: RecomendacionDoble,
-	decision: 'aceptada' | 'pospuesta' | 'descartada'
-): Promise<void> {
-	await modificarDia(diaId, (dia) => {
-		const ejercicio = dia.ejercicios.find((item) => item.exerciseId === exerciseId);
-		const progresion = ejercicio?.progresion;
-		if (!progresion?.activa) return;
-		progresion.decision = decision;
-		progresion.decisionSesionId = recomendacion.sesionId;
-		if (decision === 'aceptada') {
-			progresion.proximoPesoGramos = recomendacion.pesoObjetivoGramos;
-			progresion.proximoEsMax = recomendacion.esMax || undefined;
-			progresion.proximoExtraGramos = recomendacion.esMax
-				? recomendacion.extraObjetivoGramos
-				: undefined;
-			progresion.desdeSesionId = recomendacion.sesionId;
-		} else {
-			progresion.proximoPesoGramos = undefined;
-			progresion.proximoEsMax = undefined;
-			progresion.proximoExtraGramos = undefined;
-			progresion.desdeSesionId = undefined;
-		}
 	});
 }

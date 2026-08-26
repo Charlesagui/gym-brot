@@ -5,14 +5,11 @@ import {
 	agregarEjercicio,
 	ajustarSeries,
 	crearDia,
-	decidirRecomendacionDoble,
 	quitarEjercicio,
 	reordenarDias,
 	reordenarEjercicios,
-	setProgresionDoble,
 	toggleDiaSemana
 } from './dias';
-import type { RecomendacionDoble } from './progresion';
 
 async function limpiarDb() {
 	await db.open();
@@ -35,18 +32,6 @@ async function diaCon(ejercicios: string[]) {
  * liveQuery emitiera) perdían una escritura. Los tests corren las operaciones en
  * paralelo justamente para reproducir esa carrera.
  */
-const recomendacionBase: RecomendacionDoble = {
-	sesionId: 'sesion-anterior',
-	seriesEvaluadas: 3,
-	repsMax: 12,
-	incrementoGramos: 2_500,
-	pesoActualGramos: 80_000,
-	pesoObjetivoGramos: 82_500,
-	esMax: false,
-	extraActualGramos: 0,
-	extraObjetivoGramos: 0,
-	explicacion: 'Tres series en el techo.'
-};
 
 describe('dias: escrituras concurrentes', () => {
 	beforeEach(limpiarDb);
@@ -156,99 +141,5 @@ describe('dias: reordenar', () => {
 		const dias = await db.dias.orderBy('orden').toArray();
 		expect(dias.map((d) => d.id)).toEqual(['z', 'x', 'y']);
 		expect(dias.map((d) => d.orden)).toEqual([0, 1, 2]);
-	});
-});
-
-describe('dias: doble progresión', () => {
-	beforeEach(limpiarDb);
-
-	it('la configuración queda aislada por aparición en la rutina', async () => {
-		await db.dias.bulkAdd([
-			{
-				id: 'a',
-				nombre: 'A',
-				orden: 0,
-				ejercicios: [{ exerciseId: 'press', seriesObjetivo: 3, orden: 0 }]
-			},
-			{
-				id: 'b',
-				nombre: 'B',
-				orden: 1,
-				ejercicios: [{ exerciseId: 'press', seriesObjetivo: 4, orden: 0 }]
-			}
-		]);
-
-		await setProgresionDoble('a', 'press', { activa: true, repsMin: 8, repsMax: 12 });
-
-		expect((await db.dias.get('a'))?.ejercicios[0]?.progresion).toMatchObject({
-			activa: true,
-			tipo: 'doble',
-			repsMin: 8,
-			repsMax: 12
-		});
-		expect((await db.dias.get('b'))?.ejercicios[0]?.progresion).toBeUndefined();
-	});
-
-	it('aceptar, posponer o descartar persiste una decisión explícita', async () => {
-		await diaCon(['press']);
-		await setProgresionDoble('d1', 'press', { activa: true, repsMin: 8, repsMax: 12 });
-		const recomendacion = {
-			sesionId: '2026-01-05__d1',
-			seriesEvaluadas: 3,
-			repsMax: 12,
-			incrementoGramos: 2_500,
-			pesoActualGramos: 80_000,
-			pesoObjetivoGramos: 82_500,
-			esMax: false,
-			extraActualGramos: 0,
-			extraObjetivoGramos: 0,
-			explicacion: 'Tres series en el techo.'
-		};
-
-		await decidirRecomendacionDoble('d1', 'press', recomendacion, 'aceptada');
-		expect((await db.dias.get('d1'))?.ejercicios[0]?.progresion).toMatchObject({
-			decision: 'aceptada',
-			decisionSesionId: recomendacion.sesionId,
-			proximoPesoGramos: 82_500,
-			desdeSesionId: recomendacion.sesionId
-		});
-
-		await decidirRecomendacionDoble('d1', 'press', recomendacion, 'pospuesta');
-		expect((await db.dias.get('d1'))?.ejercicios[0]?.progresion).toMatchObject({
-			decision: 'pospuesta',
-			decisionSesionId: recomendacion.sesionId,
-			proximoPesoGramos: undefined,
-			desdeSesionId: undefined
-		});
-
-		await decidirRecomendacionDoble('d1', 'press', recomendacion, 'descartada');
-		expect((await db.dias.get('d1'))?.ejercicios[0]?.progresion?.decision).toBe('descartada');
-	});
-
-	it('retocar el rango conserva la carga que el usuario ya aceptó', async () => {
-		await diaCon(['press']);
-		await setProgresionDoble('d1', 'press', { activa: true, repsMin: 8, repsMax: 12 });
-		await decidirRecomendacionDoble('d1', 'press', recomendacionBase, 'aceptada');
-
-		// El toque de + en el máximo de reps no puede tirar la decisión ya tomada.
-		await setProgresionDoble('d1', 'press', { activa: true, repsMin: 8, repsMax: 13 });
-		expect((await db.dias.get('d1'))?.ejercicios[0]?.progresion).toMatchObject({
-			repsMax: 13,
-			proximoPesoGramos: 82_500,
-			desdeSesionId: recomendacionBase.sesionId,
-			decision: 'aceptada'
-		});
-	});
-
-	it('apagar la progresión sí descarta la carga aceptada', async () => {
-		await diaCon(['press']);
-		await setProgresionDoble('d1', 'press', { activa: true, repsMin: 8, repsMax: 12 });
-		await decidirRecomendacionDoble('d1', 'press', recomendacionBase, 'aceptada');
-
-		await setProgresionDoble('d1', 'press', { activa: false, repsMin: 8, repsMax: 12 });
-		const progresion = (await db.dias.get('d1'))?.ejercicios[0]?.progresion;
-		expect(progresion?.activa).toBe(false);
-		expect(progresion?.proximoPesoGramos).toBeUndefined();
-		expect(progresion?.desdeSesionId).toBeUndefined();
 	});
 });
