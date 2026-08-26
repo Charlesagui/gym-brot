@@ -13,9 +13,20 @@ type Handler = (evento: unknown) => void;
  * justo lo que hay que poder probar. `navigator` es el de Node: no trae `vibrate`
  * ni `wakeLock`, así que esos caminos quedan inertes solos.
  */
+/** Lo que este archivo inventa en `globalThis` y después tiene que devolver. */
+const GLOBALES_FALSOS = ['window', 'document', 'localStorage'] as const;
+
 function montarDom() {
 	const listeners = new Map<string, Handler[]>();
 	const almacen = new Map<string, string>();
+	// El entorno de vitest es `node`: acá no hay `document` ni `localStorage` de verdad,
+	// así que lo que guardamos es "no existía". Devolverlo al terminar no es ceremonia:
+	// con `isolate: false` —una optimización de velocidad que cualquiera puede prender—
+	// estos dobles sobreviven al archivo y el siguiente cree estar en un navegador. Se
+	// comprueba con `vitest run --no-isolate`: sin el desmontaje, db-migracion falla.
+	const previos = GLOBALES_FALSOS.map(
+		(clave) => [clave, Object.getOwnPropertyDescriptor(globalThis, clave)] as const
+	);
 
 	const escuchar = (tipo: string, fn: Handler) => {
 		listeners.set(tipo, [...(listeners.get(tipo) ?? []), fn]);
@@ -47,6 +58,12 @@ function montarDom() {
 	});
 
 	return {
+		desmontar() {
+			for (const [clave, descriptor] of previos) {
+				if (descriptor) Object.defineProperty(globalThis, clave, descriptor);
+				else delete (globalThis as Record<string, unknown>)[clave];
+			}
+		},
 		guardado: () => almacen.get(DESCANSO_KEY) ?? null,
 		/** Simula lo que persiste OTRA instancia y avisa por el evento `storage`. */
 		otraInstanciaEscribe(persistido: { inicio: number; hasta: number } | null) {
@@ -85,6 +102,7 @@ beforeEach(async () => {
 afterEach(() => {
 	descanso.saltar();
 	vi.useRealTimers();
+	dom.desmontar();
 });
 
 describe('descanso', () => {
