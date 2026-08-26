@@ -186,9 +186,14 @@ test('la fecha de sesión sobrevive medianoche, regreso, cierre y una sesión nu
 		'Aductores (cierre)',
 		'Elevación de gemelos sentado'
 	]) {
-		await page.getByRole('button', { name: `Saltar ${nombre} hoy`, exact: true }).click({
-			force: true
-		});
+		const saltar = page.getByRole('button', { name: `Saltar ${nombre} hoy`, exact: true });
+		// Al centro antes de tocar: la barra inferior es fija y tapa el final de la
+		// pantalla, y el último ejercicio de la lista cae justo ahí. `force` clickea las
+		// coordenadas igual, así que sin este scroll el toque se lo lleva la navegación
+		// y el ejercicio nunca se salta. El `force` se conserva por el arrastre de
+		// reordenar, que intercepta el puntero sobre las tarjetas.
+		await saltar.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+		await saltar.click({ force: true });
 		await expect(
 			page.getByRole('button', { name: `Reanudar ${nombre} hoy`, exact: true })
 		).toBeVisible();
