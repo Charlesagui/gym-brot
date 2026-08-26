@@ -1,0 +1,274 @@
+import { expect, test } from '@playwright/test';
+
+/**
+ * El asistente completo, con un perfil conocido: hombre de 32 años, 178 cm, 82 kg,
+ * trabajo sentado, 4.000–7.000 pasos, 4 entrenos de 45–75 min a ritmo normal.
+ *
+ * Los números son los mismos que fija `energia.test.ts` para el perfil A. Si acá cambian
+ * y allá no, lo que se rompió es la pantalla, no el cálculo.
+ */
+async function completarPerfilA(page: import('@playwright/test').Page) {
+	await page.goto('/herramientas/calorias');
+
+	// --- 1. Vos ---
+	await expect(page.getByText('1 de 4')).toBeVisible();
+	await page.getByRole('textbox', { name: 'Edad en años' }).fill('32');
+	await page.getByRole('textbox', { name: 'Edad en años' }).press('Enter');
+	await page.getByRole('textbox', { name: 'Altura en centímetros' }).fill('178');
+	await page.getByRole('textbox', { name: 'Altura en centímetros' }).press('Enter');
+	await page.getByRole('textbox', { name: 'Peso corporal en kg' }).fill('82');
+	await page.getByRole('textbox', { name: 'Peso corporal en kg' }).press('Enter');
+	await page.getByRole('button', { name: 'Masculina', exact: true }).click();
+	await page.getByRole('button', { name: 'Continuar' }).click();
+
+	// --- 2. Tu día ---
+	await expect(page.getByText('2 de 4')).toBeVisible();
+	await page.getByRole('button', { name: 'Sentado casi todo el día' }).click();
+	await page.getByRole('button', { name: '4.000 a 7.000' }).click();
+	await page.getByRole('button', { name: 'Continuar' }).click();
+
+	// --- 3. Tu entrenamiento ---
+	await expect(page.getByText('3 de 4')).toBeVisible();
+	await page.getByRole('textbox', { name: 'Entrenamientos por semana' }).fill('4');
+	await page.getByRole('textbox', { name: 'Entrenamientos por semana' }).press('Enter');
+	await page.getByRole('button', { name: '45–75 min' }).click();
+	await page.getByRole('button', { name: 'Ritmo normal' }).click();
+	await page.getByRole('button', { name: 'Continuar' }).click();
+
+	await expect(page.getByText('4 de 4')).toBeVisible();
+}
+
+test('los cinco objetivos muestran su número antes de elegirlos', async ({ page }) => {
+	await completarPerfilA(page);
+
+	// Cada botón sabe cuánto da: la decisión se toma con el número a la vista.
+	await expect(page.getByRole('button', { name: /Déficit moderado/ })).toContainText('2.440');
+	await expect(page.getByRole('button', { name: /Déficit agresivo/ })).toContainText('2.210');
+	await expect(page.getByRole('button', { name: /Mantenimiento/ })).toContainText('2.890');
+	await expect(page.getByRole('button', { name: /Volumen moderado/ })).toContainText('3.120');
+	await expect(page.getByRole('button', { name: /Volumen agresivo/ })).toContainText('3.340');
+
+	// El moderado viene elegido y no arrastra advertencia.
+	await expect(page.getByRole('button', { name: /Déficit moderado/ })).toHaveAttribute(
+		'aria-pressed',
+		'true'
+	);
+});
+
+test('el agresivo se puede elegir y llega con su advertencia', async ({ page }) => {
+	await completarPerfilA(page);
+
+	await page.getByRole('button', { name: /Déficit agresivo/ }).click();
+	await expect(page.getByText(/cuesta algo de masa magra/)).toBeVisible();
+
+	await page.getByRole('button', { name: /Volumen agresivo/ }).click();
+	await expect(page.getByText(/no te va a hacer ganar más músculo/)).toBeVisible();
+});
+
+test('el resultado manda una sola cifra y dice de dónde sale', async ({ page }) => {
+	await completarPerfilA(page);
+	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
+
+	// Una sola cifra manda, y va con separador de miles para leerse de un vistazo.
+	await expect(page.getByText('2.440kcal')).toBeVisible();
+
+	// La banda va con su cobertura escrita en palabras, nunca un ± suelto. Los saltos de
+	// línea del código fuente llegan al DOM, así que el patrón tolera espacios.
+	const explicacion = page.getByText(/2 de cada\s+3 personas con tu perfil/);
+	await expect(explicacion).toBeVisible();
+	await expect(explicacion).toContainText('2.890');
+	await expect(explicacion).toContainText('2.550');
+	await expect(explicacion).toContainText('3.230');
+
+	// Ritmo y proteína son cifras secundarias: acompañan, no compiten.
+	await expect(page.getByText('−0,41kg/sem')).toBeVisible();
+	await expect(page.getByText('148g')).toBeVisible();
+
+	// El descargo está siempre a la vista, no detrás de un desplegable.
+	await expect(page.getByText(/no una indicación\s+médica/)).toBeVisible();
+});
+
+test('guarda el objetivo y lo recuerda al volver a entrar', async ({ page }) => {
+	await completarPerfilA(page);
+	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
+	await page.getByRole('button', { name: 'Guardar como objetivo' }).click();
+	await expect(page.getByText('Guardado como tu objetivo')).toBeVisible();
+
+	// Al volver, el perfil viene prellenado desde el objetivo guardado.
+	await page.goto('/herramientas/calorias');
+	await expect(page.getByRole('textbox', { name: 'Edad en años' })).toHaveValue('32');
+	await expect(page.getByRole('textbox', { name: 'Altura en centímetros' })).toHaveValue('178');
+});
+
+test('un paso contestado se contrae a su respuesta y se puede reabrir', async ({ page }) => {
+	await completarPerfilA(page);
+
+	// Los tres anteriores quedaron resumidos, como una serie ya hecha.
+	await expect(page.getByRole('button', { name: /32 a · 178 cm/ })).toBeVisible();
+	await expect(page.getByRole('button', { name: /Sentado · 4\.000 a 7\.000 pasos/ })).toBeVisible();
+
+	await page.getByRole('button', { name: /32 a · 178 cm/ }).click();
+	await expect(page.getByText('1 de 4')).toBeVisible();
+	await expect(page.getByRole('textbox', { name: 'Edad en años' })).toHaveValue('32');
+});
+
+test('no ofrece déficit a quien está por debajo de IMC 18,5', async ({ page }) => {
+	await page.goto('/herramientas/calorias');
+	await page.getByRole('textbox', { name: 'Edad en años' }).fill('24');
+	await page.getByRole('textbox', { name: 'Edad en años' }).press('Enter');
+	await page.getByRole('textbox', { name: 'Altura en centímetros' }).fill('178');
+	await page.getByRole('textbox', { name: 'Altura en centímetros' }).press('Enter');
+	await page.getByRole('textbox', { name: 'Peso corporal en kg' }).fill('55');
+	await page.getByRole('textbox', { name: 'Peso corporal en kg' }).press('Enter');
+	await page.getByRole('button', { name: 'Continuar' }).click();
+	await page.getByRole('button', { name: 'Continuar' }).click();
+	await page.getByRole('button', { name: 'Continuar' }).click();
+
+	// IMC 17,4: los déficits no aparecen. Un botón gris que no se puede tocar sigue
+	// diciendo "esto existe y vos no llegás", y con calorías eso empuja para el lado malo.
+	await expect(page.getByRole('button', { name: /Déficit/ })).toHaveCount(0);
+	await expect(page.getByText('Con tu peso actual la app no propone déficit')).toBeVisible();
+	await expect(page.getByRole('button', { name: /Mantenimiento/ })).toHaveAttribute(
+		'aria-pressed',
+		'true'
+	);
+});
+
+test('lo declarado cambia qué se ofrece, y no se guarda', async ({ page }) => {
+	await completarPerfilA(page);
+	await expect(page.getByRole('button', { name: /Déficit moderado/ })).toBeVisible();
+
+	await page.getByText('¿Algo de esto aplica?').click();
+	await page.getByRole('button', { name: 'Tuve un trastorno alimentario' }).click();
+
+	// El déficit no queda gris: no está.
+	await expect(page.getByRole('button', { name: /Déficit moderado/ })).toHaveCount(0);
+	await expect(page.getByRole('button', { name: /Déficit agresivo/ })).toHaveCount(0);
+	await expect(page.getByRole('button', { name: /Mantenimiento/ })).toBeVisible();
+	await expect(page.getByRole('button', { name: /Volumen moderado/ })).toBeVisible();
+	await expect(page.getByText(/no propone objetivos de déficit/)).toBeVisible();
+
+	// Y en el resultado aparece la derivación.
+	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
+	await expect(page.getByText(/hablarlo antes con un\s+profesional/)).toBeVisible();
+
+	// Al volver a entrar no queda rastro: la respuesta no se persiste en ningún lado.
+	await completarPerfilA(page);
+	await expect(page.getByRole('button', { name: /Déficit moderado/ })).toBeVisible();
+	await expect(page.getByText(/no propone objetivos de déficit/)).toHaveCount(0);
+});
+
+test('en embarazo o lactancia solo queda mantenimiento', async ({ page }) => {
+	await completarPerfilA(page);
+	await page.getByText('¿Algo de esto aplica?').click();
+	await page.getByRole('button', { name: 'Estoy embarazada o amamantando' }).click();
+
+	await expect(page.getByRole('button', { name: /Mantenimiento/ })).toBeVisible();
+	await expect(page.getByRole('button', { name: /Déficit/ })).toHaveCount(0);
+	await expect(page.getByRole('button', { name: /Volumen/ })).toHaveCount(0);
+	await expect(page.getByText(/las necesidades se calculan distinto/)).toBeVisible();
+});
+
+test('bloquea la herramienta a menores de edad', async ({ page }) => {
+	await page.goto('/herramientas/calorias');
+	await page.getByRole('textbox', { name: 'Edad en años' }).fill('16');
+	await page.getByRole('textbox', { name: 'Edad en años' }).press('Enter');
+	// El stepper recorta a 18: el mínimo es del control, no una validación tardía.
+	await expect(page.getByRole('textbox', { name: 'Edad en años' })).toHaveValue('18');
+});
+
+test('cambiar de unidad no reinterpreta el peso guardado', async ({ page }) => {
+	await completarPerfilA(page);
+	await expect(page.getByRole('button', { name: /Déficit moderado/ })).toContainText('2.440');
+	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
+	await page.getByRole('button', { name: 'Guardar como objetivo' }).click();
+	await expect(page.getByText('Guardado como tu objetivo')).toBeVisible();
+
+	await page.goto('/ajustes');
+	const unidadLb = page.getByRole('button', { name: 'Seleccionar unidad lb' });
+	await unidadLb.click();
+	await expect(unidadLb).toHaveAttribute('aria-pressed', 'true');
+
+	// El peso vive en gramos: al pasar a libras cambia cómo se muestra, no cuánto pesa.
+	await page.goto('/herramientas/calorias');
+	await expect(page.getByRole('textbox', { name: 'Peso corporal en lb' })).toHaveValue('180.8');
+	await page.getByRole('button', { name: 'Continuar' }).click();
+	await page.getByRole('button', { name: 'Continuar' }).click();
+	await page.getByRole('button', { name: 'Continuar' }).click();
+
+	// Y las calorías no dependen de la unidad: son las mismas 2.440.
+	await expect(page.getByRole('button', { name: /Déficit moderado/ })).toContainText('2.440');
+	await page.goto('/cuerpo');
+	await expect(page.getByText('2.440kcal')).toBeVisible();
+});
+
+test('la sección dice qué esperar, y por qué esa proteína', async ({ page }) => {
+	await completarPerfilA(page);
+	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
+	await page.getByRole('button', { name: 'Guardar como objetivo' }).click();
+	await page.getByRole('link', { name: 'Cuerpo' }).click();
+
+	// Sin ninguna medición, lo más útil que se puede decir es justamente eso.
+	await expect(page.getByText(/Todavía no registraste ningún peso/)).toBeVisible();
+	// Y una predicción verificable, no un consejo.
+	await expect(page.getByText(/la fuerza se sostiene/)).toBeVisible();
+	// La proteína explica su número donde está el número.
+	await expect(page.getByText(/grasa y no músculo/)).toBeVisible();
+
+	// Nunca más de dos frases: con una sola cifra en pantalla, tres párrafos la entierran.
+	await expect(page.getByText(/Esperá bajar unos/)).toHaveCount(0);
+	await expect(page.getByText(/La banda es ancha a propósito/)).toHaveCount(0);
+});
+
+test('el objetivo se puede borrar, y hace falta confirmarlo', async ({ page }) => {
+	await completarPerfilA(page);
+	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
+	await page.getByRole('button', { name: 'Guardar como objetivo' }).click();
+	await page.getByRole('link', { name: 'Cuerpo' }).click();
+	await expect(page.getByText('2.440kcal')).toBeVisible();
+
+	// Un solo toque no borra nada: pide confirmación en el mismo botón.
+	await page.getByRole('button', { name: 'Borrar objetivo' }).click();
+	await expect(page.getByText('2.440kcal')).toBeVisible();
+	await page.getByRole('button', { name: 'Tocá otra vez para borrarlo' }).click();
+
+	await expect(page.getByRole('link', { name: 'Calcular mi objetivo' })).toBeVisible();
+	await expect(page.getByText('2.440kcal')).toHaveCount(0);
+});
+
+test('la sección Cuerpo tiene su lugar en la barra y arranca vacía', async ({ page }) => {
+	await page.goto('/');
+
+	// La portada ya no lleva la tarjeta de peso: esa pantalla ahora vive en Cuerpo.
+	await expect(page.getByRole('link', { name: /Peso corporal/ })).toHaveCount(0);
+
+	const abrir = page.getByRole('link', { name: 'Cuerpo' });
+	await expect(abrir).toBeVisible();
+	await abrir.click();
+
+	await expect(page).toHaveURL(/\/cuerpo$/);
+	await expect(page.getByRole('link', { name: 'Cuerpo' })).toHaveAttribute('aria-current', 'page');
+	await expect(page.getByRole('heading', { name: 'Cuerpo' })).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Calcular mi objetivo' })).toBeVisible();
+	await expect(page.getByText('Sin mediciones todavía')).toBeVisible();
+});
+
+test('/peso queda adentro de Cuerpo y deja de estar huérfano en la barra', async ({ page }) => {
+	await page.goto('/peso');
+	await expect(page.getByRole('link', { name: 'Cuerpo' })).toHaveAttribute('aria-current', 'page');
+});
+
+test('el objetivo guardado manda en la sección', async ({ page }) => {
+	await completarPerfilA(page);
+	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
+	await page.getByRole('button', { name: 'Guardar como objetivo' }).click();
+	await expect(page.getByText('Guardado como tu objetivo')).toBeVisible();
+
+	await page.getByRole('link', { name: 'Cuerpo' }).click();
+	await expect(page.getByText('Déficit moderado')).toBeVisible();
+	await expect(page.getByText('2.440kcal')).toBeVisible();
+	await expect(page.getByText(/2 de cada 3 personas/)).toBeVisible();
+	await expect(page.getByText('−0,41kg/sem')).toBeVisible();
+	await expect(page.getByText('148g')).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Cambiar objetivo' })).toBeVisible();
+});

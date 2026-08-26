@@ -26,7 +26,8 @@
 		unidad,
 		onCambio,
 		vibracion = true,
-		etiqueta
+		etiqueta,
+		cadaMayor = 4
 	}: {
 		valor: number;
 		min: number;
@@ -37,12 +38,17 @@
 		onCambio: (nuevo: number) => void;
 		vibracion?: boolean;
 		etiqueta: string;
+		/**
+		 * Cada cuántos pasos va una marca numerada. El peso corporal avanza de a 0,1 y
+		 * con el valor por defecto rotularía 80,0 · 80,4 · 80,8: los números tienen que
+		 * caer donde la cabeza los espera, y para el cuerpo eso es cada medio kilo.
+		 */
+		cadaMayor?: number;
 	} = $props();
 
 	/** Cuánto hay que arrastrar para correr un paso. Con 14 px la pantalla entera son ~25. */
 	const PIXELES_POR_PASO = 14;
 	/** Una marca alta con su número cada cuatro pasos: con paso de 2,5 kg, cada 10. */
-	const CADA_MAYOR = 4;
 	/** Cuántos pasos se dibujan a cada lado del centro. Lo que sobra lo recorta el overflow. */
 	const ALCANCE = 26;
 
@@ -108,7 +114,7 @@
 			ArrowLeft: -1,
 			ArrowDown: -1
 		};
-		const gruesos: Record<string, number> = { PageUp: CADA_MAYOR, PageDown: -CADA_MAYOR };
+		const gruesos: Record<string, number> = { PageUp: cadaMayor, PageDown: -cadaMayor };
 		const saltos: Record<string, number> = {
 			Home: (min - valor) / paso,
 			End: (max - valor) / paso
@@ -139,7 +145,7 @@
 			salida.push({
 				valor: v,
 				x: ((v - posicion) / paso) * PIXELES_POR_PASO,
-				mayor: i % CADA_MAYOR === 0
+				mayor: i % cadaMayor === 0
 			});
 		}
 		return salida;

@@ -73,6 +73,20 @@ test('la navegación identifica la sección activa también en rutas internas', 
 	);
 });
 
+test('el nav se esconde entrenando, pero vuelve al consultar el progreso', async ({ page }) => {
+	const rutinas = page.getByRole('link', { name: 'Rutinas' });
+
+	// Con `?dia=` estás en la serie: esa franja es de la barra de descanso y del cierre.
+	await page.goto('/ejercicio/extension-cuadriceps?dia=dia-piernas&fecha=2026-08-24');
+	await expect(page.getByRole('link', { name: 'Volver', exact: true })).toBeVisible();
+	await expect(rutinas).toHaveCount(0);
+
+	// Sin `?dia=` es la vista de progreso que abre el historial: pantalla de lectura,
+	// nada ocupa el piso, y sin nav la única salida quedaba lejos del pulgar.
+	await page.goto('/ejercicio/extension-cuadriceps');
+	await expect(rutinas).toBeVisible();
+});
+
 test('la confirmación encierra el foco y lo devuelve al cerrar', async ({ page }) => {
 	await page.goto('/ajustes');
 
@@ -319,7 +333,9 @@ test('el progreso completo incluye hoy en todos sus rangos y el calendario conse
 
 	await page.setViewportSize({ width: 320, height: 740 });
 	await page.goto('/historial');
-	const entrenado = page.getByRole('link', { name: /entrenado · ver detalle/ }).first();
+	// El día entrenado dice cuántas series entraron, no sólo que entrenaste: esa
+	// intensidad vivía en un mapa anual aparte que se retiró por redundante.
+	const entrenado = page.getByRole('link', { name: /completadas? · .*ver detalle$/ }).first();
 	const cajaDia = await entrenado.boundingBox();
 	expect(cajaDia?.width).toBeGreaterThanOrEqual(44);
 	expect(cajaDia?.height).toBeGreaterThanOrEqual(44);

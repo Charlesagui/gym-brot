@@ -1,5 +1,7 @@
 import { db, guardarSesion, VIOLETA_RUTINA, type Dia } from './db';
 import { capturarRevisionDatos, exigirRevisionDatos } from './revision-datos';
+import { reabrirSesion } from './sesion-reglas';
+import { ejercicioPorId } from './catalog';
 
 /** Paleta de colores para los días. */
 export const coloresDia: { nombre: string; rgb: string }[] = [
@@ -116,8 +118,8 @@ export async function agregarEjercicio(diaId: string, exerciseId: string): Promi
 		const fecha = new Date().toLocaleDateString('sv');
 		const sesion = await db.sesiones.get(`${fecha}__${diaId}`);
 		if (sesion?.diaTerminado) {
-			sesion.diaTerminado = false;
-			sesion.diaTerminadoAt = undefined;
+			const nombre = ejercicioPorId(exerciseId)?.nombre ?? 'un ejercicio';
+			reabrirSesion(sesion, `Agregaste ${nombre} a la rutina`);
 			await guardarSesion(sesion);
 		}
 	});

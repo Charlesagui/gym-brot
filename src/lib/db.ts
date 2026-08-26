@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie';
 import { pesoAGramos } from './unidades';
+import type { CategoriaPal, Meta, NivelRitmo, PerfilEnergia } from './energia';
 
 /** Un día de entrenamiento (ej. "Piernas") con sus ejercicios. */
 export interface Dia {
@@ -75,6 +76,13 @@ export interface Sesion {
 	diaTerminado?: boolean;
 	diaTerminadoAt?: string;
 	/**
+	 * Por qué este día dejó de estar terminado, para que la pantalla pueda decirlo.
+	 * Sobrevive a la navegación a propósito: la reapertura casi siempre se dispara en la
+	 * pantalla de ejercicio y se lee después, al volver al día.
+	 */
+	reaperturaMotivo?: string;
+	reaperturaAt?: string;
+	/**
 	 * Índice multiEntry derivado de `ejercicios`: permite traer solo las sesiones de un
 	 * ejercicio en vez de deserializar toda la tabla. NUNCA se escribe a mano — lo
 	 * recalcula `conIndice()` justo antes de cada persistencia (ver más abajo).
@@ -98,6 +106,40 @@ export interface PesoCorporal {
 	/** Fuente de verdad: gramos enteros; la unidad visible es solo presentación. */
 	pesoGramos: number;
 	registradoAt: string;
+}
+
+/**
+ * Un objetivo calórico guardado, con su perfil congelado.
+ *
+ * El perfil viaja adentro y no se recalcula: revisar dentro de tres meses un objetivo
+ * de hoy con el peso de mañana daría un número que nunca existió. Congelarlo también
+ * hace reproducible cada revisión de la cadena.
+ */
+export interface ObjetivoEnergia {
+	/**
+	 * `${creadoAt}-${sufijo}`. El prefijo ISO es de ancho fijo, así que el orden
+	 * lexicográfico por clave primaria es el cronológico y el vigente es el último.
+	 * El sufijo aleatorio evita que dos guardados en el mismo milisegundo se pisen:
+	 * un `put` con id repetido borraría un eslabón de la cadena en silencio.
+	 */
+	id: string;
+	creadoAt: string;
+	perfil: PerfilEnergia;
+	palEstimado: number;
+	categoriaPal: CategoriaPal;
+	/** Mantenimiento estimado, o ya calibrado si viene de una revisión. */
+	tdeeKcal: number;
+	/** El ancho de la banda del 68 %, para no recalcularlo al leer. */
+	sepvKcal: number;
+	meta: Meta;
+	/** Cuál de los cinco botones fue: alimenta el rótulo sin recalcular nada. */
+	nivel: NivelRitmo | null;
+	/** Ritmo aplicado, en % de peso corporal por semana. Negativo al bajar. */
+	ritmoPctSemana: number;
+	objetivoKcal: number;
+	proteinaG: number;
+	/** Id del objetivo que esta revisión reemplaza: deja la cadena completa. */
+	calibradoDe?: string;
 }
 
 /** Ajustes globales (única fila, id = 'app'). */
@@ -161,6 +203,7 @@ export const db = new Dexie('gym-brot') as Dexie & {
 	notas: EntityTable<Nota, 'exerciseId'>;
 	ajustes: EntityTable<Ajustes, 'id'>;
 	pesosCorporales: EntityTable<PesoCorporal, 'fecha'>;
+	objetivosEnergia: EntityTable<ObjetivoEnergia, 'id'>;
 };
 
 db.version(1).stores({
@@ -382,6 +425,26 @@ db.version(10).stores({
 	notas: 'exerciseId',
 	ajustes: 'id',
 	pesosCorporales: 'fecha, registradoAt'
+});
+
+/**
+ * v11: objetivos calóricos. Tabla propia y no un campo en `ajustes` porque lo valioso
+ * es el historial de revisiones, no solo el objetivo vigente: sin la cadena no se puede
+ * mostrar cómo se fue corrigiendo la estimación contra el peso real.
+ *
+ * No hay bandera `activo` ni índice sobre ella. IndexedDB no acepta booleanos como
+ * clave, así que indexarla no habría hecho nada, y un flag mantenido a mano permite
+ * el estado imposible de dos objetivos vigentes. Con el id ordenado en el tiempo, el
+ * vigente es `orderBy('id').last()`: una lectura por clave primaria, y la unicidad
+ * deja de depender de que una transacción se acuerde de apagar el anterior.
+ */
+db.version(11).stores({
+	dias: 'id, orden',
+	sesiones: 'id, diaId, fecha, *exerciseIds',
+	notas: 'exerciseId',
+	ajustes: 'id',
+	pesosCorporales: 'fecha, registradoAt',
+	objetivosEnergia: 'id'
 });
 
 /**

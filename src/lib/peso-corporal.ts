@@ -19,6 +19,28 @@ export function pesosCorporalesObs() {
 	return liveQuery(() => db.pesosCorporales.orderBy('fecha').toArray());
 }
 
+/** Ventana que alcanza para el peso actual y los cambios de 7 y 30 días, con margen. */
+export const DIAS_RESUMEN = 45;
+
+/**
+ * Los pesos de los últimos días, acotados por el índice de fecha. `pesosCorporalesObs`
+ * trae la tabla entera —una fila por día, para siempre— y eso solo se justifica donde
+ * hace falta el historial completo: el gráfico y la lista de `/peso`. Para un resumen
+ * de 30 días deserializar dos años de mediciones es la deuda que ya arrastraba la
+ * portada antes de que le sacáramos su tarjeta.
+ */
+export function pesosRecientesObs(dias = DIAS_RESUMEN) {
+	return liveQuery(() => {
+		const hoy = hoyCalendarioLocal();
+		const desde = new Date(`${hoy}T12:00:00`);
+		desde.setDate(desde.getDate() - dias);
+		return db.pesosCorporales
+			.where('fecha')
+			.between(desde.toLocaleDateString('sv'), hoy, true, true)
+			.toArray();
+	});
+}
+
 export async function guardarPesoCorporal(
 	fecha: string,
 	pesoGramos: number,

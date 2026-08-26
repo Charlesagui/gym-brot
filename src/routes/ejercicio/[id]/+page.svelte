@@ -19,6 +19,9 @@
 		setExtra,
 		addSet,
 		removeSet,
+		cerrarEjercicioConLoHecho,
+		reiniciarEjercicio,
+		restaurarInstantanea,
 		registrarPrSiSupera,
 		pesoEfectivo,
 		valorMetrica,
@@ -27,6 +30,7 @@
 		DESCRIPCION_METRICA,
 		hoyStr,
 		sesionId,
+		type InstantaneaSesion,
 		type MejorSet
 	} from '$lib/sesion';
 	import {
@@ -90,6 +94,7 @@
 	import CelebracionParticulas from '$lib/components/CelebracionParticulas.svelte';
 	import TecnicaModal from '$lib/components/TecnicaModal.svelte';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
+	import ToastAccion from '$lib/components/ToastAccion.svelte';
 	import { gramosAPeso, pesoAGramos } from '$lib/unidades';
 
 	const ej = $derived(ejercicioPorId($page.params.id!));
@@ -178,10 +183,31 @@
 		confirmarTexto: string;
 		onConfirm: () => void | Promise<void>;
 	} | null>(null);
+	/**
+	 * Reiniciar es lo único acá que borra trabajo de un toque, así que va en dos tiempos:
+	 * el botón arma el aviso y el aviso es el que reinicia. Después queda unos segundos
+	 * con "Deshacer", que devuelve la instantánea entera.
+	 */
+	let toast = $state<{
+		mensaje: string;
+		accionTexto: string;
+		tono: 'advertencia' | 'exito';
+		segundos: number;
+		onAccion: () => void | Promise<void>;
+	} | null>(null);
 
 	$effect(() => {
 		$page.params.id; // dep: reinicia "grande" al cambiar de ejercicio
 		videoGrande = demoGrande();
+		// Todo lo de abajo pertenece al ejercicio que dejamos atrás. "Siguiente" navega a
+		// esta misma ruta con otro id sin destruir el componente, así que sin este barrido
+		// llegabas al ejercicio nuevo con una fila ajena desplegada y, peor, con el cartel
+		// rojo de "ingresá las repeticiones de la serie 2" del ejercicio anterior.
+		filaAbierta = null;
+		avisoSerie = null;
+		mostrarRuedaDescanso = false;
+		mostrarQueMide = false;
+		toast = null;
 		// El pop del contador es para un toque en ESTE ejercicio, no para el salto de
 		// "hechas" que trae cargar uno nuevo.
 		hechasPrevias = null;
@@ -454,6 +480,8 @@
 	 * que faltan quedan cerradas detrás de ella.
 	 */
 	const indiceActiva = $derived(sets.findIndex((serie) => !serie.hecha));
+	/** Con todo hecho el cierre queda fijo al pie: el contenido tiene que dejarle lugar. */
+	const barraFija = $derived(completo && descanso.restoSeg === 0 && !descanso.vencido);
 	const sinHistorial = $derived(!cargandoSeries && puntos.length === 0 && anteriores.length === 0);
 
 	function abrirTecnica() {
@@ -601,23 +629,111 @@
 		el.value = peso != null ? formatoNumero(peso) : '';
 	}
 
-	function quitarSerie() {
-		if (!diaId || sets.length <= 1) return;
-		const ultima = sets[sets.length - 1];
+	/**
+	 * Quita una serie concreta. El − del contador sigue llamando acá con la última, pero
+	 * ahora cada fila puede pedir la suya: antes, para borrar la serie 2 de cuatro había
+	 * que borrar la 4, la 3 y la 2 y volver a cargar dos.
+	 */
+	function quitarSerie(i = sets.length - 1) {
+		if (!diaId || sets.length <= 1 || !sets[i]) return;
 		// No borrar un registro real con un mistap: la serie hecha pide confirmación.
-		if (ultima?.hecha) {
+		if (sets[i].hecha) {
 			confirmacion = {
-				titulo: 'Quitar serie hecha',
-				mensaje: `La serie ${sets.length} ya está marcada como hecha. Si la quitás, se recalcula el progreso y el PR de este ejercicio.`,
+				titulo: `Quitar serie ${i + 1}`,
+				mensaje: `La serie ${i + 1} ya está marcada como hecha. Si la quitás, se recalcula el progreso y el PR de este ejercicio.`,
 				confirmarTexto: 'Quitar',
 				onConfirm: async () => {
-					await removeSet(diaId, $page.params.id!, sets.length - 1, fechaSesion);
+					await removeSet(diaId, $page.params.id!, i, fechaSesion);
+					if (filaAbierta === i) filaAbierta = null;
 					confirmacion = null;
 				}
 			};
 			return;
 		}
-		escribir(removeSet(diaId, $page.params.id!, sets.length - 1, fechaSesion));
+		if (filaAbierta === i) filaAbierta = null;
+		escribir(removeSet(diaId, $page.params.id!, i, fechaSesion));
+	}
+
+	/**
+	 * "Hice tres de las cuatro y estoy listo". Quita las series sin marcar para que el
+	 * ejercicio quede completo con lo que de verdad se hizo.
+	 *
+	 * Sin esto, destildar o abandonar una serie del medio dejaba el día imposible de
+	 * cerrar —`marcarDiaTerminado` exige cada ejercicio hecho o saltado— y la única salida
+	 * era saltar el ejercicio entero, que miente sobre las series que sí hiciste.
+	 */
+	/** Primer tiempo: el botón no reinicia, avisa. Reinicia el aviso. */
+	function pedirReinicio() {
+		if (!diaId || hechas === 0) return;
+		toast = {
+			mensaje: `Se desmarcan las ${hechas} ${hechas === 1 ? 'serie hecha' : 'series hechas'} de este ejercicio. El peso y las reps quedan como referencia.`,
+			accionTexto: 'Reiniciar',
+			tono: 'advertencia',
+			segundos: 7,
+			onAccion: hacerReinicio
+		};
+	}
+
+	async function hacerReinicio() {
+		if (!diaId) return;
+		toast = null;
+		descanso.saltar();
+		let instantanea: InstantaneaSesion | null;
+		try {
+			instantanea = await reiniciarEjercicio(diaId, $page.params.id!, fechaSesion);
+		} catch (error) {
+			errorGuardado = error instanceof Error ? error.message : 'No se pudo reiniciar el ejercicio.';
+			return;
+		}
+		if (!instantanea) return;
+		await resincronizar();
+		filaAbierta = null;
+		const foto = instantanea;
+		toast = {
+			mensaje: 'Ejercicio reiniciado.',
+			accionTexto: 'Deshacer',
+			tono: 'exito',
+			segundos: 9,
+			onAccion: async () => {
+				toast = null;
+				try {
+					await restaurarInstantanea(diaId, foto, fechaSesion);
+				} catch (error) {
+					errorGuardado =
+						error instanceof Error ? error.message : 'No se pudo deshacer el reinicio.';
+					return;
+				}
+				await resincronizar();
+			}
+		};
+	}
+
+	function terminarConLoHecho(destino?: string) {
+		if (!diaId || hechas === 0 || completo) return;
+		const pendientes = sets.length - hechas;
+		confirmacion = {
+			titulo: `Terminar con ${hechas} ${hechas === 1 ? 'serie' : 'series'}`,
+			mensaje: `Se quitan las ${pendientes} ${pendientes === 1 ? 'serie que quedó' : 'series que quedaron'} sin marcar. Lo que hiciste no se toca, y podés volver a agregar series con +.`,
+			confirmarTexto: 'Terminar',
+			onConfirm: async () => {
+				confirmacion = null;
+				try {
+					const resultado = await cerrarEjercicioConLoHecho(diaId, $page.params.id!, fechaSesion);
+					if (!resultado.cerrado) {
+						errorGuardado = 'No quedó ninguna serie hecha para cerrar el ejercicio.';
+						return;
+					}
+				} catch (error) {
+					errorGuardado =
+						error instanceof Error ? error.message : 'No se pudo cerrar el ejercicio.';
+					return;
+				}
+				// `terminarEjercicio` lee `completo` y `mejorHoy` de los sets locales: hay que traer
+				// los persistidos antes, o celebra un cierre parcial que ya dejó de serlo.
+				await resincronizar();
+				await terminarEjercicio(destino);
+			}
+		};
 	}
 
 	function escribirReps(i: number, el: HTMLInputElement) {
@@ -733,7 +849,9 @@
 			// peso recién tipeado pueda verificarse sin desarmar el descanso.
 			const registrada = {
 				texto: `Serie ${i + 1} · ${formatoSet(sets[i]!, unidad)}`,
-				setIndex: i
+				setIndex: i,
+				exerciseId: $page.params.id!,
+				href: `/ejercicio/${$page.params.id}?dia=${diaId}&fecha=${fechaSesion}`
 			};
 			const minutos = descansoEj.minutos;
 			restoId = setTimeout(() => {
@@ -762,12 +880,19 @@
 	$effect(() => {
 		const pedido = descanso.correccionPedida;
 		if (pedido === 0) return;
-		const indice = untrack(() => descanso.registrada?.setIndex);
-		if (indice == null) return;
+		const registrada = untrack(() => descanso.registrada);
+		const indice = registrada?.setIndex;
+		// El descanso es global: el pedido puede haber salido de otro ejercicio (o de otra
+		// pantalla). Sin este filtro, entrar a cualquier ejercicio con un pedido viejo
+		// abría y enfocaba la fila de ese índice acá, que no es la serie de nadie.
+		if (indice == null || registrada?.exerciseId !== $page.params.id) return;
 		// La serie ya está hecha, así que su fila está contraída: hay que abrirla antes
 		// de buscarle el campo de reps.
 		filaAbierta = indice;
-		let intentos = 0;
+		// Plazo en milisegundos y no en cuadros: lo que se espera es que termine la
+		// transición del overlay, y con el teléfono ocupado 40 cuadros pueden ser una
+		// fracción de ese tiempo. Contando cuadros, el foco se rendía antes de tiempo.
+		const limite = performance.now() + 1500;
 		let frame = 0;
 		const enfocarFila = () => {
 			const campo = document.querySelector<HTMLInputElement>(
@@ -779,9 +904,14 @@
 			if (campo && !campo.closest('[inert]')) {
 				campo.scrollIntoView({ block: 'center', behavior: menosMovimiento() ? 'auto' : 'smooth' });
 				campo.focus({ preventScroll: true });
+				// El acuse va acá y no arriba: `correccionAtendida` toca la misma señal de la que
+				// depende este efecto, así que reiniciarlo antes de tiempo cancelaba —vía teardown—
+				// el requestAnimationFrame que justamente iba a poner este foco.
+				descanso.correccionAtendida();
 				return;
 			}
-			if (++intentos < 40) frame = requestAnimationFrame(enfocarFila);
+			if (performance.now() < limite) frame = requestAnimationFrame(enfocarFila);
+			else descanso.correccionAtendida();
 		};
 		frame = requestAnimationFrame(enfocarFila);
 		return () => cancelAnimationFrame(frame);
@@ -1133,7 +1263,16 @@
 					<p class="mt-6 text-center text-sm" style="color: var(--muted)">Cargando progreso…</p>
 				{/if}
 			{:else}
-				<div class="gb-exercise-work">
+				<div class="gb-exercise-work {barraFija ? 'pb-36' : ''}">
+					{#if fechaSesion !== fechaApertura}
+						<!-- Desde el historial se puede volver a entrenar un día pasado: hay que decirlo. -->
+						<p
+							class="mt-4 rounded-xl px-3 py-2.5 text-xs font-semibold"
+							style="background: rgb(var(--max) / .1); color: rgb(var(--max))"
+						>
+							Estás editando el entrenamiento del {fechaCorta(fechaSesion)}, no el de hoy.
+						</p>
+					{/if}
 					<section
 						class="mt-6 rounded-2xl border border-white/10 p-4"
 						style="background: var(--surface)"
@@ -1154,11 +1293,16 @@
 										>
 									{/if}
 								</p>
+								<!--
+									La unidad vive acá y no en cada renglón: repetida cuatro veces se comía
+									30 px por fila y el dato de la lista es el número, no cómo se llama.
+									En los ejercicios sin carga no se nombra, porque no habría qué medir.
+								-->
 								<p
 									class="mt-0.5 text-[11px] font-medium uppercase tracking-wider"
 									style="color: var(--muted)"
 								>
-									Sesión actual
+									Sesión actual{modo === 'reps' ? '' : ` · ${unidad}`}
 								</p>
 								{#if anterioresFecha}
 									<p class="mt-0.5 text-[11px] font-medium" style="color: var(--muted)">
@@ -1172,11 +1316,11 @@
 								<!-- Un solo control: hechas/total adentro del stepper de series de hoy -->
 								<div class="flex items-center rounded-full bg-white/5 p-0.5">
 									<button
-										onclick={quitarSerie}
+										onclick={() => quitarSerie()}
 										disabled={sets.length <= 1}
 										class="grid size-11 touch-manipulation place-items-center rounded-full text-sm font-bold disabled:opacity-35"
 										style="color: var(--muted)"
-										aria-label="Quitar serie de hoy">−</button
+										aria-label="Quitar la última serie de hoy">−</button
 									>
 									<span
 										class="min-w-11 text-center text-sm font-bold tabular-nums {contadorPop
@@ -1238,13 +1382,34 @@
 										onSetRir={(rir) => guardarRir(i, rir)}
 										onAbrir={() => (filaAbierta = i)}
 										onCerrar={() => (filaAbierta = null)}
+										onQuitar={() => quitarSerie(i)}
+										puedeQuitar={sets.length > 1}
 									/>
 								{/each}
 							</div>
+							{#if completo}
+								<!--
+									El momento exacto del arrepentimiento: recién terminaste y querés una más, o
+									una de las que marcaste estaba mal. Las dos cosas se podían hacer, pero nada
+									en pantalla lo decía: el ✓ verde de la fila lee como estado, no como botón.
+								-->
+								<p
+									class="mt-2 rounded-xl border border-white/5 p-2.5 text-xs leading-relaxed"
+									style="background: var(--surface-2); color: var(--muted)"
+								>
+									Ejercicio completo. ¿Va una más? Tocá <b style="color: rgb({g.glow})">+</b>. ¿Te
+									equivocaste en una? Tocá esa serie para corregirla o desmarcarla.
+								</p>
+							{/if}
 							{#if sinHistorial}
+								<!--
+									Es un consejo, no una alarma: va en superficie neutra. Con el color del
+									grupo, en pecho (255 122 92) y piernas (255 111 174) el cartel se leía como
+									una advertencia roja por decir algo que no tiene nada de malo.
+								-->
 								<div
-									class="mt-2 flex items-start gap-2 rounded-xl p-2.5"
-									style="background: rgb({g.glow} / .08)"
+									class="mt-2 flex items-start gap-2 rounded-xl border border-white/5 p-2.5"
+									style="background: var(--surface-2)"
 								>
 									<Icono nombre="consejo" tamano={16} clase="mt-0.5 shrink-0" />
 									<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
@@ -1368,8 +1533,8 @@
 						</div>
 						{#if mostrarHintTimer}
 							<div
-								class="mt-2 flex items-center gap-2 rounded-xl p-2.5"
-								style="background: rgb({g.glow} / .08)"
+								class="mt-2 flex items-center gap-2 rounded-xl border border-white/5 p-2.5"
+								style="background: var(--surface-2)"
 							>
 								<Icono nombre="consejo" tamano={16} clase="shrink-0" />
 								<p class="flex-1 text-xs leading-relaxed" style="color: var(--muted)">
@@ -1488,7 +1653,7 @@
 						></textarea>
 					</details>
 
-					{#if completo && descanso.restoSeg === 0 && !descanso.vencido}
+					{#if barraFija}
 						<!-- Con todo hecho, el cierre queda fijo al alcance del pulgar. Si queda
 						     algo pendiente en la rutina, el primario encadena directo con eso:
 						     volver a la lista para buscar el siguiente era un viaje por ejercicio. -->
@@ -1528,23 +1693,58 @@
 							{/if}
 						</div>
 					{:else}
+						<!--
+							"Terminar ejercicio" con series sin marcar no terminaba nada: navegaba, y el
+							día te recibía con "Faltan 1 ejercicio". Ahora el rótulo dice lo que hace, y
+							cerrar de verdad con menos series es una acción propia y explícita.
+						-->
+						{#if hechas > 0}
+							<button
+								onclick={() => terminarConLoHecho()}
+								disabled={!!exito}
+								class="mt-4 block w-full rounded-2xl py-4 text-center font-bold"
+								style="background: var(--accent); color: var(--on-accent)"
+								>{exito
+									? 'Cerrando…'
+									: `Terminar con ${hechas} ${hechas === 1 ? 'serie' : 'series'}`}</button
+							>
+						{/if}
 						<button
 							onclick={() => terminarEjercicio()}
 							disabled={!!exito}
-							class="mt-4 block w-full rounded-2xl py-4 text-center font-bold"
-							style="background: var(--accent); color: var(--on-accent)"
-							>{exito ? 'Cerrando…' : 'Terminar ejercicio'}</button
+							class="{hechas > 0
+								? 'mt-2'
+								: 'mt-4'} block w-full rounded-2xl py-4 text-center font-bold"
+							style={hechas > 0
+								? 'border: 1px solid rgba(255,255,255,.1); color: var(--muted)'
+								: 'background: var(--accent); color: var(--on-accent)'}
+							>{exito ? 'Cerrando…' : 'Volver al día'}</button
 						>
 						{#if proximo && hrefProximo && hechas > 0}
 							<button
-								onclick={() => terminarEjercicio(hrefProximo)}
+								onclick={() => terminarConLoHecho(hrefProximo)}
 								disabled={!!exito}
 								class="mt-2 block w-full rounded-2xl border border-white/10 px-4 py-3 text-center text-sm font-bold"
 								style="color: rgb({g.glow})"
 							>
-								<span class="block truncate">Siguiente: {proximo.nombre} →</span>
+								<span class="block truncate">Terminar y seguir: {proximo.nombre} →</span>
 							</button>
 						{/if}
+					{/if}
+
+					{#if hechas > 0}
+						<!--
+							Volver a empezar existe, pero no compite: sin fondo, sin borde y al final de
+							todo. Un toque no reinicia nada —arma el aviso, y el aviso es el que reinicia—,
+							porque es la única acción de esta pantalla que borra trabajo de una.
+						-->
+						<button
+							onclick={pedirReinicio}
+							disabled={!!exito}
+							class="mt-3 block w-full py-2 text-center text-xs font-semibold"
+							style="color: var(--muted)"
+							aria-label="Reiniciar este ejercicio">Reiniciar ejercicio</button
+						>
 					{/if}
 				</div>
 			{/if}
@@ -1635,6 +1835,17 @@
 				>
 			</div>
 		</div>
+	{/if}
+
+	{#if toast}
+		<ToastAccion
+			mensaje={toast.mensaje}
+			accionTexto={toast.accionTexto}
+			tono={toast.tono}
+			segundos={toast.segundos}
+			onAccion={toast.onAccion}
+			onCerrar={() => (toast = null)}
+		/>
 	{/if}
 
 	{#if confirmacion}

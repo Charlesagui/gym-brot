@@ -20,7 +20,11 @@
 	} from '$lib/dias';
 	import { mantener } from '$lib/mantener';
 	import {
+		descartarReapertura,
 		hoyStr,
+		reiniciarDia,
+		restaurarInstantanea,
+		type InstantaneaSesion,
 		marcarDiaTerminado,
 		reabrirDia,
 		sesionHoyObs,
@@ -37,7 +41,9 @@
 	import { estadoLiveQuery, fromLiveQuery } from '$lib/live';
 	import { formatoVolumen } from '$lib/formato';
 	import { fechaSesionDesdeUrl } from '$lib/fechas';
+	import { fechaCorta } from '$lib/formato';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
+	import ToastAccion from '$lib/components/ToastAccion.svelte';
 	import CelebracionParticulas from '$lib/components/CelebracionParticulas.svelte';
 	import { guardarSinBloquear, reportarErrorDatos } from '$lib/errores-datos';
 
@@ -53,6 +59,17 @@
 		mensaje: string;
 		confirmarTexto: string;
 		onConfirm: () => void | Promise<void>;
+	} | null>(null);
+	/**
+	 * Reiniciar el día borra el trabajo de todos los ejercicios, así que va en dos tiempos:
+	 * el botón arma el aviso y el aviso reinicia. Después quedan unos segundos de "Deshacer".
+	 */
+	let toast = $state<{
+		mensaje: string;
+		accionTexto: string;
+		tono: 'advertencia' | 'exito';
+		segundos: number;
+		onAccion: () => void | Promise<void>;
 	} | null>(null);
 	// Modo reordenar: se entra con long-press; las cards se arrastran (svelte-dnd-action).
 	interface ItemOrden {
@@ -121,9 +138,14 @@
 	const ejerciciosCompletos = $derived(
 		dia?.ejercicios.filter((item) => estaCompleto(item.exerciseId)).length ?? 0
 	);
+	// Datos viejos pueden traer un ejercicio marcado saltado Y completo: el resumen decía
+	// "3/3 ejercicios · 1 saltado" sobre el mismo. Manda lo que de verdad se hizo.
 	const ejerciciosSaltados = $derived(
 		dia?.ejercicios.filter(
-			(item) => estaSaltado(item.exerciseId) && !estaParcialSaltado(item.exerciseId)
+			(item) =>
+				estaSaltado(item.exerciseId) &&
+				!estaParcialSaltado(item.exerciseId) &&
+				!estaCompleto(item.exerciseId)
 		).length ?? 0
 	);
 	const ejerciciosParciales = $derived(
@@ -141,6 +163,11 @@
 	// es celebratorio, así que se puede querer una sin la otra.
 	const sonidoActivo = $derived(ajustes.sonido && ajustes.sonidoLogros);
 	const resumenDia = $derived(resumenDiaSesion(sesion, ajustes.unidad));
+	// Por qué el día dejó de estar terminado. Vive en la sesión y no en un estado local
+	// porque la reapertura casi siempre se dispara en la pantalla de ejercicio y se lee
+	// acá, después de navegar: sin persistirlo, la app se llevaba la celebración en silencio.
+	const reapertura = $derived(!diaTerminado ? (sesion?.reaperturaMotivo ?? null) : null);
+	const editandoPasado = $derived(!!fechaSesion && fechaSesion !== fechaApertura);
 
 	function abrirEdicion() {
 		nombreEdit = dia?.nombre ?? '';
@@ -206,11 +233,72 @@
 	async function saltarEjercicioActual(exerciseId: string) {
 		if (!fechaSesion) return;
 		try {
-			if (await saltarEjercicio(diaId, exerciseId, fechaSesion, ajustes.unidad)) return;
-			avisoDia = 'Este ejercicio ya no está en la rutina. No se guardó ningún cambio.';
+			const resultado = await saltarEjercicio(diaId, exerciseId, fechaSesion, ajustes.unidad);
+			if (resultado.saltado) return;
+			avisoDia =
+				resultado.razon === 'ya-completado'
+					? 'Ese ejercicio ya está hecho: no hace falta saltarlo.'
+					: 'Este ejercicio ya no está en la rutina. No se guardó ningún cambio.';
 		} catch (error) {
 			reportarErrorDatos('No se pudo guardar que saltaste el ejercicio. Intentá de nuevo.', error);
 		}
+	}
+
+	/** Series realmente marcadas hoy: sin ninguna, no hay nada que reiniciar. */
+	const seriesHechasDia = $derived(resumenDia.setsHechos);
+	const hayQueReiniciar = $derived(seriesHechasDia > 0 || ejerciciosSaltados > 0);
+
+	function pedirReinicioDia() {
+		if (!fechaSesion || !hayQueReiniciar) return;
+		const partes: string[] = [];
+		if (seriesHechasDia > 0)
+			partes.push(`${seriesHechasDia} ${seriesHechasDia === 1 ? 'serie' : 'series'}`);
+		if (ejerciciosSaltados > 0)
+			partes.push(`${ejerciciosSaltados} ${ejerciciosSaltados === 1 ? 'salto' : 'saltos'}`);
+		toast = {
+			mensaje: `Se desmarca todo el día: ${partes.join(' y ')}. Los pesos y las reps quedan como referencia.`,
+			accionTexto: 'Reiniciar',
+			tono: 'advertencia',
+			segundos: 7,
+			onAccion: hacerReinicioDia
+		};
+	}
+
+	async function hacerReinicioDia() {
+		if (!fechaSesion) return;
+		toast = null;
+		cerrarPremio();
+		let instantanea: InstantaneaSesion | null;
+		try {
+			instantanea = await reiniciarDia(diaId, fechaSesion);
+		} catch (error) {
+			reportarErrorDatos('No se pudo reiniciar el día. Intentá de nuevo.', error);
+			return;
+		}
+		if (!instantanea) return;
+		const foto = instantanea;
+		const fecha = fechaSesion;
+		toast = {
+			mensaje: 'Día reiniciado.',
+			accionTexto: 'Deshacer',
+			tono: 'exito',
+			segundos: 9,
+			onAccion: () => {
+				toast = null;
+				guardarSinBloquear(
+					restaurarInstantanea(diaId, foto, fecha),
+					'No se pudo deshacer el reinicio. Intentá de nuevo.'
+				);
+			}
+		};
+	}
+
+	function descartarAvisoReapertura() {
+		if (!fechaSesion) return;
+		guardarSinBloquear(
+			descartarReapertura(diaId, fechaSesion),
+			'No se pudo descartar el aviso. Intentá de nuevo.'
+		);
 	}
 
 	async function reabrir() {
@@ -493,6 +581,16 @@
 			</div>
 		{/if}
 
+		{#if editandoPasado && !editando}
+			<!-- Se llega acá desde el historial: entrenar ayer no puede parecerse a entrenar hoy. -->
+			<p
+				class="mb-3 rounded-xl px-3 py-2.5 text-xs font-semibold"
+				style="background: rgb(var(--max) / .1); color: rgb(var(--max))"
+			>
+				Estás editando el entrenamiento del {fechaCorta(fechaSesion!)}, no el de hoy.
+			</p>
+		{/if}
+
 		<div class="gb-landscape-cards space-y-3">
 			{#each dia.ejercicios.slice().sort((a, b) => a.orden - b.orden) as item, i (item.exerciseId)}
 				{@const e = ejercicioPorId(item.exerciseId)}
@@ -650,6 +748,15 @@
 								style="color: var(--accent-text)"
 								aria-label={`Reanudar ${nombre} hoy`}>↩</button
 							>
+						{:else if estaCompleto(item.exerciseId)}
+							<!-- Un ejercicio hecho no se salta: se corrige. Saltarlo lo rotulaba
+							     "Saltado" en gris y reabría el día por nada. -->
+							<a
+								href={`/ejercicio/${item.exerciseId}?dia=${diaId}&fecha=${fechaSesion}`}
+								class="grid min-h-11 shrink-0 place-items-center rounded-full px-3 text-xs font-medium"
+								style="color: var(--muted)"
+								aria-label={`Corregir o agregar series de ${nombre}`}>Corregir</a
+							>
 						{:else}
 							<!-- Acción secundaria: sin borde ni negrita, para no competir con el
 							     progreso de la fila. El target táctil se mantiene en 44px. -->
@@ -675,6 +782,23 @@
 		</div>
 
 		{#if !editando && totalEjercicios > 0}
+			{#if reapertura}
+				<div
+					class="mt-4 flex items-start gap-2 rounded-xl px-3 py-2.5"
+					style="background: rgb(var(--max) / .1)"
+					role="status"
+				>
+					<p class="flex-1 text-xs font-semibold leading-relaxed" style="color: rgb(var(--max))">
+						Este día dejó de estar terminado: {reapertura.toLowerCase()}.
+					</p>
+					<button
+						onclick={descartarAvisoReapertura}
+						class="min-h-11 shrink-0 px-2 text-xs font-bold"
+						style="color: rgb(var(--max))"
+						aria-label="Descartar el aviso de reapertura">Entendido</button
+					>
+				</div>
+			{/if}
 			{#if avisoDia}
 				<p
 					class="mt-4 rounded-xl px-3 py-2.5 text-xs font-semibold leading-relaxed"
@@ -707,22 +831,38 @@
 								>{/if}
 						</p>
 					</div>
-					{#if diaTerminado}
-						<span
-							class="rounded-full px-2.5 py-1 text-xs font-bold"
-							style="background: rgb(var(--exito) / .16); color: rgb(var(--exito))">Terminado</span
-						>
-					{:else if diaListo}
-						<span
-							class="rounded-full px-2.5 py-1 text-xs font-bold"
-							style="background: rgba(255,255,255,.08); color: var(--muted)">Listo</span
-						>
-					{:else}
-						<span
-							class="rounded-full px-2.5 py-1 text-xs font-bold"
-							style="background: rgba(255,255,255,.08); color: var(--muted)">En curso</span
-						>
-					{/if}
+					<div class="flex shrink-0 flex-col items-end gap-1">
+						{#if diaTerminado}
+							<span
+								class="rounded-full px-2.5 py-1 text-xs font-bold"
+								style="background: rgb(var(--exito) / .16); color: rgb(var(--exito))"
+								>Terminado</span
+							>
+						{:else if diaListo}
+							<span
+								class="rounded-full px-2.5 py-1 text-xs font-bold"
+								style="background: rgba(255,255,255,.08); color: var(--muted)">Listo</span
+							>
+						{:else}
+							<span
+								class="rounded-full px-2.5 py-1 text-xs font-bold"
+								style="background: rgba(255,255,255,.08); color: var(--muted)">En curso</span
+							>
+						{/if}
+						{#if hayQueReiniciar}
+							<!--
+								Volver a empezar el día: discreto, debajo del chip de estado. Va acá y no al
+								pie porque ahí alargaba la página y corría el final de la lista debajo de la
+								barra fija. Un toque no reinicia: arma el aviso, y el aviso es el que reinicia.
+							-->
+							<button
+								onclick={pedirReinicioDia}
+								class="-mr-2 min-h-11 px-2 text-xs font-semibold"
+								style="color: var(--muted)"
+								aria-label="Reiniciar el día">Reiniciar día</button
+							>
+						{/if}
+					</div>
 				</div>
 
 				{#if diaTerminado}
@@ -849,6 +989,18 @@
 			<p class="mt-5 text-[11px] font-semibold" style="color: var(--muted)">Tocá para cerrar</p>
 		</div>
 	</button>
+{/if}
+
+{#if toast}
+	<ToastAccion
+		mensaje={toast.mensaje}
+		accionTexto={toast.accionTexto}
+		tono={toast.tono}
+		segundos={toast.segundos}
+		onAccion={toast.onAccion}
+		onCerrar={() => (toast = null)}
+		offsetNav
+	/>
 {/if}
 
 {#if confirmacion}

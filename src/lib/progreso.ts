@@ -8,6 +8,7 @@ import {
 } from './db';
 import { historialPorModo, sesionesDe, hoyStr } from './sesion';
 import {
+	indexSetPr,
 	mejorSet,
 	modoEjercicio,
 	serieCompleta,
@@ -63,28 +64,9 @@ export interface DatosProgresoEjercicio {
 	puntosReps: MejorSet[];
 }
 
-/**
- * Índice de la serie ✓ que celebró el PR de la sesión; -1 si ninguna.
- * Los PR nuevos guardan su `setIndex`. Para los viejos se busca por valor, que con
- * dos series idénticas puede marcar la otra: es lo mejor disponible sin el índice.
- */
-export function indexSetPr(sets: SetSesion[], pr: PrCelebrado | undefined): number {
-	if (!pr) return -1;
-	if (pr.setIndex != null && sets[pr.setIndex] && serieCompleta(sets[pr.setIndex]!))
-		return pr.setIndex;
-	return sets.findIndex(
-		(s) =>
-			serieCompleta(s) &&
-			(s.pesoGramos != null || pr.pesoGramos != null
-				? s.pesoGramos === pr.pesoGramos
-				: s.peso === pr.peso) &&
-			s.reps === pr.reps &&
-			!!s.esMax === !!pr.esMax &&
-			(s.extraGramos != null || pr.extraGramos != null
-				? (s.extraGramos ?? 0) === (pr.extraGramos ?? 0)
-				: (s.extraKg ?? 0) === (pr.extraKg ?? 0))
-	);
-}
+// La regla vive en `sesion-reglas` (la comparten esta pantalla y el resumen del día);
+// se reexporta para no romper a quien ya la importaba desde acá.
+export { indexSetPr } from './sesion-reglas';
 
 /**
  * Deriva récords, set records por reps e historial completo en una sola pasada

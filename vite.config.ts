@@ -45,9 +45,19 @@ export default defineConfig({
 				// Qué descanso manda (ejercicio > general) y cómo se escribe: reglas puras
 				// que antes vivían como números sueltos dentro de la pantalla de ejercicio.
 				'src/lib/descanso-preset.ts',
+				// El motor de calorías: aritmética pura donde un signo cambiado no rompe
+				// nada visible, solo devuelve un número creíble y equivocado.
+				'src/lib/energia.ts',
+				// La calibración: si la señal y el ruido se confunden acá, la app propone
+				// con confianza un número sacado de la sal de un asado.
+				'src/lib/calibracion.ts',
+				// Las frases dicen cosas verificables sobre el usuario: una condición mal puesta
+				// no rompe nada, solo le afirma algo falso con cara de dato.
+				'src/lib/frases.ts',
 				'src/lib/esfuerzo.ts',
 				'src/lib/heatmap.ts',
 				'src/lib/musculos.ts',
+				'src/lib/perfil-energia.ts',
 				'src/lib/peso-corporal.ts',
 				'src/lib/progresion.ts',
 				'src/lib/wake-lock.ts',

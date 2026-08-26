@@ -146,11 +146,15 @@ export function crearDistribucionMuscular(
 				seriesCompletadas++;
 				if (set.rir != null) seriesConRir++;
 				if (soloDuras && (set.rir == null || set.rir > 2)) continue;
-				seriesConsideradas++;
+				// Un ejercicio sin músculo mapeado (típicamente uno archivado del catálogo)
+				// no pinta nada. Contarlo antes de este chequeo hacía que el encabezado
+				// dijera "84 series" con 36 de ellas fuera del dibujo: `seriesConsideradas`
+				// son las que SOSTIENEN el mapa, y las descartadas se declaran aparte.
 				if (!meta || (!meta.principal && meta.secundarios.length === 0)) {
 					seriesSinRepresentacion++;
 					continue;
 				}
+				seriesConsideradas++;
 				if (meta.principal) {
 					const actual = cargas.get(meta.principal) ?? {
 						seriesEstimadas: 0,

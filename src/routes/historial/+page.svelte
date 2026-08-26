@@ -1,47 +1,38 @@
 <script lang="ts">
 	import Icono from '$lib/components/Icono.svelte';
-	import { ajustesObs, diasDesde, necesitaBackup, AJUSTES_DEFAULT } from '$lib/extras';
+	import { diasDesde, necesitaBackup, AJUSTES_DEFAULT } from '$lib/extras';
 	import { formatoNumero, fechaCorta } from '$lib/formato';
 	import {
 		crearHistorialResumen,
-		resumenHistorialObs,
-		type HistorialResumen
+		historialPantallaObs,
+		type HistorialPantalla
 	} from '$lib/historial';
 	import { estadoLiveQuery } from '$lib/live';
-	import { hoyStr, recordsGlobalesObs } from '$lib/sesion';
-	import type { RecordEjercicio } from '$lib/sesion-reglas';
+	import { hoyStr } from '$lib/sesion';
 	import { onMount } from 'svelte';
 	import { scale } from 'svelte/transition';
 	import { dur } from '$lib/motion';
 	import { popOnChange } from '$lib/pop-on-change';
-	import HeatmapActividad from '$lib/components/HeatmapActividad.svelte';
+	import { ETIQUETAS_NIVEL, nivelActividad } from '$lib/heatmap';
 	let MapaCorporal = $state<typeof import('$lib/components/MapaCorporal.svelte').default | null>(
 		null
 	);
 
-	const VACIO: HistorialResumen = crearHistorialResumen([], []);
+	const VACIO: HistorialPantalla = {
+		resumen: crearHistorialResumen([], []),
+		records: [],
+		ajustes: AJUSTES_DEFAULT
+	};
 
-	const ajustesStore = estadoLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
-	const consultaAjustes = $derived($ajustesStore);
-	const ajustes = $derived(consultaAjustes.valor);
-	const historialStore = estadoLiveQuery(resumenHistorialObs(), VACIO);
-	const consultaHistorial = $derived($historialStore);
-	const historial = $derived(consultaHistorial.valor);
-	const recordsStore = $derived(
-		estadoLiveQuery(recordsGlobalesObs(ajustes, ajustes.unidad), [] as RecordEjercicio[])
-	);
-	const consultaRecords = $derived($recordsStore);
-	const records = $derived(consultaRecords.valor);
-	const cargandoDatos = $derived(
-		consultaAjustes.estado === 'cargando' ||
-			consultaHistorial.estado === 'cargando' ||
-			consultaRecords.estado === 'cargando'
-	);
-	const errorDatos = $derived(
-		consultaAjustes.estado === 'error' ||
-			consultaHistorial.estado === 'error' ||
-			consultaRecords.estado === 'error'
-	);
+	// Una sola consulta para toda la pantalla: resumen, récords y ajustes salen de la
+	// misma lectura de `sesiones` (ver `historialPantallaObs`).
+	const pantallaStore = estadoLiveQuery(historialPantallaObs(), VACIO);
+	const consulta = $derived($pantallaStore);
+	const ajustes = $derived(consulta.valor.ajustes);
+	const historial = $derived(consulta.valor.resumen);
+	const records = $derived(consulta.valor.records);
+	const cargandoDatos = $derived(consulta.estado === 'cargando');
+	const errorDatos = $derived(consulta.estado === 'error');
 	const metricaLabel = $derived(
 		Object.keys(ajustes.metricasPrEjercicio ?? {}).length
 			? 'métrica según cada ejercicio'
@@ -50,8 +41,18 @@
 				: 'peso máximo'
 	);
 
-	const diasEntrenados = $derived(new Set(historial.dias.map((d) => d.fecha)));
+	// El día completo, no sólo la fecha: el calendario tiñe cada celda según cuántas
+	// series entraron ese día. Antes esa intensidad vivía en un mapa anual aparte que
+	// mostraba el mismo hecho, linkeaba al mismo lugar y no entraba en un teléfono.
+	const porFecha = $derived(new Map(historial.dias.map((d) => [d.fecha, d])));
 	const semanas = $derived(historial.semanas.slice(0, 8));
+
+	/**
+	 * Fondo por intensidad con el número del día siempre en blanco. El tope es 0,55:
+	 * más alfa de `--exito` sobre `--surface` deja el texto por debajo de 4,5:1, que es
+	 * justo lo que la app ya respeta en el resto de las cifras.
+	 */
+	const ALFA_NIVEL = [0, 0.14, 0.26, 0.4, 0.55] as const;
 	// Paginación: los récords viejos siempre son alcanzables.
 	let recordsVisibles = $state(10);
 
@@ -204,10 +205,6 @@
 		</section>
 
 		<div class="mb-4">
-			<HeatmapActividad dias={historial.dias} {hoy} unidad={ajustes.unidad} />
-		</div>
-
-		<div class="mb-4">
 			{#if MapaCorporal}
 				<MapaCorporal {hoy} />
 			{:else}
@@ -251,18 +248,22 @@
 				{#each mes.celdas as fecha, i (i)}
 					{#if fecha == null}
 						<div></div>
-					{:else if diasEntrenados.has(fecha)}
-						<!-- Día entrenado: tap → detalle de ese día. El de hoy entra con un pop
-						     breve: es probable que sea "el día recién completado". -->
+					{:else if porFecha.get(fecha)}
+						{@const dia = porFecha.get(fecha)!}
+						{@const nivel = nivelActividad(dia.sets)}
+						<!-- Día entrenado: tap → detalle de ese día. El relleno dice cuántas
+						     series entraron; el de hoy entra con un pop breve, porque es
+						     probable que sea "el día recién completado". -->
 						<a
 							href={`/historial/dia/${fecha}`}
 							in:scale={fecha === hoy ? { duration: dur(240), start: 0.7 } : { duration: 0 }}
 							class="grid min-h-11 min-w-11 place-items-center rounded-lg border text-[11px] font-bold"
-							style="background: rgb(var(--exito) / .18); border-color: rgb(var(--exito) / {fecha ===
-							hoy
-								? '.9'
-								: '.36'}); color: rgb(var(--exito))"
-							aria-label={`${fechaCorta(fecha)} entrenado · ver detalle`}
+							style="background: rgb(var(--exito) / {ALFA_NIVEL[
+								nivel
+							]}); border-color: rgb(var(--exito) / {fecha === hoy ? '.9' : '.42'}); color: white"
+							aria-label={`${fechaCorta(fecha)}: ${dia.sets} ${
+								dia.sets === 1 ? 'serie completada' : 'series completadas'
+							}${dia.dias.length ? ` · ${dia.dias.join(', ')}` : ''} · ver detalle`}
 						>
 							{Number(fecha.slice(8, 10))}
 						</a>
@@ -282,12 +283,32 @@
 					{/if}
 				{/each}
 			</div>
-			<p class="mt-2.5 text-right text-[11px] font-semibold" style="color: rgb(var(--exito))">
-				● entrenado
-			</p>
+			<div
+				class="mt-2.5 flex flex-wrap items-center justify-end gap-1.5 px-1 text-[10px]"
+				style="color: var(--muted)"
+				aria-label={`Leyenda de series por día: ${ETIQUETAS_NIVEL.join(', ')}`}
+			>
+				<span>Menos series</span>
+				{#each ETIQUETAS_NIVEL as etiqueta, nivel (nivel)}
+					<span
+						class="size-3 rounded-[3px] border"
+						style={nivel === 0
+							? 'background: rgba(255,255,255,.035); border-color: rgba(255,255,255,.08)'
+							: `background: rgb(var(--exito) / ${ALFA_NIVEL[nivel]}); border-color: rgb(var(--exito) / .5)`}
+						title={etiqueta}
+					></span>
+				{/each}
+				<span>Más</span>
+			</div>
 		</section>
 
-		<section class="mb-4 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+		<!-- Mismo sangrado que el calendario: de acá para abajo la pantalla son paneles a
+		     todo el ancho, no tarjetas. El calendario aprieta el padding a px-1.5 porque sus
+		     celdas necesitan 44 px en un teléfono de 320; estos dos no, y respiran mejor. -->
+		<section
+			class="-mx-5 mb-4 rounded-none border-y border-white/10 p-4 sm:mx-0 sm:rounded-2xl sm:border"
+			style="background: var(--surface)"
+		>
 			<div class="mb-3 flex items-center justify-between gap-3">
 				<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
 					Racha semanal
@@ -322,8 +343,12 @@
 			</div>
 		</section>
 
-		<section class="mb-4">
-			<div class="mb-2 flex flex-wrap items-end justify-between gap-x-3 gap-y-1 px-1">
+		<!-- Sin fondo propio: las filas ya son tarjetas con su borde y su superficie, y un
+		     panel detrás daría superficie sobre superficie. Sólo se alinea, con el mismo
+		     px-1.5 del calendario: caja contra caja, sin que el borde izquierdo salte.
+		     El encabezado va a px-3 para caer sobre el texto de las filas, no sobre su borde. -->
+		<section class="-mx-5 mb-4 px-1.5 sm:mx-0 sm:px-0">
+			<div class="mb-2 flex flex-wrap items-end justify-between gap-x-3 gap-y-1 px-3 sm:px-1">
 				<p class="shrink-0 text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
 					Récords vigentes
 				</p>

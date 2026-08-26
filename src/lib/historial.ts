@@ -1,8 +1,15 @@
 import { liveQuery } from 'dexie';
-import { db, type Dia, type Sesion } from './db';
+import { db, type Ajustes, type Dia, type Sesion } from './db';
 import { ejercicioPorId } from './catalog';
-import { hoyStr } from './sesion';
-import { pesoEfectivo, serieCompleta, type MetricaEfectiva } from './sesion-reglas';
+import { normalizarAjustes } from './extras';
+import { hoyStr, recordsGlobales } from './sesion';
+import {
+	pesoEfectivo,
+	prRespaldado,
+	serieCompleta,
+	type MetricaEfectiva,
+	type RecordEjercicio
+} from './sesion-reglas';
 import { conPesoVisible, type UnidadPeso } from './unidades';
 
 export interface DiaEntrenado {
@@ -92,7 +99,14 @@ export function resumenDiaSesion(
 			if (peso != null && set.reps != null) volumen += peso * set.reps;
 			else setsSinVolumen++;
 		}
-		if (ejercicio.prCelebrado) {
+		// Un PR sólo se muestra si TODAVÍA hay una serie hecha que lo respalde. La
+		// pantalla del ejercicio ya exigía esto (marca la serie con `indexSetPr`), pero
+		// acá el snapshot se mostraba sin preguntar: si un residuo llegara a quedar —por
+		// un backup adulterado, o por un camino de escritura futuro que se olvide de
+		// limpiarlo— el detalle del día cantaría un PR que el resto de la app no reconoce.
+		// Contra un dato honesto no cambia nada; contra uno roto, las dos pantallas mienten
+		// o dicen la verdad juntas, que es lo que hace detectable el problema.
+		if (ejercicio.prCelebrado && prRespaldado(ejercicio.sets, ejercicio.prCelebrado)) {
 			const ej = ejercicioPorId(ejercicio.exerciseId);
 			const prVisible = conPesoVisible(ejercicio.prCelebrado, unidad);
 			prs.push({
@@ -250,5 +264,39 @@ export function resumenHistorialObs() {
 			db.ajustes.get('app')
 		]);
 		return crearHistorialResumen(sesiones, dias, ajustes?.unidad ?? 'kg');
+	});
+}
+
+export interface HistorialPantalla {
+	resumen: HistorialResumen;
+	records: RecordEjercicio[];
+	ajustes: Ajustes;
+}
+
+/**
+ * Todo lo que /historial necesita, con UNA sola lectura de `sesiones`.
+ *
+ * Antes la pantalla abría dos liveQuery independientes —el resumen y los récords— y
+ * cada uno deserializaba la tabla entera por su cuenta: con tres años de entrenamiento
+ * son ~15.000 series leídas dos veces en cada apertura y en cada escritura que
+ * invalidara cualquiera de las dos consultas.
+ *
+ * Los ajustes viajan en el mismo objeto a propósito. El volumen del resumen se calcula
+ * con una unidad y la pantalla rotulaba con otra leída aparte, así que al cambiar
+ * kg↔lb quedaba un instante con el número en una unidad y el rótulo en la otra.
+ */
+export function historialPantallaObs() {
+	return liveQuery(async () => {
+		const [sesiones, dias, fila] = await Promise.all([
+			db.sesiones.orderBy('fecha').toArray(),
+			db.dias.toArray(),
+			db.ajustes.get('app')
+		]);
+		const ajustes = normalizarAjustes(fila);
+		return {
+			resumen: crearHistorialResumen(sesiones, dias, ajustes.unidad),
+			records: recordsGlobales(sesiones, ajustes, ajustes.unidad),
+			ajustes
+		} satisfies HistorialPantalla;
 	});
 }

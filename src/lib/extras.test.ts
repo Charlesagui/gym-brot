@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { db, type Ajustes, type Dia, type Nota, type Sesion } from './db';
+import { db, type Ajustes, type Dia, type Nota, type ObjetivoEnergia, type Sesion } from './db';
 import { seedSiVacio } from './seed';
 import {
 	AJUSTES_DEFAULT,
@@ -82,7 +82,8 @@ async function limpiarDb() {
 		db.sesiones.clear(),
 		db.notas.clear(),
 		db.ajustes.clear(),
-		db.pesosCorporales.clear()
+		db.pesosCorporales.clear(),
+		db.objetivosEnergia.clear()
 	]);
 }
 
@@ -633,11 +634,12 @@ describe('prepararImport', () => {
 describe('borrarTodo', () => {
 	beforeEach(limpiarDb);
 
-	it('deja las cuatro tablas vacías', async () => {
+	it('deja todas las tablas vacías', async () => {
 		await db.dias.put(dia);
 		await db.sesiones.put(sesion);
 		await db.notas.put(nota);
 		await db.ajustes.put(ajustes);
+		await db.objetivosEnergia.put(objetivo());
 
 		await borrarTodo();
 
@@ -645,6 +647,7 @@ describe('borrarTodo', () => {
 		expect(await db.sesiones.count()).toBe(0);
 		expect(await db.notas.count()).toBe(0);
 		expect(await db.ajustes.count()).toBe(0);
+		expect(await db.objetivosEnergia.count()).toBe(0);
 	});
 });
 
@@ -667,5 +670,196 @@ describe('necesitaBackup', () => {
 	it('con backup viejo recuerda solo si hay sesiones posteriores al backup', () => {
 		expect(necesitaBackup('2026-01-01T10:00:00.000Z', ['2026-03-01'], ahora)).toBe(true);
 		expect(necesitaBackup('2026-01-01T10:00:00.000Z', ['2025-12-20'], ahora)).toBe(false);
+	});
+});
+
+/**
+ * Una tabla nueva no entra sola al backup: hay que tocar la interfaz, la transacción de
+ * exportación, el número de versión, la validación y la preparación de la importación.
+ * Olvidarse de cualquiera de esos cinco lugares pierde los objetivos en silencio, y eso
+ * solo se descubre meses después, al restaurar.
+ */
+function objetivo(parche: Partial<ObjetivoEnergia> = {}): ObjetivoEnergia {
+	return {
+		id: '2026-03-01T10:00:00.000Z-abc123',
+		creadoAt: '2026-03-01T10:00:00.000Z',
+		perfil: {
+			edad: 32,
+			alturaCm: 178,
+			pesoGramos: 82_000,
+			ecuacion: 'masculina',
+			ocupacion: 'sentado',
+			pasos: 'de4a7k',
+			sesionesSemana: 4,
+			duracion: 'media',
+			densidad: 'normal'
+		},
+		palEstimado: 1.555,
+		categoriaPal: 'poco',
+		tdeeKcal: 2890,
+		sepvKcal: 342,
+		meta: 'bajar',
+		nivel: 'moderado',
+		ritmoPctSemana: -0.5,
+		objetivoKcal: 2440,
+		proteinaG: 148,
+		...parche
+	};
+}
+
+describe('backup de objetivos de energía', () => {
+	beforeEach(limpiarDb);
+
+	it('exporta la versión 3 con la tabla nueva', async () => {
+		await db.objetivosEnergia.put(objetivo());
+		const crudo = JSON.parse(await exportarJSON());
+		expect(crudo.version).toBe(3);
+		expect(crudo.objetivosEnergia).toHaveLength(1);
+	});
+
+	it('el ida y vuelta conserva la cadena completa de objetivos', async () => {
+		const uno = objetivo();
+		const dos = objetivo({
+			id: '2026-04-01T10:00:00.000Z-def456',
+			creadoAt: '2026-04-01T10:00:00.000Z',
+			objetivoKcal: 2390,
+			calibradoDe: uno.id
+		});
+		await db.objetivosEnergia.bulkPut([uno, dos]);
+
+		const backup = parseBackup(await exportarJSON());
+		await limpiarDb();
+		await importarBackup(backup);
+
+		expect(await db.objetivosEnergia.toArray()).toEqual([uno, dos]);
+		// El vigente sigue siendo el último: el orden por id sobrevive a la restauración.
+		expect((await db.objetivosEnergia.orderBy('id').last())?.id).toBe(dos.id);
+	});
+
+	it('un backup v2 entra sin la tabla y sin romper', async () => {
+		const v2 = {
+			app: 'gym-brot',
+			version: 2,
+			dias: [dia],
+			sesiones: [],
+			notas: [],
+			ajustes: [ajustes],
+			pesosCorporales: []
+		};
+		const backup = parseBackup(JSON.stringify(v2));
+		expect(backup.objetivosEnergia).toBeUndefined();
+		await expect(importarBackup(backup)).resolves.toBeDefined();
+		expect(await db.objetivosEnergia.count()).toBe(0);
+		expect(await db.dias.count()).toBe(1);
+	});
+
+	it('descarta objetivos con id repetido y lo avisa', () => {
+		const { datos, avisos } = prepararImport({
+			app: 'gym-brot',
+			dias: [],
+			sesiones: [],
+			notas: [],
+			ajustes: [ajustes],
+			objetivosEnergia: [objetivo(), objetivo({ objetivoKcal: 9999 })]
+		});
+		expect(datos.objetivosEnergia).toHaveLength(1);
+		expect(datos.objetivosEnergia[0]!.objetivoKcal).toBe(2440);
+		expect(avisos).toContain('1 objetivo(s) con id repetido: se ignoraron');
+	});
+
+	it('rechaza un objetivo sin las cifras que la pantalla va a leer', () => {
+		const sinTdee = { ...objetivo() } as Record<string, unknown>;
+		delete sinTdee.tdeeKcal;
+		expect(() =>
+			parseBackup(
+				JSON.stringify({
+					app: 'gym-brot',
+					version: 3,
+					dias: [],
+					sesiones: [],
+					notas: [],
+					ajustes: [ajustes],
+					objetivosEnergia: [sinTdee]
+				})
+			)
+		).toThrow(/objetivosEnergia/);
+	});
+
+	it.each([
+		['ocupacion', { ocupacion: 'astronauta' }],
+		['pasos', { pasos: 'muchos' }],
+		['duracion', { duracion: 'eterna' }],
+		['densidad', { densidad: 'brutal' }],
+		['ecuacion', { ecuacion: 'otra' }]
+	])('rechaza un perfil con %s desconocido', (_campo, parche) => {
+		// El caso real no es un JSON editado a mano: es un backup escrito por una versión
+		// más nueva. Antes entraba, y después reventaba `estimarPal` en cada revisión.
+		const roto = objetivo();
+		expect(() =>
+			parseBackup(
+				JSON.stringify({
+					app: 'gym-brot',
+					version: 3,
+					dias: [],
+					sesiones: [],
+					notas: [],
+					ajustes: [ajustes],
+					objetivosEnergia: [{ ...roto, perfil: { ...roto.perfil, ...parche } }]
+				})
+			)
+		).toThrow(/objetivosEnergia/);
+	});
+
+	it('rechaza una meta o un nivel que el motor no sabe interpretar', () => {
+		const base = {
+			app: 'gym-brot',
+			version: 3,
+			dias: [],
+			sesiones: [],
+			notas: [],
+			ajustes: [ajustes]
+		};
+		expect(() =>
+			parseBackup(
+				JSON.stringify({ ...base, objetivosEnergia: [objetivo({ meta: 'flotar' as never })] })
+			)
+		).toThrow(/objetivosEnergia/);
+		expect(() =>
+			parseBackup(
+				JSON.stringify({ ...base, objetivosEnergia: [objetivo({ nivel: 'brutal' as never })] })
+			)
+		).toThrow(/objetivosEnergia/);
+	});
+
+	it('acepta un nivel ausente: mantenimiento no tiene', () => {
+		const sinNivel = { ...objetivo(), meta: 'mantener' } as Record<string, unknown>;
+		delete sinNivel.nivel;
+		const backup = parseBackup(
+			JSON.stringify({
+				app: 'gym-brot',
+				version: 3,
+				dias: [],
+				sesiones: [],
+				notas: [],
+				ajustes: [ajustes],
+				objetivosEnergia: [sinNivel]
+			})
+		);
+		expect(backup.objetivosEnergia).toHaveLength(1);
+	});
+
+	it('rechaza una versión de archivo más nueva que la que entiende', () => {
+		expect(() =>
+			parseBackup(
+				JSON.stringify({
+					app: 'gym-brot',
+					version: 4,
+					dias: [],
+					sesiones: [],
+					notas: [],
+					ajustes: []
+				})
+			)
+		).toThrow(/version/);
 	});
 });

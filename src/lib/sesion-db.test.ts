@@ -5,6 +5,8 @@ import {
 	addSet,
 	actualizarSetHistorial,
 	borrarSetHistorial,
+	cerrarEjercicioConLoHecho,
+	descartarReapertura,
 	ensureEjercicio,
 	ejercicioSesionObs,
 	historialObs,
@@ -13,6 +15,9 @@ import {
 	marcarDiaTerminado,
 	prepararEjercicioSesion,
 	registrarPrSiSupera,
+	reiniciarDia,
+	reiniciarEjercicio,
+	restaurarInstantanea,
 	reabrirDia,
 	reanudarEjercicio,
 	recordsGlobalesObs,
@@ -30,7 +35,7 @@ import {
 	ultimaSesion
 } from './sesion';
 import { resumenDiaSesion, rachaSemanalActual } from './historial';
-import { pesoEfectivo } from './sesion-reglas';
+import { pesoEfectivo, serieCompleta } from './sesion-reglas';
 import { gramosAPeso } from './unidades';
 import { agregarEjercicio } from './dias';
 
@@ -157,7 +162,10 @@ describe('sesion con IndexedDB', () => {
 	});
 
 	it('no crea una sesión al saltar un ejercicio que ya no está en la rutina', async () => {
-		expect(await saltarEjercicio('push', 'press', '2026-01-05')).toBe(false);
+		expect(await saltarEjercicio('push', 'press', '2026-01-05')).toEqual({
+			saltado: false,
+			razon: 'rutina-no-disponible'
+		});
 		expect(await db.sesiones.count()).toBe(0);
 	});
 
@@ -818,6 +826,34 @@ describe('sesion con IndexedDB', () => {
 		expect(await primerValor(recordsGlobalesObs('peso'))).toMatchObject([{ valor: 90 }]);
 	});
 
+	it('historialPantallaObs sirve resumen, records y ajustes de una sola lectura', async () => {
+		await ensureEjercicio('push', 'press', 2, '2026-01-01');
+		await setPeso('push', 'press', 0, 80, '2026-01-01');
+		await setReps('push', 'press', 0, 10, '2026-01-01');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01', 'peso');
+		await setPeso('push', 'press', 1, 100, '2026-01-01');
+		await setReps('push', 'press', 1, 5, '2026-01-01');
+		await setSerieHecha('push', 'press', 1, true, '2026-01-01', 'peso');
+
+		await ensureEjercicio('pull', 'remo', 1, '2026-01-02');
+		await setPeso('pull', 'remo', 0, 70, '2026-01-02');
+		await setReps('pull', 'remo', 0, 8, '2026-01-02');
+		await setSerieHecha('pull', 'remo', 0, true, '2026-01-02', 'peso');
+
+		const { historialPantallaObs } = await import('./historial');
+		const pantalla = await primerValor(historialPantallaObs());
+
+		// Las dos mitades tienen que hablar de los mismos días: antes salían de dos
+		// consultas independientes y nada garantizaba que vieran la misma tabla.
+		expect(pantalla.resumen.totalDias).toBe(2);
+		expect(pantalla.resumen.dias.map((dia) => dia.fecha)).toEqual(['2026-01-02', '2026-01-01']);
+		expect(pantalla.records.map((record) => record.exerciseId)).toEqual(['remo', 'press']);
+		expect(pantalla.records.find((record) => record.exerciseId === 'press')?.valor).toBe(100);
+		// Y la unidad con la que se calculó el volumen es la que la pantalla va a rotular.
+		expect(pantalla.ajustes.unidad).toBe('kg');
+		expect(pantalla.resumen.dias.at(-1)?.volumen).toBe(80 * 10 + 100 * 5);
+	});
+
 	it('editar una serie activa recalcula el PR celebrado de la sesion', async () => {
 		await ensureEjercicio('push', 'press', 1, '2026-01-01');
 		await setPeso('push', 'press', 0, 100, '2026-01-01');
@@ -1087,7 +1123,7 @@ describe('sesion con IndexedDB', () => {
 			]
 		});
 
-		expect(await saltarEjercicio('push', 'press', '2026-01-02', 'lb')).toBe(true);
+		expect(await saltarEjercicio('push', 'press', '2026-01-02', 'lb')).toEqual({ saltado: true });
 
 		const set = (await db.sesiones.get('2026-01-02__push'))?.ejercicios[0]?.sets[0];
 		// Prellena en la unidad activa: antes copiaba el numero en kg y lo rotulaba lb.
@@ -1116,5 +1152,245 @@ describe('sesion con IndexedDB', () => {
 		expect(pesoEfectivo(sets![0]!)).toBe(105);
 		expect(pesoEfectivo(sets![1]!)).toBe(105);
 		expect(sets![1]).toMatchObject({ esMax: true, extraKg: 5, extraGramos: 5000, hecha: false });
+	});
+});
+
+/**
+ * El usuario real no va en línea recta: termina, se arrepiente, vuelve, borra, agrega.
+ * Estas pruebas cubren la vuelta atrás, que es donde el flujo se trababa.
+ */
+describe('flujo no lineal: arrepentirse y volver', () => {
+	beforeEach(async () => {
+		vi.useRealTimers();
+		await limpiarDb();
+		await db.dias.add({
+			id: 'push',
+			nombre: 'Push',
+			orden: 0,
+			ejercicios: [{ exerciseId: 'press', seriesObjetivo: 4, orden: 0 }]
+		});
+	});
+
+	async function hacerSerie(i: number, peso: number, reps: number, fecha = '2026-01-08') {
+		await setPeso('push', 'press', i, peso, fecha);
+		await setReps('push', 'press', i, reps, fecha);
+		await setSerieHecha('push', 'press', i, true, fecha);
+	}
+
+	it('quita la serie que se pide, no siempre la última', async () => {
+		await prepararEjercicioSesion('push', 'press', '2026-01-08');
+		for (const i of [0, 1, 2, 3]) await hacerSerie(i, 70 + i, 10);
+
+		await removeSet('push', 'press', 1, '2026-01-08');
+
+		const sets = (await db.sesiones.get('2026-01-08__push'))?.ejercicios[0]?.sets;
+		expect(sets?.map((s) => s.peso)).toEqual([70, 72, 73]);
+	});
+
+	it('cerrar con lo hecho deja el ejercicio completo y permite terminar el día', async () => {
+		await prepararEjercicioSesion('push', 'press', '2026-01-08');
+		for (const i of [0, 1, 2]) await hacerSerie(i, 80, 10);
+		// La cuarta nunca se hizo: antes bloqueaba el día para siempre.
+		expect(await marcarDiaTerminado('push', '2026-01-08')).toEqual({
+			terminado: false,
+			razon: 'ejercicios-pendientes'
+		});
+
+		expect(await cerrarEjercicioConLoHecho('push', 'press', '2026-01-08')).toEqual({
+			cerrado: true,
+			quitadas: 1
+		});
+
+		const sets = (await db.sesiones.get('2026-01-08__push'))?.ejercicios[0]?.sets;
+		expect(sets).toHaveLength(3);
+		expect(sets?.every(serieCompleta)).toBe(true);
+		expect(await marcarDiaTerminado('push', '2026-01-08')).toEqual({ terminado: true });
+	});
+
+	it('cerrar con lo hecho no borra nada si no hay ninguna serie marcada', async () => {
+		await prepararEjercicioSesion('push', 'press', '2026-01-08');
+		await setPeso('push', 'press', 0, 80, '2026-01-08');
+
+		expect(await cerrarEjercicioConLoHecho('push', 'press', '2026-01-08')).toEqual({
+			cerrado: false,
+			quitadas: 0
+		});
+		expect((await db.sesiones.get('2026-01-08__push'))?.ejercicios[0]?.sets).toHaveLength(4);
+	});
+
+	it('la reapertura del día explica su motivo y se apaga al volver a terminarlo', async () => {
+		await prepararEjercicioSesion('push', 'press', '2026-01-08');
+		for (const i of [0, 1, 2, 3]) await hacerSerie(i, 80, 10);
+		await marcarDiaTerminado('push', '2026-01-08');
+
+		await setSerieHecha('push', 'press', 1, false, '2026-01-08');
+		const reabierta = await db.sesiones.get('2026-01-08__push');
+		expect(reabierta?.diaTerminado).toBe(false);
+		expect(reabierta?.reaperturaMotivo).toBe('Desmarcaste la serie 2 de un ejercicio');
+		expect(reabierta?.reaperturaAt).toEqual(expect.any(String));
+
+		await setSerieHecha('push', 'press', 1, true, '2026-01-08');
+		await marcarDiaTerminado('push', '2026-01-08');
+		const cerrada = await db.sesiones.get('2026-01-08__push');
+		expect(cerrada?.diaTerminado).toBe(true);
+		expect(cerrada?.reaperturaMotivo).toBeUndefined();
+	});
+
+	it('descartar el aviso no vuelve a cerrar el día', async () => {
+		await prepararEjercicioSesion('push', 'press', '2026-01-08');
+		for (const i of [0, 1, 2, 3]) await hacerSerie(i, 80, 10);
+		await marcarDiaTerminado('push', '2026-01-08');
+		await addSet('push', 'press', '2026-01-08');
+		expect((await db.sesiones.get('2026-01-08__push'))?.reaperturaMotivo).toBe(
+			'Agregaste la serie 5 a un ejercicio'
+		);
+
+		await descartarReapertura('push', '2026-01-08');
+		const s = await db.sesiones.get('2026-01-08__push');
+		expect(s?.reaperturaMotivo).toBeUndefined();
+		expect(s?.diaTerminado).toBe(false);
+	});
+
+	it('un día que ya estaba abierto no inventa un cartel de reapertura', async () => {
+		await prepararEjercicioSesion('push', 'press', '2026-01-08');
+		await hacerSerie(0, 80, 10);
+		await setSerieHecha('push', 'press', 0, false, '2026-01-08');
+		expect((await db.sesiones.get('2026-01-08__push'))?.reaperturaMotivo).toBeUndefined();
+	});
+
+	it('no se puede saltar un ejercicio que ya está completo', async () => {
+		await prepararEjercicioSesion('push', 'press', '2026-01-08');
+		for (const i of [0, 1, 2, 3]) await hacerSerie(i, 80, 10);
+		await marcarDiaTerminado('push', '2026-01-08');
+
+		expect(await saltarEjercicio('push', 'press', '2026-01-08')).toEqual({
+			saltado: false,
+			razon: 'ya-completado'
+		});
+		const s = await db.sesiones.get('2026-01-08__push');
+		expect(s?.ejercicios[0]?.saltado).toBeUndefined();
+		// Y de paso: un salto rechazado no puede llevarse el día terminado.
+		expect(s?.diaTerminado).toBe(true);
+	});
+
+	it('ir y venir sobre el mismo ejercicio no acumula recompensas', async () => {
+		await prepararEjercicioSesion('push', 'press', '2026-01-08');
+		for (const i of [0, 1, 2, 3]) await hacerSerie(i, 100, 8);
+		await registrarPrSiSupera('push', 'press', 3, 'peso', '2026-01-08');
+		const base = resumenDiaSesion(await db.sesiones.get('2026-01-08__push'));
+		expect(base.prs).toHaveLength(1);
+
+		// Tres arrepentimientos seguidos sobre la misma serie del PR.
+		for (let vuelta = 0; vuelta < 3; vuelta++) {
+			await setSerieHecha('push', 'press', 3, false, '2026-01-08');
+			await setSerieHecha('push', 'press', 3, true, '2026-01-08');
+			await registrarPrSiSupera('push', 'press', 3, 'peso', '2026-01-08');
+		}
+
+		// La celebración puede volver a verse —eso es problema de quien va y viene—, pero
+		// nada de lo que se acumula puede crecer: ni PRs del día, ni sets, ni volumen.
+		const despues = resumenDiaSesion(await db.sesiones.get('2026-01-08__push'));
+		expect(despues).toEqual(base);
+		expect(despues.prs).toHaveLength(1);
+		expect(despues.setsHechos).toBe(4);
+	});
+
+	it('reiniciar un ejercicio desmarca todo y conserva la carga como referencia', async () => {
+		await prepararEjercicioSesion('push', 'press', '2026-01-08');
+		for (const i of [0, 1, 2, 3]) await hacerSerie(i, 100, 8);
+		await registrarPrSiSupera('push', 'press', 3, 'peso', '2026-01-08');
+		await marcarDiaTerminado('push', '2026-01-08');
+
+		const foto = await reiniciarEjercicio('push', 'press', '2026-01-08');
+		expect(foto).not.toBeNull();
+
+		const s = await db.sesiones.get('2026-01-08__push');
+		const e = s!.ejercicios[0]!;
+		expect(e.sets.every((set) => !set.hecha)).toBe(true);
+		// El peso y las reps son justamente lo que se quiere para repetir la serie.
+		expect(e.sets.map((set) => set.peso)).toEqual([100, 100, 100, 100]);
+		expect(e.sets.map((set) => set.reps)).toEqual([8, 8, 8, 8]);
+		expect(e.prCelebrado).toBeUndefined();
+		expect(s?.diaTerminado).toBe(false);
+		expect(s?.reaperturaMotivo).toBe('Reiniciaste un ejercicio');
+	});
+
+	it('deshacer un reinicio devuelve series, PR y estado del día tal cual estaban', async () => {
+		await prepararEjercicioSesion('push', 'press', '2026-01-08');
+		for (const i of [0, 1, 2, 3]) await hacerSerie(i, 100, 8);
+		await registrarPrSiSupera('push', 'press', 3, 'peso', '2026-01-08');
+		await marcarDiaTerminado('push', '2026-01-08');
+		const antes = await db.sesiones.get('2026-01-08__push');
+
+		const foto = await reiniciarEjercicio('push', 'press', '2026-01-08');
+		expect(await restaurarInstantanea('push', foto!, '2026-01-08')).toBe(true);
+
+		const despues = await db.sesiones.get('2026-01-08__push');
+		expect(despues?.ejercicios).toEqual(antes?.ejercicios);
+		expect(despues?.diaTerminado).toBe(true);
+		expect(despues?.reaperturaMotivo).toBeUndefined();
+		expect(resumenDiaSesion(despues)).toEqual(resumenDiaSesion(antes));
+	});
+
+	it('reiniciar sin nada hecho no toca la sesión ni ofrece deshacer', async () => {
+		await prepararEjercicioSesion('push', 'press', '2026-01-08');
+		expect(await reiniciarEjercicio('push', 'press', '2026-01-08')).toBeNull();
+		expect(await reiniciarDia('push', '2026-01-08')).toBeNull();
+	});
+
+	it('reiniciar el día limpia series y saltos de todos los ejercicios', async () => {
+		await db.dias.update('push', {
+			ejercicios: [
+				{ exerciseId: 'press', seriesObjetivo: 2, orden: 0 },
+				{ exerciseId: 'remo', seriesObjetivo: 2, orden: 1 }
+			]
+		});
+		await prepararEjercicioSesion('push', 'press', '2026-01-08');
+		for (const i of [0, 1]) await hacerSerie(i, 100, 8);
+		await saltarEjercicio('push', 'remo', '2026-01-08');
+		await marcarDiaTerminado('push', '2026-01-08');
+		const antes = await db.sesiones.get('2026-01-08__push');
+
+		const foto = await reiniciarDia('push', '2026-01-08');
+		const s = await db.sesiones.get('2026-01-08__push');
+		expect(s?.ejercicios.every((e) => e.sets.every((set) => !set.hecha))).toBe(true);
+		expect(s?.ejercicios.every((e) => !e.saltado)).toBe(true);
+		expect(s?.diaTerminado).toBe(false);
+		expect(s?.reaperturaMotivo).toBe('Reiniciaste el día');
+		expect(resumenDiaSesion(s).setsHechos).toBe(0);
+
+		// Y vuelve entero: el reinicio del día también se deshace.
+		await restaurarInstantanea('push', foto!, '2026-01-08');
+		const despues = await db.sesiones.get('2026-01-08__push');
+		expect(despues?.ejercicios).toEqual(antes?.ejercicios);
+		expect(despues?.diaTerminado).toBe(true);
+	});
+
+	it('reiniciar y deshacer en redondo no acumula recompensas', async () => {
+		await prepararEjercicioSesion('push', 'press', '2026-01-08');
+		for (const i of [0, 1, 2, 3]) await hacerSerie(i, 100, 8);
+		await registrarPrSiSupera('push', 'press', 3, 'peso', '2026-01-08');
+		const base = resumenDiaSesion(await db.sesiones.get('2026-01-08__push'));
+
+		for (let vuelta = 0; vuelta < 3; vuelta++) {
+			const foto = await reiniciarEjercicio('push', 'press', '2026-01-08');
+			await restaurarInstantanea('push', foto!, '2026-01-08');
+		}
+
+		expect(resumenDiaSesion(await db.sesiones.get('2026-01-08__push'))).toEqual(base);
+	});
+
+	it('agregar y quitar series en redondo no infla el volumen del día', async () => {
+		await prepararEjercicioSesion('push', 'press', '2026-01-08');
+		for (const i of [0, 1, 2, 3]) await hacerSerie(i, 100, 8);
+		const base = resumenDiaSesion(await db.sesiones.get('2026-01-08__push'));
+
+		for (let vuelta = 0; vuelta < 3; vuelta++) {
+			await addSet('push', 'press', '2026-01-08');
+			await hacerSerie(4, 100, 8);
+			await removeSet('push', 'press', 4, '2026-01-08');
+		}
+
+		expect(resumenDiaSesion(await db.sesiones.get('2026-01-08__push'))).toEqual(base);
 	});
 });

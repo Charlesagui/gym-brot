@@ -7,6 +7,7 @@
 	import { completarNombresSnapshotFaltantes, db, onDbBloqueada } from '$lib/db';
 	import { seedSiVacio } from '$lib/seed';
 	import BottomNav from '$lib/components/BottomNav.svelte';
+	import Icono from '$lib/components/Icono.svelte';
 	import RestBar from '$lib/components/RestBar.svelte';
 	import RestFocusOverlay from '$lib/components/RestFocusOverlay.svelte';
 	import { descanso } from '$lib/descanso.svelte';
@@ -17,6 +18,15 @@
 	import { escucharReemplazosDatos } from '$lib/revision-datos';
 
 	let { children } = $props();
+
+	/**
+	 * Entrenar es la ruta de ejercicio CON `?dia=`. Sin ese parámetro la misma ruta es
+	 * la vista de progreso que se abre desde el historial: ahí no hay serie que
+	 * proteger, no hay barra de descanso ocupando la franja del pulgar, y esconder el
+	 * nav sólo dejaba la pantalla sin su salida cómoda.
+	 */
+	const enSesion = (url: URL) =>
+		url.pathname.startsWith('/ejercicio/') && url.searchParams.has('dia');
 
 	// Transición breve y espacial entre pantallas (View Transitions nativas: sin
 	// librería). Sin soporte del navegador o con movimiento reducido, no hace nada y
@@ -32,7 +42,7 @@
 		// sin View Transitions, y no demora la navegación (no se espera nada).
 		// `entrenando` mira todavía la pantalla vieja acá, así que el destino se
 		// descarta aparte: entrar a un ejercicio no debe arrancar una descarga.
-		if (!navigation.to?.url.pathname.startsWith('/ejercicio/')) buscarVersionNueva();
+		if (!navigation.to || !enSesion(navigation.to.url)) buscarVersionNueva();
 		if (!document.startViewTransition || menosMovimiento()) return;
 		if (navigation.to?.url.pathname === navigation.from?.url.pathname) return;
 		// Volver (atrás del navegador) invierte el sentido del deslizamiento.
@@ -48,7 +58,7 @@
 
 	// Mid-entrenamiento el nav no aporta y ocupa la mejor zona del pulgar:
 	// en la pantalla de ejercicio ese espacio es para la barra de descanso.
-	const sinNav = $derived($page.url.pathname.startsWith('/ejercicio/'));
+	const sinNav = $derived(enSesion($page.url));
 
 	// Actualización de la app: el service worker nuevo queda esperando y avisamos acá.
 	// Nunca durante el entrenamiento — recargar a mitad de una serie es justo lo que
@@ -93,6 +103,17 @@
 		}
 	}
 	let dbError = $state<string | null>(null);
+	/**
+	 * La base existe pero es MÁS NUEVA que este código (VersionError): pasa cuando la
+	 * app instalada quedó con el shell viejo cacheado y otra pestaña ya migró. Los datos
+	 * están intactos, así que esta pantalla no ofrece borrar nada — sólo actualizar.
+	 */
+	let dbDesactualizada = $state(false);
+	/**
+	 * La base abrió bien pero un paso posterior (sembrar ejemplos, completar nombres)
+	 * falló. Es degradación, no pérdida: se avisa sin bloquear y sin ofrecer borrar.
+	 */
+	let avisoArranque = $state<string | null>(null);
 	// La base abrió y sembró: recién acá montamos las pantallas. Así toda la carga
 	// pasa por un único estado recuperable y ninguna pantalla puede quedar colgada
 	// con su propio spinner si la apertura se traba.
@@ -167,31 +188,64 @@
 		});
 
 		(async () => {
+			// PASO 1 — abrir. Es el ÚNICO fallo que puede justificar una pantalla con
+			// opción destructiva, porque es el único donde no sabemos si hay datos legibles.
 			try {
 				await db.open();
-				clearTimeout(lentaId);
-				clearTimeout(bloqueoId);
-				dbLenta = false;
-				dbBloqueada = false;
-				await seedSiVacio();
-				// Después del seed: así la fila de ajustes ya existe y el backfill puede
-				// dejar marcado que corrió, en vez de repetir el barrido en cada arranque.
-				await completarNombresSnapshotFaltantes();
-				// Pide almacenamiento persistente: reduce el riesgo de que el navegador
-				// (sobre todo iOS) borre los datos locales por presión de espacio.
-				void navigator.storage?.persist?.();
-				// Restaura un descanso en curso y engancha listeners globales.
-				descanso.init();
-				dbLista = true;
 			} catch (error) {
 				clearTimeout(lentaId);
 				clearTimeout(bloqueoId);
 				dbLenta = false;
-				dbError =
-					error instanceof Error
-						? error.message
-						: 'El navegador no permitió abrir la base de datos local.';
+				// Los datos son más nuevos que este código: están enteros y hay que
+				// actualizar la app, no borrarlos.
+				if (error instanceof Error && error.name === 'VersionError') dbDesactualizada = true;
+				else
+					dbError =
+						error instanceof Error
+							? error.message
+							: 'El navegador no permitió abrir la base de datos local.';
+				return;
 			}
+			clearTimeout(lentaId);
+			clearTimeout(bloqueoId);
+			dbLenta = false;
+			dbBloqueada = false;
+
+			// PASO 2 — de acá en adelante la base ABRIÓ y el historial está entero. Sembrar
+			// ejemplos y completar nombres son mejoras, no requisitos: si fallan (chunk del
+			// catálogo caído a mitad de un deploy, cuota llena durante el `modify`) la app
+			// arranca igual y degradada. Antes compartían el `try` de la apertura, así que
+			// un backfill fallido mostraba "No pude abrir tus datos locales" y ofrecía
+			// borrarlos — la única ruta de pérdida total que la app tenía por sí misma.
+			try {
+				await seedSiVacio();
+			} catch (error) {
+				console.error('seed inicial', error);
+				avisoArranque = 'No pude crear las rutinas de ejemplo. Tus datos están intactos.';
+			}
+			try {
+				// Después del seed: así la fila de ajustes ya existe y el backfill puede
+				// dejar marcado que corrió, en vez de repetir el barrido en cada arranque.
+				await completarNombresSnapshotFaltantes();
+			} catch (error) {
+				console.error('backfill de nombres', error);
+				avisoArranque =
+					'Algunos ejercicios viejos pueden verse como "archivados" hasta la próxima vez que abras la app. Tu historial está completo.';
+			}
+			// Pide almacenamiento persistente: reduce el riesgo de que el navegador
+			// (sobre todo iOS) borre los datos locales por presión de espacio.
+			try {
+				void navigator.storage?.persist?.();
+			} catch (error) {
+				console.error('storage.persist', error);
+			}
+			// Restaura un descanso en curso y engancha listeners globales.
+			try {
+				descanso.init();
+			} catch (error) {
+				console.error('init del descanso', error);
+			}
+			dbLista = true;
 		})();
 		return () => {
 			clearTimeout(lentaId);
@@ -239,10 +293,36 @@
 						: 'Reiniciar almacenamiento local'}</button
 				>
 				{#if confirmarReinicioDatos}
-					<p class="mt-2 text-center text-xs leading-relaxed" style="color: var(--muted)">
-						Esto borra los datos de este navegador. Después podés restaurar un backup desde Ajustes.
+					<p class="mt-2 text-center text-xs leading-relaxed" style="color: #ff9b9b">
+						Esto borra <b>todo</b> tu historial de este navegador y no se puede deshacer. Desde acá no
+						se puede exportar un backup: si tenés uno viejo en el teléfono, vas a poder restaurarlo después
+						desde Ajustes. Si no, probá primero “Recargar” o cerrar las otras pestañas.
 					</p>
 				{/if}
+			</section>
+		</main>
+	{:else if dbDesactualizada}
+		<main class="gb-page glow-bg grid min-h-dvh place-items-center px-5 py-10">
+			<section
+				class="w-full rounded-2xl border border-white/10 p-5"
+				style="background: var(--surface)"
+			>
+				<p class="text-xs font-bold uppercase tracking-[0.22em]" style="color: var(--accent-text)">
+					Versión vieja
+				</p>
+				<h1 class="mt-2 text-2xl font-extrabold leading-tight">
+					Esta copia de Gym-brot quedó atrás
+				</h1>
+				<p class="mt-3 text-sm leading-relaxed" style="color: var(--muted)">
+					Tus datos están <b>intactos</b> — de hecho son más nuevos que esta versión de la app. Suele
+					pasar cuando la app instalada tiene una versión vieja guardada y el navegador ya se actualizó.
+					Cerrá Gym-brot del todo y volvé a abrirlo para tomar la versión nueva.
+				</p>
+				<button
+					onclick={recargar}
+					class="mt-4 block w-full rounded-2xl py-3 text-center text-sm font-bold"
+					style="background: var(--accent); color: var(--on-accent)">Recargar</button
+				>
 			</section>
 		</main>
 	{:else if dbBloqueada}
@@ -299,6 +379,34 @@
 		<BottomNav />
 	{/if}
 </div>
+
+<!-- Arranque degradado: la base abrió y el historial está entero, pero un paso
+     opcional falló. Se avisa sin bloquear y sin ofrecer nada destructivo. -->
+{#if avisoArranque && dbLista}
+	<div
+		class="fixed inset-x-0 top-0 z-[88] mx-auto max-w-md px-5"
+		style="padding-top: calc(1rem + env(safe-area-inset-top))"
+		role="status"
+	>
+		<div
+			class="flex items-start gap-3 rounded-2xl border border-white/10 p-3 shadow-2xl"
+			style="background: var(--surface)"
+		>
+			<span class="mt-0.5 shrink-0" style="color: var(--muted)">
+				<Icono nombre="backup" tamano={20} />
+			</span>
+			<p class="min-w-0 flex-1 text-xs leading-relaxed" style="color: var(--muted)">
+				{avisoArranque}
+			</p>
+			<button
+				onclick={() => (avisoArranque = null)}
+				class="grid size-11 shrink-0 place-items-center rounded-full text-sm font-bold"
+				style="color: var(--muted)"
+				aria-label="Cerrar aviso">✕</button
+			>
+		</div>
+	</div>
+{/if}
 
 <!-- Barra de descanso global: visible en todas las pantallas mientras corre. -->
 {#if dbLista && !dbError}
