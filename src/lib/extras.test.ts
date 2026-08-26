@@ -31,18 +31,7 @@ const dia: Dia = {
 		{
 			exerciseId: 'press',
 			seriesObjetivo: 3,
-			orden: 1,
-			progresion: {
-				activa: true,
-				tipo: 'doble',
-				repsMin: 8,
-				repsMax: 12,
-				incrementoGramos: 2_500,
-				decision: 'aceptada',
-				decisionSesionId: '2026-01-05__push',
-				proximoPesoGramos: 102_500,
-				desdeSesionId: '2026-01-05__push'
-			}
+			orden: 1
 		}
 	]
 };

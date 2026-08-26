@@ -33,7 +33,6 @@ import { resumenDiaSesion, rachaSemanalActual } from './historial';
 import { pesoEfectivo } from './sesion-reglas';
 import { gramosAPeso } from './unidades';
 import { agregarEjercicio } from './dias';
-import { decidirRecomendacionDoble, setProgresionDoble } from './dias';
 
 async function limpiarDb() {
 	await db.open();
@@ -106,58 +105,6 @@ describe('sesion con IndexedDB', () => {
 		expect(estado).toEqual({
 			sets: [{ hecha: false }, { hecha: false }],
 			prCelebrado: null
-		});
-	});
-
-	it('aplica una recomendación aceptada una sola vez sin modificar el pasado', async () => {
-		await db.dias.add({
-			id: 'push',
-			nombre: 'Push',
-			orden: 0,
-			ejercicios: [{ exerciseId: 'press', seriesObjetivo: 2, orden: 0 }]
-		});
-		await setProgresionDoble('push', 'press', { activa: true, repsMin: 8, repsMax: 12 });
-		await prepararEjercicioSesion('push', 'press', '2026-01-05');
-		for (const indice of [0, 1]) {
-			await setPeso('push', 'press', indice, 80, '2026-01-05');
-			await setReps('push', 'press', indice, 12, '2026-01-05');
-			await setSerieHecha('push', 'press', indice, true, '2026-01-05');
-		}
-		const pasada = structuredClone(await db.sesiones.get('2026-01-05__push'));
-
-		await decidirRecomendacionDoble(
-			'push',
-			'press',
-			{
-				sesionId: '2026-01-05__push',
-				seriesEvaluadas: 2,
-				repsMax: 12,
-				incrementoGramos: 2_500,
-				pesoActualGramos: 80_000,
-				pesoObjetivoGramos: 82_500,
-				esMax: false,
-				extraActualGramos: 0,
-				extraObjetivoGramos: 0,
-				explicacion: 'Dos series en el techo.'
-			},
-			'aceptada'
-		);
-
-		await prepararEjercicioSesion('push', 'press', '2026-01-12');
-		expect((await db.sesiones.get('2026-01-12__push'))?.ejercicios[0]?.sets).toEqual([
-			{ peso: 82.5, pesoGramos: 82_500, reps: 8, hecha: false },
-			{ peso: 82.5, pesoGramos: 82_500, reps: 8, hecha: false }
-		]);
-		expect(await db.sesiones.get('2026-01-05__push')).toEqual(pasada);
-		expect((await db.dias.get('push'))?.ejercicios[0]?.progresion).not.toHaveProperty(
-			'proximoPesoGramos'
-		);
-
-		await prepararEjercicioSesion('push', 'press', '2026-01-19');
-		expect((await db.sesiones.get('2026-01-19__push'))?.ejercicios[0]?.sets[0]).toMatchObject({
-			peso: 80,
-			reps: 12,
-			hecha: false
 		});
 	});
 

@@ -354,37 +354,13 @@ export async function prepararEjercicioSesion(
 		}
 		if (!sesion.ejercicios.some((item) => item.exerciseId === exerciseId)) {
 			const anterior = await ultimaDe(diaId, exerciseId, fecha, unidad);
-			const progresion = configuracion.progresion;
-			const usarRecomendacion =
-				progresion?.proximoPesoGramos != null &&
-				progresion.desdeSesionId != null &&
-				progresion.desdeSesionId !== sesion.id;
 			sesion.ejercicios.push({
 				exerciseId,
 				nombreSnapshot: ejercicioPorId(exerciseId)?.nombre,
 				sets: Array.from({ length: Math.max(1, configuracion.seriesObjetivo) }, (_, indice) =>
-					usarRecomendacion
-						? {
-								peso: gramosAPeso(progresion.proximoPesoGramos, unidad),
-								pesoGramos: progresion.proximoPesoGramos,
-								reps: progresion.repsMin,
-								hecha: false,
-								esMax: progresion.proximoEsMax,
-								extraKg: gramosAPeso(progresion.proximoExtraGramos, unidad),
-								extraGramos: progresion.proximoExtraGramos
-							}
-						: serieDesdeAnterior(anterior?.[indice], unidad)
+					serieDesdeAnterior(anterior?.[indice], unidad)
 				)
 			});
-			if (usarRecomendacion && progresion) {
-				delete progresion.proximoPesoGramos;
-				delete progresion.proximoEsMax;
-				delete progresion.proximoExtraGramos;
-				delete progresion.desdeSesionId;
-				delete progresion.decision;
-				delete progresion.decisionSesionId;
-				await db.dias.put(dia);
-			}
 			await guardarSesion(sesion);
 		} else if (snapshotsActualizados) await guardarSesion(sesion);
 

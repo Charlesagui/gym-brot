@@ -52,7 +52,7 @@ test('peso corporal conserva el valor canónico al alternar kg y lb', async ({ p
 	expect(errores).toEqual([]);
 });
 
-test('RIR sigue opcional y la doble progresión requiere activación explícita', async ({ page }) => {
+test('el RIR es opcional y se registra por serie', async ({ page }) => {
 	await page.goto('/ajustes');
 	const modoRir = page.getByRole('button', { name: 'RIR', exact: true });
 	await modoRir.click();
@@ -70,10 +70,9 @@ test('RIR sigue opcional y la doble progresión requiere activación explícita'
 	await page.getByRole('button', { name: 'Marcar serie 1' }).click();
 	await expect(page.getByRole('button', { name: 'Desmarcar serie 1' })).toBeVisible();
 
-	await page.getByText('Doble progresión', { exact: true }).click();
-	await expect(page.getByText('Opcional. Cuando todas las series lleguen al techo')).toBeVisible();
-	await page.getByRole('button', { name: 'Activar 8–12 reps' }).click();
-	await expect(page.getByText('Incremento automático:')).toBeVisible();
+	// El esfuerzo queda guardado con la serie, no se pierde al contraerse la fila.
+	await page.getByRole('button', { name: 'Corregir serie 1' }).click();
+	await expect(page.getByLabel('RIR de la serie 1')).toHaveValue('2');
 });
 
 test('el mapa corporal comparte datos con la lista y responde a borrar historial', async ({

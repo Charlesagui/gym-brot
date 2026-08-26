@@ -90,8 +90,6 @@
 	import CelebracionParticulas from '$lib/components/CelebracionParticulas.svelte';
 	import TecnicaModal from '$lib/components/TecnicaModal.svelte';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
-	import { decidirRecomendacionDoble, setProgresionDoble } from '$lib/dias';
-	import { evaluarDobleProgresion } from '$lib/progresion';
 	import { gramosAPeso, pesoAGramos } from '$lib/unidades';
 
 	const ej = $derived(ejercicioPorId($page.params.id!));
@@ -445,16 +443,6 @@
 	const itemRutina = $derived(
 		$contextoDia.dia?.ejercicios.find((item) => item.exerciseId === $page.params.id!)
 	);
-	const progresion = $derived(itemRutina?.progresion);
-	const evaluacionProgresion = $derived(
-		evaluarDobleProgresion(
-			progresion,
-			sets,
-			sesionId(diaId ?? '', fechaSesion),
-			pesoAGramos(pasoPeso, unidad) ?? 0,
-			unidad
-		)
-	);
 	// Sin PR ni serie previa: es la primera vez con este ejercicio → hint de peso inicial.
 	/**
 	 * La serie en curso es la primera sin hacer: es la única que se muestra abierta,
@@ -594,55 +582,6 @@
 	function guardarRir(i: number, rir?: number) {
 		if (sets[i]) sets[i].rir = rir;
 		escribir(setRir(diaId!, $page.params.id!, i, rir, fechaSesion));
-	}
-
-	function configurarProgresion(activa: boolean) {
-		if (!diaId) return;
-		guardarDatoSecundario(
-			setProgresionDoble(
-				diaId,
-				$page.params.id!,
-				activa
-					? {
-							activa: true,
-							repsMin: progresion?.repsMin ?? 8,
-							repsMax: progresion?.repsMax ?? 12,
-							incrementoGramos: progresion?.incrementoGramos
-						}
-					: undefined
-			),
-			'No se pudo guardar la progresión.'
-		);
-	}
-
-	function ajustarRangoProgresion(campo: 'repsMin' | 'repsMax', delta: number) {
-		if (!diaId || !progresion) return;
-		let repsMin = progresion.repsMin;
-		let repsMax = progresion.repsMax;
-		if (campo === 'repsMin') repsMin = Math.max(1, Math.min(repsMax, repsMin + delta));
-		else repsMax = Math.max(repsMin, Math.min(30, repsMax + delta));
-		guardarDatoSecundario(
-			setProgresionDoble(diaId, $page.params.id!, {
-				activa: true,
-				repsMin,
-				repsMax,
-				incrementoGramos: progresion.incrementoGramos
-			}),
-			'No se pudo guardar el rango de progresión.'
-		);
-	}
-
-	function decidirProgresion(decision: 'aceptada' | 'pospuesta' | 'descartada') {
-		if (!diaId || !evaluacionProgresion.recomendacion) return;
-		guardarDatoSecundario(
-			decidirRecomendacionDoble(
-				diaId,
-				$page.params.id!,
-				evaluacionProgresion.recomendacion,
-				decision
-			),
-			'No se pudo guardar la decisión de progresión.'
-		);
 	}
 
 	/** Chips de memoria: fija la carga de la vez pasada (o un paso arriba/abajo). */
@@ -1305,60 +1244,6 @@
 									</p>
 								</div>
 							{/if}
-							{#if evaluacionProgresion.recomendacion}
-								{@const recomendacion = evaluacionProgresion.recomendacion}
-								<section
-									class="mt-3 rounded-xl border p-3"
-									style="background: rgb({g.glow} / .09); border-color: rgb({g.glow} / .3)"
-								>
-									<p
-										class="text-xs font-bold uppercase tracking-wider"
-										style="color: rgb({g.glow})"
-									>
-										Recomendación de progresión
-									</p>
-									<p class="mt-1 text-sm font-bold">
-										{recomendacion.esMax
-											? `MAX + ${formatoNumero(gramosAPeso(recomendacion.extraObjetivoGramos, unidad)!)} ${unidad}`
-											: `${formatoNumero(gramosAPeso(recomendacion.pesoObjetivoGramos, unidad)!)} ${unidad}`}
-										para la próxima sesión
-									</p>
-									<p class="mt-1 text-xs leading-relaxed" style="color: var(--muted)">
-										{recomendacion.explicacion} La próxima empieza en {progresion?.repsMin} reps.
-									</p>
-									<div class="mt-3 grid grid-cols-3 gap-2">
-										<button
-											type="button"
-											onclick={() => decidirProgresion('aceptada')}
-											class="min-h-11 rounded-xl px-2 text-xs font-bold"
-											style="background: var(--accent); color: var(--on-accent)">Aceptar</button
-										>
-										<button
-											type="button"
-											onclick={() => decidirProgresion('pospuesta')}
-											class="min-h-11 rounded-xl bg-white/[0.06] px-2 text-xs font-bold"
-											>Posponer</button
-										>
-										<button
-											type="button"
-											onclick={() => decidirProgresion('descartada')}
-											class="min-h-11 rounded-xl bg-white/[0.06] px-2 text-xs font-bold"
-											style="color: var(--muted)">Descartar</button
-										>
-									</div>
-								</section>
-							{:else if progresion?.decisionSesionId === sesionId(diaId, fechaSesion)}
-								<p
-									class="mt-2 rounded-xl bg-white/[0.035] px-3 py-2 text-xs"
-									style="color: var(--muted)"
-								>
-									Recomendación {progresion.decision === 'aceptada'
-										? 'aceptada para la próxima sesión'
-										: progresion.decision === 'pospuesta'
-											? 'pospuesta'
-											: 'descartada'}.
-								</p>
-							{/if}
 							{#if mostrarHintMax}
 								<div
 									class="mt-2 flex items-start gap-2 rounded-xl p-2.5"
@@ -1493,92 +1378,6 @@
 								>
 							</div>
 						{/if}
-
-						<!--
-							Configuración al pie, no en el medio: el paso del ± y la doble progresión se
-							definen una vez y no se vuelven a tocar, pero estaban entre el encabezado y la
-							primera serie, empujando hacia abajo lo único que se usa entre repeticiones.
-						-->
-						<p
-							class="mt-4 border-t border-white/10 pt-3 text-[11px] font-bold uppercase tracking-wider"
-							style="color: var(--muted)"
-						>
-							Ajustes de este ejercicio
-						</p>
-						<details class="mt-2 rounded-xl border border-white/5 bg-white/[0.025] px-3 py-1">
-							<summary
-								class="flex min-h-11 cursor-pointer items-center justify-between gap-2 text-xs font-semibold"
-								style="color: var(--muted)"
-							>
-								<span>Doble progresión</span>
-								<span
-									>{progresion?.activa
-										? `${progresion.repsMin}–${progresion.repsMax} reps`
-										: 'Off'}</span
-								>
-							</summary>
-							<div class="pb-3 pt-2">
-								{#if modo === 'reps'}
-									<p class="text-xs leading-relaxed" style="color: var(--muted)">
-										Este ejercicio no registra carga. La doble progresión de peso no aplica.
-									</p>
-								{:else if !progresion?.activa}
-									<p class="text-xs leading-relaxed" style="color: var(--muted)">
-										Opcional. Cuando todas las series lleguen al techo del rango con la misma carga,
-										la app recomienda subirla; nunca cambia nada sola.
-									</p>
-									<button
-										type="button"
-										onclick={() => configurarProgresion(true)}
-										class="mt-3 min-h-11 w-full rounded-xl text-sm font-bold"
-										style="background: rgb({g.glow} / .18); color: rgb({g.glow})"
-										>Activar 8–12 reps</button
-									>
-								{:else}
-									<div class="grid grid-cols-2 gap-2">
-										{#each [{ campo: 'repsMin', label: 'Mínimo', valor: progresion.repsMin }, { campo: 'repsMax', label: 'Máximo', valor: progresion.repsMax }] as control (control.campo)}
-											<div>
-												<p
-													class="text-[11px] font-bold uppercase tracking-wider"
-													style="color: var(--muted)"
-												>
-													{control.label}
-												</p>
-												<div class="mt-1 flex min-h-11 items-center rounded-xl bg-white/[0.05]">
-													<button
-														type="button"
-														onclick={() =>
-															ajustarRangoProgresion(control.campo as 'repsMin' | 'repsMax', -1)}
-														class="size-11 text-lg font-bold"
-														aria-label={`Bajar ${control.label.toLowerCase()} de reps`}>−</button
-													>
-													<span class="flex-1 text-center font-bold tabular-nums"
-														>{control.valor}</span
-													>
-													<button
-														type="button"
-														onclick={() =>
-															ajustarRangoProgresion(control.campo as 'repsMin' | 'repsMax', 1)}
-														class="size-11 text-lg font-bold"
-														aria-label={`Subir ${control.label.toLowerCase()} de reps`}>+</button
-													>
-												</div>
-											</div>
-										{/each}
-									</div>
-									<p class="mt-2 text-xs" style="color: var(--muted)">
-										Incremento automático: {formatoNumero(pasoPeso)}
-										{unidad}, usando el paso de este ejercicio.
-									</p>
-									<button
-										type="button"
-										onclick={() => configurarProgresion(false)}
-										class="mt-2 min-h-11 rounded-xl px-3 text-xs font-bold"
-										style="color: #ff8d8d">Desactivar</button
-									>
-								{/if}
-							</div>
-						</details>
 					</section>
 
 					{#if pr}
