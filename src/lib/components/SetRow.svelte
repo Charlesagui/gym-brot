@@ -30,7 +30,9 @@
 		onAjustarExtra,
 		onSetRir,
 		onAbrir,
-		onCerrar
+		onCerrar,
+		onQuitar,
+		puedeQuitar = false
 	}: {
 		set: SetSesion;
 		index: number;
@@ -66,6 +68,10 @@
 		onAbrir: () => void;
 		/** La cerraron con su propio botón. */
 		onCerrar: () => void;
+		/** Quitar ESTA serie del ejercicio de hoy (no la última de la lista). */
+		onQuitar: () => void;
+		/** Falso cuando es la única serie: un ejercicio sin ninguna serie no existe. */
+		puedeQuitar?: boolean;
 	} = $props();
 
 	const ant = $derived(formatoAnterior(anterior, unidad));
@@ -178,7 +184,22 @@
 			class="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-lg px-1 text-left"
 			aria-label={`Corregir serie ${index + 1}`}
 		>
-			<span class="cifra min-w-0 truncate text-2xl">
+			<!--
+				Los valores se centran en el espacio que queda entre el número de serie y el
+				delta. Se probó alineados a la izquierda y el renglón se veía volcado: entre
+				el 39 % y el 56 % del ancho quedaba vacío a la derecha. El argumento en contra
+				era que centrar mueve el arranque de cada renglón y rompe la columna que se
+				lee de arriba abajo, pero eso vale cuando los valores tienen anchos muy
+				distintos, y las series de un mismo ejercicio se parecen entre sí: el corrimiento
+				real es de unos pocos píxeles.
+			-->
+			<span class="flex-1"></span>
+			<!--
+				20 px y no 24: con el delta reservado a la derecha, "102.5 kg × 10 reps" no
+				entraba y se cortaba. De paso ordena la jerarquía, porque la cifra que tiene
+				que gritar es la de la serie en curso, no la de las que ya hiciste.
+			-->
+			<span class="cifra min-w-0 truncate text-xl">
 				{set.peso != null ? formatoNumero(set.peso) : '—'}<span class="cifra-u">{unidad}</span>
 				<span class="mx-0.5" style="color: var(--muted)">×</span>{set.reps ?? '—'}<span
 					class="cifra-u">reps</span
@@ -198,16 +219,23 @@
 				>
 			{/if}
 			<span class="flex-1"></span>
-			{#if delta}
-				<span
-					class="cifra shrink-0 text-base"
-					style="color: {delta.diferencia > 0 ? 'rgb(var(--exito))' : 'var(--muted)'}"
-					aria-label={delta.diferencia === 0
-						? 'Igual que la vez pasada'
-						: `${delta.diferencia > 0 ? 'Más' : 'Menos'} que la vez pasada: ${formatoNumero(Math.abs(delta.diferencia))} ${unidad}`}
-					>{delta.texto}</span
-				>
-			{/if}
+			<!--
+				El delta ocupa lugar aunque no exista. Sin esto, las series sin sesión anterior
+				corrían los valores 37 px respecto de las que sí la tienen, y la lista quedaba
+				bailando renglón por medio: el hueco reservado deja el centro quieto.
+			-->
+			<span class="gb-delta flex w-12 shrink-0 justify-end">
+				{#if delta}
+					<span
+						class="cifra text-base"
+						style="color: {delta.diferencia > 0 ? 'rgb(var(--exito))' : 'var(--muted)'}"
+						aria-label={delta.diferencia === 0
+							? 'Igual que la vez pasada'
+							: `${delta.diferencia > 0 ? 'Más' : 'Menos'} que la vez pasada: ${formatoNumero(Math.abs(delta.diferencia))} ${unidad}`}
+						>{delta.texto}</span
+					>
+				{/if}
+			</span>
 			<span class="shrink-0" style="color: var(--muted)" aria-hidden="true">
 				<Icono nombre="editar" tamano={15} />
 			</span>
@@ -455,20 +483,36 @@
 			{/if}
 		</button>
 
-		{#if !activa}
-			<!--
-				La que estás haciendo no se cierra: es el trabajo en curso. Cualquier otra que
-				hayas abierto vos —hecha o pendiente— tiene que poder volver a su renglón, o
-				abrirla para mirarla se convierte en un viaje de ida.
-			-->
-			<button
-				type="button"
-				onclick={onCerrar}
-				class="mt-1 min-h-11 w-full rounded-xl text-xs font-bold"
-				style="color: var(--muted)"
-				aria-label={`Cerrar serie ${index + 1}`}>Cerrar</button
-			>
-		{/if}
+		<!--
+			Quitar vive acá y no en el contador de arriba porque el − de arriba siempre se
+			llevaba la ÚLTIMA serie: para borrar la 2 de cuatro había que borrar la 4, la 3 y
+			la 2 y volver a cargar dos. La serie que se quita es la que tenés abierta.
+		-->
+		<div class="mt-1 flex items-center gap-2">
+			{#if puedeQuitar}
+				<button
+					type="button"
+					onclick={onQuitar}
+					class="min-h-11 flex-1 rounded-xl text-xs font-bold"
+					style="color: rgb(var(--max))"
+					aria-label={`Quitar la serie ${index + 1} de hoy`}>Quitar serie</button
+				>
+			{/if}
+			{#if !activa}
+				<!--
+					La que estás haciendo no se cierra: es el trabajo en curso. Cualquier otra que
+					hayas abierto vos —hecha o pendiente— tiene que poder volver a su renglón, o
+					abrirla para mirarla se convierte en un viaje de ida.
+				-->
+				<button
+					type="button"
+					onclick={onCerrar}
+					class="min-h-11 flex-1 rounded-xl text-xs font-bold"
+					style="color: var(--muted)"
+					aria-label={`Cerrar serie ${index + 1}`}>Cerrar</button
+				>
+			{/if}
+		</div>
 	</div>
 {/if}
 
@@ -506,6 +550,15 @@
 	 */
 	@container (max-width: 17rem) {
 		.gb-set-row--hecha :global(.cifra-u) {
+			display: none;
+		}
+
+		/*
+		 * Y si aun sin unidades no entra —"137.5 × 12" a 320 px—, lo siguiente en irse es
+		 * el delta. El orden de prioridad del renglón es siempre el mismo: los números que
+		 * levantaste, después cuánto te moviste, al final cómo se llaman las unidades.
+		 */
+		.gb-set-row--hecha .gb-delta {
 			display: none;
 		}
 	}
