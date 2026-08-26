@@ -530,7 +530,7 @@
 						min={RUEDA_DESCANSO.min}
 						max={RUEDA_DESCANSO.max}
 						paso={RUEDA_DESCANSO.paso}
-						glow="124 92 255"
+						glow="var(--glow)"
 						vibracion={ajustes.vibracion ?? true}
 						etiqueta="Descanso por defecto"
 						onCambio={girarDescanso}
