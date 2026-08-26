@@ -26,7 +26,7 @@
 		unidad
 	}: {
 		carga: CargaBarra;
-		/** El disco más grande disponible: fija la escala y marca el tope de la pila. */
+		/** El disco más grande disponible: es lo que fija la escala de alturas. */
 		pesoMaxDisco: number;
 		formato: (n: number) => string;
 		unidad: UnidadPeso;
@@ -83,8 +83,6 @@
 		x: number;
 		alto: number;
 		color: string;
-		/** El disco más grande que tenés: el tope de la pila, marcado con un aro. */
-		tope: boolean;
 		/** Distancia al centro de la barra, en discos. Ordena la animación de entrada. */
 		orden: number;
 	}
@@ -95,7 +93,6 @@
 			x: desde + i * PASO,
 			alto: alto(peso),
 			color: colorDisco(peso, unidad),
-			tope: peso === pesoMaxDisco,
 			orden: desdeElCentro ? i : pesosLado.length - 1 - i
 		}));
 	}
@@ -142,10 +139,9 @@
 	<defs>
 		<!--
 			El canto de la placa: claro arriba y oscuro abajo, que es como se ve un borde
-			mecanizado cuando le pega la luz de arriba. Antes el tope de la pila llevaba un
-			aro naranja separado de la placa, con aire en el medio, y eso se leía como una
-			calcomanía pegada encima. Ahora todas tienen canto y el naranja es el color de
-			ese canto: misma señal, integrada al disco.
+			mecanizado cuando le pega la luz de arriba. Es el único canto que hay — la marca
+			naranja del tope de la pila se sacó: era una señal débil (se prendía en casi toda
+			carga) y ensuciaba el disco a cambio de poco.
 		-->
 		<linearGradient id="gb-canto-metal" x1="0" y1="0" x2="0" y2="1">
 			<stop offset="0" stop-color="rgb(255 255 255 / .75)" />
@@ -213,7 +209,7 @@
 					height={placa.alto}
 					rx="3"
 					fill="rgb({placa.color})"
-					stroke={placa.tope ? 'rgb(var(--max))' : 'url(#gb-canto-metal)'}
+					stroke="url(#gb-canto-metal)"
 					stroke-width="1.5"
 				/>
 				<text

@@ -281,32 +281,45 @@ Dos decisiones tomadas:
 - **El 2,5 va rosa.** En la vida real es rojo, igual que el 25, porque la escala se repite en
   las fracciones. En el dibujo el tamaño los separa; en la grilla de disponibles no, y
   quedaban dos botones rojos iguales.
-- **El naranja del tope de la pila vive en el canto.** Con un color por peso el relleno ya
-  está ocupado. El primer intento fue un aro separado de la placa, pero el aire entre los dos
-  lo hacía leer como una calcomanía pegada encima. Ahora toda placa tiene canto —un degradado
-  claro arriba y oscuro abajo, que es como se ve un borde mecanizado— y en la más pesada ese
-  canto va naranja: misma señal, integrada al disco.
+- **La marca naranja del tope de la pila se sacó.** Pasó por dos formas —aro por fuera de la
+  placa, después canto naranja— y las dos ensuciaban el disco. La señal era débil de entrada:
+  se prendía en casi toda carga, porque casi toda carga usa el disco más grande. Lo que quedó
+  es el canto metálico en todas las placas: un degradado claro arriba y oscuro abajo, que es
+  como se ve un borde mecanizado con la luz de arriba.
 
 Las placas pasan de teñidas a llenas: a media opacidad los siete colores se acercan entre sí
 hasta dejar de distinguirse. La tinta va oscura, que es para lo que existe `--on-bright`.
 
-### El objetivo se barre
+### El objetivo se pone con una cinta métrica
 
-`Stepper` acepta `barrido`, apagado por defecto y encendido sólo en la calculadora. Apoyás el
-dedo sobre la cifra, barrés, y el peso corre de a pasos mientras la barra se redibuja; las
-marcas de la cinta aparecen abajo y se van al soltar.
+`CintaPeso.svelte`. El ± se fue de esta pantalla: el objetivo se elige arrastrando una regla
+con marcas y números, con la aguja fija en el centro.
 
-El ± no se toca. La regla del manifiesto —un toque le gana a cualquier gesto en el peso— se
-escribió para el peso de una serie, donde hay prellenado y el valor que buscás ya está en
-pantalla. El objetivo de la calculadora no tiene nada de eso: ir de 60 a 100 kg son dieciséis
-toques del +. Así que el barrido se suma como segunda forma, no reemplaza a la primera.
+El primer intento fue un barrido escondido sobre la cifra, conservando el ±. No servía, y por
+un motivo que vale anotar: **un gesto sin forma visible no existe**. Nadie va a descubrir que
+la cifra se arrastra si nada en la pantalla lo insinúa. Una cinta se entiende porque se ve
+que es una cinta.
 
-Dos detalles que hacen que no moleste:
+La cinta sigue al dedo, como una cinta de verdad: llevarla a la derecha trae los números de
+abajo, porque lo que corre es la cinta y no la aguja. La cifra salta de a pasos pero el
+dibujo se mueve continuo — redondear también la cinta hace que el gesto se sienta trabado.
 
-- `touch-action: pan-y` y no `none`. El navegador se queda con el scroll vertical y nos cede
-  el horizontal, así que la página sigue scrolleando con el dedo encima del número.
-- Umbral de 6 px antes de considerar que es un arrastre. Sin eso, tocar el campo para
-  escribir movería el peso un paso antes de abrir el teclado.
+Sobre la regla del manifiesto (un toque le gana a cualquier gesto en el peso): se escribió
+para el peso de una serie, donde el valor viene prellenado de la vez anterior y está a un
+toque. El objetivo de la calculadora se explora, y ir de 60 a 100 kg con un ± son dieciséis
+toques que además no te muestran nada de lo que hay en el medio.
 
-No es alcanzable por teclado, y no hace falta que lo sea: el ± y el campo de texto ya cubren
-teclado y lector de pantalla enteros.
+Lo que no se pierde:
+
+- **Escribirlo.** La cifra sigue siendo un campo: para saltar de 60 a 180 el teclado gana, y
+  está a un toque. La cinta se acomoda sola al valor escrito.
+- **El teclado y el lector de pantalla.** Es un `role="slider"` con flechas, PageUp/PageDown y
+  Home/End, y `aria-valuetext` que dice el peso con su unidad.
+- **El scroll.** `touch-action: pan-y` deja que el navegador se quede con el eje vertical, así
+  que la página scrollea aunque el dedo caiga sobre la cinta.
+
+### El rótulo de la grilla
+
+"Discos por lado" se leía como _cuántos_ discos vas a usar, cuando la grilla es _qué pesos de
+disco_ hay en el gimnasio. La cantidad la resuelve el cálculo. Pasó a "Pesos de disco que
+tenés".
