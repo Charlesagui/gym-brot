@@ -43,7 +43,6 @@
 	const ANCHO_DISCO = 13;
 	const SEPARACION = 2.5;
 	const COLA = 16;
-	const ANCHO_EJE = 26;
 	const PASO = ANCHO_DISCO + SEPARACION;
 
 	/**
@@ -57,6 +56,8 @@
 	 * número de la placa además queda más grande, no más chico.
 	 */
 	const ANCHO_MIN = 320;
+	/** Lo mínimo de eje agarrable, cuando hay tantos discos que el ancho ya no alcanza. */
+	const EJE_MIN = 70;
 
 	/** Alto de placa según su peso, con piso para que 1,25 siga siendo visible. */
 	const ALTO_MIN = 36;
@@ -99,22 +100,30 @@
 		}));
 	}
 
-	/** Lo que ocupan las dos pilas más el centro; el resto del ancho es manga sobrante. */
-	const contenido = $derived(2 * pesos.length * PASO + 2 * ANCHO_COLLAR + ANCHO_EJE);
-	const ancho = $derived(Math.max(ANCHO_MIN, contenido + 2 * COLA));
+	/**
+	 * Cada lado ocupa lo suyo y el sobrante se lo lleva el eje, no las puntas.
+	 *
+	 * Al revés —eje fijo y corto, puntas largas— los discos quedaban amontonados contra
+	 * el centro con media barra vacía por fuera, que es exactamente lo que no hace una
+	 * barra cargada. En una barra olímpica el eje agarrable es como el 60% del largo y
+	 * cada manga el 19%: el disco va contra el collar, cerca de la punta, y lo que sobra
+	 * queda en el medio para las manos.
+	 */
+	const lado = $derived(COLA + pesos.length * PASO + ANCHO_COLLAR);
+	const ancho = $derived(Math.max(ANCHO_MIN, 2 * lado + EJE_MIN));
 
-	/** Dónde arranca cada pieza fija, de izquierda a derecha. Todo va centrado. */
-	const margen = $derived((ancho - contenido) / 2);
-	const collarIzq = $derived(margen + pesos.length * PASO);
+	/** Dónde arranca cada pieza fija, de izquierda a derecha. */
+	const collarIzq = $derived(COLA + pesos.length * PASO);
 	const ejeDesde = $derived(collarIzq + ANCHO_COLLAR);
-	const collarDer = $derived(ejeDesde + ANCHO_EJE);
+	const largoEje = $derived(ancho - 2 * lado);
+	const collarDer = $derived(ejeDesde + largoEje);
 
 	/**
 	 * En una barra real el disco pesado va contra el collar y el liviano queda afuera.
 	 * El lado izquierdo se dibuja invertido para que el espejo sea de verdad un espejo.
 	 */
 	const placas = $derived([
-		...armar([...pesos].reverse(), margen, false),
+		...armar([...pesos].reverse(), COLA, false),
 		...armar(pesos, collarDer + ANCHO_COLLAR, true)
 	]);
 </script>
@@ -130,6 +139,21 @@
 	class="gb-barra block h-28 w-full"
 	aria-hidden="true"
 >
+	<defs>
+		<!--
+			El canto de la placa: claro arriba y oscuro abajo, que es como se ve un borde
+			mecanizado cuando le pega la luz de arriba. Antes el tope de la pila llevaba un
+			aro naranja separado de la placa, con aire en el medio, y eso se leía como una
+			calcomanía pegada encima. Ahora todas tienen canto y el naranja es el color de
+			ese canto: misma señal, integrada al disco.
+		-->
+		<linearGradient id="gb-canto-metal" x1="0" y1="0" x2="0" y2="1">
+			<stop offset="0" stop-color="rgb(255 255 255 / .75)" />
+			<stop offset="0.45" stop-color="rgb(255 255 255 / .3)" />
+			<stop offset="1" stop-color="rgb(0 0 0 / .45)" />
+		</linearGradient>
+	</defs>
+
 	<!--
 		La barra, de punta a punta. Va en tres tramos y no en un rectángulo sólo: las dos
 		mangas gruesas donde entran los discos y, entre los collares, el eje más fino. Esa
@@ -156,7 +180,7 @@
 	<rect
 		x={ejeDesde}
 		y={CENTRO - ALTO_EJE / 2}
-		width={ANCHO_EJE}
+		width={largoEje}
 		height={ALTO_EJE}
 		fill="rgba(255,255,255,.14)"
 	/>
@@ -184,32 +208,14 @@
 					siete se acercan entre sí hasta dejar de distinguirse. La tinta va oscura,
 					que es exactamente para lo que existe `--on-bright`.
 				-->
-				<rect width={ANCHO_DISCO} height={placa.alto} rx="3" fill="rgb({placa.color})" />
 				<rect
-					x="1.5"
-					y="1.5"
-					width={ANCHO_DISCO - 3}
-					height="1.5"
-					rx="0.75"
-					fill="rgba(255,255,255,.34)"
+					width={ANCHO_DISCO}
+					height={placa.alto}
+					rx="3"
+					fill="rgb({placa.color})"
+					stroke={placa.tope ? 'rgb(var(--max))' : 'url(#gb-canto-metal)'}
+					stroke-width="1.5"
 				/>
-				{#if placa.tope}
-					<!--
-						El tope de la pila. Antes el naranja teñía la placa entera, y con un color
-						por peso ese relleno ya está ocupado: pasa a ser un aro por fuera, que
-						señala sin discutirle el color al disco.
-					-->
-					<rect
-						x="-2.5"
-						y="-2.5"
-						width={ANCHO_DISCO + 5}
-						height={placa.alto + 5}
-						rx="4.5"
-						fill="none"
-						stroke="rgb(var(--max))"
-						stroke-width="1.5"
-					/>
-				{/if}
 				<text
 					x={ANCHO_DISCO / 2}
 					y={placa.alto / 2}
