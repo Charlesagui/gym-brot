@@ -194,42 +194,90 @@ describe('prellenado del asistente', () => {
 		expect(await pesoRecienteGramos(7, '2026-03-12')).toBeNull();
 	});
 
-	it('estima la frecuencia semanal desde los días terminados', async () => {
-		const sesion = (fecha: string, diaTerminado: boolean) => ({
-			id: `${fecha}__push`,
-			fecha,
-			diaId: 'push',
-			ejercicios: [],
-			diaTerminado
-		});
+	/** Plan de 2 ejercicios x 4 series; `hechas` se reparte desde el primero. */
+	const sesionPlan = (
+		fecha: string,
+		hechas: number,
+		extra: { diaId?: string; diaTerminado?: boolean } = {}
+	) => ({
+		id: `${fecha}__${extra.diaId ?? 'push'}`,
+		fecha,
+		diaId: extra.diaId ?? 'push',
+		plan: { ejercicios: 2, series: 8 },
+		diaTerminado: extra.diaTerminado,
+		ejercicios: [
+			{
+				exerciseId: 'press',
+				sets: Array.from({ length: 4 }, (_, i) => ({ peso: 60, reps: 8, hecha: i < hechas }))
+			},
+			{
+				exerciseId: 'remo',
+				sets: Array.from({ length: 4 }, (_, i) => ({
+					peso: 50,
+					reps: 8,
+					hecha: i < hechas - 4
+				}))
+			}
+		]
+	});
+
+	it('estima la frecuencia semanal desde los días completos', async () => {
 		await db.sesiones.bulkPut([
-			sesion('2026-03-02', true),
-			sesion('2026-03-04', true),
-			sesion('2026-03-06', true),
-			sesion('2026-03-09', true),
-			// Empezada y no terminada: no cuenta como entrenamiento.
-			sesion('2026-03-10', false)
+			sesionPlan('2026-03-02', 8),
+			sesionPlan('2026-03-04', 8),
+			sesionPlan('2026-03-06', 8),
+			sesionPlan('2026-03-09', 8),
+			// Una sola serie de ocho: es un día parcial, no un entrenamiento.
+			sesionPlan('2026-03-10', 1)
 		]);
-		// 4 días terminados en una ventana de 28 -> 1 por semana.
+		// 4 días completos en una ventana de 28 -> 1 por semana.
 		expect(await frecuenciaSemanalReciente(28, '2026-03-29')).toBe(1);
 	});
 
-	it('dos rutinas el mismo día son un solo día de entrenamiento', async () => {
+	it('entrenar completo sin cerrar el día a mano cuenta igual', async () => {
+		// Era el bug: filtrando por `diaTerminado`, entrenar entero y no tocar el botón
+		// daba frecuencia 0 y con ella un gasto estimado más bajo del real.
+		await db.sesiones.bulkPut([
+			sesionPlan('2026-03-02', 8),
+			sesionPlan('2026-03-04', 8),
+			sesionPlan('2026-03-06', 8),
+			sesionPlan('2026-03-09', 8)
+		]);
+		expect(await frecuenciaSemanalReciente(28, '2026-03-29')).toBe(1);
+	});
+
+	it('una serie con el resto saltado y cerrada a mano NO es un entrenamiento', async () => {
+		// El otro lado del mismo bug: cerrar el día alcanzaba para contar una sesión plena.
 		await db.sesiones.bulkPut([
 			{
 				id: '2026-03-02__push',
 				fecha: '2026-03-02',
 				diaId: 'push',
-				ejercicios: [],
-				diaTerminado: true
-			},
-			{
-				id: '2026-03-02__pull',
-				fecha: '2026-03-02',
-				diaId: 'pull',
-				ejercicios: [],
-				diaTerminado: true
+				plan: { ejercicios: 3, series: 12 },
+				diaTerminado: true,
+				diaTerminadoConPendientes: true,
+				ejercicios: [
+					{ exerciseId: 'press', sets: [{ peso: 60, reps: 8, hecha: true }] },
+					{ exerciseId: 'remo', sets: [{ peso: 50, reps: 8, hecha: false }], saltado: true },
+					{ exerciseId: 'curl', sets: [{ peso: 20, reps: 12, hecha: false }], saltado: true }
+				]
 			}
+		]);
+		expect(await frecuenciaSemanalReciente(7, '2026-03-08')).toBe(0);
+	});
+
+	it('dos rutinas el mismo día son un solo día de entrenamiento', async () => {
+		await db.sesiones.bulkPut([
+			sesionPlan('2026-03-02', 8),
+			sesionPlan('2026-03-02', 8, { diaId: 'pull' })
+		]);
+		expect(await frecuenciaSemanalReciente(7, '2026-03-08')).toBe(1);
+	});
+
+	it('empezar una segunda rutina no degrada el día ya completo', async () => {
+		await db.sesiones.bulkPut([
+			sesionPlan('2026-03-02', 8),
+			sesionPlan('2026-03-02', 1, { diaId: 'pull' })
 		]);
 		expect(await frecuenciaSemanalReciente(7, '2026-03-08')).toBe(1);
 	});

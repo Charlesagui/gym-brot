@@ -1,6 +1,6 @@
 import { db, guardarSesion, VIOLETA_RUTINA, type Dia } from './db';
 import { capturarRevisionDatos, exigirRevisionDatos } from './revision-datos';
-import { reabrirSesion } from './sesion-reglas';
+import { mismoPlan, planDeDia, reabrirSesion } from './sesion-reglas';
 import { ejercicioPorId } from './catalog';
 
 /** Paleta de colores para los días. */
@@ -25,10 +25,33 @@ export const SERIES_MAX = 12;
  */
 function modificarDia(id: string, fn: (dia: Dia) => void): Promise<number> {
 	const revision = capturarRevisionDatos();
-	return db.transaction('rw', db.dias, async () => {
+	return db.transaction('rw', db.dias, db.sesiones, async () => {
 		exigirRevisionDatos(revision);
-		return db.dias.where('id').equals(id).modify(fn);
+		const cambios = await db.dias.where('id').equals(id).modify(fn);
+		const dia = await db.dias.get(id);
+		if (dia) await resincronizarPlanDeHoy(dia);
+		return cambios;
 	});
+}
+
+/**
+ * El plan congelado en la sesión de hoy sigue a la rutina mientras el día siga abierto:
+ * quitar un ejercicio o bajarle las series cambia lo que había que hacer HOY, y sin esto
+ * el denominador quedaría contando trabajo que ya no está planeado.
+ *
+ * Sólo hoy: una fecha pasada es historia y su plan no se toca. Y sólo si la sesión ya
+ * existe — editar una rutina no es empezar a entrenarla.
+ */
+async function resincronizarPlanDeHoy(dia: Dia): Promise<void> {
+	const fecha = new Date().toLocaleDateString('sv');
+	const sesion = await db.sesiones.get(`${fecha}__${dia.id}`);
+	// Sin plan previo la sesión es anterior al congelado: darle uno ahora sería inventarle
+	// un denominador que nunca tuvo.
+	if (!sesion?.plan) return;
+	const plan = planDeDia(dia.ejercicios);
+	if (mismoPlan(sesion.plan, plan)) return;
+	sesion.plan = plan;
+	await guardarSesion(sesion);
 }
 
 export async function crearDia(): Promise<string> {
@@ -117,11 +140,15 @@ export async function agregarEjercicio(diaId: string, exerciseId: string): Promi
 		// tarea pendiente bajo el estado "Terminado".
 		const fecha = new Date().toLocaleDateString('sv');
 		const sesion = await db.sesiones.get(`${fecha}__${diaId}`);
-		if (sesion?.diaTerminado) {
-			const nombre = ejercicioPorId(exerciseId)?.nombre ?? 'un ejercicio';
-			reabrirSesion(sesion, `Agregaste ${nombre} a la rutina`);
-			await guardarSesion(sesion);
-		}
+		if (!sesion) return;
+		// El ejercicio nuevo entra al denominador del día: si no, "4 de 12" seguiría
+		// midiendo contra un plan que ya no es el que hay que hacer hoy.
+		const plan = planDeDia(dia.ejercicios);
+		const planCambio = !!sesion.plan && !mismoPlan(sesion.plan, plan);
+		if (planCambio) sesion.plan = plan;
+		const nombre = ejercicioPorId(exerciseId)?.nombre ?? 'un ejercicio';
+		const reabierto = reabrirSesion(sesion, `Agregaste ${nombre} a la rutina`);
+		if (planCambio || reabierto) await guardarSesion(sesion);
 	});
 }
 

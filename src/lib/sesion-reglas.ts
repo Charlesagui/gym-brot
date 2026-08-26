@@ -1,4 +1,4 @@
-import type { Ajustes, MetricaPr, PrCelebrado, Sesion, SetSesion } from './db';
+import type { Ajustes, MetricaPr, PlanSesion, PrCelebrado, Sesion, SetSesion } from './db';
 import { conPesoCanonico, conPesoVisible, gramosAPeso, type UnidadPeso } from './unidades';
 
 /** Cómo puntúa un ejercicio: por peso o por reps si nunca registró peso. */
@@ -195,12 +195,20 @@ export function prRespaldado(sets: SetSesion[], pr: PrCelebrado | undefined): bo
  * abierto no es una novedad y no tiene por qué dejar un cartel.
  */
 export function reabrirSesion(
-	sesion: Pick<Sesion, 'diaTerminado' | 'diaTerminadoAt' | 'reaperturaMotivo' | 'reaperturaAt'>,
+	sesion: Pick<
+		Sesion,
+		| 'diaTerminado'
+		| 'diaTerminadoAt'
+		| 'diaTerminadoConPendientes'
+		| 'reaperturaMotivo'
+		| 'reaperturaAt'
+	>,
 	motivo: string
 ): boolean {
 	if (!sesion.diaTerminado) return false;
 	sesion.diaTerminado = false;
 	sesion.diaTerminadoAt = undefined;
+	sesion.diaTerminadoConPendientes = undefined;
 	sesion.reaperturaMotivo = motivo;
 	sesion.reaperturaAt = new Date().toISOString();
 	return true;
@@ -301,4 +309,153 @@ export function snapPr(
 		},
 		unidad
 	);
+}
+
+/**
+ * ============================================================================
+ * Qué cuenta como "día entrenado" — definición única de todo el producto.
+ * ============================================================================
+ *
+ * Antes había dos, y se contradecían al revés: el historial contaba cualquier
+ * sesión con UNA serie hecha, y el objetivo calórico sólo contaba las cerradas a
+ * mano. Así, entrenar completo sin tocar "Terminar día" valía cero para las
+ * calorías, y una serie con el resto saltado valía un entrenamiento entero.
+ */
+
+/**
+ * Fracción del plan que hay que cumplir para que el día cuente como entrenado.
+ *
+ * Fijo, explicable y testeado, como los topes del heatmap. Deliberadamente NO es un
+ * ajuste: un umbral por usuario vuelve incomparables dos historiales y nadie podría
+ * decir qué significa su propia racha.
+ */
+export const UMBRAL_DIA_COMPLETO = 0.6;
+
+export type CalidadSesion = 'nula' | 'parcial' | 'completa';
+
+/** Lo que hizo una sesión contra lo que planeaba, sin veredicto todavía. */
+export interface TotalesSesion {
+	seriesHechas: number;
+	/** Series planeadas, o null si la sesión es anterior al congelado del plan. */
+	seriesPlan: number | null;
+	/** Ejercicios con al menos una serie real. */
+	ejerciciosTrabajados: number;
+	ejerciciosPlan: number | null;
+	/** El usuario cerró el día a mano (con o sin pendientes). */
+	cerradaAMano: boolean;
+}
+
+export interface EstadoSesion extends TotalesSesion {
+	calidad: CalidadSesion;
+}
+
+/**
+ * El veredicto, en dos cláusulas y ninguna más:
+ *
+ * 1. Hiciste al menos el 60 % de las series planeadas. No depende de tocar ningún
+ *    botón: quien entrena completo y se va del gym queda bien contado igual.
+ * 2. O cerraste el día a mano habiendo trabajado en al menos el 60 % de los
+ *    ejercicios. Cubre al que hace dos series por ejercicio en vez de cuatro y
+ *    termina de verdad — y no cubre al que hizo un ejercicio y saltó el resto,
+ *    porque ahí el cierre a mano no alcanza el 60 % de ejercicios tampoco.
+ *
+ * El cierre a mano sólo puede subir el veredicto, nunca es el único camino. Que el
+ * dato dependiera de un toque haría que midiera disciplina con la app en vez de
+ * entrenamiento, que es como nació el bug que esto reemplaza.
+ */
+export function calidadDesde(totales: TotalesSesion): CalidadSesion {
+	if (totales.seriesHechas <= 0) return 'nula';
+	// Sin denominador no hay porcentaje que calcular, y estimarlo con la rutina de hoy
+	// reescribiría el pasado. No juzgamos: la sesión conserva el trato que ya tenía.
+	if (totales.seriesPlan == null || totales.seriesPlan <= 0) return 'completa';
+	if (totales.seriesHechas / totales.seriesPlan >= UMBRAL_DIA_COMPLETO) return 'completa';
+	if (
+		totales.cerradaAMano &&
+		totales.ejerciciosPlan != null &&
+		totales.ejerciciosPlan > 0 &&
+		totales.ejerciciosTrabajados / totales.ejerciciosPlan >= UMBRAL_DIA_COMPLETO
+	)
+		return 'completa';
+	return 'parcial';
+}
+
+const ORDEN_CALIDAD: Record<CalidadSesion, number> = { nula: 0, parcial: 1, completa: 2 };
+
+/**
+ * Veredicto de una FECHA con varias rutinas: manda la mejor de sus sesiones, no la suma.
+ *
+ * Sumar parecía lo natural y era un error: quien hacía una rutina entera y después
+ * empezaba otra y marcaba una serie terminaba con 13 de 24 series —un 54 %— y perdía el
+ * día completo que ya se había ganado. Empezar algo más nunca puede restar. La otra cara
+ * es que dos medias rutinas no se suman hasta un día completo, que es un caso raro y
+ * mucho menos grave que castigar al que entrenó de más.
+ */
+export function mejorCalidad(calidades: CalidadSesion[]): CalidadSesion {
+	return calidades.reduce<CalidadSesion>(
+		(mejor, actual) => (ORDEN_CALIDAD[actual] > ORDEN_CALIDAD[mejor] ? actual : mejor),
+		'nula'
+	);
+}
+
+/** Veredicto de una fecha entera a partir de sus sesiones. */
+export function calidadDeSesiones(sesiones: Sesion[]): CalidadSesion {
+	return mejorCalidad(sesiones.map((sesion) => calidadDesde(totalesSesion(sesion))));
+}
+
+/**
+ * Suma las cifras visibles de las sesiones de una misma fecha ("9 de 24 series"). Es
+ * presentación: el veredicto sale de `calidadDeSesiones`, que toma la mejor y no la suma.
+ */
+export function sumarTotales(a: TotalesSesion, b: TotalesSesion): TotalesSesion {
+	// Un plan ausente contamina la suma: con una sesión vieja adentro, el total deja de
+	// tener denominador en vez de fingir uno más chico del real.
+	return {
+		seriesHechas: a.seriesHechas + b.seriesHechas,
+		seriesPlan: a.seriesPlan == null || b.seriesPlan == null ? null : a.seriesPlan + b.seriesPlan,
+		ejerciciosTrabajados: a.ejerciciosTrabajados + b.ejerciciosTrabajados,
+		ejerciciosPlan:
+			a.ejerciciosPlan == null || b.ejerciciosPlan == null
+				? null
+				: a.ejerciciosPlan + b.ejerciciosPlan,
+		cerradaAMano: a.cerradaAMano || b.cerradaAMano
+	};
+}
+
+export function totalesSesion(sesion: Sesion): TotalesSesion {
+	let seriesHechas = 0;
+	let ejerciciosTrabajados = 0;
+	for (const ejercicio of sesion.ejercicios) {
+		const hechas = ejercicio.sets.filter(serieCompleta).length;
+		seriesHechas += hechas;
+		if (hechas > 0) ejerciciosTrabajados++;
+	}
+	return {
+		seriesHechas,
+		seriesPlan: sesion.plan?.series ?? null,
+		ejerciciosTrabajados,
+		ejerciciosPlan: sesion.plan?.ejercicios ?? null,
+		cerradaAMano: !!sesion.diaTerminado
+	};
+}
+
+/** Estado completo de una sesión: sus totales y el veredicto que sale de ellos. */
+export function estadoSesion(sesion: Sesion): EstadoSesion {
+	const totales = totalesSesion(sesion);
+	return { ...totales, calidad: calidadDesde(totales) };
+}
+
+/**
+ * El plan de una rutina, para congelarlo en la sesión. `Math.max(1, …)` replica lo que
+ * hace la creación de series: una rutina con objetivo 0 igual reserva una serie.
+ */
+export function planDeDia(ejercicios: { seriesObjetivo: number }[]): PlanSesion {
+	return {
+		ejercicios: ejercicios.length,
+		series: ejercicios.reduce((total, e) => total + Math.max(1, e.seriesObjetivo), 0)
+	};
+}
+
+/** Si el plan cambió de verdad: evita una escritura por cada toque en la rutina. */
+export function mismoPlan(a: PlanSesion | undefined, b: PlanSesion): boolean {
+	return a?.ejercicios === b.ejercicios && a?.series === b.series;
 }

@@ -116,7 +116,12 @@ test('el mapa corporal comparte datos con la lista y responde a borrar historial
 	await page.keyboard.press('Enter');
 	await expect(zona).toHaveAttribute('aria-pressed', 'true');
 	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
-	await expect(page.getByText(/no mide fatiga, recuperación ni activación médica/)).toBeVisible();
+	// `\s+` y no un espacio: el descargo es un párrafo largo y dónde le cae el salto de
+	// línea lo decide Prettier, no el contenido. Sin esto, reacomodar una palabra del
+	// pie rompe el test sin que nada haya cambiado en pantalla.
+	await expect(
+		page.getByText(/no\s+mide\s+fatiga,\s+recuperación\s+ni\s+activación\s+médica/)
+	).toBeVisible();
 
 	await page.goto('/historial/dia/2026-08-24');
 	await page.getByRole('button', { name: /Editar serie 1/ }).click();

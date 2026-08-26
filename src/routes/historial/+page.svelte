@@ -14,6 +14,9 @@
 	import { dur } from '$lib/motion';
 	import { popOnChange } from '$lib/pop-on-change';
 	import { ETIQUETAS_NIVEL, nivelActividad } from '$lib/heatmap';
+	import { UMBRAL_DIA_COMPLETO } from '$lib/sesion-reglas';
+
+	const PORCENTAJE_UMBRAL = Math.round(UMBRAL_DIA_COMPLETO * 100);
 	let MapaCorporal = $state<typeof import('$lib/components/MapaCorporal.svelte').default | null>(
 		null
 	);
@@ -45,6 +48,9 @@
 	// series entraron ese día. Antes esa intensidad vivía en un mapa anual aparte que
 	// mostraba el mismo hecho, linkeaba al mismo lugar y no entraba en un teléfono.
 	const porFecha = $derived(new Map(historial.dias.map((d) => [d.fecha, d])));
+	// Fechas con trabajo cargado y sin marcar: no son días entrenados y no se tiñen,
+	// pero tienen que ser alcanzables. Ver `DiaSinMarcar` en $lib/historial.
+	const pendientePorFecha = $derived(new Map(historial.sinMarcar.map((d) => [d.fecha, d])));
 	const semanas = $derived(historial.semanas.slice(0, 8));
 
 	/**
@@ -103,7 +109,13 @@
 	}
 
 	const mes = $derived(mesGrid(mesOffset, hoy));
-	const primeraFecha = $derived(historial.dias.at(-1)?.fecha ?? null);
+	// La fecha más vieja alcanzable, entrenada o pendiente: un mes cuyo único registro es
+	// un día sin marcar también tiene que poder navegarse, si no el enlace no sirve.
+	const primeraFecha = $derived(
+		[historial.dias.at(-1)?.fecha, historial.sinMarcar.at(-1)?.fecha]
+			.filter((f): f is string => !!f)
+			.sort()[0] ?? null
+	);
 	// Atrás solo hasta el mes del primer entrenamiento; adelante solo hasta hoy.
 	const sinMesAnterior = $derived(!primeraFecha || mes.ym <= primeraFecha.slice(0, 7));
 
@@ -135,13 +147,40 @@
 			</p>
 			<button
 				onclick={() => location.reload()}
-				class="mt-3 min-h-11 rounded-xl px-4 text-sm font-bold"
+				class="gb-relieve mt-3 min-h-11 rounded-xl px-4 text-sm font-bold"
 				style="background: rgba(255,255,255,.1); color: white">Reintentar</button
 			>
 		</section>
 	{:else if cargandoDatos}
 		<p class="py-8 text-center text-sm" style="color: var(--muted)">Cargando historial…</p>
 	{:else}
+		<!--
+			El mapa corporal, primero.
+
+			Es lo que la pantalla tiene de más mirable y entraba tercero, detrás del
+			recordatorio de backup y de la tarjeta de racha: entre los dos lo empujaban
+			137 px, y con la letra chica de la propia tarjeta el dibujo arrancaba recién a
+			los 535 px. En un teléfono de 664 px de alto no entraba ni la mitad.
+		-->
+		<div class="mb-4">
+			{#if MapaCorporal}
+				<MapaCorporal {hoy} />
+			{:else}
+				<!-- El esqueleto reserva lo que el mapa mide de verdad (~48 rem). Con las 9 rem
+				     de antes, al llegar el componente todo lo de abajo saltaba 610 px: si estabas
+				     por tocar una celda del calendario, tocabas otra. -->
+				<section
+					class="gb-skeleton min-h-[48rem] border border-white/10 p-4"
+					style="background: var(--surface)"
+					aria-busy="true"
+					aria-label="Cargando distribución estimada de series"
+				>
+					<div class="h-4 w-48 rounded bg-white/10"></div>
+					<div class="mt-3 h-[44rem] rounded-xl bg-white/[0.035]"></div>
+				</section>
+			{/if}
+		</div>
+
 		{#if recordarBackup}
 			<!-- Discreto y accionable: el dato local se puede perder sin backup (iOS purga IndexedDB). -->
 			<a
@@ -156,41 +195,54 @@
 						? `último backup hace ${diasDesde(ajustes.ultimoBackup)} días`
 						: 'todavía sin backup'}
 				</span>
-				<span class="shrink-0 text-xs font-bold" style="color: var(--accent-text)">Exportar →</span>
+				<span class="shrink-0 text-xs font-bold" style="color: var(--accent-text)">Exportar</span>
 			</a>
 		{/if}
 
+		<!-- Las tres cifras van en la tipografía de cifras, como el peso y el récord en el
+		     resto de la app: son contenido, no rótulos. Se quedan del mismo tamaño a
+		     propósito — quien manda en esta pantalla ahora es el dibujo de arriba, y un
+		     número inflado acá le pelearía el lugar sin decir nada más. -->
 		<section
 			class="mb-4 rounded-2xl border border-white/10 p-4"
 			style="background: radial-gradient(120% 120% at 0% 0%, rgb(var(--exito) / .18), transparent 62%), var(--surface)"
 		>
 			<div class="grid grid-cols-3 gap-2 text-center">
 				<div>
-					<p class="text-2xl font-extrabold tabular-nums" use:popOnChange={historial.rachaSemanal}>
+					<p class="cifra text-2xl" use:popOnChange={historial.rachaSemanal}>
 						{historial.rachaSemanal}
 					</p>
-					<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">
+					<p class="mt-1.5 text-[11px] font-semibold" style="color: var(--muted)">
 						semanas en racha
 					</p>
 				</div>
 				<div>
-					<p
-						class="text-2xl font-extrabold tabular-nums"
-						use:popOnChange={historial.diasEstaSemana}
-					>
+					<p class="cifra text-2xl" use:popOnChange={historial.diasEstaSemana}>
 						{historial.diasEstaSemana}
 					</p>
-					<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">
+					<p class="mt-1.5 text-[11px] font-semibold" style="color: var(--muted)">
 						días esta semana
 					</p>
+					{#if historial.parcialesEstaSemana > 0}
+						<p class="text-[10px] font-semibold" style="color: var(--muted)">
+							+{historial.parcialesEstaSemana} parcial{historial.parcialesEstaSemana === 1
+								? ''
+								: 'es'}
+						</p>
+					{/if}
 				</div>
 				<div>
-					<p class="text-2xl font-extrabold tabular-nums" use:popOnChange={historial.totalDias}>
+					<p class="cifra text-2xl" use:popOnChange={historial.totalDias}>
 						{historial.totalDias}
 					</p>
-					<p class="mt-0.5 text-[11px] font-semibold" style="color: var(--muted)">
+					<p class="mt-1.5 text-[11px] font-semibold" style="color: var(--muted)">
 						días entrenados
 					</p>
+					{#if historial.totalParciales > 0}
+						<p class="text-[10px] font-semibold" style="color: var(--muted)">
+							+{historial.totalParciales} parcial{historial.totalParciales === 1 ? '' : 'es'}
+						</p>
+					{/if}
 				</div>
 			</div>
 			{#if historial.rachaSemanal > 0 && historial.diasEstaSemana === 0}
@@ -204,22 +256,6 @@
 			{/if}
 		</section>
 
-		<div class="mb-4">
-			{#if MapaCorporal}
-				<MapaCorporal {hoy} />
-			{:else}
-				<section
-					class="min-h-36 animate-pulse rounded-2xl border border-white/10 p-4"
-					style="background: var(--surface)"
-					aria-busy="true"
-					aria-label="Cargando distribución estimada de series"
-				>
-					<div class="h-4 w-48 rounded bg-white/10"></div>
-					<div class="mt-3 h-24 rounded-xl bg-white/[0.035]"></div>
-				</section>
-			{/if}
-		</div>
-
 		<section
 			class="-mx-5 mb-4 rounded-none border-y border-white/10 px-1.5 py-4 sm:mx-0 sm:rounded-2xl sm:border sm:p-4"
 			style="background: var(--surface)"
@@ -228,8 +264,8 @@
 				<button
 					onclick={() => (mesOffset -= 1)}
 					disabled={sinMesAnterior}
-					class="grid size-11 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
-					aria-label="Mes anterior">‹</button
+					class="gb-relieve grid size-11 place-items-center rounded-full border border-white/10 disabled:opacity-30"
+					aria-label="Mes anterior"><Icono nombre="volver" /></button
 				>
 				<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
 					{mes.label}
@@ -237,8 +273,8 @@
 				<button
 					onclick={() => (mesOffset += 1)}
 					disabled={mesOffset >= 0}
-					class="grid size-11 place-items-center rounded-full border border-white/10 text-base disabled:opacity-30"
-					aria-label="Mes siguiente">›</button
+					class="gb-relieve grid size-11 place-items-center rounded-full border border-white/10 disabled:opacity-30"
+					aria-label="Mes siguiente"><Icono nombre="volver" clase="rotate-180" /></button
 				>
 			</div>
 			<div class="grid grid-cols-7 gap-0 sm:gap-1.5">
@@ -251,31 +287,68 @@
 					{:else if porFecha.get(fecha)}
 						{@const dia = porFecha.get(fecha)!}
 						{@const nivel = nivelActividad(dia.sets)}
+						{@const parcial = dia.calidad === 'parcial'}
 						<!-- Día entrenado: tap → detalle de ese día. El relleno dice cuántas
 						     series entraron; el de hoy entra con un pop breve, porque es
-						     probable que sea "el día recién completado". -->
+						     probable que sea "el día recién completado".
+
+						     Un día PARCIAL va HUECO y con el borde entero: entrenaste, pero por
+						     debajo del umbral. Se distingue del completo (relleno), del cargado
+						     sin marcar (punteado y en acento) y del vacío. Antes una serie de
+						     doce llenaba la celda igual que la rutina entera. -->
 						<a
 							href={`/historial/dia/${fecha}`}
 							in:scale={fecha === hoy ? { duration: dur(240), start: 0.7 } : { duration: 0 }}
 							class="grid min-h-11 min-w-11 place-items-center rounded-lg border text-[11px] font-bold"
-							style="background: rgb(var(--exito) / {ALFA_NIVEL[
-								nivel
-							]}); border-color: rgb(var(--exito) / {fecha === hoy ? '.9' : '.42'}); color: white"
-							aria-label={`${fechaCorta(fecha)}: ${dia.sets} ${
+							style="background: {parcial
+								? 'transparent'
+								: `rgb(var(--exito) / ${ALFA_NIVEL[nivel]})`}; border-color: rgb(var(--exito) / {fecha ===
+							hoy
+								? '.9'
+								: '.42'}); color: {parcial ? 'rgb(var(--exito))' : 'white'}"
+							aria-label={`${fechaCorta(fecha)}: ${parcial ? 'día parcial, ' : ''}${dia.sets} ${
 								dia.sets === 1 ? 'serie completada' : 'series completadas'
-							}${dia.dias.length ? ` · ${dia.dias.join(', ')}` : ''} · ver detalle`}
+							}${dia.seriesPlan != null ? ` de ${dia.seriesPlan} planeadas` : ''}${
+								dia.dias.length ? ` · ${dia.dias.join(', ')}` : ''
+							} · ver detalle`}
+						>
+							{Number(fecha.slice(8, 10))}
+						</a>
+					{:else if pendientePorFecha.get(fecha)}
+						{@const pendiente = pendientePorFecha.get(fecha)!}
+						<!-- Trabajo cargado que nunca se marcó. Sin relleno y con el borde punteado
+						     porque NO es un día entrenado: no cuenta en la racha ni en el total, y
+						     teñirlo como los demás sería afirmar series que nadie confirmó. Lo único
+						     que aporta es la puerta: el detalle de ese día sabe reabrir la rutina y
+						     terminar de marcarlas, y hasta acá no había forma de llegar. -->
+						<a
+							href={`/historial/dia/${fecha}`}
+							class="grid min-h-11 min-w-11 place-items-center rounded-lg border border-dashed text-[11px] font-bold"
+							style="border-color: rgb(var(--accent-rgb) / .5); color: var(--accent-text)"
+							aria-label={`${fechaCorta(fecha)}: ${pendiente.sets} ${
+								pendiente.sets === 1 ? 'serie cargada' : 'series cargadas'
+							} sin marcar${
+								pendiente.dias.length ? ` · ${pendiente.dias.join(', ')}` : ''
+							} · abrir para terminar de marcarlas`}
 						>
 							{Number(fecha.slice(8, 10))}
 						</a>
 					{:else}
+						<!-- El día futuro recede sacándole el relleno, no bajándole la opacidad. Con
+						     `opacity-35` el número quedaba en 1,9:1 contra el fondo —la única cosa de la
+						     pantalla por debajo de 4,5:1— y atenuar no alcanzaba para arreglarlo: hasta
+						     `opacity-60` da 3,2:1, y el 80 % que sí llega a 4,5:1 ya no se distingue de un
+						     día pasado. Sin fondo, la celda se lee como "todavía no hay nada acá" y el
+						     número conserva sus 7,1:1. -->
 						<div
-							class="grid min-h-11 min-w-11 place-items-center rounded-lg border text-[11px] font-semibold {fecha >
-							hoy
-								? 'opacity-35'
-								: ''}"
-							style="background: rgba(255,255,255,.035); border-color: {fecha === hoy
+							class="grid min-h-11 min-w-11 place-items-center rounded-lg border text-[11px] font-semibold"
+							style="background: {fecha > hoy
+								? 'transparent'
+								: 'rgba(255,255,255,.035)'}; border-color: {fecha === hoy
 								? 'rgba(255,255,255,.4)'
-								: 'rgba(255,255,255,.06)'}; color: var(--muted)"
+								: fecha > hoy
+									? 'rgba(255,255,255,.03)'
+									: 'rgba(255,255,255,.06)'}; color: var(--muted)"
 							aria-label={`${fechaCorta(fecha)} sin entrenamiento`}
 						>
 							{Number(fecha.slice(8, 10))}
@@ -288,6 +361,12 @@
 				style="color: var(--muted)"
 				aria-label={`Leyenda de series por día: ${ETIQUETAS_NIVEL.join(', ')}`}
 			>
+				<span
+					class="size-3 rounded-[3px] border"
+					style="background: transparent; border-color: rgb(var(--exito) / .5)"
+					title="Día parcial: menos del {PORCENTAJE_UMBRAL} % de lo planeado"
+				></span>
+				<span class="mr-1">Parcial</span>
 				<span>Menos series</span>
 				{#each ETIQUETAS_NIVEL as etiqueta, nivel (nivel)}
 					<span
@@ -300,6 +379,15 @@
 				{/each}
 				<span>Más</span>
 			</div>
+			{#if historial.sinMarcar.length > 0}
+				<p class="mt-2 px-1 text-[10px] leading-relaxed" style="color: var(--muted)">
+					<span
+						class="mr-1 inline-block size-3 translate-y-[2px] rounded-[3px] border border-dashed"
+						style="border-color: rgb(var(--accent-rgb) / .5)"
+					></span>
+					Punteado: series cargadas que quedaron sin marcar. No cuentan como día entrenado.
+				</p>
+			{/if}
 		</section>
 
 		<!-- Mismo sangrado que el calendario: de acá para abajo la pantalla son paneles a
@@ -378,12 +466,10 @@
 									? '1RM est.'
 									: 'peso máx.'} · {fechaCorta(record.fecha)}</span
 						>
-						<p
-							class="shrink-0 text-right text-sm font-extrabold tabular-nums"
-							style="color: rgb(var(--max))"
-						>
-							{formatoNumero(record.valor)}
-							<span class="ml-1 text-[11px] font-semibold" style="color: var(--muted)"
+						<!-- El récord es contenido, no rótulo: va en la tipografía de cifras con su
+						     unidad chica al lado, igual que en la pantalla del ejercicio. -->
+						<p class="cifra shrink-0 text-right text-base" style="color: rgb(var(--max))">
+							{formatoNumero(record.valor)}<span class="cifra-u"
 								>{record.modo === 'reps' ? 'reps' : ajustes.unidad}</span
 							>
 						</p>
@@ -392,7 +478,7 @@
 				{#if records.length > recordsVisibles}
 					<button
 						onclick={() => (recordsVisibles += 15)}
-						class="w-full rounded-xl border border-white/10 py-2.5 text-sm font-semibold"
+						class="gb-relieve min-h-11 w-full rounded-xl border border-white/10 py-2.5 text-sm font-semibold"
 						style="background: var(--surface); color: var(--muted)"
 					>
 						Ver más ({records.length - recordsVisibles}

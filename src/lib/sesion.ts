@@ -5,8 +5,10 @@ import {
 	db,
 	guardarSesion,
 	type Ajustes,
+	type Dia,
 	type EjercicioSesion,
 	type MetricaPr,
+	type PlanSesion,
 	type PrCelebrado,
 	type Sesion,
 	type SetSesion
@@ -20,7 +22,9 @@ import {
 	estadoEjercicioSesion,
 	limpiarReapertura,
 	metricaConfigurada,
+	mismoPlan,
 	modoEjercicio,
+	planDeDia,
 	reabrirSesion,
 	resolverMetricaPr,
 	repeticionesValidas,
@@ -45,6 +49,7 @@ import { rirValido } from './esfuerzo';
 
 export {
 	DESCRIPCION_METRICA,
+	estadoSesion,
 	mejorSet,
 	modoEjercicio,
 	pesoEfectivo,
@@ -52,7 +57,14 @@ export {
 	valorMetrica,
 	valorSet
 } from './sesion-reglas';
-export type { MejorSet, MetricaEfectiva, ModoPr, RecordEjercicio } from './sesion-reglas';
+export type {
+	CalidadSesion,
+	EstadoSesion,
+	MejorSet,
+	MetricaEfectiva,
+	ModoPr,
+	RecordEjercicio
+} from './sesion-reglas';
 
 /** Fecha local en formato YYYY-MM-DD. */
 export function hoyStr(): string {
@@ -103,17 +115,38 @@ export async function setsEjercicioSesion(
 	);
 }
 
-async function ensureSesion(diaId: string, fecha = hoyStr(), diaNombre?: string): Promise<Sesion> {
+async function ensureSesion(
+	diaId: string,
+	fecha = hoyStr(),
+	diaNombre?: string,
+	plan?: PlanSesion
+): Promise<Sesion> {
 	const id = sesionId(diaId, fecha);
 	let s = await db.sesiones.get(id);
 	if (!s) {
 		const mismoDia = await db.sesiones.where('fecha').equals(fecha).toArray();
 		const ordenEnDia =
 			mismoDia.reduce((maximo, sesion) => Math.max(maximo, sesion.ordenEnDia ?? -1), -1) + 1;
-		s = { id, fecha, diaId, diaNombre, ordenEnDia, ejercicios: [] };
+		s = { id, fecha, diaId, diaNombre, ordenEnDia, plan, ejercicios: [] };
 		await db.sesiones.add(conIndice(s));
 	}
 	return s;
+}
+
+/**
+ * Congela (o actualiza) el plan del día en la sesión. Devuelve si hubo cambio.
+ *
+ * Sólo toca la sesión de HOY. El plan de una fecha pasada es historia: reescribirlo con
+ * la rutina actual es exactamente el error que `Sesion.plan` existe para evitar, y por
+ * eso una sesión anterior a este campo se queda sin denominador en vez de recibir uno
+ * inventado.
+ */
+function sincronizarPlan(sesion: Sesion, dia: Dia, fecha: string): boolean {
+	if (fecha !== hoyStr()) return false;
+	const plan = planDeDia(dia.ejercicios);
+	if (mismoPlan(sesion.plan, plan)) return false;
+	sesion.plan = plan;
+	return true;
 }
 
 /**
@@ -357,13 +390,16 @@ export async function prepararEjercicioSesion(
 		const id = sesionId(diaId, fecha);
 		let sesion = await db.sesiones.get(id);
 		if (!sesion) {
-			sesion = await ensureSesion(diaId, fecha, dia.nombre);
+			sesion = await ensureSesion(diaId, fecha, dia.nombre, planDeDia(dia.ejercicios));
 		}
 		let snapshotsActualizados = false;
 		if (!sesion.diaNombre) {
 			sesion.diaNombre = dia.nombre;
 			snapshotsActualizados = true;
 		}
+		// La rutina puede haber cambiado desde que se creó la sesión de hoy: el denominador
+		// tiene que seguir al plan vigente mientras el día siga siendo hoy.
+		if (sincronizarPlan(sesion, dia, fecha)) snapshotsActualizados = true;
 		const ejercicioExistente = sesion.ejercicios.find((item) => item.exerciseId === exerciseId);
 		if (ejercicioExistente && !ejercicioExistente.nombreSnapshot) {
 			ejercicioExistente.nombreSnapshot = ejercicioPorId(exerciseId)?.nombre;
@@ -859,7 +895,8 @@ export async function saltarEjercicio(
 		const dia = await db.dias.get(diaId);
 		const configuracion = dia?.ejercicios.find((item) => item.exerciseId === exerciseId);
 		if (!dia || !configuracion) return { saltado: false, razon: 'rutina-no-disponible' };
-		const sesion = await ensureSesion(diaId, fecha, dia.nombre);
+		const sesion = await ensureSesion(diaId, fecha, dia.nombre, planDeDia(dia.ejercicios));
+		sincronizarPlan(sesion, dia, fecha);
 		sesion.diaNombre ??= dia.nombre;
 		let ejercicio = sesion.ejercicios.find((item) => item.exerciseId === exerciseId);
 		// Saltar algo ya terminado lo rotulaba "Saltado" en gris y de paso reabría el día:
@@ -996,6 +1033,7 @@ export interface InstantaneaSesion {
 	ejercicios: EjercicioSesion[];
 	diaTerminado?: boolean;
 	diaTerminadoAt?: string;
+	diaTerminadoConPendientes?: boolean;
 	reaperturaMotivo?: string;
 	reaperturaAt?: string;
 }
@@ -1008,6 +1046,7 @@ function fotografiar(sesion: Sesion, exerciseId?: string): InstantaneaSesion {
 		ejercicios: structuredClone(ejercicios),
 		diaTerminado: sesion.diaTerminado,
 		diaTerminadoAt: sesion.diaTerminadoAt,
+		diaTerminadoConPendientes: sesion.diaTerminadoConPendientes,
 		reaperturaMotivo: sesion.reaperturaMotivo,
 		reaperturaAt: sesion.reaperturaAt
 	};
@@ -1072,6 +1111,7 @@ export function reiniciarDia(diaId: string, fecha = hoyStr()): Promise<Instantan
 		reabrirSesion(s, 'Reiniciaste el día');
 		s.diaTerminado = false;
 		s.diaTerminadoAt = undefined;
+		s.diaTerminadoConPendientes = undefined;
 		await guardarSesion(s);
 		return instantanea;
 	});
@@ -1099,6 +1139,7 @@ export function restaurarInstantanea(
 		}
 		s.diaTerminado = instantanea.diaTerminado;
 		s.diaTerminadoAt = instantanea.diaTerminadoAt;
+		s.diaTerminadoConPendientes = instantanea.diaTerminadoConPendientes;
 		s.reaperturaMotivo = instantanea.reaperturaMotivo;
 		s.reaperturaAt = instantanea.reaperturaAt;
 		await guardarSesion(s);
@@ -1112,12 +1153,23 @@ export function restaurarInstantanea(
  * vacía marcada como terminada, y dejaba la sesión real del entrenamiento abierta.
  */
 export type ResultadoDiaTerminado =
-	| { terminado: true }
-	| { terminado: false; razon: 'rutina-no-disponible' | 'ejercicios-pendientes' };
+	| { terminado: true; conPendientes: boolean }
+	| { terminado: false; razon: 'rutina-no-disponible' | 'ejercicios-pendientes' | 'sin-trabajo' };
 
+/**
+ * Cierra el día.
+ *
+ * `conPendientes` es la salida honesta para "terminé por hoy" con trabajo sin resolver.
+ * Antes no existía: cerrar exigía cada ejercicio hecho o saltado, así que quien hacía un
+ * ejercicio y se iba sólo podía saltar el resto —mintiendo sobre por qué no los hizo— o
+ * dejar el día abierto para siempre. Se pide explícitamente desde la pantalla, que ya
+ * confirmó con el usuario cuánto queda afuera, y queda registrado en la sesión: cerrar a
+ * mano no puede valer lo mismo que haber cumplido el plan.
+ */
 export async function marcarDiaTerminado(
 	diaId: string,
-	fecha = hoyStr()
+	fecha = hoyStr(),
+	{ conPendientes = false }: { conPendientes?: boolean } = {}
 ): Promise<ResultadoDiaTerminado> {
 	const revision = capturarRevisionDatos();
 	return db.transaction('rw', db.dias, db.sesiones, async () => {
@@ -1131,12 +1183,18 @@ export async function marcarDiaTerminado(
 				const ejercicio = s.ejercicios.find((e) => e.exerciseId === item.exerciseId);
 				return !!ejercicio && (ejercicio.saltado || ejercicio.sets.every(serieCompleta));
 			});
-		if (!todoResuelto) return { terminado: false, razon: 'ejercicios-pendientes' };
+		if (!todoResuelto && !conPendientes)
+			return { terminado: false, razon: 'ejercicios-pendientes' };
+		// Un día sin una sola serie ni un solo salto no es un día cerrado: es un día que no
+		// empezó. Cerrarlo dejaría una sesión "terminada" que el historial no muestra.
+		const hayAlgoQueCerrar = s.ejercicios.some((e) => e.saltado || e.sets.some(serieCompleta));
+		if (!hayAlgoQueCerrar) return { terminado: false, razon: 'sin-trabajo' };
 		s.diaTerminado = true;
 		s.diaTerminadoAt = new Date().toISOString();
+		s.diaTerminadoConPendientes = todoResuelto ? undefined : true;
 		limpiarReapertura(s);
 		await guardarSesion(s);
-		return { terminado: true };
+		return { terminado: true, conPendientes: !todoResuelto };
 	});
 }
 
@@ -1148,6 +1206,7 @@ export function reabrirDia(diaId: string, fecha = hoyStr()) {
 		.modify((s) => {
 			s.diaTerminado = false;
 			s.diaTerminadoAt = undefined;
+			s.diaTerminadoConPendientes = undefined;
 			limpiarReapertura(s);
 		});
 }

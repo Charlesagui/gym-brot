@@ -1,5 +1,5 @@
 import { liveQuery } from 'dexie';
-import { db, type ObjetivoEnergia } from './db';
+import { db, type ObjetivoEnergia, type Sesion } from './db';
 import {
 	calcularMantenimiento,
 	calcularObjetivo,
@@ -11,6 +11,7 @@ import {
 } from './energia';
 import { hoyCalendarioLocal } from './fechas';
 import { capturarRevisionDatos, exigirRevisionDatos } from './revision-datos';
+import { calidadDeSesiones } from './sesion-reglas';
 
 /**
  * Persistencia de los objetivos calóricos y las lecturas que alimentan el asistente.
@@ -188,16 +189,27 @@ export async function pesoRecienteGramos(
  * Sesiones por semana en la ventana reciente, redondeadas al medio entrenamiento más
  * cercano. Es un prellenado, no un dato: el asistente lo muestra con su procedencia y
  * el usuario puede corregirlo.
+ *
+ * Cuenta días COMPLETOS según la definición única del producto, la misma que usa el
+ * historial. Antes filtraba por `diaTerminado`, que fallaba en las dos direcciones a la
+ * vez: entrenar entero sin tocar "Terminar día" daba frecuencia 0 —y con ella un gasto
+ * estimado más bajo del real—, mientras que una serie con el resto saltado, cerrada a
+ * mano, valía un entrenamiento completo e inflaba el objetivo calórico.
  */
 export async function frecuenciaSemanalReciente(
 	dias = DIAS_FRECUENCIA,
 	hoy = hoyCalendarioLocal()
 ): Promise<number> {
 	const desde = fechaMenosDias(hoy, dias - 1);
-	const fechas = await db.sesiones.where('fecha').between(desde, hoy, true, true).toArray();
-	// Dos rutinas el mismo día son un día de entrenamiento, no dos.
-	const diasEntrenados = new Set(
-		fechas.filter((sesion) => sesion.diaTerminado).map((s) => s.fecha)
-	);
-	return Math.round(((diasEntrenados.size * 7) / dias) * 2) / 2;
+	const sesiones = await db.sesiones.where('fecha').between(desde, hoy, true, true).toArray();
+	// Dos rutinas el mismo día son un día de entrenamiento, no dos: manda la mejor.
+	const porFecha = new Map<string, Sesion[]>();
+	for (const sesion of sesiones) {
+		porFecha.set(sesion.fecha, [...(porFecha.get(sesion.fecha) ?? []), sesion]);
+	}
+	let diasEntrenados = 0;
+	for (const delDia of porFecha.values()) {
+		if (calidadDeSesiones(delDia) === 'completa') diasEntrenados++;
+	}
+	return Math.round(((diasEntrenados * 7) / dias) * 2) / 2;
 }

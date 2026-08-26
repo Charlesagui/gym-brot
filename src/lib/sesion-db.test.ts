@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { conIndice, db, guardarSesion } from './db';
 import {
 	addSet,
@@ -35,9 +35,9 @@ import {
 	ultimaSesion
 } from './sesion';
 import { resumenDiaSesion, rachaSemanalActual } from './historial';
-import { pesoEfectivo, serieCompleta } from './sesion-reglas';
+import { estadoSesion, pesoEfectivo, serieCompleta } from './sesion-reglas';
 import { gramosAPeso } from './unidades';
-import { agregarEjercicio } from './dias';
+import { agregarEjercicio, ajustarSeries, quitarEjercicio } from './dias';
 
 async function limpiarDb() {
 	await db.open();
@@ -1203,7 +1203,10 @@ describe('flujo no lineal: arrepentirse y volver', () => {
 		const sets = (await db.sesiones.get('2026-01-08__push'))?.ejercicios[0]?.sets;
 		expect(sets).toHaveLength(3);
 		expect(sets?.every(serieCompleta)).toBe(true);
-		expect(await marcarDiaTerminado('push', '2026-01-08')).toEqual({ terminado: true });
+		expect(await marcarDiaTerminado('push', '2026-01-08')).toEqual({
+			terminado: true,
+			conPendientes: false
+		});
 	});
 
 	it('cerrar con lo hecho no borra nada si no hay ninguna serie marcada', async () => {
@@ -1391,5 +1394,158 @@ describe('flujo no lineal: arrepentirse y volver', () => {
 		}
 
 		expect(resumenDiaSesion(await db.sesiones.get('2026-01-08__push'))).toEqual(base);
+	});
+});
+
+describe('plan congelado del día', () => {
+	beforeEach(async () => {
+		vi.useRealTimers();
+		await limpiarDb();
+	});
+	afterEach(() => vi.useRealTimers());
+
+	const RUTINA = {
+		id: 'push',
+		nombre: 'Push',
+		orden: 0,
+		ejercicios: [
+			{ exerciseId: 'press', seriesObjetivo: 4, orden: 0 },
+			{ exerciseId: 'fondos', seriesObjetivo: 4, orden: 1 },
+			{ exerciseId: 'elevaciones', seriesObjetivo: 4, orden: 2 }
+		]
+	};
+
+	it('congela ejercicios y series al crear la sesión de hoy', async () => {
+		vi.setSystemTime(new Date('2026-01-07T12:00:00'));
+		await db.dias.add(RUTINA);
+		await prepararEjercicioSesion('push', 'press', '2026-01-07');
+		expect((await db.sesiones.get('2026-01-07__push'))?.plan).toEqual({
+			ejercicios: 3,
+			series: 12
+		});
+	});
+
+	it('sigue a la rutina mientras el día sea hoy', async () => {
+		vi.setSystemTime(new Date('2026-01-07T12:00:00'));
+		await db.dias.add(RUTINA);
+		await prepararEjercicioSesion('push', 'press', '2026-01-07');
+
+		await ajustarSeries('push', 'press', 1);
+		expect((await db.sesiones.get('2026-01-07__push'))?.plan).toEqual({
+			ejercicios: 3,
+			series: 13
+		});
+
+		await quitarEjercicio('push', 'elevaciones');
+		expect((await db.sesiones.get('2026-01-07__push'))?.plan).toEqual({
+			ejercicios: 2,
+			series: 9
+		});
+
+		await agregarEjercicio('push', 'remo');
+		expect((await db.sesiones.get('2026-01-07__push'))?.plan).toEqual({
+			ejercicios: 3,
+			series: 12
+		});
+	});
+
+	it('NO reescribe el plan de una fecha pasada: eso es historia', async () => {
+		vi.setSystemTime(new Date('2026-01-07T12:00:00'));
+		await db.dias.add(RUTINA);
+		await prepararEjercicioSesion('push', 'press', '2026-01-07');
+
+		// Al día siguiente, editar la rutina no puede tocar lo de ayer.
+		vi.setSystemTime(new Date('2026-01-08T12:00:00'));
+		await ajustarSeries('push', 'press', 1);
+		await quitarEjercicio('push', 'fondos');
+		expect((await db.sesiones.get('2026-01-07__push'))?.plan).toEqual({
+			ejercicios: 3,
+			series: 12
+		});
+	});
+
+	it('no le inventa un plan a una sesión que nació sin él', async () => {
+		vi.setSystemTime(new Date('2026-01-07T12:00:00'));
+		await db.dias.add(RUTINA);
+		// Sesión anterior al congelado, escrita a mano como la dejaría una base vieja.
+		await guardarSesion({
+			id: '2026-01-07__push',
+			fecha: '2026-01-07',
+			diaId: 'push',
+			ejercicios: [{ exerciseId: 'press', sets: [{ peso: 60, reps: 8, hecha: true }] }]
+		});
+		await ajustarSeries('push', 'press', 1);
+		expect((await db.sesiones.get('2026-01-07__push'))?.plan).toBeUndefined();
+	});
+});
+
+describe('cerrar el día con trabajo pendiente', () => {
+	beforeEach(async () => {
+		vi.useRealTimers();
+		await limpiarDb();
+	});
+	afterEach(() => vi.useRealTimers());
+
+	async function conUnaSerieDeDoce() {
+		vi.setSystemTime(new Date('2026-01-07T12:00:00'));
+		await db.dias.add({
+			id: 'push',
+			nombre: 'Push',
+			orden: 0,
+			ejercicios: [
+				{ exerciseId: 'press', seriesObjetivo: 4, orden: 0 },
+				{ exerciseId: 'fondos', seriesObjetivo: 4, orden: 1 },
+				{ exerciseId: 'elevaciones', seriesObjetivo: 4, orden: 2 }
+			]
+		});
+		await prepararEjercicioSesion('push', 'press', '2026-01-07');
+		await setReps('push', 'press', 0, 8, '2026-01-07');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-07');
+	}
+
+	it('sin pedirlo explícitamente sigue sin poder cerrarse', async () => {
+		await conUnaSerieDeDoce();
+		expect(await marcarDiaTerminado('push', '2026-01-07')).toEqual({
+			terminado: false,
+			razon: 'ejercicios-pendientes'
+		});
+	});
+
+	it('cierra a pedido y deja registrado que quedó trabajo afuera', async () => {
+		await conUnaSerieDeDoce();
+		expect(await marcarDiaTerminado('push', '2026-01-07', { conPendientes: true })).toEqual({
+			terminado: true,
+			conPendientes: true
+		});
+
+		const s = await db.sesiones.get('2026-01-07__push');
+		expect(s?.diaTerminado).toBe(true);
+		expect(s?.diaTerminadoConPendientes).toBe(true);
+		// Y sigue siendo un día parcial: cerrar a mano no compra el veredicto.
+		expect(estadoSesion(s!).calidad).toBe('parcial');
+	});
+
+	it('un día sin una sola serie ni un salto no se puede cerrar', async () => {
+		vi.setSystemTime(new Date('2026-01-07T12:00:00'));
+		await db.dias.add({
+			id: 'push',
+			nombre: 'Push',
+			orden: 0,
+			ejercicios: [{ exerciseId: 'press', seriesObjetivo: 4, orden: 0 }]
+		});
+		await prepararEjercicioSesion('push', 'press', '2026-01-07');
+		expect(await marcarDiaTerminado('push', '2026-01-07', { conPendientes: true })).toEqual({
+			terminado: false,
+			razon: 'sin-trabajo'
+		});
+	});
+
+	it('reabrir limpia la marca de cierre con pendientes', async () => {
+		await conUnaSerieDeDoce();
+		await marcarDiaTerminado('push', '2026-01-07', { conPendientes: true });
+		await reabrirDia('push', '2026-01-07');
+		const s = await db.sesiones.get('2026-01-07__push');
+		expect(s?.diaTerminado).toBe(false);
+		expect(s?.diaTerminadoConPendientes).toBeUndefined();
 	});
 });

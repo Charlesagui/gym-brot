@@ -340,7 +340,9 @@ test('el progreso completo incluye hoy en todos sus rangos y el calendario conse
 	await page.goto('/historial');
 	// El día entrenado dice cuántas series entraron, no sólo que entrenaste: esa
 	// intensidad vivía en un mapa anual aparte que se retiró por redundante.
-	const entrenado = page.getByRole('link', { name: /completadas?( de \d+ planeadas)? · .*ver detalle$/ }).first();
+	const entrenado = page
+		.getByRole('link', { name: /completadas?( de \d+ planeadas)? · .*ver detalle$/ })
+		.first();
 	const cajaDia = await entrenado.boundingBox();
 	expect(cajaDia?.width).toBeGreaterThanOrEqual(44);
 	expect(cajaDia?.height).toBeGreaterThanOrEqual(44);

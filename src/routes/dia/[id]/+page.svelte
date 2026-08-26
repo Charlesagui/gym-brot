@@ -30,10 +30,10 @@
 		saltarEjercicio,
 		reanudarEjercicio
 	} from '$lib/sesion';
-	import { estadoEjercicioSesion, serieCompleta } from '$lib/sesion-reglas';
+	import { estadoEjercicioSesion, estadoSesion, serieCompleta } from '$lib/sesion-reglas';
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
 	import { resumenDiaSesion, rachaSemanalActual } from '$lib/historial';
-	import { sonarDiaTerminado } from '$lib/audio';
+	import { sonarDiaTerminado, sonarExito } from '$lib/audio';
 	import { vibrar } from '$lib/vibracion';
 	import { reproducirEnVista } from '$lib/video';
 	import { dur } from '$lib/motion';
@@ -157,6 +157,9 @@
 	const totalEjercicios = $derived(dia?.ejercicios.length ?? 0);
 	const diaListo = $derived(totalEjercicios > 0 && ejerciciosResueltos === totalEjercicios);
 	const diaTerminado = $derived(!!sesion?.diaTerminado);
+	// Veredicto único del producto, el mismo que lee el historial y el objetivo calórico.
+	const calidadDia = $derived(sesion ? estadoSesion(sesion).calidad : 'nula');
+	const seriesPlanDia = $derived(sesion?.plan?.series ?? null);
 	// Los logros tienen su propio canal: la alarma de descanso es funcional y esto
 	// es celebratorio, así que se puede querer una sin la otra.
 	const sonidoActivo = $derived(ajustes.sonido && ajustes.sonidoLogros);
@@ -193,17 +196,50 @@
 		};
 	}
 
+	/**
+	 * Cerrar el día ya no exige haber resuelto todo.
+	 *
+	 * Antes sí, y era la trampa: quien hacía un ejercicio y se iba sólo podía saltar el
+	 * resto —mintiendo sobre por qué no los hizo— o dejar el día abierto para siempre.
+	 * Ahora el botón siempre está, y cuando queda trabajo afuera la app lo dice con
+	 * números antes de cerrar en vez de esconderlo.
+	 */
 	async function terminarDia() {
-		if (!diaListo || diaTerminado || !fechaSesion) return;
+		if (diaTerminado || !fechaSesion || !hayTrabajo) return;
+		if (diaListo) {
+			await cerrarDia(false);
+			return;
+		}
+		const faltan = totalEjercicios - ejerciciosResueltos;
+		const hechas = seriesPlanDia
+			? `${seriesHechasDia} de ${seriesPlanDia} series`
+			: `${seriesHechasDia} ${seriesHechasDia === 1 ? 'serie' : 'series'}`;
+		confirmacion = {
+			titulo: 'Cerrar día con lo hecho',
+			mensaje: `Vas a cerrar "${dia?.nombre ?? 'la rutina'}" con ${hechas} y ${faltan} ejercicio${
+				faltan === 1 ? '' : 's'
+			} sin resolver. Queda registrado como día parcial y podés reabrirlo cuando quieras.`,
+			confirmarTexto: 'Cerrar día',
+			onConfirm: async () => {
+				confirmacion = null;
+				await cerrarDia(true);
+			}
+		};
+	}
+
+	async function cerrarDia(conPendientes: boolean) {
+		if (!fechaSesion) return;
 		// La fecha va explícita: con `hoyStr()` adentro, terminar el día pasada la
 		// medianoche marcaba una sesión nueva y vacía y dejaba abierta la real.
 		try {
-			const resultado = await marcarDiaTerminado(diaId, fechaSesion);
+			const resultado = await marcarDiaTerminado(diaId, fechaSesion, { conPendientes });
 			if (!resultado.terminado) {
 				avisoDia =
 					resultado.razon === 'ejercicios-pendientes'
 						? 'La rutina cambió mientras la cerrabas. Revisá el ejercicio pendiente antes de terminar el día.'
-						: 'Esta rutina ya no está disponible. Volvé a tus rutinas e intentá de nuevo.';
+						: resultado.razon === 'sin-trabajo'
+							? 'Todavía no hay nada que cerrar: marcá una serie o saltá un ejercicio.'
+							: 'Esta rutina ya no está disponible. Volvé a tus rutinas e intentá de nuevo.';
 				return;
 			}
 		} catch (error) {
@@ -213,10 +249,16 @@
 		avisoDia = null;
 		premioDia = true;
 		rachaSemanal = 0;
+		// La recompensa sigue al veredicto, no al toque: la fiesta entera es para el día
+		// completo, y el parcial recibe el acuse corto. Celebrar los dos igual es lo que
+		// hacía que "día terminado" no significara nada.
+		const completo = calidadDia === 'completa';
 		const conActividadReal = resumenDia.setsHechos > 0;
-		if (conActividadReal && sonidoActivo) void sonarDiaTerminado().catch(() => {});
-		if (conActividadReal) vibrar([120, 70, 120, 70, 220], ajustes.vibracion ?? true);
-		if (conActividadReal) {
+		if (conActividadReal && sonidoActivo)
+			void (completo ? sonarDiaTerminado() : sonarExito(false)).catch(() => {});
+		if (conActividadReal)
+			vibrar(completo ? [120, 70, 120, 70, 220] : [90], ajustes.vibracion ?? true);
+		if (completo) {
 			// Puntual, no suscripta: ver el comentario en rachaSemanalActual().
 			void rachaSemanalActual()
 				.then((valor) => {
@@ -225,7 +267,7 @@
 				.catch(() => {});
 		}
 		if (premioId) clearTimeout(premioId);
-		premioId = setTimeout(() => (premioDia = false), 2400);
+		premioId = setTimeout(() => (premioDia = false), completo ? 2400 : 1600);
 	}
 
 	async function saltarEjercicioActual(exerciseId: string) {
@@ -242,9 +284,10 @@
 		}
 	}
 
-	/** Series realmente marcadas hoy: sin ninguna, no hay nada que reiniciar. */
+	/** Series realmente marcadas hoy: sin ninguna, no hay nada que reiniciar ni que cerrar. */
 	const seriesHechasDia = $derived(resumenDia.setsHechos);
-	const hayQueReiniciar = $derived(seriesHechasDia > 0 || ejerciciosSaltados > 0);
+	const hayTrabajo = $derived(seriesHechasDia > 0 || ejerciciosSaltados > 0);
+	const hayQueReiniciar = $derived(hayTrabajo);
 
 	function pedirReinicioDia() {
 		if (!fechaSesion || !hayQueReiniciar) return;
@@ -815,8 +858,12 @@
 						{#if diaTerminado}
 							<span
 								class="rounded-full px-2.5 py-1 text-xs font-bold"
-								style="background: rgb(var(--exito) / .16); color: rgb(var(--exito))"
-								>Terminado</span
+								style="background: {calidadDia === 'completa'
+									? 'rgb(var(--exito) / .16)'
+									: 'rgba(255,255,255,.08)'}; color: {calidadDia === 'completa'
+									? 'rgb(var(--exito))'
+									: 'var(--muted)'}"
+								>{calidadDia === 'completa' ? 'Terminado' : 'Cerrado parcial'}</span
 							>
 						{:else if diaListo}
 							<span
@@ -846,9 +893,15 @@
 							style="color: var(--muted)">Reabrir día</button
 						>
 					{:else}
+						<!--
+							Siempre apretable mientras haya trabajo real. Con el día incompleto no
+							cierra de una: confirma diciendo cuánto queda afuera. Antes estaba
+							deshabilitado y la única salida honesta era saltar los ejercicios que
+							faltaban, que es mentir sobre por qué no se hicieron.
+						-->
 						<button
 							onclick={terminarDia}
-							disabled={!diaListo}
+							disabled={!hayTrabajo}
 							class="rounded-2xl py-3 text-sm font-bold disabled:opacity-45"
 							style="background: {diaListo
 								? 'var(--accent)'
@@ -858,6 +911,9 @@
 								<span class="inline-flex items-center gap-2">
 									<Icono nombre="terminar" tamano={18} /> Terminar día
 								</span>
+							{:else if hayTrabajo}
+								{@const faltan = totalEjercicios - ejerciciosResueltos}
+								Cerrar con lo hecho · faltan {faltan}
 							{:else}
 								{@const faltan = totalEjercicios - ejerciciosResueltos}
 								Faltan {faltan} ejercicio{faltan === 1 ? '' : 's'}
@@ -898,27 +954,41 @@
 		onclick={cerrarPremio}
 		aria-label="Cerrar resumen del día"
 		class="fixed inset-0 z-[60] grid w-full cursor-default place-items-center px-8"
-		style={resumenDia.setsHechos > 0
+		style={calidadDia === 'completa'
 			? 'background: radial-gradient(72% 50% at 50% 42%, rgb(var(--exito) / .22), transparent 72%), rgb(var(--scrim) / .84); backdrop-filter: blur(8px)'
 			: 'background: rgb(var(--scrim) / .9); backdrop-filter: blur(8px)'}
 	>
 		<div transition:fly={{ y: 18, duration: dur(260) }} class="text-center" aria-live="polite">
 			<div class="relative mx-auto grid size-24 place-items-center">
-				{#if resumenDia.setsHechos > 0}
+				<!-- Las partículas y el halo son del día completo. Un día parcial recibe el
+				     acuse corto: celebrar los dos igual es lo que hacía que "día terminado"
+				     no significara nada. -->
+				{#if calidadDia === 'completa'}
 					<CelebracionParticulas color="var(--exito)" cantidad={16} />
 				{/if}
 				<div
 					class="relative grid size-24 place-items-center rounded-full border border-white/15 text-5xl font-extrabold"
-					style="background: rgb(var(--exito) / .18); color: rgb(var(--exito)); box-shadow: 0 0 55px rgb(var(--exito) / .24)"
+					style="background: rgb(var(--exito) / {calidadDia === 'completa'
+						? '.18'
+						: '.1'}); color: rgb(var(--exito)); box-shadow: {calidadDia === 'completa'
+						? '0 0 55px rgb(var(--exito) / .24)'
+						: 'none'}"
 				>
-					<Icono nombre={resumenDia.setsHechos > 0 ? 'terminar' : 'hecha'} tamano={42} />
+					<Icono nombre={calidadDia === 'completa' ? 'terminar' : 'hecha'} tamano={42} />
 				</div>
 			</div>
-			{#if resumenDia.setsHechos > 0}
+			{#if calidadDia === 'completa'}
 				<p class="mt-5 text-2xl font-extrabold">Día terminado</p>
 				<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
 					{ejerciciosCompletos} completos · {ejerciciosParciales} parciales · {ejerciciosSaltados}
 					saltados
+				</p>
+			{:else if resumenDia.setsHechos > 0}
+				<p class="mt-5 text-xl font-bold">Día cerrado</p>
+				<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
+					{seriesPlanDia
+						? `${seriesHechasDia} de ${seriesPlanDia} series`
+						: `${seriesHechasDia} ${seriesHechasDia === 1 ? 'serie' : 'series'}`} · queda como día parcial
 				</p>
 			{:else}
 				<p class="mt-5 text-xl font-bold">

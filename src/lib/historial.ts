@@ -4,11 +4,17 @@ import { ejercicioPorId } from './catalog';
 import { normalizarAjustes } from './extras';
 import { hoyStr, recordsGlobales } from './sesion';
 import {
+	calidadDeSesiones,
+	calidadDesde,
 	pesoEfectivo,
 	prRespaldado,
 	serieCompleta,
+	sumarTotales,
+	totalesSesion,
+	type CalidadSesion,
 	type MetricaEfectiva,
-	type RecordEjercicio
+	type RecordEjercicio,
+	type TotalesSesion
 } from './sesion-reglas';
 import { conPesoVisible, type UnidadPeso } from './unidades';
 
@@ -18,21 +24,52 @@ export interface DiaEntrenado {
 	volumen: number;
 	prs: number;
 	dias: string[];
+	/** Veredicto único del producto: ver `calidadDesde` en sesion-reglas. */
+	calidad: CalidadSesion;
+	/** Series planeadas ese día, o null si es anterior al congelado del plan. */
+	seriesPlan: number | null;
+	cerradoAMano: boolean;
 }
 
 export interface SemanaHistorial {
 	inicio: string;
 	fin: string;
+	/** Días con trabajo real, completos y parciales: es lo que sostiene la racha. */
 	diasEntrenados: number;
+	diasCompletos: number;
+	diasParciales: number;
 	entrenada: boolean;
+}
+
+/**
+ * Una fecha con trabajo cargado y ninguna serie marcada: se murió el teléfono, o te
+ * fuiste del gimnasio sin cerrar la última tanda.
+ *
+ * NO es un día entrenado y no cuenta en ningún lado —ni racha, ni total, ni intensidad
+ * del calendario—, porque nadie confirmó que esas series se hicieran. Existe sólo para
+ * que el calendario pueda ofrecer la puerta de entrada: hasta acá el detalle del día
+ * sabía arreglar exactamente este caso y no había forma de llegar, porque la celda de
+ * esa fecha no era un enlace.
+ */
+export interface DiaSinMarcar {
+	fecha: string;
+	/** Series con peso o reps cargados que quedaron sin marcar. */
+	sets: number;
+	dias: string[];
 }
 
 export interface HistorialResumen {
 	dias: DiaEntrenado[];
+	/** Fechas alcanzables pero no entrenadas: ver `DiaSinMarcar`. */
+	sinMarcar: DiaSinMarcar[];
 	semanas: SemanaHistorial[];
 	rachaSemanal: number;
+	/** Días COMPLETOS de la semana en curso. */
 	diasEstaSemana: number;
+	parcialesEstaSemana: number;
+	/** Días COMPLETOS de todo el historial: la cifra que la pantalla llama "días entrenados". */
 	totalDias: number;
+	totalParciales: number;
 }
 
 export interface PrDelDia {
@@ -125,8 +162,61 @@ export function resumenDiaSesion(
 	return { setsHechos, volumen, setsSinVolumen, prs };
 }
 
+/** Una sesión aporta al historial cuando tiene trabajo real, completa o parcial. */
 function tieneEntrenamiento(sesion: Sesion): boolean {
-	return sesion.ejercicios.some((e) => e.sets.some(serieCompleta));
+	return totalesSesion(sesion).seriesHechas > 0;
+}
+
+/**
+ * Series con datos cargados que no llegaron a marcarse.
+ *
+ * Exige peso o reps a propósito: abrir un día de rutina para mirarlo ya crea su sesión,
+ * y contar esas sesiones vacías haría que el calendario marcara como "pendiente" cada
+ * fecha que alguna vez se espió. Sin un número cargado no hay trabajo que rescatar.
+ */
+function seriesCargadasSinMarcar(sesion: Sesion): number {
+	let n = 0;
+	for (const ejercicio of sesion.ejercicios) {
+		for (const set of ejercicio.sets) {
+			if (serieCompleta(set)) continue;
+			if (set.peso != null || set.pesoGramos != null || set.reps != null) n++;
+		}
+	}
+	return n;
+}
+
+/**
+ * Fechas pasadas con trabajo cargado y sin marcar, agrupadas por día.
+ *
+ * Se piden dos condiciones más allá de tener datos: que la fecha no sea ya un día
+ * entrenado (si lo es, el calendario la abre por el camino normal) y que su rutina siga
+ * existiendo. Lo segundo es porque el único arreglo posible es reabrir esa rutina en esa
+ * fecha; si la rutina se borró, el enlace llevaría a una pantalla sin salida.
+ */
+function diasSinMarcar(
+	sesiones: Sesion[],
+	dias: Dia[],
+	hoy: string,
+	fechasEntrenadas: Set<string>
+): DiaSinMarcar[] {
+	const porDia = new Map(dias.map((d) => [d.id, d.nombre]));
+	const vigentes = new Set(dias.map((d) => d.id));
+	const porFecha = new Map<string, DiaSinMarcar>();
+
+	for (const sesion of sesiones) {
+		if (sesion.fecha > hoy) continue;
+		if (fechasEntrenadas.has(sesion.fecha)) continue;
+		if (!vigentes.has(sesion.diaId)) continue;
+		const sets = seriesCargadasSinMarcar(sesion);
+		if (sets === 0) continue;
+		const actual = porFecha.get(sesion.fecha) ?? { fecha: sesion.fecha, sets: 0, dias: [] };
+		actual.sets += sets;
+		const nombre = sesion.diaNombre ?? porDia.get(sesion.diaId);
+		if (nombre && !actual.dias.includes(nombre)) actual.dias.push(nombre);
+		porFecha.set(sesion.fecha, actual);
+	}
+
+	return [...porFecha.values()].sort((a, b) => b.fecha.localeCompare(a.fecha));
 }
 
 export interface ComparacionSesion {
@@ -140,14 +230,25 @@ export interface ComparacionSesion {
  * rutina, fecha estrictamente anterior, con actividad real. Sin eso, no hay con qué
  * comparar (primera vez, o entrenaste ese día suelto sin rutina) y devuelve null — el
  * manifiesto pide no inventar comparaciones donde no hay base real.
+ *
+ * Sólo compara días COMPLETOS contra días COMPLETOS. Un día en el que hiciste un
+ * ejercicio y te fuiste tiene menos volumen que uno entero por definición, y mostrar ese
+ * "−2.400 kg" al lado de la fecha lee como retroceso cuando en realidad son dos cosas
+ * distintas. Cuando alguno de los dos lados es parcial, no hay comparación honesta.
  */
 export function compararConAnterior(
 	actual: Sesion,
 	candidatas: Sesion[],
 	unidad: UnidadPeso = 'kg'
 ): ComparacionSesion | null {
+	if (calidadDesde(totalesSesion(actual)) !== 'completa') return null;
 	const previa = candidatas
-		.filter((s) => s.diaId === actual.diaId && s.fecha < actual.fecha && tieneEntrenamiento(s))
+		.filter(
+			(s) =>
+				s.diaId === actual.diaId &&
+				s.fecha < actual.fecha &&
+				calidadDesde(totalesSesion(s)) === 'completa'
+		)
 		.sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
 	if (!previa) return null;
 	const resumenActual = resumenDiaSesion(actual, unidad);
@@ -159,11 +260,24 @@ export function compararConAnterior(
 	};
 }
 
+const TOTALES_CERO: TotalesSesion = {
+	seriesHechas: 0,
+	seriesPlan: 0,
+	ejerciciosTrabajados: 0,
+	ejerciciosPlan: 0,
+	cerradaAMano: false
+};
+
+/**
+ * Una fecha con dos rutinas es UN día entrenado. Las cifras se suman (para mostrar
+ * "9 de 24 series") pero el veredicto lo da la mejor sesión: ver `mejorCalidad`.
+ */
 function resumenSesionAgrupada(sesiones: Sesion[], dias: Dia[], unidad: UnidadPeso): DiaEntrenado {
 	const porDia = new Map(dias.map((d) => [d.id, d.nombre]));
 	let sets = 0;
 	let volumen = 0;
 	let prs = 0;
+	let totales = TOTALES_CERO;
 	const nombres = new Set<string>();
 
 	for (const sesion of sesiones) {
@@ -171,6 +285,7 @@ function resumenSesionAgrupada(sesiones: Sesion[], dias: Dia[], unidad: UnidadPe
 		sets += resumen.setsHechos;
 		volumen += resumen.volumen;
 		prs += resumen.prs.length;
+		totales = sumarTotales(totales, totalesSesion(sesion));
 		const nombre = sesion.diaNombre ?? porDia.get(sesion.diaId);
 		if (nombre) nombres.add(nombre);
 	}
@@ -180,7 +295,10 @@ function resumenSesionAgrupada(sesiones: Sesion[], dias: Dia[], unidad: UnidadPe
 		sets,
 		volumen,
 		prs,
-		dias: [...nombres]
+		dias: [...nombres],
+		calidad: calidadDeSesiones(sesiones),
+		seriesPlan: totales.seriesPlan,
+		cerradoAMano: totales.cerradaAMano
 	};
 }
 
@@ -193,7 +311,18 @@ export function crearHistorialResumen(
 	const hoy = hoyStr();
 	const entrenadas = sesiones.filter((sesion) => sesion.fecha <= hoy && tieneEntrenamiento(sesion));
 	if (entrenadas.length === 0) {
-		return { dias: [], semanas: [], rachaSemanal: 0, diasEstaSemana: 0, totalDias: 0 };
+		// Sin días entrenados todavía puede haber trabajo cargado sin marcar, y ése es
+		// justamente el caso en que más importa poder llegar.
+		return {
+			dias: [],
+			sinMarcar: diasSinMarcar(sesiones, dias, hoy, new Set()),
+			semanas: [],
+			rachaSemanal: 0,
+			diasEstaSemana: 0,
+			parcialesEstaSemana: 0,
+			totalDias: 0,
+			totalParciales: 0
+		};
 	}
 
 	const porFecha = new Map<string, Sesion[]>();
@@ -212,15 +341,27 @@ export function crearHistorialResumen(
 	const semanaActual = inicioSemana(new Date().toLocaleDateString('sv'));
 	const semanas: SemanaHistorial[] = [];
 
+	const porFechaResumen = new Map(diasEntrenados.map((d) => [d.fecha, d]));
+
 	for (let cursor = new Date(primeraSemana); cursor <= semanaActual; cursor = addDias(cursor, 7)) {
 		const inicio = fechaStr(cursor);
 		const fin = finSemana(cursor);
-		const diasEntrenadosSemana = fechas.filter((f) => f >= inicio && f <= fin).length;
+		const deLaSemana = fechas.filter((f) => f >= inicio && f <= fin);
+		const completos = deLaSemana.filter(
+			(f) => porFechaResumen.get(f)?.calidad === 'completa'
+		).length;
 		semanas.push({
 			inicio,
 			fin,
-			diasEntrenados: diasEntrenadosSemana,
-			entrenada: diasEntrenadosSemana > 0
+			diasEntrenados: deLaSemana.length,
+			diasCompletos: completos,
+			diasParciales: deLaSemana.length - completos,
+			// La racha la sostiene cualquier día con trabajo real, parcial incluido. Es
+			// deliberado, y es la única asimetría del modelo: la racha protege la motivación
+			// (el manifiesto pide que nada importante vuelva de forma abrupta) mientras que
+			// el contador de "días entrenados" tiene que decir la verdad. Antes un solo
+			// predicado hacía los dos trabajos y por eso ninguno salía bien.
+			entrenada: deLaSemana.length > 0
 		});
 	}
 
@@ -231,14 +372,17 @@ export function crearHistorialResumen(
 		if (!semanas[i]!.entrenada) break;
 		rachaSemanal++;
 	}
-	const diasEstaSemana = semanas[semanas.length - 1]?.diasEntrenados ?? 0;
+	const ultima = semanas[semanas.length - 1];
 
 	return {
 		dias: diasEntrenados,
+		sinMarcar: diasSinMarcar(sesiones, dias, hoy, new Set(fechas)),
 		semanas: semanas.reverse(),
 		rachaSemanal,
-		diasEstaSemana,
-		totalDias: diasEntrenados.length
+		diasEstaSemana: ultima?.diasCompletos ?? 0,
+		parcialesEstaSemana: ultima?.diasParciales ?? 0,
+		totalDias: diasEntrenados.filter((d) => d.calidad === 'completa').length,
+		totalParciales: diasEntrenados.filter((d) => d.calidad === 'parcial').length
 	};
 }
 
