@@ -267,8 +267,16 @@
 				Activá al menos un disco.
 			</div>
 		{:else if resultado.exacta}
-			<!-- El canto verde dice "le pegaste" antes de que leas nada. -->
-			<div class="gb-foco rounded-2xl p-3 text-center" style="--foco-color: var(--exito)">
+			<!--
+				La tarjeta no se tine: los dos estados usan el mismo fondo neutro.
+				Antes el exacto iba en verde y el aproximado en violeta, pero el violeta es el
+				acento de toda la pantalla —la aguja de la cinta, "menos que el objetivo", los
+				botones— asi que no se leia "no es exacta" sino "tarjeta normal". Colorear un
+				solo estado partia la simetria, y el manifiesto pide el color en el canto o el
+				anillo, no de lavado sobre toda la superficie. Queda el relieve, que es lo que
+				distingue la respuesta del resto; el estado lo dicen el rotulo y la cifra.
+			-->
+			<div class="gb-resultado rounded-2xl p-3 text-center">
 				<p
 					class="text-[11px] font-bold uppercase tracking-[0.18em]"
 					style="color: rgb(var(--exito))"
@@ -290,7 +298,7 @@
 				</p>
 			</div>
 		{:else if cercanas}
-			<div class="gb-foco rounded-2xl p-3 text-center">
+			<div class="gb-resultado rounded-2xl p-3 text-center">
 				<p class="text-[11px] font-bold uppercase tracking-[0.18em]" style="color: var(--muted)">
 					Sin carga exacta · lo más cerca
 				</p>
@@ -399,3 +407,20 @@
 		</div>
 	</section>
 </main>
+
+<style>
+	/*
+	 * El relieve de `.gb-foco` sin su color. Ese primitivo lo comparten las filas de
+	 * serie, donde `--foco-color` es el glow del grupo muscular y por eso dice de que
+	 * ejercicio se trata; aca se le estaba pidiendo que dijera un estado, que es otra
+	 * cosa. La tarjeta se queda con el bisel de arriba y la sombra de abajo, que es lo
+	 * que la separa del fondo, y con un anillo neutro en vez de uno teñido.
+	 */
+	.gb-resultado {
+		background: var(--surface-3);
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.12),
+			inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+			0 10px 26px rgba(0, 0, 0, 0.4);
+	}
+</style>
