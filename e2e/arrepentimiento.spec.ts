@@ -7,13 +7,22 @@ import { expect, test } from '@playwright/test';
 
 const RUTA = '/ejercicio/prensa-pierna-45?dia=dia-piernas&fecha=2026-08-15';
 
-async function hacerSerie(page: import('@playwright/test').Page, n: number, peso: string) {
+type Pagina = import('@playwright/test').Page;
+
+async function hacerSerie(page: Pagina, n: number, peso: string) {
 	await page.getByRole('textbox', { name: `Peso de la serie ${n} en kg` }).fill(peso);
 	await page.getByRole('textbox', { name: `Reps de la serie ${n}` }).fill('10');
 	await page.getByRole('button', { name: `Marcar serie ${n}`, exact: true }).click();
+	// La serie marcada se va al renglón de hechas: el conteo del grupo es el acuse.
 	await expect(
-		page.getByRole('button', { name: `Desmarcar serie ${n}`, exact: true })
+		page.getByText(n === 1 ? '1 serie hecha' : `${n} series hechas`, { exact: true })
 	).toBeVisible();
+}
+
+/** Las hechas viven juntas en un renglón: hay que abrirlo para llegar a una fila. */
+async function verHechas(page: Pagina) {
+	const grupo = page.getByRole('button', { name: /^Ver todas:/ });
+	if (await grupo.isVisible()) await grupo.click();
 }
 
 test('terminar con menos series de las planeadas cierra el ejercicio de verdad', async ({
@@ -55,6 +64,7 @@ test('una serie del medio se quita sola, sin arrastrar a las de abajo', async ({
 	await hacerSerie(page, 3, '120');
 
 	// La 2 estaba mal cargada: se abre y se borra esa, no la última.
+	await verHechas(page);
 	await page.getByRole('button', { name: 'Corregir serie 2' }).click();
 	await page.getByRole('button', { name: 'Borrar la serie 2 de hoy' }).click();
 	const avisoQuitar = page.getByRole('alertdialog');
@@ -63,12 +73,14 @@ test('una serie del medio se quita sola, sin arrastrar a las de abajo', async ({
 
 	// Quedan la de 100 y la de 120; la de 80 desapareció.
 	await expect(page.getByLabel('2 de 3 series hechas')).toBeVisible();
+	await verHechas(page);
 	await expect(page.getByRole('button', { name: 'Corregir serie 1' })).toContainText('100');
 	await expect(page.getByRole('button', { name: 'Corregir serie 2' })).toContainText('120');
 
 	// Borrar un registro real tiene vuelta atrás, igual que reiniciar.
 	await page.getByRole('status').getByRole('button', { name: 'Deshacer' }).click();
 	await expect(page.getByLabel('3 de 4 series hechas')).toBeVisible();
+	await verHechas(page);
 	await expect(page.getByRole('button', { name: 'Corregir serie 2' })).toContainText('80');
 });
 
@@ -126,6 +138,7 @@ test('reiniciar el ejercicio pide confirmación en el aviso y se puede deshacer'
 	// Y vuelve entero, con las cargas intactas.
 	await page.getByRole('status').getByRole('button', { name: 'Deshacer' }).click();
 	await expect(page.getByLabel('2 de 4 series hechas')).toBeVisible();
+	await verHechas(page);
 	await expect(page.getByRole('button', { name: 'Corregir serie 2' })).toContainText('105');
 });
 

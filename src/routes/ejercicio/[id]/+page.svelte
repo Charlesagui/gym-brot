@@ -486,39 +486,57 @@
 	const indiceActiva = $derived(sets.findIndex((serie) => !serie.hecha));
 
 	/**
-	 * Cuántas series hechas quedan a la vista antes de juntarse en un solo renglón.
+	 * La lista tiene siempre las mismas tres zonas: lo que hiciste, lo que estás haciendo y
+	 * lo que falta. Las hechas viven todas juntas en un renglón que se abre tocándolo.
 	 *
-	 * Cada renglón hecho cuesta 60 px y se acumulan arriba de la serie en curso, que ya
-	 * mide 390: en la cuarta serie la tarjeta activa arrancaba en y≈708 de 844 y había que
-	 * scrollear para llegar a lo que estabas haciendo. Con tope, la lista mide lo mismo
-	 * hagas tres series o doce.
+	 * El intento anterior dejaba dos filas a la vista y agrupaba el resto, para que corregir
+	 * una serie recién hecha siguiera costando un toque. En la práctica producía un
+	 * agrupador que no se disparaba nunca en una rutina de 3 series —el default— y que en
+	 * una de 4 aparecía en un solo estado para agrupar una sola serie. Peor: al terminar el
+	 * ejercicio `indiceActiva` pasa a -1 y el grupo se apagaba entero, así que el momento
+	 * con más filas era justo el único sin agrupar (con 12 series, 540 px de golpe).
 	 *
-	 * Se dejan DOS a la vista y no cero: corregir una serie recién hecha tiene que seguir
-	 * costando un toque, y la que se corrige es casi siempre la última.
+	 * Agrupar siempre y desde la primera cuesta un toque más para corregir, y a cambio no
+	 * hay ningún estado que haya que explicar.
 	 */
-	const HECHAS_A_LA_VISTA = 2;
 	let hechasDesplegadas = $state(false);
-	const anterioresOcultables = $derived(Math.max(0, indiceActiva - HECHAS_A_LA_VISTA));
-	const anterioresOcultas = $derived(hechasDesplegadas ? 0 : anterioresOcultables);
-	/** Las dos últimas de las guardadas: alcanza para ver si la carga se sostuvo. */
-	const resumenAnteriores = $derived(
-		sets
-			.slice(0, anterioresOcultables)
-			.slice(-2)
-			.map((serie) => cargaCorta(serie))
-			.join(' · ')
+	/** Terminado el ejercicio no queda activa (-1) y las hechas son todas. */
+	const hechasAgrupadas = $derived(indiceActiva === -1 ? sets.length : indiceActiva);
+	const hechasOcultas = $derived(hechasDesplegadas ? 0 : hechasAgrupadas);
+	/**
+	 * Vista previa de las cargas. Se muestran las ÚLTIMAS y no las primeras, con un "+N"
+	 * adelante por las que no entran: la pregunta que se hace mirando el renglón es si la
+	 * carga se sostuvo hasta la serie que estás por hacer.
+	 */
+	const RESUMEN_MAX = 4;
+	const resumenHechas = $derived.by(() => {
+		const hechasDelGrupo = sets.slice(0, hechasAgrupadas);
+		const visibles = hechasDelGrupo.slice(-RESUMEN_MAX);
+		return {
+			ocultas: hechasDelGrupo.length - visibles.length,
+			cargas: visibles.map((serie) => cargaCorta(serie)).join(' · ')
+		};
+	});
+	const conteoHechas = $derived(
+		`${hechasAgrupadas} ${hechasAgrupadas === 1 ? 'serie hecha' : 'series hechas'}`
 	);
-	/** El renglón resume; su nombre accesible no puede resumir, o las series se pierden. */
-	const resumenAnterioresLeido = $derived(
-		sets
-			.slice(0, anterioresOcultables)
-			.map((serie, indice) => `serie ${indice + 1}, ${formatoSet(serie, unidad)}`)
-			.join('; ')
+	/**
+	 * El renglón resume; su nombre accesible no puede resumir, o las series se pierden para
+	 * quien lo escucha. Y arranca con el mismo verbo que se ve, que es lo que necesita el
+	 * control por voz para encontrarlo.
+	 */
+	const etiquetaGrupoHechas = $derived(
+		hechasDesplegadas
+			? `Ocultar ${conteoHechas}`
+			: `Ver todas: ${conteoHechas}: ${sets
+					.slice(0, hechasAgrupadas)
+					.map((serie, indice) => `serie ${indice + 1}, ${formatoSet(serie, unidad)}`)
+					.join('; ')}`
 	);
 	$effect(() => {
 		// Volver del descanso a corregir apunta a un índice que puede haber quedado guardado
 		// en el renglón: sin esto el foco viaja a una fila que no está en pantalla.
-		if (filaAbierta != null && filaAbierta < anterioresOcultables) hechasDesplegadas = true;
+		if (filaAbierta != null && filaAbierta < hechasAgrupadas) hechasDesplegadas = true;
 	});
 	/** Con todo hecho el cierre queda fijo al pie: el contenido tiene que dejarle lugar. */
 	const barraFija = $derived(completo && descanso.restoSeg === 0 && !descanso.vencido);
@@ -1409,47 +1427,51 @@
 								</p>
 							{/if}
 							<div class="mt-3 space-y-2">
-								{#if anterioresOcultables > 0}
+								{#if hechasAgrupadas > 0}
 									<!--
-										Las series hechas más viejas se juntan acá en vez de empujar hacia abajo la
-										que estás haciendo. Se despliegan tocando el renglón; las dos últimas quedan
-										siempre como fila entera, que son las que se corrigen.
+										Lo hecho, en un renglón: la primera de las tres zonas fijas de la lista. Manda la
+										cifra —las cargas— y el conteo va abajo y chico; el rótulo es lo que menos
+										información lleva y antes era lo más brillante del renglón.
+										Se abre tocándolo, y el texto de la derecha dice cuál de las dos cosas hace.
 									-->
 									<button
 										type="button"
 										onclick={() => (hechasDesplegadas = !hechasDesplegadas)}
 										aria-expanded={hechasDesplegadas}
-										class="flex min-h-12 w-full items-center gap-2.5 rounded-xl px-2.5 py-1 text-left"
-										style="background: rgb(var(--exito) / .07); border: 1px solid rgb(var(--exito) / .18)"
-										aria-label={hechasDesplegadas
-											? `Volver a guardar las ${anterioresOcultables} series anteriores`
-											: `Ver las ${anterioresOcultables} series anteriores: ${resumenAnterioresLeido}`}
+										class="flex min-h-14 w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-left"
+										style="background: rgb(var(--exito) / .07); border: 1px solid rgb(var(--exito) / .2)"
+										aria-label={etiquetaGrupoHechas}
 									>
 										<span style="color: rgb(var(--exito))" aria-hidden="true">
 											<Icono nombre="hecha" tamano={18} />
 										</span>
-										<span class="flex min-w-0 flex-1 flex-col">
+										<span class="flex min-w-0 flex-1 flex-col gap-0.5">
+											{#if !hechasDesplegadas}
+												<span class="cifra truncate text-lg" style="color: #c2c6d6">
+													{#if resumenHechas.ocultas}<span style="color: var(--muted)"
+															>+{resumenHechas.ocultas} ·
+														</span>{/if}{resumenHechas.cargas}
+												</span>
+											{/if}
 											<span
 												class="text-[10px] font-bold uppercase tracking-wider"
-												style="color: rgb(var(--exito))"
-												>{anterioresOcultables}
-												{anterioresOcultables === 1 ? 'serie anterior' : 'series anteriores'}</span
+												style="color: rgb(var(--exito))">{conteoHechas}</span
 											>
-											{#if !hechasDesplegadas}
-												<span class="cifra truncate text-base" style="color: #c2c6d6"
-													>{resumenAnteriores}</span
-												>
-											{/if}
 										</span>
 										<span
-											class="gb-caret shrink-0 {hechasDesplegadas ? 'gb-caret--abierto' : ''}"
+											class="flex shrink-0 items-center gap-1 text-[10px] font-bold uppercase tracking-wider"
 											style="color: var(--muted)"
-											aria-hidden="true"><Icono nombre="desplegar" tamano={18} /></span
 										>
+											{hechasDesplegadas ? 'Ocultar' : 'Ver todas'}
+											<span
+												class="gb-caret {hechasDesplegadas ? 'gb-caret--abierto' : ''}"
+												aria-hidden="true"><Icono nombre="desplegar" tamano={14} /></span
+											>
+										</span>
 									</button>
 								{/if}
 								{#each sets as s, i (i)}
-									{#if i >= anterioresOcultas}
+									{#if i >= hechasOcultas}
 										<SetRow
 											set={s}
 											index={i}
