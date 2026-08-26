@@ -1,7 +1,8 @@
 # Roadmap — la calculadora de discos al lenguaje visual
 
-> **Estado (2026-08-25):** fases 1 a 4 implementadas. La fase 5 se descartó por decisión
-> del usuario: la calculadora sigue siendo autónoma y no se entera de la sesión.
+> **Estado (2026-08-25):** fases 1 a 4 implementadas, más las tres mejoras de la segunda
+> tanda (ver el final). La fase 5 se descartó por decisión del usuario: la calculadora
+> sigue siendo autónoma y no se entera de la sesión.
 
 ## Por qué existe este documento
 
@@ -231,3 +232,64 @@ molestia real —tipear el mismo peso que ya está en pantalla—, el punto de p
 
 Los fallbacks `?? '124 92 255'` que quedan en el código son valores por defecto de color de
 grupo muscular en TypeScript, no props de estilo: son otro problema y no se tocaron.
+
+## Segunda tanda — la barra entera, el color y el barrido
+
+Tres pedidos posteriores, con su informe de factibilidad previo. Los tres implementados.
+
+### La barra se dibuja entera
+
+Se muestran los dos lados. Es información redundante —el cálculo es simétrico y el lado
+derecho nunca dice nada nuevo— y se hace igual: el error clásico de matemática de discos es
+cargar un solo lado, y con media barra esquivarlo depende de que leas el rótulo "por lado".
+
+No cuesta legibilidad. El dibujo se escala para entrar en su caja y, mientras lo limite el
+alto y no el ancho, duplicarlo no cambia nada: hasta 8 discos por lado el número de la placa
+queda en los mismos 8,2 px. Recién a 10 baja a 6,8, y las cargas reales usan entre 1 y 4
+discos por lado (200 kg son 4).
+
+### Un color por peso
+
+`src/lib/discos-color.ts`. Los discos reales vienen codificados por color —25 rojo, 20 azul,
+15 amarillo, 10 verde, 5 blanco es el estándar de competición— y quien entrena lo tiene
+incorporado. Reproducir esa codificación no decora: es la misma información que usás cuando
+agarrás la placa del rack.
+
+Lo que no se puede es copiar los colores tal cual. Están pensados para la luz del día sobre
+una barra cromada, y esta app es casi negra: contra `--surface-3`, el azul real de 20 kg da
+2,26:1 y el rojo de 25 se queda en 3,19:1. Se conserva el tono, que es lo que da el
+reconocimiento, y se sube la luminosidad a la banda que la app ya usa para los grupos
+musculares. El peor caso de la paleta queda en 5,76:1, y `discos-color.test.ts` lo verifica
+en vez de confiar en que alguien lo mire.
+
+Dos decisiones tomadas:
+
+- **El 2,5 va rosa.** En la vida real es rojo, igual que el 25, porque la escala se repite en
+  las fracciones. En el dibujo el tamaño los separa; en la grilla de disponibles no, y
+  quedaban dos botones rojos iguales.
+- **El naranja del tope de la pila pasa a ser un aro.** Con un color por peso el relleno ya
+  está ocupado, así que `--max` rodea la placa más pesada en vez de teñirla.
+
+Las placas pasan de teñidas a llenas: a media opacidad los siete colores se acercan entre sí
+hasta dejar de distinguirse. La tinta va oscura, que es para lo que existe `--on-bright`.
+
+### El objetivo se barre
+
+`Stepper` acepta `barrido`, apagado por defecto y encendido sólo en la calculadora. Apoyás el
+dedo sobre la cifra, barrés, y el peso corre de a pasos mientras la barra se redibuja; las
+marcas de la cinta aparecen abajo y se van al soltar.
+
+El ± no se toca. La regla del manifiesto —un toque le gana a cualquier gesto en el peso— se
+escribió para el peso de una serie, donde hay prellenado y el valor que buscás ya está en
+pantalla. El objetivo de la calculadora no tiene nada de eso: ir de 60 a 100 kg son dieciséis
+toques del +. Así que el barrido se suma como segunda forma, no reemplaza a la primera.
+
+Dos detalles que hacen que no moleste:
+
+- `touch-action: pan-y` y no `none`. El navegador se queda con el scroll vertical y nos cede
+  el horizontal, así que la página sigue scrolleando con el dedo encima del número.
+- Umbral de 6 px antes de considerar que es un arrastre. Sin eso, tocar el campo para
+  escribir movería el peso un paso antes de abrir el teclado.
+
+No es alcanzable por teclado, y no hace falta que lo sea: el ± y el campo de texto ya cubren
+teclado y lector de pantalla enteros.

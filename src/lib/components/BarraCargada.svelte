@@ -1,12 +1,19 @@
 <script lang="ts">
+	import { colorDisco } from '$lib/discos-color';
 	import type { CargaBarra } from '$lib/discos';
+	import type { UnidadPeso } from '$lib/unidades';
 
 	/**
-	 * Un lado de la barra, dibujado.
+	 * La barra cargada, entera.
 	 *
-	 * La pregunta que contesta esta herramienta es física —qué cuelgo de cada lado— y
-	 * hasta acá la respuesta se entregaba como una cadena ("2×20 + 10 + 2,5") que había
-	 * que leer y traducir. Acá se ve la pila de placas: se sabe qué agarrar sin leer.
+	 * La pregunta que contesta esta herramienta es física —qué cuelgo— y hasta acá la
+	 * respuesta se entregaba como una cadena ("2×20 + 10 + 2,5") que había que leer y
+	 * traducir. Acá se ve la pila de placas: se sabe qué agarrar sin leer.
+	 *
+	 * Se dibujan los dos lados aunque el cálculo sea simétrico y el derecho no diga
+	 * nada que no diga el izquierdo. El error clásico de matemática de discos es cargar
+	 * un solo lado y creer que ya está; con media barra y un rótulo que aclara "por
+	 * lado", esquivar ese error depende de que leas el rótulo. Con el objeto entero, no.
 	 *
 	 * Es puro: consume el `CargaBarra` que ya devuelve `calcularDiscos` y no calcula
 	 * nada propio. La lista de texto sigue existiendo debajo, para el lector de pantalla
@@ -15,23 +22,41 @@
 	let {
 		carga,
 		pesoMaxDisco,
-		formato
+		formato,
+		unidad
 	}: {
 		carga: CargaBarra;
 		/** El disco más grande disponible: fija la escala y marca el tope de la pila. */
 		pesoMaxDisco: number;
 		formato: (n: number) => string;
+		unidad: UnidadPeso;
 	} = $props();
 
 	const H = 100;
 	const CENTRO = H / 2;
-	const ALTO_BARRA = 8;
+	/** La manga, donde entran los discos. Más gruesa que el eje, como en una barra real. */
+	const ALTO_MANGA = 8;
+	/** El eje agarrable: más fino, que es lo que da a leer que la barra es una sola. */
+	const ALTO_EJE = 5;
 	const ANCHO_COLLAR = 10;
 	const ALTO_COLLAR = 24;
 	const ANCHO_DISCO = 13;
 	const SEPARACION = 2.5;
 	const COLA = 16;
-	const ANCHO_MIN = 72;
+	const ANCHO_EJE = 26;
+	const PASO = ANCHO_DISCO + SEPARACION;
+
+	/**
+	 * Ancho mínimo del `viewBox`, en la misma escala que el alto.
+	 *
+	 * Sin esto el dibujo se ve chico y perdido justo en el caso más común. `meet` escala
+	 * para entrar entero, y con pocos discos el recuadro queda casi cuadrado: con un
+	 * disco por lado ocupaba el 34% del ancho de la tarjeta en un teléfono de 375, y el
+	 * 29% en uno de 430. Fijando la proporción en 3,2:1 la barra cruza la tarjeta de
+	 * lado a lado —que es como se ve una barra de verdad, con la manga sobrando— y el
+	 * número de la placa además queda más grande, no más chico.
+	 */
+	const ANCHO_MIN = 320;
 
 	/** Alto de placa según su peso, con piso para que 1,25 siga siendo visible. */
 	const ALTO_MIN = 36;
@@ -47,35 +72,51 @@
 		return ALTO_MIN + (ALTO_MAX - ALTO_MIN) * Math.sqrt(proporcion);
 	}
 
+	/** `2×20 + 10` se despliega en tres pesos: el dibujo cuenta unidades, no grupos. */
+	const pesos = $derived(
+		carga.discos.flatMap((disco) => Array.from({ length: disco.cantidad }, () => disco.peso))
+	);
+
 	interface Placa {
 		peso: number;
 		x: number;
 		alto: number;
+		color: string;
+		/** El disco más grande que tenés: el tope de la pila, marcado con un aro. */
 		tope: boolean;
+		/** Distancia al centro de la barra, en discos. Ordena la animación de entrada. */
+		orden: number;
 	}
 
-	/** `2×20 + 10` se despliega en tres placas: el dibujo cuenta unidades, no grupos. */
-	const placas = $derived.by<Placa[]>(() => {
-		const salida: Placa[] = [];
-		let x = ANCHO_COLLAR;
-		for (const disco of carga.discos) {
-			for (let i = 0; i < disco.cantidad; i++) {
-				salida.push({
-					peso: disco.peso,
-					x,
-					alto: alto(disco.peso),
-					tope: disco.peso === pesoMaxDisco
-				});
-				x += ANCHO_DISCO + SEPARACION;
-			}
-		}
-		return salida;
-	});
+	function armar(pesosLado: number[], desde: number, desdeElCentro: boolean): Placa[] {
+		return pesosLado.map((peso, i) => ({
+			peso,
+			x: desde + i * PASO,
+			alto: alto(peso),
+			color: colorDisco(peso, unidad),
+			tope: peso === pesoMaxDisco,
+			orden: desdeElCentro ? i : pesosLado.length - 1 - i
+		}));
+	}
 
-	const ancho = $derived(
-		Math.max(ANCHO_MIN, ANCHO_COLLAR + placas.length * (ANCHO_DISCO + SEPARACION) + COLA)
-	);
+	/** Lo que ocupan las dos pilas más el centro; el resto del ancho es manga sobrante. */
+	const contenido = $derived(2 * pesos.length * PASO + 2 * ANCHO_COLLAR + ANCHO_EJE);
+	const ancho = $derived(Math.max(ANCHO_MIN, contenido + 2 * COLA));
 
+	/** Dónde arranca cada pieza fija, de izquierda a derecha. Todo va centrado. */
+	const margen = $derived((ancho - contenido) / 2);
+	const collarIzq = $derived(margen + pesos.length * PASO);
+	const ejeDesde = $derived(collarIzq + ANCHO_COLLAR);
+	const collarDer = $derived(ejeDesde + ANCHO_EJE);
+
+	/**
+	 * En una barra real el disco pesado va contra el collar y el liviano queda afuera.
+	 * El lado izquierdo se dibuja invertido para que el espejo sea de verdad un espejo.
+	 */
+	const placas = $derived([
+		...armar([...pesos].reverse(), margen, false),
+		...armar(pesos, collarDer + ANCHO_COLLAR, true)
+	]);
 </script>
 
 <!--
@@ -86,61 +127,89 @@
 <svg
 	viewBox="0 0 {ancho} {H}"
 	preserveAspectRatio="xMidYMid meet"
-	class="gb-barra block h-24 w-full"
+	class="gb-barra block h-28 w-full"
 	aria-hidden="true"
 >
-	<!-- La manga: sale del centro de la barra hacia afuera y sigue después del último disco. -->
+	<!--
+		La barra, de punta a punta. Va en tres tramos y no en un rectángulo sólo: las dos
+		mangas gruesas donde entran los discos y, entre los collares, el eje más fino. Esa
+		diferencia de grosor es casi todo lo que hace que se lea como una barra.
+	-->
+	{#each [[0, ejeDesde], [collarDer, ancho - collarDer]] as [x, w] (x)}
+		<rect
+			{x}
+			y={CENTRO - ALTO_MANGA / 2}
+			width={w}
+			height={ALTO_MANGA}
+			rx={ALTO_MANGA / 2}
+			fill="rgba(255,255,255,.18)"
+		/>
+		<rect
+			{x}
+			y={CENTRO - ALTO_MANGA / 2}
+			width={w}
+			height="1.5"
+			rx="0.75"
+			fill="rgba(255,255,255,.22)"
+		/>
+	{/each}
 	<rect
-		x="0"
-		y={CENTRO - ALTO_BARRA / 2}
-		width={ancho}
-		height={ALTO_BARRA}
-		rx={ALTO_BARRA / 2}
-		fill="rgba(255,255,255,.18)"
+		x={ejeDesde}
+		y={CENTRO - ALTO_EJE / 2}
+		width={ANCHO_EJE}
+		height={ALTO_EJE}
+		fill="rgba(255,255,255,.14)"
 	/>
-	<rect
-		x="0"
-		y={CENTRO - ALTO_BARRA / 2}
-		width={ancho}
-		height="1.5"
-		rx="0.75"
-		fill="rgba(255,255,255,.22)"
-	/>
-	<!-- El collar: donde apoyan los discos, y el borde interno de la barra. -->
-	<rect
-		x="0"
-		y={CENTRO - ALTO_COLLAR / 2}
-		width={ANCHO_COLLAR}
-		height={ALTO_COLLAR}
-		rx="2"
-		fill="rgba(255,255,255,.26)"
-	/>
+	<!-- Los collares: donde apoyan los discos, y el límite del tramo agarrable. -->
+	{#each [collarIzq, collarDer] as x (x)}
+		<rect
+			{x}
+			y={CENTRO - ALTO_COLLAR / 2}
+			width={ANCHO_COLLAR}
+			height={ALTO_COLLAR}
+			rx="2"
+			fill="rgba(255,255,255,.26)"
+		/>
+	{/each}
 
 	{#each placas as placa, i (i)}
-		{@const color = placa.tope ? 'var(--max)' : 'var(--accent-rgb)'}
 		<!--
 			El translate va en un grupo aparte del animado: una `transform` de CSS pisa
 			entera la del atributo, y la placa terminaria dibujandose sobre el collar.
 		-->
 		<g transform="translate({placa.x} {CENTRO - placa.alto / 2})">
-			<g class="gb-placa" style="--gb-placa-orden: {i}">
-				<rect
-					width={ANCHO_DISCO}
-					height={placa.alto}
-					rx="3"
-					fill="rgb({color} / .24)"
-					stroke="rgb({color} / .8)"
-					stroke-width="1.5"
-				/>
-				<!-- Bisel: la placa se lee como volumen y no como un rectángulo pintado. -->
+			<g class="gb-placa" style="--gb-placa-orden: {placa.orden}">
+				<!--
+					Placa llena y no teñida: acá el color ES el dato, y a media opacidad los
+					siete se acercan entre sí hasta dejar de distinguirse. La tinta va oscura,
+					que es exactamente para lo que existe `--on-bright`.
+				-->
+				<rect width={ANCHO_DISCO} height={placa.alto} rx="3" fill="rgb({placa.color})" />
 				<rect
 					x="1.5"
 					y="1.5"
 					width={ANCHO_DISCO - 3}
 					height="1.5"
 					rx="0.75"
-					fill="rgba(255,255,255,.28)"
+					fill="rgba(255,255,255,.34)"
 				/>
+				{#if placa.tope}
+					<!--
+						El tope de la pila. Antes el naranja teñía la placa entera, y con un color
+						por peso ese relleno ya está ocupado: pasa a ser un aro por fuera, que
+						señala sin discutirle el color al disco.
+					-->
+					<rect
+						x="-2.5"
+						y="-2.5"
+						width={ANCHO_DISCO + 5}
+						height={placa.alto + 5}
+						rx="4.5"
+						fill="none"
+						stroke="rgb(var(--max))"
+						stroke-width="1.5"
+					/>
+				{/if}
 				<text
 					x={ANCHO_DISCO / 2}
 					y={placa.alto / 2}
@@ -150,7 +219,7 @@
 					font-size="8.5"
 					font-family="var(--fuente-cifra)"
 					font-weight="700"
-					fill="rgb({color})">{formato(placa.peso)}</text
+					fill="var(--on-bright)">{formato(placa.peso)}</text
 				>
 			</g>
 		</g>
@@ -160,9 +229,10 @@
 <style>
 	/*
 	 * Las placas entran de a una, de la más pesada a la más liviana: el orden en que
-	 * las vas a colgar. Es corto a propósito — la recompensa no puede demorar la
-	 * lectura. `prefers-reduced-motion` la apaga desde app.css, que anula toda
-	 * `animation-duration`, así que no hace falta repetir la media query acá.
+	 * las vas a colgar. Los dos lados comparten el orden, así que la barra se arma
+	 * simétrica, del centro hacia afuera. Es corto a propósito — la recompensa no puede
+	 * demorar la lectura. `prefers-reduced-motion` la apaga desde app.css, que anula
+	 * toda `animation-duration`, así que no hace falta repetir la media query acá.
 	 */
 	.gb-placa {
 		animation: gb-placa-entra var(--dur-base) var(--ease-spring) backwards;
