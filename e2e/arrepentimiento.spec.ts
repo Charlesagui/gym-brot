@@ -54,9 +54,9 @@ test('una serie del medio se quita sola, sin arrastrar a las de abajo', async ({
 	await hacerSerie(page, 2, '80');
 	await hacerSerie(page, 3, '120');
 
-	// La 2 estaba mal cargada: se abre y se quita esa, no la última.
+	// La 2 estaba mal cargada: se abre y se borra esa, no la última.
 	await page.getByRole('button', { name: 'Corregir serie 2' }).click();
-	await page.getByRole('button', { name: 'Quitar la serie 2 de hoy' }).click();
+	await page.getByRole('button', { name: 'Borrar la serie 2 de hoy' }).click();
 	const avisoQuitar = page.getByRole('alertdialog');
 	await expect(avisoQuitar).toContainText('La serie 2 está marcada como hecha');
 	await avisoQuitar.getByRole('button', { name: 'Quitar', exact: true }).click();
