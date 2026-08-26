@@ -30,7 +30,8 @@
 		| 'favorito'
 		| 'aviso'
 		| 'error'
-		| 'rueda';
+		| 'rueda'
+		| 'desplegar';
 
 	/** Cada ícono es su lista de trazos; el `viewBox` es siempre 0 0 24 24. */
 	const TRAZOS: Record<NombreIcono, string[]> = {
@@ -59,7 +60,8 @@
 		favorito: ['M12 4l2.5 5.2 5.5.8-4 3.9 1 5.6-5-2.7-5 2.7 1-5.6-4-3.9 5.5-.8z'],
 		aviso: ['M12 4l9 16H3z', 'M12 10v4', 'M12 17h.01'],
 		error: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M9 9l6 6', 'M15 9l-6 6'],
-		rueda: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M12 3v3', 'M12 18v3', 'M3 12h3', 'M18 12h3']
+		rueda: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M12 3v3', 'M12 18v3', 'M3 12h3', 'M18 12h3'],
+		desplegar: ['M6 9l6 6 6-6']
 	};
 </script>
 

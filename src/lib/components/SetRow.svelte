@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { SetSesion, Ajustes, ModoEsfuerzo } from '$lib/db';
 	import { pulsar } from '$lib/pulsar';
-	import { formatoNumero, formatoAnterior } from '$lib/formato';
+	import { formatoNumero, formatoAnterior, formatoSet } from '$lib/formato';
 	import { redondear, sumarPeso } from '$lib/numeros';
 	import Stepper from './Stepper.svelte';
 	import Icono from './Icono.svelte';
@@ -96,29 +96,28 @@
 	const etiquetaToggle = $derived(`${set.hecha ? 'Desmarcar' : 'Marcar'} serie ${index + 1}`);
 
 	/**
-	 * Chips de memoria: la app ya sabe con cuánto hiciste esta serie la vez pasada, y
-	 * hasta acá ese dato era texto gris. Repetir la carga anterior (o moverla un paso)
-	 * es lo que se hace en la mayoría de las series, y ahora cuesta un toque.
+	 * Chips de memoria: mover la carga de la vez pasada un paso arriba o abajo en un toque.
+	 *
+	 * "Igual" se fue: la serie ya viene prellenada con el peso anterior
+	 * (`serieDesdeAnterior` en $lib/sesion), así que el chip escribía el valor que ya
+	 * estaba. Ocupaba una fila de 44 px y no hacía nada, salvo en el caso raro de volver
+	 * atrás después de haber cambiado el peso a mano, que es lo que hace el stepper.
 	 */
 	const memoria = $derived.by(() => {
 		if (set.hecha || anterior?.peso == null) return [];
 		const base = anterior.peso;
 		const arriba = sumarPeso(base, pasoPeso);
 		const abajo = sumarPeso(base, -pasoPeso);
-		const opcionesChips = [{ etiqueta: 'Igual', valor: base }];
+		const opcionesChips: { etiqueta: string; valor: number }[] = [];
 		if (arriba != null && arriba !== base) opcionesChips.push({ etiqueta: 'Subir', valor: arriba });
 		if (abajo != null && abajo > 0) opcionesChips.push({ etiqueta: 'Bajar', valor: abajo });
 		return opcionesChips;
 	});
 
 	/**
-	 * Cuánto se movió la carga respecto de la misma serie de la vez pasada.
-	 *
-	 * Vive en el renglón contraído porque ahí sobraba entre un 39 % y un 56 % del ancho:
-	 * los valores arrancan siempre en el mismo x —que es lo que deja leer la columna de
-	 * arriba abajo, y por eso no se centran— y a la derecha no había nada. En vez de
-	 * rellenar con aire, va el dato que contesta la pregunta que uno se hace mirando una
-	 * serie hecha: ¿subí?
+	 * Cuánto se movió la carga respecto de la misma serie de la vez pasada. Cierra el
+	 * renglón contraído por la derecha porque contesta la pregunta que uno se hace
+	 * mirando una serie hecha: ¿subí?
 	 */
 	const delta = $derived.by(() => {
 		if (set.peso == null || anterior?.peso == null) return null;
@@ -128,8 +127,40 @@
 			diferencia === 0
 				? '='
 				: `${diferencia > 0 ? '+' : '−'}${formatoNumero(Math.abs(diferencia))}`;
-		return { diferencia, texto };
+		const frase =
+			diferencia === 0
+				? 'igual que la vez pasada'
+				: `${formatoNumero(Math.abs(diferencia))} ${unidad} ${diferencia > 0 ? 'más' : 'menos'} que la vez pasada`;
+		return { diferencia, texto, frase };
 	});
+
+	/**
+	 * Nombre accesible del renglón contraído. El `aria-label` REEMPLAZA al contenido del
+	 * botón, así que "Corregir serie 2" a secas dejaba el peso y las reps inaudibles: la
+	 * lista entera se escuchaba "corregir serie 1, corregir serie 2, corregir serie 3".
+	 * Mismo criterio que el historial, que ya nombraba la serie con lo que levantaste.
+	 */
+	const etiquetaCorregir = $derived(
+		`Corregir serie ${index + 1}: ${formatoSet(set, unidad)}${delta ? `, ${delta.frase}` : ''}`
+	);
+
+	/**
+	 * Qué es el número que muestra una serie que todavía no hiciste. Es el prellenado de
+	 * la sesión anterior, no un objetivo de la rutina: mientras no lo toques dice "Última
+	 * vez", y en cuanto lo movés pasa a ser lo que dejaste preparado. Decirle "objetivo" a
+	 * lo que levantaste la vez pasada es justo lo que CLAUDE.md pide no hacer.
+	 */
+	const rotuloFalta = $derived(
+		anterior != null && set.peso === anterior.peso && set.reps === anterior.reps
+			? 'Última vez'
+			: 'Preparada'
+	);
+
+	const etiquetaAbrir = $derived(
+		set.peso != null || set.reps != null
+			? `Abrir serie ${index + 1}: ${rotuloFalta.toLowerCase()}, ${formatoSet(set, unidad)}`
+			: `Abrir serie ${index + 1}: sin cargar`
+	);
 
 	function cambiarEsfuerzo(valor: string) {
 		if (!valor) {
@@ -147,114 +178,116 @@
 
 {#if compacta}
 	<!--
-		Serie hecha: un renglón con lo que realmente levantaste. El check verde sigue
-		siendo el que desmarca; el resto de la fila abre la corrección.
-	-->
-	<!--
-		El renglón se lee en lista, no solo, y por eso va en columnas fijas en vez de
-		centrado: el peso alineado a la derecha en su columna hace que 100, 95 y 137.5
-		terminen en la misma línea y que las reps arranquen todas en el mismo punto. Bajando
-		la vista se ve al toque si la carga se sostuvo. Centrado, cada renglón arrancaba
-		donde lo dejaba su largo y no había nada que comparar.
+		Serie hecha: el aro con el número ES el check. Al confirmar, la tarjeta se contrae a
+		ese mismo aro ya lleno de verde, que es lo que el botón grande venía prometiendo:
+		antes el número quedaba en gris a la izquierda y el ✓ aparecía como otro botón a
+		262 px de distancia, sin continuidad entre la acción y su resultado.
 
-		Las unidades salieron del renglón —las dice el rótulo de la tarjeta— porque "kg" y
-		"reps" ocupaban 30 px por fila repetidos cuatro veces, y acá el dato es el número.
+		Los valores se pegan al aro como un solo bloque. La versión anterior los ponía en una
+		columna fija de 4.4rem dimensionada para el peor caso ("137.5") y alineada a la
+		derecha: con un peso de dos dígitos dejaba 42 px de vacío contra el número de serie y
+		otros 48 en la columna de insignias, así que la fila entera se leía corrida. Alinear
+		la coma entre renglones no se puede hacer bien fila por fila —cada una es su propio
+		grid— y con tres o cuatro series no compensa el hueco.
+
+		Las unidades no van acá: las dice el rótulo de la tarjeta, y repetidas por fila
+		costaban 30 px que son del número.
 	-->
 	<div
-		class="gb-set-row gb-set-row--hecha grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl px-1.5 py-1 {flash
+		class="gb-set-row gb-set-row--hecha grid grid-cols-[2.75rem_auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl px-1.5 py-1 {flash
 			? 'gb-row-flash'
 			: ''}"
 		style="background: var(--surface-2); --row-glow: {glow}"
 	>
 		<button
-			onclick={onAbrir}
-			class="grid min-h-11 grid-cols-[1.3rem_4.4rem_auto_minmax(0,1fr)] items-center gap-2 rounded-lg text-left"
-			aria-label={`Corregir serie ${index + 1}`}
+			onclick={alternar}
+			disabled={pendiente}
+			class="grid size-11 shrink-0 touch-manipulation place-items-center rounded-full {flash
+				? 'gb-pop'
+				: ''}"
+			aria-pressed={set.hecha}
+			aria-busy={pendiente}
+			aria-label={etiquetaToggle}
 		>
-			<span class="text-center text-xs font-bold tabular-nums" style="color: var(--muted)"
-				>{index + 1}</span
-			>
-			<span class="cifra truncate text-right text-2xl"
-				>{set.peso != null ? formatoNumero(set.peso) : '—'}</span
-			>
-			<span class="cifra text-2xl" style="color: #c2c6d6">×{set.reps ?? '—'}</span>
-			<span class="flex min-w-0 items-center gap-1.5 overflow-hidden">
-				{#if set.esMax}
-					<span
-						class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold"
-						style="background: rgb(var(--max) / .16); color: rgb(var(--max))"
-						>MAX{set.extraKg ? ` +${formatoNumero(set.extraKg)}` : ''}</span
-					>
-				{/if}
-				{#if set.rir != null}
-					<span class="shrink-0 text-[10px] font-bold" style="color: var(--muted)"
-						>{escala.toUpperCase()}
-						{escala === 'rir' ? set.rir : 10 - set.rir}</span
-					>
-				{/if}
-			</span>
+			{#if pendiente}
+				<span class="gb-set-spinner" aria-hidden="true"></span>
+			{:else}
+				<span
+					class="cifra grid size-9 place-items-center rounded-full border-2 text-[0.95rem]"
+					style="background: rgb(var(--exito) / .16); border-color: rgb(var(--exito) / .55); color: rgb(var(--exito))"
+					aria-hidden="true">{index + 1}</span
+				>
+			{/if}
 		</button>
-		<span class="flex items-center gap-1">
-			<!--
-				El delta ocupa su lugar aunque no exista: sin el hueco reservado, las series sin
-				sesión anterior corrían todo el renglón y la lista bailaba renglón por medio.
-			-->
-			<span class="gb-delta flex w-11 justify-end">
-				{#if delta}
-					<span
-						class="cifra text-base"
-						style="color: {delta.diferencia > 0 ? 'rgb(var(--exito))' : 'var(--muted)'}"
-						aria-label={delta.diferencia === 0
-							? 'Igual que la vez pasada'
-							: `${delta.diferencia > 0 ? 'Más' : 'Menos'} que la vez pasada: ${formatoNumero(Math.abs(delta.diferencia))} ${unidad}`}
-						>{delta.texto}</span
-					>
-				{/if}
-			</span>
-			<button
-				onclick={alternar}
-				disabled={pendiente}
-				class="grid size-11 shrink-0 touch-manipulation place-items-center rounded-full {flash
-					? 'gb-pop'
-					: ''}"
-				style="color: rgb(var(--exito))"
-				aria-pressed={set.hecha}
-				aria-busy={pendiente}
-				aria-label={etiquetaToggle}
-			>
-				{#if pendiente}
-					<span class="gb-set-spinner" aria-hidden="true"></span>
-				{:else}
-					<Icono nombre="hecha" tamano={20} />
-				{/if}
-			</button>
+		<button
+			onclick={onAbrir}
+			class="flex min-h-11 items-baseline gap-1 rounded-lg text-left"
+			aria-label={etiquetaCorregir}
+		>
+			<span class="cifra text-2xl">{set.peso != null ? formatoNumero(set.peso) : '—'}</span>
+			<span class="cifra text-xl" style="color: var(--muted)">×</span>
+			<span class="cifra text-2xl" style="color: #c2c6d6">{set.reps ?? '—'}</span>
+		</button>
+		<span class="flex min-w-0 items-center gap-1.5 overflow-hidden" aria-hidden="true">
+			{#if set.esMax}
+				<span
+					class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+					style="background: rgb(var(--max) / .16); color: rgb(var(--max))"
+					>MAX{set.extraKg ? ` +${formatoNumero(set.extraKg)}` : ''}</span
+				>
+			{/if}
+			{#if set.rir != null}
+				<span class="shrink-0 text-[10px] font-bold" style="color: var(--muted)"
+					>{escala.toUpperCase()}
+					{escala === 'rir' ? set.rir : 10 - set.rir}</span
+				>
+			{/if}
+		</span>
+		<!--
+			El delta va oculto para el lector de pantalla porque `aria-label` sobre un span
+			genérico se descarta: lo dice `etiquetaCorregir`, que sí es el nombre de un botón.
+		-->
+		<span class="gb-delta flex justify-end pr-1" aria-hidden="true">
+			{#if delta}
+				<span
+					class="cifra text-base"
+					style="color: {delta.diferencia > 0 ? 'rgb(var(--exito))' : 'var(--muted)'}"
+					>{delta.texto}</span
+				>
+			{/if}
 		</span>
 	</div>
 {:else if porHacer}
 	<!--
-		Serie que todavía no llegaste: su objetivo en un renglón punteado. Tocarla la abre
-		por si querés dejar la carga preparada antes de tiempo.
+		Serie que todavía no llegaste: lo que tiene cargado, en un renglón punteado. Tocarla
+		la abre por si querés dejar la carga preparada antes de tiempo.
+
+		El rótulo dice de dónde sale el número. Decía "Objetivo", pero el prellenado viene de
+		la sesión anterior (`serieDesdeAnterior`), no de la rutina: bajar el peso una vez por
+		una molestia convertía ese peso reducido en tu "objetivo" de la vez siguiente.
 	-->
 	<button
 		onclick={onAbrir}
-		class="gb-set-row grid min-h-11 w-full grid-cols-[1.3rem_4.4rem_auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-dashed border-white/10 px-1.5 py-1 text-left"
-		aria-label={`Abrir serie ${index + 1}`}
+		class="gb-set-row grid min-h-11 w-full grid-cols-[2.75rem_auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-dashed border-white/10 px-1.5 py-1 text-left"
+		aria-label={etiquetaAbrir}
 	>
-		<span class="text-center text-xs font-bold tabular-nums" style="color: var(--muted)"
-			>{index + 1}</span
+		<span
+			class="cifra grid size-9 place-items-center justify-self-center rounded-full border text-[0.95rem]"
+			style="border-color: rgba(255,255,255,.12); color: var(--muted)">{index + 1}</span
 		>
 		{#if set.peso != null || set.reps != null}
-			<span class="cifra truncate text-right text-xl" style="color: var(--muted)"
-				>{set.peso != null ? formatoNumero(set.peso) : '—'}</span
+			<span class="flex items-baseline gap-1" style="color: var(--muted)">
+				<span class="cifra text-2xl">{set.peso != null ? formatoNumero(set.peso) : '—'}</span>
+				<span class="cifra text-xl">×</span>
+				<span class="cifra text-2xl">{set.reps ?? '—'}</span>
+			</span>
+			<span></span>
+			<span class="pr-1 text-[10px] font-bold uppercase tracking-wider" style="color: var(--muted)"
+				>{rotuloFalta}</span
 			>
-			<span class="cifra text-xl" style="color: var(--muted)">×{set.reps ?? '—'}</span>
 		{:else}
-			<span class="col-span-2 text-sm" style="color: var(--muted)">Sin cargar</span>
+			<span class="col-span-3 text-sm" style="color: var(--muted)">Sin cargar</span>
 		{/if}
-		<span></span>
-		<span class="pr-1 text-[10px] font-bold uppercase tracking-wider" style="color: var(--muted)"
-			>Objetivo</span
-		>
 	</button>
 {:else}
 	<div
@@ -532,20 +565,14 @@
 	}
 
 	/*
-	 * Renglón hecho en pantalla angosta: "137.5 kg × 12 reps" con el delta y el lápiz al
-	 * lado no entra a 320 px con una cifra redonda. Lo primero que se va son las
-	 * unidades, que el `×` ya sobreentiende; los números, que son el dato, quedan.
+	 * Renglón muy angosto —la columna de trabajo en apaisado, o 320 px con zoom de
+	 * pantalla—: "137.5 × 12" con el aro y el delta no entra. Lo primero que se va es el
+	 * delta; los números que levantaste, que son el dato, quedan siempre.
+	 *
+	 * (La regla que escondía `.cifra-u` se borró: el renglón contraído ya no imprime
+	 * unidades, las dice el rótulo de la tarjeta.)
 	 */
 	@container (max-width: 17rem) {
-		.gb-set-row--hecha :global(.cifra-u) {
-			display: none;
-		}
-
-		/*
-		 * Y si aun sin unidades no entra —"137.5 × 12" a 320 px—, lo siguiente en irse es
-		 * el delta. El orden de prioridad del renglón es siempre el mismo: los números que
-		 * levantaste, después cuánto te moviste, al final cómo se llaman las unidades.
-		 */
 		.gb-set-row--hecha .gb-delta {
 			display: none;
 		}

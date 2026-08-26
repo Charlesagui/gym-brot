@@ -402,6 +402,20 @@ body {
 }
 
 /*
+ * Punta de flecha de un renglón que se despliega (las series anteriores guardadas).
+ * Gira en vez de cambiar de ícono: el giro dice hacia dónde se abre. Con movimiento
+ * reducido el `*` global deja la transición en cero y solo cambia de posición.
+ */
+.gb-caret {
+	display: inline-flex;
+	transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.gb-caret--abierto {
+	transform: rotate(180deg);
+}
+
+/*
  * Marco para el video/imagen del ejercicio: el material fuente trae fondo
  * claro sólido. En vez de flotar como un rectángulo blanco clínico sobre el
  * tema oscuro, queda enmarcado en un bisel oscuro con el glow del grupo
