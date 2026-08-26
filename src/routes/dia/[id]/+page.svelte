@@ -411,7 +411,15 @@
 				style="background: var(--accent); color: var(--on-accent)">Guardar nombre</button
 			>
 		{:else}
-			<h1 class="flex-1 text-xl font-bold">{dia?.nombre ?? ''}</h1>
+			<div class="min-w-0 flex-1">
+				<h1 class="truncate text-xl font-bold leading-tight">{dia?.nombre ?? ''}</h1>
+				{#if editandoPasado}
+					<!-- Se llega acá desde el historial: entrenar ayer no puede parecerse a hoy. -->
+					<p class="text-[11px] font-semibold leading-tight" style="color: rgb(var(--max))">
+						Entrenamiento del {fechaCorta(fechaSesion!)} · no es hoy
+					</p>
+				{/if}
+			</div>
 			{#if dia && !reordenando}
 				<button
 					onclick={abrirEdicion}
@@ -579,16 +587,6 @@
 					></button>
 				{/each}
 			</div>
-		{/if}
-
-		{#if editandoPasado && !editando}
-			<!-- Se llega acá desde el historial: entrenar ayer no puede parecerse a entrenar hoy. -->
-			<p
-				class="mb-3 rounded-xl px-3 py-2.5 text-xs font-semibold"
-				style="background: rgb(var(--max) / .1); color: rgb(var(--max))"
-			>
-				Estás editando el entrenamiento del {fechaCorta(fechaSesion!)}, no el de hoy.
-			</p>
 		{/if}
 
 		<div class="gb-landscape-cards space-y-3">
@@ -849,47 +847,50 @@
 								style="background: rgba(255,255,255,.08); color: var(--muted)">En curso</span
 							>
 						{/if}
-						{#if hayQueReiniciar}
-							<!--
-								Volver a empezar el día: discreto, debajo del chip de estado. Va acá y no al
-								pie porque ahí alargaba la página y corría el final de la lista debajo de la
-								barra fija. Un toque no reinicia: arma el aviso, y el aviso es el que reinicia.
-							-->
-							<button
-								onclick={pedirReinicioDia}
-								class="-mr-2 min-h-11 px-2 text-xs font-semibold"
-								style="color: var(--muted)"
-								aria-label="Reiniciar el día">Reiniciar día</button
-							>
-						{/if}
 					</div>
 				</div>
 
-				{#if diaTerminado}
-					<button
-						onclick={reabrir}
-						class="mt-3 w-full rounded-2xl border border-white/10 py-3 text-sm font-bold"
-						style="color: var(--muted)">Reabrir día</button
-					>
-				{:else}
-					<button
-						onclick={terminarDia}
-						disabled={!diaListo}
-						class="mt-3 w-full rounded-2xl py-3 text-sm font-bold disabled:opacity-45"
-						style="background: {diaListo
-							? 'var(--accent)'
-							: 'rgba(255,255,255,.08)'}; color: {diaListo ? 'white' : 'var(--muted)'}"
-					>
-						{#if diaListo}
-							<span class="inline-flex items-center gap-2">
-								<Icono nombre="terminar" tamano={18} /> Terminar día
-							</span>
-						{:else}
-							{@const faltan = totalEjercicios - ejerciciosResueltos}
-							Faltan {faltan} ejercicio{faltan === 1 ? '' : 's'}
-						{/if}
-					</button>
-				{/if}
+				<!--
+					Reiniciar comparte la fila con la acción principal en vez de colgar debajo. No es
+					solo estética: todo lo que se agrega DEBAJO de la lista de ejercicios le da scroll
+					extra a la página, y con ese colchón la última tarjeta queda pegada al borde
+					inferior, justo donde la barra fija se come los toques. Acá suma cero alto.
+				-->
+				<div class="mt-3 grid gap-2 {hayQueReiniciar ? 'grid-cols-[minmax(0,1fr)_auto]' : ''}">
+					{#if diaTerminado}
+						<button
+							onclick={reabrir}
+							class="rounded-2xl border border-white/10 py-3 text-sm font-bold"
+							style="color: var(--muted)">Reabrir día</button
+						>
+					{:else}
+						<button
+							onclick={terminarDia}
+							disabled={!diaListo}
+							class="rounded-2xl py-3 text-sm font-bold disabled:opacity-45"
+							style="background: {diaListo
+								? 'var(--accent)'
+								: 'rgba(255,255,255,.08)'}; color: {diaListo ? 'white' : 'var(--muted)'}"
+						>
+							{#if diaListo}
+								<span class="inline-flex items-center gap-2">
+									<Icono nombre="terminar" tamano={18} /> Terminar día
+								</span>
+							{:else}
+								{@const faltan = totalEjercicios - ejerciciosResueltos}
+								Faltan {faltan} ejercicio{faltan === 1 ? '' : 's'}
+							{/if}
+						</button>
+					{/if}
+					{#if hayQueReiniciar}
+						<button
+							onclick={pedirReinicioDia}
+							class="rounded-2xl px-3 text-xs font-semibold"
+							style="color: var(--muted)"
+							aria-label="Reiniciar el día">Reiniciar</button
+						>
+					{/if}
+				</div>
 			</section>
 		{/if}
 
