@@ -150,8 +150,15 @@
 		Serie hecha: un renglón con lo que realmente levantaste. El check verde sigue
 		siendo el que desmarca; el resto de la fila abre la corrección.
 	-->
+	<!--
+		Tres columnas y no una fila: las dos de los costados son `1fr`, o sea que miden lo
+		mismo, y por eso la del medio cae en el centro exacto del renglón. Con flex los
+		valores quedaban 8 px a la izquierda, porque el bloque de la izquierda (el número)
+		mide 54 px y el de la derecha (delta y lápiz) 81: centrar "en lo que sobra" no es
+		centrar en el renglón cuando los costados son distintos.
+	-->
 	<div
-		class="gb-set-row gb-set-row--hecha flex items-center gap-2 rounded-xl p-1.5 {flash
+		class="gb-set-row gb-set-row--hecha grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-xl p-1.5 {flash
 			? 'gb-row-flash'
 			: ''}"
 		style="background: var(--surface-2); --row-glow: {glow}"
@@ -164,7 +171,7 @@
 		<button
 			onclick={alternar}
 			disabled={pendiente}
-			class="flex min-h-11 shrink-0 touch-manipulation items-center gap-1.5 rounded-full px-2.5 {flash
+			class="flex min-h-11 w-fit touch-manipulation items-center gap-1.5 rounded-full px-2.5 {flash
 				? 'gb-pop'
 				: ''}"
 			style="background: rgb(var(--exito) / .16); color: rgb(var(--exito))"
@@ -181,19 +188,9 @@
 		</button>
 		<button
 			onclick={onAbrir}
-			class="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-lg px-1 text-left"
+			class="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg px-1"
 			aria-label={`Corregir serie ${index + 1}`}
 		>
-			<!--
-				Los valores se centran en el espacio que queda entre el número de serie y el
-				delta. Se probó alineados a la izquierda y el renglón se veía volcado: entre
-				el 39 % y el 56 % del ancho quedaba vacío a la derecha. El argumento en contra
-				era que centrar mueve el arranque de cada renglón y rompe la columna que se
-				lee de arriba abajo, pero eso vale cuando los valores tienen anchos muy
-				distintos, y las series de un mismo ejercicio se parecen entre sí: el corrimiento
-				real es de unos pocos píxeles.
-			-->
-			<span class="flex-1"></span>
 			<!--
 				20 px y no 24: con el delta reservado a la derecha, "102.5 kg × 10 reps" no
 				entraba y se cortaba. De paso ordena la jerarquía, porque la cifra que tiene
@@ -218,25 +215,31 @@
 					{escala === 'rir' ? set.rir : 10 - set.rir}</span
 				>
 			{/if}
-			<span class="flex-1"></span>
-			<!--
-				El delta ocupa lugar aunque no exista. Sin esto, las series sin sesión anterior
-				corrían los valores 37 px respecto de las que sí la tienen, y la lista quedaba
-				bailando renglón por medio: el hueco reservado deja el centro quieto.
-			-->
-			<span class="gb-delta flex w-12 shrink-0 justify-end">
+		</button>
+		<!--
+			El delta y el lápiz también abren la corrección, pero para el lector de pantalla
+			son el mismo botón que ya está anunciado al medio: acá van como blanco táctil y
+			nada más, para que tocar la derecha del renglón haga lo mismo que tocar el centro.
+
+			El delta ocupa su lugar aunque no exista. Sin eso, las series sin sesión anterior
+			corrían los valores 37 px respecto de las que sí la tienen.
+		-->
+		<button
+			onclick={onAbrir}
+			tabindex="-1"
+			aria-hidden="true"
+			class="flex min-h-11 w-full items-center justify-end gap-2 rounded-lg pr-1"
+		>
+			<span class="gb-delta flex w-12 justify-end">
 				{#if delta}
 					<span
 						class="cifra text-base"
 						style="color: {delta.diferencia > 0 ? 'rgb(var(--exito))' : 'var(--muted)'}"
-						aria-label={delta.diferencia === 0
-							? 'Igual que la vez pasada'
-							: `${delta.diferencia > 0 ? 'Más' : 'Menos'} que la vez pasada: ${formatoNumero(Math.abs(delta.diferencia))} ${unidad}`}
 						>{delta.texto}</span
 					>
 				{/if}
 			</span>
-			<span class="shrink-0" style="color: var(--muted)" aria-hidden="true">
+			<span class="shrink-0" style="color: var(--muted)">
 				<Icono nombre="editar" tamano={15} />
 			</span>
 		</button>
