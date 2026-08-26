@@ -4,21 +4,25 @@
  * Tipografía de las cifras.
  *
  * El peso, las reps, el descanso y el PR son el contenido de la app, y hasta acá se
- * imprimían en la misma `system-ui` de 16 px que sus propios rótulos. Una condensada
- * de display les da identidad y, sobre todo, deja poner el número mucho más grande
- * sin robarle ancho a la fila.
+ * imprimían en la misma `system-ui` de 16 px que sus propios rótulos. Outfit es
+ * geométrica —el 0 y el 3 son casi círculos— y esa redondez es la que hace que un número
+ * grande se lea como algo para agarrar, no como un cartel.
+ *
+ * Cuesta ancho: "137.5" ocupa un 29 % más que con una condensada, y ese ancho compite en
+ * la fila contraída con el delta y el lápiz. Entra, pero es el techo: las candidatas más
+ * redondas que se probaron (Rubik +48 %, Poppins +40 %) se comen el renglón a 320 px.
  *
  * Va self-hosted y NO por CDN: la app tiene que arrancar sin red. `woff2` ya está en
  * los globPatterns del service worker, así que entra sola al precache (ver
- * scripts/verify-performance-budget.mjs, donde el techo subió por estos 14,9 KB).
- * Un solo peso: el 700 es el único que se usa, y cada peso extra son ~15 KB.
+ * scripts/verify-performance-budget.mjs). Un solo peso: el 700 es el único que se usa,
+ * y cada peso extra son ~14 KB.
  */
 @font-face {
-	font-family: 'Barlow Condensed';
+	font-family: 'Outfit';
 	font-style: normal;
 	font-weight: 700;
 	font-display: swap;
-	src: url('/fonts/barlow-condensed-700-latin.woff2') format('woff2');
+	src: url('/fonts/outfit-700-latin.woff2') format('woff2');
 }
 
 /* Tokens de diseño — color de acento y glow son PROVISIONALES (libres de cambiar) */
@@ -51,7 +55,7 @@
 	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 	--ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-	--fuente-cifra: 'Barlow Condensed', 'Arial Narrow', ui-sans-serif, system-ui, sans-serif;
+	--fuente-cifra: 'Outfit', ui-sans-serif, system-ui, sans-serif;
 }
 
 /*

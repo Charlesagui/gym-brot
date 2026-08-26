@@ -7,7 +7,7 @@ const BUILD = new URL('../build/', import.meta.url);
 const MAX_SHELL_BYTES = 320 * 1024;
 const MAX_SHELL_GZIP_BYTES = 110 * 1024;
 // La calculadora de discos agrega una ruta offline de ~12 KiB al precache, y la
-// tipografía de las cifras (Barlow Condensed 700, subset latin) otros ~14,5 KiB.
+// tipografía de las cifras (Outfit 700, subset latin) otros ~13,7 KiB.
 // Conservamos un margen acotado sin relajar los presupuestos del shell.
 const MAX_PRECACHE_BYTES = 1380 * 1024;
 
