@@ -144,6 +144,40 @@ describe('descanso', () => {
 		expect(descanso.totalSeg).toBe(60);
 	});
 
+	it('ajustarFin puede deshacer el vencimiento que él mismo provocó', () => {
+		descanso.iniciar(3, GLOW);
+		vi.advanceTimersByTime(70_000);
+		expect(descanso.restoSeg).toBe(110);
+
+		// Bajar el descanso del ejercicio por debajo de lo ya transcurrido lo da por
+		// terminado: correcto, ya descansaste más que eso.
+		descanso.ajustarFin(0.75);
+		expect(descanso.vencido).toBe(true);
+
+		// Y subirlo de nuevo lo revive. Antes la guarda `|| this.vencido` hacía que este
+		// llamado no hiciera nada: quedabas con la alarma sonando por un número que
+		// acababas de corregir.
+		descanso.ajustarFin(2);
+		expect(descanso.vencido).toBe(false);
+		expect(descanso.restoSeg).toBe(50);
+		expect(descanso.totalSeg).toBe(120);
+	});
+
+	it('un descanso revivido vuelve a vencer solo cuando le toca', () => {
+		descanso.iniciar(3, GLOW);
+		vi.advanceTimersByTime(70_000);
+		descanso.ajustarFin(0.75);
+		descanso.ajustarFin(2);
+		expect(descanso.vencido).toBe(false);
+
+		// Le quedaban 50 s de los 120: ni antes ni sin avisar.
+		vi.advanceTimersByTime(49_000);
+		expect(descanso.vencido).toBe(false);
+		vi.advanceTimersByTime(2_000);
+		expect(descanso.vencido).toBe(true);
+		expect(descanso.restoSeg).toBe(0);
+	});
+
 	it('ajustarResto cambia lo que falta y estira el total, sin mover el inicio', () => {
 		descanso.iniciar(3, GLOW);
 		vi.advanceTimersByTime(30_000);
