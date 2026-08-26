@@ -288,11 +288,10 @@
 				</p>
 				<BarraCargada carga={resultado.exacta} {pesoMaxDisco} formato={formatoPeso} {unidad} />
 				<!--
-					El peso de la barra se dice aca y no dentro del dibujo: el disco se identifica
-					solo —tiene su color y su numero encima—, la barra no tenia quien la nombrara.
-					Va pegado al renglon que ya estaba y no en uno nuevo, que la pantalla entra
-					justa en 727 px, y en el orden en que se carga: primero la barra, despues lo
-					que le colgas.
+					Debajo del dibujo va la barra y nada mas. La lista de discos que estaba aca
+					repetia lo que el grafico ya dice mejor: cada placa lleva su color y su numero
+					encima. La barra era lo unico sin nombre —el peso que elegis abajo no volvia a
+					aparecer en la respuesta—, asi que se queda con el renglon.
 				-->
 				<p class="mt-1 text-sm font-bold" style="color: var(--muted)">
 					{#if resultado.exacta.discos.length === 0}
@@ -303,12 +302,16 @@
 						Barra <span class="cifra" style="color: var(--text)"
 							>{formatoPeso(resultado.barra)}</span
 						>
-						· Discos:
-						<span class="cifra text-lg" style="color: var(--text)"
-							>{combinacion(resultado.exacta)}</span
-						>
 					{/if}
 				</p>
+				<!--
+					La combinacion sigue existiendo para quien no ve el dibujo: el SVG es
+					`aria-hidden` justamente porque este texto era el que lo leia en voz alta.
+					Sacarlo de la pantalla sin dejarlo acá dejaba la carga sin narrar.
+				-->
+				{#if resultado.exacta.discos.length > 0}
+					<p class="sr-only">Discos por lado: {combinacion(resultado.exacta)}</p>
+				{/if}
 			</div>
 		{:else if cercanas}
 			<div class="gb-resultado rounded-2xl p-3 text-center">
@@ -336,12 +339,11 @@
 						Barra <span class="cifra" style="color: var(--text)"
 							>{formatoPeso(resultado.barra)}</span
 						>
-						· Por lado:
-						<span class="cifra text-lg" style="color: var(--text)"
-							>{combinacion(cercanas.principal.carga)}</span
-						>
 					{/if}
 				</p>
+				{#if cercanas.principal.carga.discos.length > 0}
+					<p class="sr-only">Discos por lado: {combinacion(cercanas.principal.carga)}</p>
+				{/if}
 
 				{#if cercanas.alternativa}
 					<!-- La otra opción existe, pero no compite con la cifra que manda. -->

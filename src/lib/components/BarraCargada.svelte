@@ -16,8 +16,9 @@
 	 * lado", esquivar ese error depende de que leas el rótulo. Con el objeto entero, no.
 	 *
 	 * Es puro: consume el `CargaBarra` que ya devuelve `calcularDiscos` y no calcula
-	 * nada propio. La lista de texto sigue existiendo debajo, para el lector de pantalla
-	 * y para las combinaciones donde el dibujo se achica.
+	 * nada propio. La combinacion sigue existiendo debajo como texto `sr-only`: salio de
+	 * la pantalla porque repetia lo que las placas ya dicen con su color y su numero,
+	 * pero quien no ve el dibujo la sigue necesitando.
 	 */
 	let {
 		carga,
@@ -128,7 +129,7 @@
 <!--
 	Oculto para el lector de pantalla a propósito: la lista de discos vive como texto
 	justo debajo y dice lo mismo mejor dicho. Como el bloque entero es un `aria-live`,
-	etiquetar el dibujo haría que cada toque del ± anunciara la carga dos veces.
+	etiquetar el dibujo haría que cada paso de la cinta anunciara la carga dos veces.
 -->
 <svg
 	viewBox="0 0 {ancho} {H}"
