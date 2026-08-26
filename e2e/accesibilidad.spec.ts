@@ -424,6 +424,41 @@ test('el loop de entrenamiento encadena serie, PR, descanso y siguiente ejercici
  * click (la captura de puntero retargetea el `pointerup`), lo que dejaba el overlay
  * sin más salida que el gesto de arrastrar hacia abajo.
  */
+/**
+ * La lista de series tiene una sola fila desplegada además de la que estás haciendo.
+ * Abrir una pendiente para dejar la carga preparada no puede ser un viaje de ida, y
+ * marcar tiene que devolver el foco a la serie siguiente.
+ */
+test('abrir y cerrar series deja una sola desplegada y siempre con salida', async ({ page }) => {
+	await page.goto('/ejercicio/prensa-pierna-45?dia=dia-piernas&fecha=2026-08-27');
+	await page.getByRole('button', { name: 'Sin descanso en este ejercicio' }).click();
+
+	// La que estás haciendo no se cierra: es el trabajo en curso.
+	await expect(page.getByRole('button', { name: 'Cerrar serie 1' })).toBeHidden();
+
+	// Una que falta se abre y vuelve a su renglón.
+	await page.getByRole('button', { name: 'Abrir serie 3' }).click();
+	await expect(page.getByRole('textbox', { name: 'Peso de la serie 3 en kg' })).toBeVisible();
+	await page.getByRole('button', { name: 'Cerrar serie 3' }).click();
+	await expect(page.getByRole('button', { name: 'Abrir serie 3' })).toBeVisible();
+
+	// Abrir otra cierra la anterior.
+	await page.getByRole('button', { name: 'Abrir serie 3' }).click();
+	await page.getByRole('button', { name: 'Abrir serie 4' }).click();
+	await expect(page.getByRole('button', { name: 'Abrir serie 3' })).toBeVisible();
+	await expect(page.getByRole('textbox', { name: 'Peso de la serie 4 en kg' })).toBeVisible();
+
+	// Marcar cierra lo que hubiera abierto a mano y el foco pasa a la serie siguiente.
+	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
+	await page.getByRole('button', { name: 'Marcar serie 1' }).click();
+	await expect(page.getByRole('button', { name: 'Abrir serie 4' })).toBeVisible();
+	await expect(page.getByRole('textbox', { name: 'Reps de la serie 2' })).toBeVisible();
+
+	// Desmarcar es lo contrario: la serie que vas a rehacer queda desplegada.
+	await page.getByRole('button', { name: 'Desmarcar serie 1' }).click();
+	await expect(page.getByRole('textbox', { name: 'Reps de la serie 1' })).toBeVisible();
+});
+
 test('la rueda alcanza los descansos que ya no tienen chip propio', async ({ page }) => {
 	await page.goto('/ejercicio/prensa-pierna-45?dia=dia-piernas&fecha=2026-08-16');
 

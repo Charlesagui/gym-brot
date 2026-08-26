@@ -428,8 +428,12 @@
 	let mostrarRuedaDescanso = $state(false);
 	/** La explicación de la métrica y la equivalencia: útiles una vez, no en cada serie. */
 	let mostrarQueMide = $state(false);
-	/** Fila que el descanso pidió abrir para corregir (índice de la serie). */
-	let correccionIndice = $state<number | null>(null);
+	/**
+	 * Qué fila está abierta además de la que estás haciendo. Vive acá y no en cada fila
+	 * para que abrir una cierre la anterior: con el estado adentro de `SetRow` podían
+	 * quedar tres desplegadas a la vez y ninguna forma de saberlo desde afuera.
+	 */
+	let filaAbierta = $state<number | null>(null);
 	let segundosRueda = $state(90);
 	/** Un descanso propio que no es ninguno de los cuatro atajos: lo eligió la rueda. */
 	const descansoDeRueda = $derived(
@@ -661,6 +665,9 @@
 			return;
 		}
 		avisoSerie = null;
+		// Marcar cierra lo que hubiera abierto a mano: el foco pasa a la serie siguiente.
+		// Desmarcar es lo contrario —vas a rehacer esa serie—, así que queda desplegada.
+		filaAbierta = objetivo ? null : i;
 		// Antes de cualquier await: iOS exige gesto vivo para desbloquear el audio y
 		// para pedir el permiso de notificaciones.
 		if (objetivo && descansoEj.activo) descanso.prepararDesdeGesto();
@@ -759,7 +766,7 @@
 		if (indice == null) return;
 		// La serie ya está hecha, así que su fila está contraída: hay que abrirla antes
 		// de buscarle el campo de reps.
-		correccionIndice = indice;
+		filaAbierta = indice;
 		let intentos = 0;
 		let frame = 0;
 		const enfocarFila = () => {
@@ -1216,7 +1223,7 @@
 										{unidad}
 										{pasoPeso}
 										activa={i === indiceActiva}
-										abrirParaCorregir={i === correccionIndice}
+										abierta={i === filaAbierta}
 										pendiente={seriesPendientes.has(i)}
 										flash={filasFlash.has(i)}
 										onToggle={() => onToggle(i)}
@@ -1229,6 +1236,8 @@
 										onAjustarExtra={(d) => ajustarExtra(i, d)}
 										modoEsfuerzo={ajustes.modoEsfuerzo}
 										onSetRir={(rir) => guardarRir(i, rir)}
+										onAbrir={() => (filaAbierta = i)}
+										onCerrar={() => (filaAbierta = null)}
 									/>
 								{/each}
 							</div>

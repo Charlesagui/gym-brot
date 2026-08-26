@@ -16,7 +16,7 @@
 		unidad,
 		pasoPeso,
 		activa = false,
-		abrirParaCorregir = false,
+		abierta = false,
 		pendiente = false,
 		flash = false,
 		modoEsfuerzo = 'off',
@@ -28,7 +28,9 @@
 		onAjustarReps,
 		onEscribirReps,
 		onAjustarExtra,
-		onSetRir
+		onSetRir,
+		onAbrir,
+		onCerrar
 	}: {
 		set: SetSesion;
 		index: number;
@@ -40,11 +42,12 @@
 		/** La primera serie sin hacer: la única que se muestra abierta y con relieve. */
 		activa?: boolean;
 		/**
-		 * La pantalla pide abrir esta fila (volver desde el descanso a corregir la serie
-		 * que se acaba de registrar). Sin esto, el renglón compacto no tiene campos a los
-		 * que mandar el foco.
+		 * Abierta a pedido de la pantalla. Vive afuera y no acá adentro porque es una
+		 * decisión de la lista, no de la fila: hay una sola abierta a la vez además de la
+		 * que estás haciendo, y volver del descanso a corregir tiene que poder abrirla
+		 * aunque el usuario la haya cerrado un rato antes.
 		 */
-		abrirParaCorregir?: boolean;
+		abierta?: boolean;
 		pendiente?: boolean;
 		/** Breve acuse visual tras confirmar el guardado (no se usa al desmarcar). */
 		flash?: boolean;
@@ -59,6 +62,10 @@
 		onEscribirReps: (el: HTMLInputElement) => void;
 		onAjustarExtra: (delta: number) => void;
 		onSetRir: (rir?: number) => void;
+		/** La tocaron para abrirla (corregir una hecha o preparar una que falta). */
+		onAbrir: () => void;
+		/** La cerraron con su propio botón. */
+		onCerrar: () => void;
 	} = $props();
 
 	const ant = $derived(formatoAnterior(anterior, unidad));
@@ -68,21 +75,14 @@
 	 * sin desmarcarla: al desmarcar se recalcula el PR, y "me equivoqué en las reps" no
 	 * tiene por qué costar eso.
 	 */
-	let expandida = $state(false);
 	/**
 	 * Tres estados, no uno: la que estás haciendo se muestra entera, la que ya hiciste
 	 * se contrae a lo que levantaste y la que falta se contrae a su objetivo. Cualquiera
-	 * de las contraídas se abre tocándola.
+	 * de las contraídas se abre tocándola, y se cierra con su propio botón.
 	 */
-	const abierta = $derived(activa || expandida);
-	const compacta = $derived(!abierta && set.hecha);
-	const porHacer = $derived(!abierta && !set.hecha);
-
-	$effect(() => {
-		// Se abre sola cuando la piden desde afuera; cerrarla después vuelve a ser
-		// decisión del usuario, así que no se fuerza en cada render.
-		if (abrirParaCorregir) expandida = true;
-	});
+	const desplegada = $derived(activa || abierta);
+	const compacta = $derived(!desplegada && set.hecha);
+	const porHacer = $derived(!desplegada && !set.hecha);
 	const escala = $derived(modoEsfuerzo === 'rpe' ? 'rpe' : 'rir');
 	const opciones = $derived(
 		Array.from({ length: 11 }, (_, indice) => (escala === 'rir' ? indice / 2 : 10 - indice / 2))
@@ -115,8 +115,6 @@
 	}
 
 	function alternar() {
-		// Desmarcar desde el renglón compacto lo devuelve al estado abierto de siempre.
-		if (set.hecha) expandida = false;
 		onToggle();
 	}
 </script>
@@ -156,7 +154,7 @@
 			{/if}
 		</button>
 		<button
-			onclick={() => (expandida = true)}
+			onclick={onAbrir}
 			class="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-lg px-1 text-left"
 			aria-label={`Corregir serie ${index + 1}`}
 		>
@@ -187,7 +185,7 @@
 		por si querés dejar la carga preparada antes de tiempo.
 	-->
 	<button
-		onclick={() => (expandida = true)}
+		onclick={onAbrir}
 		class="gb-set-row flex w-full min-h-11 items-center gap-3 rounded-xl border border-dashed border-white/10 p-1.5 text-left"
 		aria-label={`Abrir serie ${index + 1}`}
 	>
@@ -425,12 +423,18 @@
 			{/if}
 		</button>
 
-		{#if set.hecha && expandida}
+		{#if !activa}
+			<!--
+				La que estás haciendo no se cierra: es el trabajo en curso. Cualquier otra que
+				hayas abierto vos —hecha o pendiente— tiene que poder volver a su renglón, o
+				abrirla para mirarla se convierte en un viaje de ida.
+			-->
 			<button
 				type="button"
-				onclick={() => (expandida = false)}
+				onclick={onCerrar}
 				class="mt-1 min-h-11 w-full rounded-xl text-xs font-bold"
-				style="color: var(--muted)">Listo, contraer</button
+				style="color: var(--muted)"
+				aria-label={`Cerrar serie ${index + 1}`}>Cerrar</button
 			>
 		{/if}
 	</div>
