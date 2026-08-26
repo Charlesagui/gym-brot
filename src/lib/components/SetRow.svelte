@@ -505,20 +505,18 @@
 		</button>
 
 		<!--
-			Quitar vive acá y no en el contador de arriba porque el − de arriba siempre se
+			Borrar vive acá y no en el contador de arriba porque el − de arriba siempre se
 			llevaba la ÚLTIMA serie: para borrar la 2 de cuatro había que borrar la 4, la 3 y
-			la 2 y volver a cargar dos. La serie que se quita es la que tenés abierta.
+			la 2 y volver a cargar dos. La serie que se borra es la que tenés abierta.
+
+			Los dos botones eran gemelos: mismo alto, mismo ancho, mismo peso, uno al lado del
+			otro. "Quitar" y "Cerrar" se leen parecido y hacen cosas opuestas —uno borra un
+			registro y recalcula el PR, el otro sólo contrae la fila—, así que se distinguen
+			por forma y no por lectura: Cerrar es el ancho neutro y borrar es chico, con el
+			tacho al lado del verbo. Y "borrar" no se puede confundir con sacar algo de la
+			pantalla, que es lo que "quitar" dejaba entender.
 		-->
 		<div class="mt-1 flex items-center gap-2">
-			{#if puedeQuitar}
-				<button
-					type="button"
-					onclick={onQuitar}
-					class="min-h-11 flex-1 rounded-xl text-xs font-bold"
-					style="color: rgb(var(--max))"
-					aria-label={`Quitar la serie ${index + 1} de hoy`}>Quitar serie</button
-				>
-			{/if}
 			{#if !activa}
 				<!--
 					La que estás haciendo no se cierra: es el trabajo en curso. Cualquier otra que
@@ -529,8 +527,21 @@
 					type="button"
 					onclick={onCerrar}
 					class="min-h-11 flex-1 rounded-xl text-xs font-bold"
-					style="color: var(--muted)"
+					style="background: rgba(255,255,255,.05); color: var(--muted)"
 					aria-label={`Cerrar serie ${index + 1}`}>Cerrar</button
+				>
+			{:else}
+				<!-- La activa no tiene Cerrar: el hueco evita que borrar quede a lo ancho. -->
+				<span class="flex-1"></span>
+			{/if}
+			{#if puedeQuitar}
+				<button
+					type="button"
+					onclick={onQuitar}
+					class="flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl px-3 text-xs font-bold"
+					style="color: rgb(var(--max))"
+					aria-label={`Borrar la serie ${index + 1} de hoy`}
+					><Icono nombre="borrar" tamano={15} /> Borrar serie</button
 				>
 			{/if}
 		</div>
