@@ -41,7 +41,6 @@
 		setNota,
 		ajustesObs,
 		setDescansoEjercicio,
-		setPasoPesoEjercicio,
 		setMetricaPrEjercicio,
 		AJUSTES_DEFAULT
 	} from '$lib/extras';
@@ -60,6 +59,7 @@
 	import { sonarSetHecho, sonarExito } from '$lib/audio';
 	import { vibrar } from '$lib/vibracion';
 	import { descanso } from '$lib/descanso.svelte';
+	import { WakeLockSeguro } from '$lib/wake-lock';
 	import { dur, menosMovimiento, DUR_BASE, DUR_SLOW } from '$lib/motion';
 	import { fromLiveQuery } from '$lib/live';
 	import { formatoNumero, formatoSet, fechaCorta } from '$lib/formato';
@@ -74,7 +74,7 @@
 		unidadValorEjercicio
 	} from '$lib/ejercicio-activo';
 	import { leerPeso, leerReps, sumarPeso, sumarReps } from '$lib/numeros';
-	import { pasoPesoEfectivo, pasoPesoPersonalizado } from '$lib/paso-peso';
+	import { pasoPesoEfectivo } from '$lib/paso-peso';
 	import { demostracionActiva } from '$lib/video';
 	import {
 		debeMostrarHintMax,
@@ -330,6 +330,21 @@
 		};
 	});
 
+	/**
+	 * Entrenar es la única pantalla donde el teléfono queda quieto minutos entre serie y
+	 * serie: se apagaba solo y había que desbloquearlo con las manos ocupadas. El
+	 * descanso ya sostenía la pantalla; ahora la sostiene el ejercicio entero.
+	 *
+	 * Solo en modo entrenar (`?dia=`): mirar el progreso de un ejercicio no justifica
+	 * gastar batería. Si el navegador no lo permite, `WakeLockSeguro` no rompe nada.
+	 */
+	const pantallaEjercicio = new WakeLockSeguro();
+	$effect(() => {
+		if (!diaId || !ajustes.ejercicioPantallaEncendida) return;
+		void pantallaEjercicio.activar();
+		return () => pantallaEjercicio.desactivar();
+	});
+
 	onMount(() => {
 		function cerrarTecnicaConBack() {
 			if (!tecnicaAbierta || !tecnicaHistoryActiva) return;
@@ -427,8 +442,6 @@
 	const pasoPeso = $derived(
 		ej ? pasoPesoEfectivo(ej, ajustes) : (ajustes.pasoPeso ?? AJUSTES_DEFAULT.pasoPeso)
 	);
-	const pasoPersonalizado = $derived(ej ? pasoPesoPersonalizado(ej, ajustes) : undefined);
-	const opcionesPaso = $derived(unidad === 'kg' ? [1, 2.5, 5] : [1, 2.5, 5, 10]);
 	const itemRutina = $derived(
 		$contextoDia.dia?.ejercicios.find((item) => item.exerciseId === $page.params.id!)
 	);
@@ -939,14 +952,6 @@
 		segundosRueda = segundos;
 		cambiarDescansoEjercicio(segundosAMinutos(segundos));
 	}
-
-	function cambiarPasoEjercicio(paso?: number) {
-		if (!ej) return;
-		guardarDatoSecundario(
-			setPasoPesoEjercicio(ej.id, unidad, paso),
-			'No se pudo guardar el paso de peso del ejercicio.'
-		);
-	}
 </script>
 
 <svelte:document
@@ -1374,60 +1379,81 @@
 							{/if}
 						{/if}
 
-						<div
-							class="gb-rest-presets mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/10 pt-3"
-						>
-							<span
-								class="mr-1 flex items-center gap-1.5 text-xs font-semibold"
-								style="color: var(--muted)"
-							>
-								<Icono nombre="descanso" tamano={15} /> Descanso
-							</span>
-							<button
-								onclick={descansoAutomatico}
-								class="min-h-11 rounded-full px-3.5 py-2 text-xs font-semibold"
-								aria-pressed={descansoPropio == null}
-								aria-label="Usar el descanso general en este ejercicio"
-								style={descansoPropio == null
-									? 'background: var(--accent); color: var(--on-accent)'
-									: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Auto</button
-							>
-							<button
-								onclick={apagarDescansoEjercicio}
-								class="min-h-11 rounded-full px-3.5 py-2 text-xs font-semibold"
-								aria-pressed={descansoPropio === 0}
-								aria-label="Sin descanso en este ejercicio"
-								style={descansoPropio === 0
-									? 'background: var(--accent); color: var(--on-accent)'
-									: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Off</button
-							>
-							{#each PRESETS_DESCANSO as minutos (minutos)}
+						<!--
+							El descanso en dos renglones parejos en vez de ocho píldoras que se
+							envolvían donde caía cada una: primero el modo (Auto / Off), después los
+							valores, todos del mismo ancho. El párrafo que explicaba qué hacía Auto se
+							convierte en el estado de la derecha, que dice lo mismo en cuatro palabras.
+						-->
+						<div class="gb-rest-presets mt-3 border-t border-white/10 pt-3">
+							<div class="flex items-center justify-between gap-2">
+								<span
+									class="flex items-center gap-1.5 text-xs font-semibold"
+									style="color: var(--muted)"
+								>
+									<Icono nombre="descanso" tamano={15} /> Descanso
+								</span>
+								<span class="text-[11px] font-semibold" style="color: var(--muted)">
+									{#if descansoPropio == null}
+										Auto · {ajustes.timer.activo
+											? etiquetaDescanso(ajustes.timer.minutos)
+											: 'apagado'}
+									{:else if descansoPropio === 0}
+										Sin descanso acá
+									{:else}
+										Propio · {etiquetaDescanso(descansoPropio)}
+									{/if}
+								</span>
+							</div>
+							<div class="mt-2 grid grid-cols-4 gap-1.5">
 								<button
-									onclick={() => cambiarDescansoEjercicio(minutos)}
-									class="min-h-11 min-w-11 rounded-full px-3.5 py-2 text-xs font-semibold tabular-nums"
-									aria-pressed={descansoPropio === minutos}
-									aria-label={`Descanso de ${etiquetaDescanso(minutos)} en este ejercicio`}
-									style={descansoPropio === minutos
+									onclick={descansoAutomatico}
+									class="min-h-11 rounded-xl px-2 text-xs font-semibold"
+									aria-pressed={descansoPropio == null}
+									aria-label="Usar el descanso general en este ejercicio"
+									style={descansoPropio == null
+										? 'background: var(--accent); color: var(--on-accent)'
+										: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Auto</button
+								>
+								<button
+									onclick={apagarDescansoEjercicio}
+									class="min-h-11 rounded-xl px-2 text-xs font-semibold"
+									aria-pressed={descansoPropio === 0}
+									aria-label="Sin descanso en este ejercicio"
+									style={descansoPropio === 0
+										? 'background: var(--accent); color: var(--on-accent)'
+										: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Off</button
+								>
+								{#each PRESETS_DESCANSO as minutos (minutos)}
+									<button
+										onclick={() => cambiarDescansoEjercicio(minutos)}
+										class="min-h-11 rounded-xl px-2 text-xs font-semibold tabular-nums"
+										aria-pressed={descansoPropio === minutos}
+										aria-label={`Descanso de ${etiquetaDescanso(minutos)} en este ejercicio`}
+										style={descansoPropio === minutos
+											? 'background: var(--accent); color: var(--on-accent)'
+											: 'background: rgba(255,255,255,.06); color: var(--muted)'}
+										>{etiquetaCortaDescanso(minutos)}</button
+									>
+								{/each}
+								<button
+									onclick={alternarRuedaDescanso}
+									class="col-span-2 flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-semibold tabular-nums"
+									aria-pressed={descansoDeRueda}
+									aria-expanded={mostrarRuedaDescanso}
+									aria-label="Elegir otro descanso con la rueda"
+									style={descansoDeRueda
 										? 'background: var(--accent); color: var(--on-accent)'
 										: 'background: rgba(255,255,255,.06); color: var(--muted)'}
-									>{etiquetaCortaDescanso(minutos)}</button
 								>
-							{/each}
-							<button
-								onclick={alternarRuedaDescanso}
-								class="flex min-h-11 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold tabular-nums"
-								aria-pressed={descansoDeRueda}
-								aria-expanded={mostrarRuedaDescanso}
-								aria-label="Elegir otro descanso con la rueda"
-								style={descansoDeRueda
-									? 'background: var(--accent); color: var(--on-accent)'
-									: 'background: rgba(255,255,255,.06); color: var(--muted)'}
-							>
-								<Icono nombre="rueda" tamano={14} />
-								{descansoDeRueda && descansoPropio ? etiquetaCortaDescanso(descansoPropio) : 'Otro'}
-							</button>
+									<Icono nombre="rueda" tamano={14} />
+									{descansoDeRueda && descansoPropio
+										? etiquetaCortaDescanso(descansoPropio)
+										: 'Otro'}
+								</button>
+							</div>
 							{#if mostrarRuedaDescanso}
-								<div class="mt-2 flex w-full flex-col items-center gap-2">
+								<div class="mt-3 flex flex-col items-center gap-2">
 									<RuedaTiempo
 										segundos={segundosRueda}
 										min={RUEDA_DESCANSO.min}
@@ -1445,17 +1471,6 @@
 									>
 								</div>
 							{/if}
-							<p class="mt-1 w-full text-[11px] leading-relaxed" style="color: var(--muted)">
-								{#if descansoPropio == null}
-									Auto sigue el descanso general: {ajustes.timer.activo
-										? etiquetaDescanso(ajustes.timer.minutos)
-										: 'apagado'}. Elegí uno acá y solo cambia en este ejercicio.
-								{:else if descansoPropio === 0}
-									Sin descanso en este ejercicio. Los demás siguen con el suyo.
-								{:else}
-									Propio de este ejercicio: {etiquetaDescanso(descansoPropio)}.
-								{/if}
-							</p>
 						</div>
 						{#if mostrarHintTimer}
 							<div
@@ -1490,42 +1505,6 @@
 						>
 							Ajustes de este ejercicio
 						</p>
-						<details class="mt-3 rounded-xl border border-white/5 bg-white/[0.025] px-3 py-1">
-							<summary
-								class="flex min-h-11 cursor-pointer items-center text-xs font-semibold"
-								style="color: var(--muted)"
-							>
-								−/+ Paso: {formatoNumero(pasoPeso)}
-								{unidad}
-								{pasoPersonalizado == null ? '· automático' : '· personalizado'}
-							</summary>
-							<div class="mt-2 flex flex-wrap gap-2" aria-label="Configurar paso del peso">
-								<button
-									onclick={() => cambiarPasoEjercicio()}
-									class="min-h-11 rounded-lg px-3 text-xs font-bold"
-									aria-pressed={pasoPersonalizado == null}
-									style={pasoPersonalizado == null
-										? 'background: var(--accent); color: var(--on-accent)'
-										: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Automático</button
-								>
-								{#each opcionesPaso as paso (paso)}
-									<button
-										onclick={() => cambiarPasoEjercicio(paso)}
-										class="min-h-11 rounded-lg px-3 text-xs font-bold tabular-nums"
-										aria-pressed={pasoPersonalizado === paso}
-										style={pasoPersonalizado === paso
-											? 'background: var(--accent); color: var(--on-accent)'
-											: 'background: rgba(255,255,255,.06); color: var(--muted)'}
-										>{formatoNumero(paso)} {unidad}</button
-									>
-								{/each}
-							</div>
-							<p class="mt-2 text-[11px]" style="color: var(--muted)">
-								Automático usa {unidad === 'kg' ? '1 kg' : '5 lb'} en mancuernas y el paso general en
-								los demás ejercicios.
-							</p>
-						</details>
-
 						<details class="mt-2 rounded-xl border border-white/5 bg-white/[0.025] px-3 py-1">
 							<summary
 								class="flex min-h-11 cursor-pointer items-center justify-between gap-2 text-xs font-semibold"

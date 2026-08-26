@@ -370,7 +370,7 @@ test('el loop de entrenamiento encadena serie, PR, descanso y siguiente ejercici
 	// Descanso propio de este ejercicio: el más corto de la fila, para que el test no
 	// dependa del valor general ni de esperas largas.
 	await page.getByRole('button', { name: 'Descanso de 1 minuto en este ejercicio' }).click();
-	await expect(page.getByText('Propio de este ejercicio: 1 minuto')).toBeVisible();
+	await expect(page.getByText('Propio · 1 minuto')).toBeVisible();
 
 	await page.getByRole('textbox', { name: 'Peso de la serie 1 en kg' }).fill('100');
 	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
@@ -442,7 +442,7 @@ test('la rueda alcanza los descansos que ya no tienen chip propio', async ({ pag
 
 	await expect(rueda).toHaveAttribute('aria-valuenow', '45');
 	await expect(rueda).toHaveAttribute('aria-valuetext', '45 segundos');
-	await expect(page.getByText('Propio de este ejercicio: 45 segundos')).toBeVisible();
+	await expect(page.getByText('Propio · 45 segundos')).toBeVisible();
 	// El botón deja de decir "Otro" y muestra el valor elegido.
 	await expect(otro).toHaveAttribute('aria-pressed', 'true');
 	await expect(otro).toContainText('45s');
