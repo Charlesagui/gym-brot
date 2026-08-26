@@ -21,7 +21,6 @@
 		removeSet,
 		cerrarEjercicioConLoHecho,
 		reiniciarEjercicio,
-		restaurarInstantanea,
 		registrarPrSiSupera,
 		pesoEfectivo,
 		valorMetrica,
@@ -63,6 +62,7 @@
 	import { sonarSetHecho, sonarExito } from '$lib/audio';
 	import { vibrar } from '$lib/vibracion';
 	import { descanso } from '$lib/descanso.svelte';
+	import { deshacer } from '$lib/deshacer.svelte';
 	import { WakeLockSeguro } from '$lib/wake-lock';
 	import { dur, menosMovimiento, DUR_BASE, DUR_SLOW } from '$lib/motion';
 	import { fromLiveQuery } from '$lib/live';
@@ -93,7 +93,6 @@
 	import CelebracionOverlay from '$lib/components/CelebracionOverlay.svelte';
 	import CelebracionParticulas from '$lib/components/CelebracionParticulas.svelte';
 	import TecnicaModal from '$lib/components/TecnicaModal.svelte';
-	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
 	import ToastAccion from '$lib/components/ToastAccion.svelte';
 	import { gramosAPeso, pesoAGramos } from '$lib/unidades';
 
@@ -177,12 +176,6 @@
 	let contadorPop = $state(false);
 	let contadorPopId: ReturnType<typeof setTimeout> | null = null;
 	let restoId: ReturnType<typeof setTimeout> | null = null;
-	let confirmacion = $state<{
-		titulo: string;
-		mensaje: string;
-		confirmarTexto: string;
-		onConfirm: () => void | Promise<void>;
-	} | null>(null);
 	/**
 	 * Reiniciar es lo único acá que borra trabajo de un toque, así que va en dos tiempos:
 	 * el botón arma el aviso y el aviso es el que reinicia. Después queda unos segundos
@@ -191,8 +184,6 @@
 	let toast = $state<{
 		mensaje: string;
 		accionTexto: string;
-		tono: 'advertencia' | 'exito';
-		segundos: number;
 		onAccion: () => void | Promise<void>;
 	} | null>(null);
 
@@ -636,22 +627,30 @@
 	 */
 	function quitarSerie(i = sets.length - 1) {
 		if (!diaId || sets.length <= 1 || !sets[i]) return;
-		// No borrar un registro real con un mistap: la serie hecha pide confirmación.
-		if (sets[i].hecha) {
-			confirmacion = {
-				titulo: `Quitar serie ${i + 1}`,
-				mensaje: `La serie ${i + 1} ya está marcada como hecha. Si la quitás, se recalcula el progreso y el PR de este ejercicio.`,
-				confirmarTexto: 'Quitar',
-				onConfirm: async () => {
-					await removeSet(diaId, $page.params.id!, i, fechaSesion);
-					if (filaAbierta === i) filaAbierta = null;
-					confirmacion = null;
-				}
-			};
+		// Quitar una serie hecha borra un registro real, así que se avisa qué se lleva.
+		toast = {
+			mensaje: sets[i].hecha
+				? `La serie ${i + 1} está marcada como hecha. Al quitarla se recalculan el progreso y el PR.`
+				: `Se quita la serie ${i + 1} de este ejercicio.`,
+			accionTexto: 'Quitar',
+			onAccion: () => void hacerQuitarSerie(i)
+		};
+	}
+
+	async function hacerQuitarSerie(i: number) {
+		if (!diaId) return;
+		toast = null;
+		if (filaAbierta === i) filaAbierta = null;
+		let instantanea: InstantaneaSesion | null;
+		try {
+			instantanea = await removeSet(diaId, $page.params.id!, i, fechaSesion);
+		} catch (error) {
+			errorGuardado = error instanceof Error ? error.message : 'No se pudo quitar la serie.';
 			return;
 		}
-		if (filaAbierta === i) filaAbierta = null;
-		escribir(removeSet(diaId, $page.params.id!, i, fechaSesion));
+		if (!instantanea) return;
+		await resincronizar();
+		deshacer.ofrecer(`Serie ${i + 1} quitada.`, diaId, fechaSesion, instantanea);
 	}
 
 	/**
@@ -668,8 +667,6 @@
 		toast = {
 			mensaje: `Se desmarcan las ${hechas} ${hechas === 1 ? 'serie hecha' : 'series hechas'} de este ejercicio. El peso y las reps quedan como referencia.`,
 			accionTexto: 'Reiniciar',
-			tono: 'advertencia',
-			segundos: 7,
 			onAccion: hacerReinicio
 		};
 	}
@@ -688,52 +685,47 @@
 		if (!instantanea) return;
 		await resincronizar();
 		filaAbierta = null;
-		const foto = instantanea;
-		toast = {
-			mensaje: 'Ejercicio reiniciado.',
-			accionTexto: 'Deshacer',
-			tono: 'exito',
-			segundos: 9,
-			onAccion: async () => {
-				toast = null;
-				try {
-					await restaurarInstantanea(diaId, foto, fechaSesion);
-				} catch (error) {
-					errorGuardado =
-						error instanceof Error ? error.message : 'No se pudo deshacer el reinicio.';
-					return;
-				}
-				await resincronizar();
-			}
-		};
+		deshacer.ofrecer('Ejercicio reiniciado.', diaId, fechaSesion, instantanea);
 	}
 
 	function terminarConLoHecho(destino?: string) {
 		if (!diaId || hechas === 0 || completo) return;
 		const pendientes = sets.length - hechas;
-		confirmacion = {
-			titulo: `Terminar con ${hechas} ${hechas === 1 ? 'serie' : 'series'}`,
-			mensaje: `Se quitan las ${pendientes} ${pendientes === 1 ? 'serie que quedó' : 'series que quedaron'} sin marcar. Lo que hiciste no se toca, y podés volver a agregar series con +.`,
-			confirmarTexto: 'Terminar',
-			onConfirm: async () => {
-				confirmacion = null;
-				try {
-					const resultado = await cerrarEjercicioConLoHecho(diaId, $page.params.id!, fechaSesion);
-					if (!resultado.cerrado) {
-						errorGuardado = 'No quedó ninguna serie hecha para cerrar el ejercicio.';
-						return;
-					}
-				} catch (error) {
-					errorGuardado =
-						error instanceof Error ? error.message : 'No se pudo cerrar el ejercicio.';
-					return;
-				}
-				// `terminarEjercicio` lee `completo` y `mejorHoy` de los sets locales: hay que traer
-				// los persistidos antes, o celebra un cierre parcial que ya dejó de serlo.
-				await resincronizar();
-				await terminarEjercicio(destino);
-			}
+		toast = {
+			mensaje: `Se quitan las ${pendientes} ${pendientes === 1 ? 'serie que quedó' : 'series que quedaron'} sin marcar. Lo que hiciste no se toca.`,
+			accionTexto: 'Terminar',
+			onAccion: () => void hacerCierreParcial(destino)
 		};
+	}
+
+	async function hacerCierreParcial(destino?: string) {
+		if (!diaId) return;
+		toast = null;
+		const quedan = hechas;
+		let resultado: Awaited<ReturnType<typeof cerrarEjercicioConLoHecho>>;
+		try {
+			resultado = await cerrarEjercicioConLoHecho(diaId, $page.params.id!, fechaSesion);
+		} catch (error) {
+			errorGuardado = error instanceof Error ? error.message : 'No se pudo cerrar el ejercicio.';
+			return;
+		}
+		if (!resultado.cerrado) {
+			errorGuardado = 'No quedó ninguna serie hecha para cerrar el ejercicio.';
+			return;
+		}
+		// El ofrecimiento va ANTES de navegar y vive fuera de esta pantalla: si no, se iba
+		// con ella y la acción que borra filas quedaba siendo la única sin vuelta atrás.
+		if (resultado.instantanea)
+			deshacer.ofrecer(
+				`Ejercicio terminado con ${quedan} ${quedan === 1 ? 'serie' : 'series'}.`,
+				diaId,
+				fechaSesion,
+				resultado.instantanea
+			);
+		// `terminarEjercicio` lee `completo` y `mejorHoy` de los sets locales: hay que traer
+		// los persistidos antes, o celebra un cierre parcial que ya dejó de serlo.
+		await resincronizar();
+		await terminarEjercicio(destino);
 	}
 
 	function escribirReps(i: number, el: HTMLInputElement) {
@@ -1841,20 +1833,8 @@
 		<ToastAccion
 			mensaje={toast.mensaje}
 			accionTexto={toast.accionTexto}
-			tono={toast.tono}
-			segundos={toast.segundos}
 			onAccion={toast.onAccion}
 			onCerrar={() => (toast = null)}
-		/>
-	{/if}
-
-	{#if confirmacion}
-		<ConfirmSheet
-			titulo={confirmacion.titulo}
-			mensaje={confirmacion.mensaje}
-			confirmarTexto={confirmacion.confirmarTexto}
-			onConfirm={confirmacion.onConfirm}
-			onCancel={() => (confirmacion = null)}
 		/>
 	{/if}
 {/if}

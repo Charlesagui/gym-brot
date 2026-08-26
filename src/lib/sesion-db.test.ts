@@ -1196,10 +1196,9 @@ describe('flujo no lineal: arrepentirse y volver', () => {
 			razon: 'ejercicios-pendientes'
 		});
 
-		expect(await cerrarEjercicioConLoHecho('push', 'press', '2026-01-08')).toEqual({
-			cerrado: true,
-			quitadas: 1
-		});
+		const cierre = await cerrarEjercicioConLoHecho('push', 'press', '2026-01-08');
+		expect(cierre).toMatchObject({ cerrado: true, quitadas: 1 });
+		expect(cierre.instantanea).toBeDefined();
 
 		const sets = (await db.sesiones.get('2026-01-08__push'))?.ejercicios[0]?.sets;
 		expect(sets).toHaveLength(3);

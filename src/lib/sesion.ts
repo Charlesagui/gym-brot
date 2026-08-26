@@ -763,23 +763,33 @@ export function addSet(diaId: string, exerciseId: string, fecha = hoyStr()) {
 	);
 }
 
-export function removeSet(diaId: string, exerciseId: string, i: number, fecha = hoyStr()) {
-	return mutar(
-		diaId,
-		exerciseId,
-		(sets, sesion, ejercicio) => {
-			if (sets.length <= 1 || !sets[i]) return;
-			sets.splice(i, 1);
-			reabrirSesion(sesion, `Quitaste la serie ${i + 1} de ${nombreDe(ejercicio)}`);
-		},
-		fecha,
-		true
-	);
+/** Quita una serie y devuelve la foto previa, o null si no había nada que quitar. */
+export function removeSet(
+	diaId: string,
+	exerciseId: string,
+	i: number,
+	fecha = hoyStr()
+): Promise<InstantaneaSesion | null> {
+	const revision = capturarRevisionDatos();
+	return db.transaction('rw', db.sesiones, async (): Promise<InstantaneaSesion | null> => {
+		exigirRevisionDatos(revision);
+		const s = await db.sesiones.get(sesionId(diaId, fecha));
+		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
+		if (!s || !e || e.sets.length <= 1 || !e.sets[i]) return null;
+		const instantanea = fotografiar(s, exerciseId);
+		e.sets.splice(i, 1);
+		reabrirSesion(s, `Quitaste la serie ${i + 1} de ${nombreDe(e)}`);
+		await recalcularPrCelebrado(s, exerciseId);
+		await guardarSesion(s);
+		return instantanea;
+	});
 }
 
 export interface ResultadoCierreParcial {
 	cerrado: boolean;
 	quitadas: number;
+	/** Foto previa para deshacer; ausente cuando no se quitó nada. */
+	instantanea?: InstantaneaSesion;
 }
 
 /**
@@ -808,10 +818,11 @@ export function cerrarEjercicioConLoHecho(
 		if (hechas.length === 0) return { cerrado: false, quitadas: 0 };
 		const quitadas = e.sets.length - hechas.length;
 		if (quitadas === 0) return { cerrado: true, quitadas: 0 };
+		const instantanea = fotografiar(s, exerciseId);
 		e.sets = hechas;
 		// Cerrar solo puede resolver trabajo pendiente, nunca crearlo: no reabre el día.
 		await guardarSesion(s);
-		return { cerrado: true, quitadas };
+		return { cerrado: true, quitadas, instantanea };
 	});
 }
 

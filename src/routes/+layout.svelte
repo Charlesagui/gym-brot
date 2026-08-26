@@ -9,6 +9,8 @@
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import Icono from '$lib/components/Icono.svelte';
 	import RestBar from '$lib/components/RestBar.svelte';
+	import ToastAccion from '$lib/components/ToastAccion.svelte';
+	import { deshacer } from '$lib/deshacer.svelte';
 	import RestFocusOverlay from '$lib/components/RestFocusOverlay.svelte';
 	import { descanso } from '$lib/descanso.svelte';
 	import { errorDatos } from '$lib/errores-datos';
@@ -445,6 +447,23 @@
 {#if dbLista && !dbError}
 	<RestFocusOverlay />
 	<RestBar offsetNav={!sinNav} />
+{/if}
+
+<!--
+	El deshacer va global y no en cada pantalla: "Terminar con N series" navega apenas
+	termina, así que una barra montada en la pantalla del ejercicio se iba junto con ella
+	y la acción más destructiva quedaba siendo la única sin vuelta atrás.
+-->
+{#if deshacer.activo}
+	<ToastAccion
+		mensaje={deshacer.mensaje}
+		accionTexto="Deshacer"
+		tono="exito"
+		segundos={9}
+		offsetNav={!sinNav}
+		onAccion={() => deshacer.deshacer()}
+		onCerrar={() => deshacer.descartar()}
+	/>
 {/if}
 
 {#if $errorDatos}

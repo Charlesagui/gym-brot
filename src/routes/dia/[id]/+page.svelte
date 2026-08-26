@@ -23,7 +23,6 @@
 		descartarReapertura,
 		hoyStr,
 		reiniciarDia,
-		restaurarInstantanea,
 		type InstantaneaSesion,
 		marcarDiaTerminado,
 		reabrirDia,
@@ -44,6 +43,7 @@
 	import { fechaCorta } from '$lib/formato';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
 	import ToastAccion from '$lib/components/ToastAccion.svelte';
+	import { deshacer } from '$lib/deshacer.svelte';
 	import CelebracionParticulas from '$lib/components/CelebracionParticulas.svelte';
 	import { guardarSinBloquear, reportarErrorDatos } from '$lib/errores-datos';
 
@@ -67,8 +67,6 @@
 	let toast = $state<{
 		mensaje: string;
 		accionTexto: string;
-		tono: 'advertencia' | 'exito';
-		segundos: number;
 		onAccion: () => void | Promise<void>;
 	} | null>(null);
 	// Modo reordenar: se entra con long-press; las cards se arrastran (svelte-dnd-action).
@@ -258,8 +256,6 @@
 		toast = {
 			mensaje: `Se desmarca todo el día: ${partes.join(' y ')}. Los pesos y las reps quedan como referencia.`,
 			accionTexto: 'Reiniciar',
-			tono: 'advertencia',
-			segundos: 7,
 			onAccion: hacerReinicioDia
 		};
 	}
@@ -276,21 +272,7 @@
 			return;
 		}
 		if (!instantanea) return;
-		const foto = instantanea;
-		const fecha = fechaSesion;
-		toast = {
-			mensaje: 'Día reiniciado.',
-			accionTexto: 'Deshacer',
-			tono: 'exito',
-			segundos: 9,
-			onAccion: () => {
-				toast = null;
-				guardarSinBloquear(
-					restaurarInstantanea(diaId, foto, fecha),
-					'No se pudo deshacer el reinicio. Intentá de nuevo.'
-				);
-			}
-		};
+		deshacer.ofrecer('Día reiniciado.', diaId, fechaSesion, instantanea);
 	}
 
 	function descartarAvisoReapertura() {
@@ -996,8 +978,6 @@
 	<ToastAccion
 		mensaje={toast.mensaje}
 		accionTexto={toast.accionTexto}
-		tono={toast.tono}
-		segundos={toast.segundos}
 		onAccion={toast.onAccion}
 		onCerrar={() => (toast = null)}
 		offsetNav
