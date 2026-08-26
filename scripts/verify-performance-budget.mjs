@@ -6,10 +6,20 @@ const BUILD = new URL('../build/', import.meta.url);
 // techo gzip —lo que realmente viaja— no se movió y sigue con margen de sobra.
 const MAX_SHELL_BYTES = 320 * 1024;
 const MAX_SHELL_GZIP_BYTES = 110 * 1024;
-// La calculadora de discos agrega una ruta offline de ~12 KiB al precache, y la
-// tipografía de las cifras (Outfit 700, subset latin) otros ~13,7 KiB.
-// Conservamos un margen acotado sin relajar los presupuestos del shell.
-const MAX_PRECACHE_BYTES = 1380 * 1024;
+/*
+ * Techo del precache: lo que la app se baja en la primera visita y revalida en cada
+ * deploy. Sube cuando la app crece de verdad, no para tapar un asset que no debería
+ * estar acá — por eso el guardia de arriba rechaza los videos.
+ *
+ * Medido el 25/8/2026: 1372,6 KiB en 125 entradas, de las cuales 1273,8 KiB (93 %) son
+ * el JavaScript de las rutas, 63,3 KiB de CSS, 20,7 KiB de íconos y 13,7 KiB de la
+ * tipografía de las cifras. Es decir: el número sigue el tamaño de la app, y la forma
+ * de bajarlo sería partir rutas, no borrar assets.
+ *
+ * 1425 KiB deja ~52 KiB de aire, alcanza para las rutas en curso (energía, discos) y
+ * sigue siendo chico para que un mp4 o una imagen grande lo rompan enseguida.
+ */
+const MAX_PRECACHE_BYTES = 1425 * 1024;
 
 async function tamanio(url) {
 	return stat(url).then((archivo) => archivo.size);
