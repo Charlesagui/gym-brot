@@ -5,6 +5,7 @@ import {
 	db,
 	guardarSesion,
 	type Ajustes,
+	type EjercicioSesion,
 	type MetricaPr,
 	type PrCelebrado,
 	type Sesion,
@@ -16,8 +17,11 @@ import {
 	mejorSetDeSeries,
 	metricaDeSnapshot,
 	modoDeMetrica,
+	estadoEjercicioSesion,
+	limpiarReapertura,
 	metricaConfigurada,
 	modoEjercicio,
+	reabrirSesion,
 	resolverMetricaPr,
 	repeticionesValidas,
 	serieCompleta,
@@ -167,58 +171,71 @@ export function historialObs(
 	});
 }
 
+/**
+ * Récord vigente de cada ejercicio, a partir de sesiones YA leídas.
+ *
+ * Es puro a propósito: la pantalla de Historial necesita esto y el resumen del
+ * historial sobre exactamente la misma tabla, y antes cada uno abría su propio
+ * liveQuery y deserializaba `sesiones` entera por su cuenta. Con la parte pura
+ * separada, esa lectura se hace una sola vez (ver `historialPantallaObs`).
+ */
+export function recordsGlobales(
+	sesiones: Sesion[],
+	configuracion: MetricaPr | Pick<Ajustes, 'metricaPr' | 'metricasPrEjercicio'> = 'peso',
+	unidad: UnidadPeso = 'kg'
+): RecordEjercicio[] {
+	const ajustes =
+		typeof configuracion === 'string'
+			? { metricaPr: configuracion, metricasPrEjercicio: {} }
+			: configuracion;
+	const hoy = hoyStr();
+	// `filter` ya devuelve un array nuevo: ordenar acá no toca el que recibimos, que
+	// puede estar compartido con el resumen del historial.
+	const todas = sesiones.filter((sesion) => sesion.fecha <= hoy).sort(compararSesiones);
+	// Modo por ejercicio en una pasada: con algún set ✓ con peso puntúa por peso.
+	const conPeso = new Set<string>();
+	for (const s of todas)
+		for (const e of s.ejercicios)
+			for (const set of e.sets)
+				if (serieCompleta(set) && (set.peso != null || set.pesoGramos != null))
+					conPeso.add(e.exerciseId);
+	// `todas` viene en orden ascendente: el último snapshot que se ve es el más
+	// reciente, que es el nombre con el que la persona conoce hoy ese ejercicio.
+	const nombres = new Map<string, string>();
+	for (const s of todas)
+		for (const e of s.ejercicios) if (e.nombreSnapshot) nombres.set(e.exerciseId, e.nombreSnapshot);
+	const mejores = new Map<string, RecordEjercicio>();
+	for (const s of todas) {
+		for (const ejercicio of s.ejercicios) {
+			const modo: ModoPr = conPeso.has(ejercicio.exerciseId) ? 'peso' : 'reps';
+			const metricaEfectiva = resolverMetricaPr(ajustes, ejercicio.exerciseId, modo);
+			// En modo reps `valorSet` ignora la métrica; se pasa la configurada igual para
+			// no tener dos maneras de leer el override.
+			const metrica = metricaConfigurada(ajustes, ejercicio.exerciseId);
+			const candidato = mejorSetDeSeries(ejercicio.sets, s.fecha, metrica, s.id, modo, unidad);
+			if (!candidato) continue;
+			const mejor = mejorSet(mejores.get(ejercicio.exerciseId) ?? null, candidato);
+			mejores.set(ejercicio.exerciseId, {
+				...mejor,
+				exerciseId: ejercicio.exerciseId,
+				modo,
+				metrica: metricaEfectiva,
+				nombre: nombres.get(ejercicio.exerciseId)
+			});
+		}
+	}
+	// Récord más reciente primero: así los récords chicos también aparecen
+	// (ordenar por valor dejaba siempre arriba a la prensa y afuera a las elevaciones).
+	return [...mejores.values()].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.valor - a.valor);
+}
+
 export function recordsGlobalesObs(
 	configuracion: MetricaPr | Pick<Ajustes, 'metricaPr' | 'metricasPrEjercicio'> = 'peso',
 	unidad: UnidadPeso = 'kg'
 ) {
-	return liveQuery(async () => {
-		const ajustes =
-			typeof configuracion === 'string'
-				? { metricaPr: configuracion, metricasPrEjercicio: {} }
-				: configuracion;
-		const hoy = hoyStr();
-		const todas = (await db.sesiones.orderBy('fecha').toArray())
-			.filter((sesion) => sesion.fecha <= hoy)
-			.sort(compararSesiones);
-		// Modo por ejercicio en una pasada: con algún set ✓ con peso puntúa por peso.
-		const conPeso = new Set<string>();
-		for (const s of todas)
-			for (const e of s.ejercicios)
-				for (const set of e.sets)
-					if (serieCompleta(set) && (set.peso != null || set.pesoGramos != null))
-						conPeso.add(e.exerciseId);
-		// `todas` viene en orden ascendente: el último snapshot que se ve es el más
-		// reciente, que es el nombre con el que la persona conoce hoy ese ejercicio.
-		const nombres = new Map<string, string>();
-		for (const s of todas)
-			for (const e of s.ejercicios)
-				if (e.nombreSnapshot) nombres.set(e.exerciseId, e.nombreSnapshot);
-		const mejores = new Map<string, RecordEjercicio>();
-		for (const s of todas) {
-			for (const ejercicio of s.ejercicios) {
-				const modo: ModoPr = conPeso.has(ejercicio.exerciseId) ? 'peso' : 'reps';
-				const metricaEfectiva = resolverMetricaPr(ajustes, ejercicio.exerciseId, modo);
-				// En modo reps `valorSet` ignora la métrica; se pasa la configurada igual para
-				// no tener dos maneras de leer el override.
-				const metrica = metricaConfigurada(ajustes, ejercicio.exerciseId);
-				const candidato = mejorSetDeSeries(ejercicio.sets, s.fecha, metrica, s.id, modo, unidad);
-				if (!candidato) continue;
-				const mejor = mejorSet(mejores.get(ejercicio.exerciseId) ?? null, candidato);
-				mejores.set(ejercicio.exerciseId, {
-					...mejor,
-					exerciseId: ejercicio.exerciseId,
-					modo,
-					metrica: metricaEfectiva,
-					nombre: nombres.get(ejercicio.exerciseId)
-				});
-			}
-		}
-		// Récord más reciente primero: así los récords chicos también aparecen
-		// (ordenar por valor dejaba siempre arriba a la prensa y afuera a las elevaciones).
-		return [...mejores.values()].sort(
-			(a, b) => b.fecha.localeCompare(a.fecha) || b.valor - a.valor
-		);
-	});
+	return liveQuery(async () =>
+		recordsGlobales(await db.sesiones.orderBy('fecha').toArray(), configuracion, unidad)
+	);
 }
 
 /**
@@ -381,7 +398,7 @@ export async function prepararEjercicioSesion(
 async function mutar(
 	diaId: string,
 	exerciseId: string,
-	fn: (sets: SetSesion[], sesion: Sesion) => void,
+	fn: (sets: SetSesion[], sesion: Sesion, ejercicio: EjercicioSesion) => void,
 	fecha = hoyStr(),
 	recalcularPr = false
 ): Promise<void> {
@@ -391,7 +408,7 @@ async function mutar(
 		const s = await db.sesiones.get(sesionId(diaId, fecha));
 		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
 		if (!s || !e) return;
-		fn(e.sets, s);
+		fn(e.sets, s, e);
 		if (recalcularPr) await recalcularPrCelebrado(s, exerciseId);
 		await guardarSesion(s);
 	});
@@ -526,7 +543,7 @@ export function actualizarSetHistorial(
 		// conserva un ✓ inválido que seguiría contando para volumen, PR e historial.
 		if (!repeticionesValidas(set.reps)) {
 			set.hecha = false;
-			reabrirSesion(s);
+			reabrirSesion(s, `Editaste una serie de ${nombreDe(e!)} y quedó sin repeticiones`);
 		}
 		// Editar el historial puede invalidar el PR de sesiones POSTERIORES a esta.
 		await recalcularPrCelebrado(s, exerciseId, true);
@@ -548,7 +565,7 @@ export function borrarSetHistorial(
 		const set = e?.sets[setIndex];
 		if (!s || !set?.hecha) return false;
 		set.hecha = false;
-		reabrirSesion(s);
+		reabrirSesion(s, `Borraste una serie de ${nombreDe(e!)} desde el historial`);
 		await recalcularPrCelebrado(s, exerciseId, true);
 		await guardarSesion(s);
 		return true;
@@ -562,9 +579,9 @@ export interface ResultadoSet {
 	ejercicioCompleto?: boolean;
 }
 
-function reabrirSesion(sesion: Sesion) {
-	sesion.diaTerminado = false;
-	sesion.diaTerminadoAt = undefined;
+/** Nombre con el que la persona conoce ese ejercicio, para poder explicar la reapertura. */
+function nombreDe(ejercicio: Pick<EjercicioSesion, 'exerciseId' | 'nombreSnapshot'>): string {
+	return ejercicio.nombreSnapshot ?? ejercicioPorId(ejercicio.exerciseId)?.nombre ?? 'un ejercicio';
 }
 
 /**
@@ -599,11 +616,13 @@ export function setSerieHecha(
 		if (hecha && e.saltado) {
 			e.saltado = false;
 			cambio = true;
-			reabrirSesion(s);
+			reabrirSesion(s, `Retomaste ${nombreDe(e)}`);
 		}
 		if (!hecha) {
-			reabrirSesion(s);
-			if (cambio) await recalcularPrCelebrado(s, exerciseId);
+			if (cambio) {
+				reabrirSesion(s, `Desmarcaste la serie ${i + 1} de ${nombreDe(e)}`);
+				await recalcularPrCelebrado(s, exerciseId);
+			}
 		}
 		if (cambio) await guardarSesion(s);
 		return {
@@ -663,13 +682,13 @@ export function setReps(
 	return mutar(
 		diaId,
 		exerciseId,
-		(sets, sesion) => {
+		(sets, sesion, ejercicio) => {
 			const set = sets[i];
 			if (!set) return;
 			set.reps = reps;
 			if (set.hecha && !repeticionesValidas(reps)) {
 				set.hecha = false;
-				reabrirSesion(sesion);
+				reabrirSesion(sesion, `La serie ${i + 1} de ${nombreDe(ejercicio)} quedó sin repeticiones`);
 			}
 		},
 		fecha,
@@ -725,7 +744,7 @@ export function addSet(diaId: string, exerciseId: string, fecha = hoyStr()) {
 	return mutar(
 		diaId,
 		exerciseId,
-		(sets, sesion) => {
+		(sets, sesion, ejercicio) => {
 			const last = sets[sets.length - 1];
 			// Copia la carga entera, gramos incluidos: el MAX y su extra pesan, y una serie
 			// agregada que los pierde registra menos de lo que se está por levantar.
@@ -738,8 +757,7 @@ export function addSet(diaId: string, exerciseId: string, fecha = hoyStr()) {
 				extraKg: last?.extraKg,
 				extraGramos: last?.extraGramos
 			});
-			sesion.diaTerminado = false;
-			sesion.diaTerminadoAt = undefined;
+			reabrirSesion(sesion, `Agregaste la serie ${sets.length} a ${nombreDe(ejercicio)}`);
 		},
 		fecha
 	);
@@ -749,14 +767,52 @@ export function removeSet(diaId: string, exerciseId: string, i: number, fecha = 
 	return mutar(
 		diaId,
 		exerciseId,
-		(sets, sesion) => {
-			if (sets.length > 1 && sets[i]) sets.splice(i, 1);
-			sesion.diaTerminado = false;
-			sesion.diaTerminadoAt = undefined;
+		(sets, sesion, ejercicio) => {
+			if (sets.length <= 1 || !sets[i]) return;
+			sets.splice(i, 1);
+			reabrirSesion(sesion, `Quitaste la serie ${i + 1} de ${nombreDe(ejercicio)}`);
 		},
 		fecha,
 		true
 	);
+}
+
+export interface ResultadoCierreParcial {
+	cerrado: boolean;
+	quitadas: number;
+}
+
+/**
+ * "Terminé con menos series de las que planeaba": quita las que quedaron sin marcar y
+ * deja el ejercicio completo con lo que de verdad se hizo.
+ *
+ * Existe porque destildar o abandonar una serie del medio dejaba el día imposible de
+ * cerrar: `marcarDiaTerminado` exige que cada ejercicio esté hecho o saltado, y la única
+ * salida era saltar el ejercicio entero (mintiendo sobre las series que sí se hicieron)
+ * o borrar desde el final de a una. Nunca toca una serie marcada: el registro real es
+ * intocable, lo que se descarta es el plan que no se cumplió.
+ */
+export function cerrarEjercicioConLoHecho(
+	diaId: string,
+	exerciseId: string,
+	fecha = hoyStr()
+): Promise<ResultadoCierreParcial> {
+	const revision = capturarRevisionDatos();
+	return db.transaction('rw', db.sesiones, async (): Promise<ResultadoCierreParcial> => {
+		exigirRevisionDatos(revision);
+		const s = await db.sesiones.get(sesionId(diaId, fecha));
+		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
+		if (!s || !e) return { cerrado: false, quitadas: 0 };
+		const hechas = e.sets.filter(serieCompleta);
+		// Sin una sola serie real no hay nada que cerrar: eso es saltar el ejercicio.
+		if (hechas.length === 0) return { cerrado: false, quitadas: 0 };
+		const quitadas = e.sets.length - hechas.length;
+		if (quitadas === 0) return { cerrado: true, quitadas: 0 };
+		e.sets = hechas;
+		// Cerrar solo puede resolver trabajo pendiente, nunca crearlo: no reabre el día.
+		await guardarSesion(s);
+		return { cerrado: true, quitadas };
+	});
 }
 
 /** Marca/desmarca el ejercicio como saltado SOLO en la sesión (no toca la rutina). */
@@ -768,8 +824,7 @@ function setSaltado(diaId: string, exerciseId: string, saltado: boolean, fecha =
 			const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
 			if (!e || e.saltado === saltado) return;
 			e.saltado = saltado;
-			s.diaTerminado = false;
-			s.diaTerminadoAt = undefined;
+			reabrirSesion(s, saltado ? `Saltaste ${nombreDe(e)}` : `Retomaste ${nombreDe(e)}`);
 		});
 }
 
@@ -778,21 +833,28 @@ function setSaltado(diaId: string, exerciseId: string, saltado: boolean, fecha =
  * misma transacción: una pantalla vieja no puede crear una sesión huérfana al tocar
  * "Saltar" mientras otra pestaña quitó el ejercicio.
  */
+export type ResultadoSalto =
+	{ saltado: true } | { saltado: false; razon: 'rutina-no-disponible' | 'ya-completado' };
+
 export async function saltarEjercicio(
 	diaId: string,
 	exerciseId: string,
 	fecha = hoyStr(),
 	unidad: UnidadPeso = 'kg'
-): Promise<boolean> {
+): Promise<ResultadoSalto> {
 	const revision = capturarRevisionDatos();
-	return db.transaction('rw', db.dias, db.sesiones, async () => {
+	return db.transaction('rw', db.dias, db.sesiones, async (): Promise<ResultadoSalto> => {
 		exigirRevisionDatos(revision);
 		const dia = await db.dias.get(diaId);
 		const configuracion = dia?.ejercicios.find((item) => item.exerciseId === exerciseId);
-		if (!dia || !configuracion) return false;
+		if (!dia || !configuracion) return { saltado: false, razon: 'rutina-no-disponible' };
 		const sesion = await ensureSesion(diaId, fecha, dia.nombre);
 		sesion.diaNombre ??= dia.nombre;
 		let ejercicio = sesion.ejercicios.find((item) => item.exerciseId === exerciseId);
+		// Saltar algo ya terminado lo rotulaba "Saltado" en gris y de paso reabría el día:
+		// el resumen quedaba diciendo "3/3 ejercicios · 1 saltado" sobre el mismo ejercicio.
+		if (ejercicio && estadoEjercicioSesion(ejercicio.sets) === 'completado')
+			return { saltado: false, razon: 'ya-completado' };
 		if (!ejercicio) {
 			const anterior = await ultimaDe(diaId, exerciseId, fecha, unidad);
 			ejercicio = {
@@ -806,9 +868,9 @@ export async function saltarEjercicio(
 		}
 		ejercicio.nombreSnapshot ??= ejercicioPorId(exerciseId)?.nombre;
 		ejercicio.saltado = true;
-		reabrirSesion(sesion);
+		reabrirSesion(sesion, `Saltaste ${nombreDe(ejercicio)}`);
 		await guardarSesion(sesion);
-		return true;
+		return { saltado: true };
 	});
 }
 
@@ -912,6 +974,128 @@ export function registrarPrSiSupera(
 }
 
 /**
+ * Foto del estado que se pisa al reiniciar, para poder devolverlo tal cual.
+ *
+ * Reiniciar es la única acción de la app que borra trabajo de un toque, así que no
+ * puede ser de ida: se guarda lo que había, y deshacer lo restaura completo —series,
+ * PR celebrado, salto y estado del día incluidos—. Vive en memoria de la pantalla, no
+ * en la base: es un arrepentimiento de segundos, no un historial de versiones.
+ */
+export interface InstantaneaSesion {
+	ejercicios: EjercicioSesion[];
+	diaTerminado?: boolean;
+	diaTerminadoAt?: string;
+	reaperturaMotivo?: string;
+	reaperturaAt?: string;
+}
+
+function fotografiar(sesion: Sesion, exerciseId?: string): InstantaneaSesion {
+	const ejercicios = exerciseId
+		? sesion.ejercicios.filter((e) => e.exerciseId === exerciseId)
+		: sesion.ejercicios;
+	return {
+		ejercicios: structuredClone(ejercicios),
+		diaTerminado: sesion.diaTerminado,
+		diaTerminadoAt: sesion.diaTerminadoAt,
+		reaperturaMotivo: sesion.reaperturaMotivo,
+		reaperturaAt: sesion.reaperturaAt
+	};
+}
+
+/** Deja el ejercicio como al empezar: ninguna serie hecha, la carga queda de referencia. */
+function limpiarEjercicio(ejercicio: EjercicioSesion): boolean {
+	let cambio = false;
+	for (const set of ejercicio.sets) {
+		if (set.hecha) {
+			set.hecha = false;
+			cambio = true;
+		}
+	}
+	if (ejercicio.saltado) {
+		ejercicio.saltado = false;
+		cambio = true;
+	}
+	// Sin ninguna serie hecha no puede quedar un PR celebrado: no hay set que lo sostenga.
+	if (ejercicio.prCelebrado) {
+		ejercicio.prCelebrado = undefined;
+		cambio = true;
+	}
+	return cambio;
+}
+
+/**
+ * Vuelve a empezar un ejercicio de la sesión. No borra pesos ni repeticiones: eso es
+ * justamente lo que se quiere conservar para repetir la serie. Devuelve la instantánea
+ * para deshacer, o null si no había nada que reiniciar.
+ */
+export function reiniciarEjercicio(
+	diaId: string,
+	exerciseId: string,
+	fecha = hoyStr()
+): Promise<InstantaneaSesion | null> {
+	const revision = capturarRevisionDatos();
+	return db.transaction('rw', db.sesiones, async (): Promise<InstantaneaSesion | null> => {
+		exigirRevisionDatos(revision);
+		const s = await db.sesiones.get(sesionId(diaId, fecha));
+		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
+		if (!s || !e) return null;
+		const instantanea = fotografiar(s, exerciseId);
+		if (!limpiarEjercicio(e)) return null;
+		reabrirSesion(s, `Reiniciaste ${nombreDe(e)}`);
+		await guardarSesion(s);
+		return instantanea;
+	});
+}
+
+/** Vuelve a empezar la sesión entera: todos los ejercicios sin marcar y sin saltos. */
+export function reiniciarDia(diaId: string, fecha = hoyStr()): Promise<InstantaneaSesion | null> {
+	const revision = capturarRevisionDatos();
+	return db.transaction('rw', db.sesiones, async (): Promise<InstantaneaSesion | null> => {
+		exigirRevisionDatos(revision);
+		const s = await db.sesiones.get(sesionId(diaId, fecha));
+		if (!s) return null;
+		const instantanea = fotografiar(s);
+		let cambio = false;
+		for (const ejercicio of s.ejercicios) if (limpiarEjercicio(ejercicio)) cambio = true;
+		if (!cambio) return null;
+		reabrirSesion(s, 'Reiniciaste el día');
+		s.diaTerminado = false;
+		s.diaTerminadoAt = undefined;
+		await guardarSesion(s);
+		return instantanea;
+	});
+}
+
+/**
+ * Deshace un reinicio devolviendo la instantánea. Los ejercicios que la foto no incluye
+ * (reinicio de UN ejercicio) quedan como están: deshacer restaura lo que se pisó, no
+ * revierte lo que hayas hecho después en el resto del día.
+ */
+export function restaurarInstantanea(
+	diaId: string,
+	instantanea: InstantaneaSesion,
+	fecha = hoyStr()
+): Promise<boolean> {
+	const revision = capturarRevisionDatos();
+	return db.transaction('rw', db.sesiones, async () => {
+		exigirRevisionDatos(revision);
+		const s = await db.sesiones.get(sesionId(diaId, fecha));
+		if (!s) return false;
+		for (const guardado of instantanea.ejercicios) {
+			const indice = s.ejercicios.findIndex((e) => e.exerciseId === guardado.exerciseId);
+			if (indice >= 0) s.ejercicios[indice] = structuredClone(guardado);
+			else s.ejercicios.push(structuredClone(guardado));
+		}
+		s.diaTerminado = instantanea.diaTerminado;
+		s.diaTerminadoAt = instantanea.diaTerminadoAt;
+		s.reaperturaMotivo = instantanea.reaperturaMotivo;
+		s.reaperturaAt = instantanea.reaperturaAt;
+		await guardarSesion(s);
+		return true;
+	});
+}
+
+/**
  * `fecha` es explícita por el mismo motivo que en el resto de las mutaciones: sin
  * ella, terminar el día justo después de la medianoche creaba una sesión nueva y
  * vacía marcada como terminada, y dejaba la sesión real del entrenamiento abierta.
@@ -939,11 +1123,13 @@ export async function marcarDiaTerminado(
 		if (!todoResuelto) return { terminado: false, razon: 'ejercicios-pendientes' };
 		s.diaTerminado = true;
 		s.diaTerminadoAt = new Date().toISOString();
+		limpiarReapertura(s);
 		await guardarSesion(s);
 		return { terminado: true };
 	});
 }
 
+/** Reapertura pedida a mano: no deja cartel, porque no hay nada que explicarle a nadie. */
 export function reabrirDia(diaId: string, fecha = hoyStr()) {
 	return db.sesiones
 		.where('id')
@@ -951,5 +1137,14 @@ export function reabrirDia(diaId: string, fecha = hoyStr()) {
 		.modify((s) => {
 			s.diaTerminado = false;
 			s.diaTerminadoAt = undefined;
+			limpiarReapertura(s);
 		});
+}
+
+/** El usuario leyó por qué se reabrió el día: se apaga el cartel sin cerrar el día. */
+export function descartarReapertura(diaId: string, fecha = hoyStr()) {
+	return db.sesiones
+		.where('id')
+		.equals(sesionId(diaId, fecha))
+		.modify((s) => limpiarReapertura(s));
 }

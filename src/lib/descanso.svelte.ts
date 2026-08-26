@@ -41,6 +41,14 @@ export interface SerieRegistrada {
 	/** Ya formateada por la pantalla: "Serie 2 · 60 kg × 10". */
 	texto: string;
 	setIndex: number;
+	/**
+	 * De qué ejercicio es esta serie. Sin esto, "Tocá para corregir" abría la fila de ese
+	 * índice en CUALQUIER ejercicio que estuviera montado: el descanso es global y el
+	 * índice, solo, no identifica nada.
+	 */
+	exerciseId: string;
+	/** A dónde hay que volver para corregirla: el descanso corre en todas las pantallas. */
+	href: string;
 }
 
 interface Persistido {
@@ -73,7 +81,13 @@ function guardarStorage(clave: string, valor: string): boolean {
 function serieRegistradaValida(valor: unknown): valor is SerieRegistrada {
 	if (typeof valor !== 'object' || valor === null) return false;
 	const s = valor as Partial<SerieRegistrada>;
-	return typeof s.texto === 'string' && Number.isInteger(s.setIndex) && s.setIndex! >= 0;
+	return (
+		typeof s.texto === 'string' &&
+		Number.isInteger(s.setIndex) &&
+		s.setIndex! >= 0 &&
+		typeof s.exerciseId === 'string' &&
+		typeof s.href === 'string'
+	);
 }
 
 function borrarStorage(clave: string): void {
@@ -271,6 +285,15 @@ class Descanso {
 	pedirCorreccion() {
 		this.focusAbierto = false;
 		this.correccionPedida++;
+	}
+
+	/**
+	 * La pantalla del ejercicio ya enfocó la fila. Sin este acuse, el pedido quedaba
+	 * vivo toda la sesión y volvía a abrir una fila sola cada vez que se montaba la
+	 * pantalla —incluso la de otro ejercicio.
+	 */
+	correccionAtendida() {
+		this.correccionPedida = 0;
 	}
 
 	/** Vuelve a abrir el descanso grande si sigue siendo accionable. */

@@ -84,6 +84,19 @@
 		{/each}
 	</div>
 
+	{#if distribucion.seriesSinRepresentacion > 0}
+		<!-- Series reales que el dibujo no puede representar (ejercicio archivado o sin
+		     músculo mapeado). Se dicen: el encabezado cuenta sólo lo que sostiene el mapa,
+		     y sin esta línea la diferencia contra el historial no tendría explicación. -->
+		<p class="mt-2 rounded-xl bg-white/[0.035] px-3 py-2 text-[11px]" style="color: var(--muted)">
+			{distribucion.seriesSinRepresentacion}
+			{distribucion.seriesSinRepresentacion === 1 ? 'serie más' : 'series más'} del período no
+			{distribucion.seriesSinRepresentacion === 1 ? 'entra' : 'entran'} en el mapa: su ejercicio no tiene
+			músculos asignados. Sí {distribucion.seriesSinRepresentacion === 1 ? 'cuenta' : 'cuentan'} en el
+			historial.
+		</p>
+	{/if}
+
 	{#if distribucion.puedeFiltrarDuras || soloDuras}
 		<label
 			class="mt-2 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl bg-white/[0.035] px-3"

@@ -151,98 +151,84 @@
 		siendo el que desmarca; el resto de la fila abre la corrección.
 	-->
 	<!--
-		Tres columnas y no una fila: las dos de los costados son `1fr`, o sea que miden lo
-		mismo, y por eso la del medio cae en el centro exacto del renglón. Con flex los
-		valores quedaban 8 px a la izquierda, porque el bloque de la izquierda (el número)
-		mide 54 px y el de la derecha (delta y lápiz) 81: centrar "en lo que sobra" no es
-		centrar en el renglón cuando los costados son distintos.
+		El renglón se lee en lista, no solo, y por eso va en columnas fijas en vez de
+		centrado: el peso alineado a la derecha en su columna hace que 100, 95 y 137.5
+		terminen en la misma línea y que las reps arranquen todas en el mismo punto. Bajando
+		la vista se ve al toque si la carga se sostuvo. Centrado, cada renglón arrancaba
+		donde lo dejaba su largo y no había nada que comparar.
+
+		Las unidades salieron del renglón —las dice el rótulo de la tarjeta— porque "kg" y
+		"reps" ocupaban 30 px por fila repetidos cuatro veces, y acá el dato es el número.
 	-->
 	<div
-		class="gb-set-row gb-set-row--hecha grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-xl p-1.5 {flash
+		class="gb-set-row gb-set-row--hecha grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl px-1.5 py-1 {flash
 			? 'gb-row-flash'
 			: ''}"
 		style="background: var(--surface-2); --row-glow: {glow}"
 	>
-		<!--
-			El número va también en la fila contraída: sin él, la lista de hechas es una
-			pila de valores sin decir cuál es cuál, y la columna de la izquierda deja de
-			leerse 1-2-3-4 de arriba abajo.
-		-->
-		<button
-			onclick={alternar}
-			disabled={pendiente}
-			class="flex min-h-11 w-fit touch-manipulation items-center gap-1.5 rounded-full px-2.5 {flash
-				? 'gb-pop'
-				: ''}"
-			style="background: rgb(var(--exito) / .16); color: rgb(var(--exito))"
-			aria-pressed={set.hecha}
-			aria-busy={pendiente}
-			aria-label={etiquetaToggle}
-		>
-			<span class="cifra text-lg">{index + 1}</span>
-			{#if pendiente}
-				<span class="gb-set-spinner" aria-hidden="true"></span>
-			{:else}
-				<Icono nombre="hecha" tamano={18} />
-			{/if}
-		</button>
 		<button
 			onclick={onAbrir}
-			class="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-lg px-1"
+			class="grid min-h-11 grid-cols-[1.3rem_4.4rem_auto_minmax(0,1fr)] items-center gap-2 rounded-lg text-left"
 			aria-label={`Corregir serie ${index + 1}`}
 		>
-			<!--
-				20 px y no 24: con el delta reservado a la derecha, "102.5 kg × 10 reps" no
-				entraba y se cortaba. De paso ordena la jerarquía, porque la cifra que tiene
-				que gritar es la de la serie en curso, no la de las que ya hiciste.
-			-->
-			<span class="cifra min-w-0 truncate text-xl">
-				{set.peso != null ? formatoNumero(set.peso) : '—'}<span class="cifra-u">{unidad}</span>
-				<span class="mx-0.5" style="color: var(--muted)">×</span>{set.reps ?? '—'}<span
-					class="cifra-u">reps</span
-				>
+			<span class="text-center text-xs font-bold tabular-nums" style="color: var(--muted)"
+				>{index + 1}</span
+			>
+			<span class="cifra truncate text-right text-2xl"
+				>{set.peso != null ? formatoNumero(set.peso) : '—'}</span
+			>
+			<span class="cifra text-2xl" style="color: #c2c6d6">×{set.reps ?? '—'}</span>
+			<span class="flex min-w-0 items-center gap-1.5 overflow-hidden">
+				{#if set.esMax}
+					<span
+						class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+						style="background: rgb(var(--max) / .16); color: rgb(var(--max))"
+						>MAX{set.extraKg ? ` +${formatoNumero(set.extraKg)}` : ''}</span
+					>
+				{/if}
+				{#if set.rir != null}
+					<span class="shrink-0 text-[10px] font-bold" style="color: var(--muted)"
+						>{escala.toUpperCase()}
+						{escala === 'rir' ? set.rir : 10 - set.rir}</span
+					>
+				{/if}
 			</span>
-			{#if set.esMax}
-				<span
-					class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold"
-					style="background: rgb(var(--max) / .16); color: rgb(var(--max))"
-					>MAX{set.extraKg ? ` +${formatoNumero(set.extraKg)}` : ''}</span
-				>
-			{/if}
-			{#if set.rir != null}
-				<span class="shrink-0 text-[10px] font-bold" style="color: var(--muted)"
-					>{escala.toUpperCase()}
-					{escala === 'rir' ? set.rir : 10 - set.rir}</span
-				>
-			{/if}
 		</button>
-		<!--
-			El delta y el lápiz también abren la corrección, pero para el lector de pantalla
-			son el mismo botón que ya está anunciado al medio: acá van como blanco táctil y
-			nada más, para que tocar la derecha del renglón haga lo mismo que tocar el centro.
-
-			El delta ocupa su lugar aunque no exista. Sin eso, las series sin sesión anterior
-			corrían los valores 37 px respecto de las que sí la tienen.
-		-->
-		<button
-			onclick={onAbrir}
-			tabindex="-1"
-			aria-hidden="true"
-			class="flex min-h-11 w-full items-center justify-end gap-2 rounded-lg pr-1"
-		>
-			<span class="gb-delta flex w-12 justify-end">
+		<span class="flex items-center gap-1">
+			<!--
+				El delta ocupa su lugar aunque no exista: sin el hueco reservado, las series sin
+				sesión anterior corrían todo el renglón y la lista bailaba renglón por medio.
+			-->
+			<span class="gb-delta flex w-11 justify-end">
 				{#if delta}
 					<span
 						class="cifra text-base"
 						style="color: {delta.diferencia > 0 ? 'rgb(var(--exito))' : 'var(--muted)'}"
+						aria-label={delta.diferencia === 0
+							? 'Igual que la vez pasada'
+							: `${delta.diferencia > 0 ? 'Más' : 'Menos'} que la vez pasada: ${formatoNumero(Math.abs(delta.diferencia))} ${unidad}`}
 						>{delta.texto}</span
 					>
 				{/if}
 			</span>
-			<span class="shrink-0" style="color: var(--muted)">
-				<Icono nombre="editar" tamano={15} />
-			</span>
-		</button>
+			<button
+				onclick={alternar}
+				disabled={pendiente}
+				class="grid size-11 shrink-0 touch-manipulation place-items-center rounded-full {flash
+					? 'gb-pop'
+					: ''}"
+				style="color: rgb(var(--exito))"
+				aria-pressed={set.hecha}
+				aria-busy={pendiente}
+				aria-label={etiquetaToggle}
+			>
+				{#if pendiente}
+					<span class="gb-set-spinner" aria-hidden="true"></span>
+				{:else}
+					<Icono nombre="hecha" tamano={20} />
+				{/if}
+			</button>
+		</span>
 	</div>
 {:else if porHacer}
 	<!--
@@ -251,24 +237,23 @@
 	-->
 	<button
 		onclick={onAbrir}
-		class="gb-set-row flex w-full min-h-11 items-center gap-3 rounded-xl border border-dashed border-white/10 p-1.5 text-left"
+		class="gb-set-row grid min-h-11 w-full grid-cols-[1.3rem_4.4rem_auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-dashed border-white/10 px-1.5 py-1 text-left"
 		aria-label={`Abrir serie ${index + 1}`}
 	>
-		<span
-			class="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 text-sm font-bold"
-			style="color: var(--muted)">{index + 1}</span
+		<span class="text-center text-xs font-bold tabular-nums" style="color: var(--muted)"
+			>{index + 1}</span
 		>
-		<span class="cifra min-w-0 flex-1 truncate text-xl" style="color: var(--muted)">
-			{#if set.peso != null || set.reps != null}
-				{set.peso != null ? formatoNumero(set.peso) : '—'}<span class="cifra-u">{unidad}</span>
-				<span class="mx-0.5">×</span>{set.reps ?? '—'}<span class="cifra-u">reps</span>
-			{:else}
-				<span class="text-sm" style="font-family: inherit">Sin cargar</span>
-			{/if}
-		</span>
-		<span
-			class="shrink-0 text-[10px] font-bold uppercase tracking-wider"
-			style="color: var(--muted)">Objetivo</span
+		{#if set.peso != null || set.reps != null}
+			<span class="cifra truncate text-right text-xl" style="color: var(--muted)"
+				>{set.peso != null ? formatoNumero(set.peso) : '—'}</span
+			>
+			<span class="cifra text-xl" style="color: var(--muted)">×{set.reps ?? '—'}</span>
+		{:else}
+			<span class="col-span-2 text-sm" style="color: var(--muted)">Sin cargar</span>
+		{/if}
+		<span></span>
+		<span class="pr-1 text-[10px] font-bold uppercase tracking-wider" style="color: var(--muted)"
+			>Objetivo</span
 		>
 	</button>
 {:else}

@@ -1,5 +1,17 @@
 import { expect, test } from '@playwright/test';
 
+/** Lleva la cinta hasta un valor: PageUp/PageDown mueven 0,5 y las flechas 0,1. */
+async function mover(cinta: import('@playwright/test').Locator, destino: number) {
+	await cinta.focus();
+	const actual = Number(await cinta.getAttribute('aria-valuenow'));
+	const pasos = Math.round((destino - actual) * 10);
+	const gruesos = Math.trunc(pasos / 5);
+	for (let i = 0; i < Math.abs(gruesos); i++)
+		await cinta.press(gruesos > 0 ? 'PageUp' : 'PageDown');
+	const finos = pasos - gruesos * 5;
+	for (let i = 0; i < Math.abs(finos); i++) await cinta.press(finos > 0 ? 'ArrowUp' : 'ArrowDown');
+}
+
 test('peso corporal conserva el valor canónico al alternar kg y lb', async ({ page }) => {
 	const errores: Error[] = [];
 	page.on('pageerror', (error) => errores.push(error));
@@ -7,14 +19,20 @@ test('peso corporal conserva el valor canónico al alternar kg y lb', async ({ p
 	const registro = page
 		.locator('section')
 		.filter({ has: page.getByRole('heading', { name: 'Registrar peso' }) });
-	await registro.getByLabel('Peso entero en kg').selectOption('80');
-	await registro.getByLabel('Décima de peso').selectOption('5');
+	// El peso se elige con la cinta, no con dos menús del sistema: se arrastra con el
+	// dedo, y el teclado la mueve de a un paso —0,1 kg— o de a una marca mayor —0,5 kg—,
+	// que es lo que permite manejarla desde un test.
+	const cinta = registro.getByRole('slider', { name: 'Peso en kg' });
+	await mover(cinta, 80.5);
+	await expect(cinta).toHaveAttribute('aria-valuetext', '80.5 kg');
 	await registro.getByRole('button', { name: 'Guardar' }).click();
 	await expect(page.getByRole('status')).toHaveText('Medición guardada.');
 	await expect(page.getByText('80.5 kg', { exact: true }).first()).toBeVisible();
-	await page.goto('/');
-	await expect(page.getByText('80.5 kg', { exact: true })).toBeVisible();
-	await expect(page.getByText('Registrar primera medición')).toHaveCount(0);
+	// El peso se mudó de la portada a la sección Cuerpo, donde vive junto al objetivo
+	// de calorías: la portada volvió a ser solo las rutinas.
+	await page.goto('/cuerpo');
+	await expect(page.getByText('80.5kg')).toBeVisible();
+	await expect(page.getByText('Sin mediciones todavía')).toHaveCount(0);
 	await page.goto('/peso');
 
 	await page.getByText('Meta opcional', { exact: true }).click();
@@ -44,8 +62,7 @@ test('peso corporal conserva el valor canónico al alternar kg y lb', async ({ p
 	await expect(rango7Dias).toHaveAttribute('aria-pressed', 'true');
 
 	await page.getByLabel('Fecha').fill('9999-12-31');
-	await page.getByLabel('Peso entero en kg').selectOption('81');
-	await page.getByLabel('Décima de peso').selectOption('0');
+	await mover(page.getByRole('slider', { name: 'Peso en kg' }), 81);
 	await page.getByRole('button', { name: 'Guardar', exact: true }).first().click();
 	await expect(page.getByRole('status')).toHaveText('No podés registrar una medición futura.');
 	await expect(page.getByText('81 kg', { exact: true })).toHaveCount(0);
@@ -127,6 +144,10 @@ test('el shell y las rutas nuevas siguen disponibles sin conexión', async ({ pa
 		await expect(
 			page.getByRole('heading', { name: 'Distribución estimada de series' })
 		).toBeVisible();
+		// La calculadora de calorías es aritmética pura: sin red tiene que funcionar entera.
+		await page.goto('/herramientas/calorias');
+		await expect(page.getByRole('heading', { name: 'Tu objetivo' })).toBeVisible();
+		await expect(page.getByRole('textbox', { name: 'Edad en años' })).toBeVisible();
 	} finally {
 		await context.setOffline(false);
 	}

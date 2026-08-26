@@ -12,6 +12,7 @@
 	import { gramosAPeso, pesoAGramos, type UnidadPeso } from '$lib/unidades';
 	import { formatoNumero, fechaCorta } from '$lib/formato';
 	import ChartPesoCorporal from '$lib/components/ChartPesoCorporal.svelte';
+	import CintaPeso from '$lib/components/CintaPeso.svelte';
 	import { reportarErrorDatos } from '$lib/errores-datos';
 	import { fromLiveQuery } from '$lib/live';
 
@@ -34,18 +35,6 @@
 	const resumen = $derived(resumirPesoCorporal(pesos, ajustes.metaPesoGramos));
 	const minimoVisible = $derived(gramosAPeso(PESO_CORPORAL_MIN_GRAMOS, ajustes.unidad)!);
 	const maximoVisible = $derived(gramosAPeso(PESO_CORPORAL_MAX_GRAMOS, ajustes.unidad)!);
-	const enterosPeso = $derived(
-		Array.from(
-			{ length: Math.floor(maximoVisible) - Math.floor(minimoVisible) + 1 },
-			(_, indice) => Math.floor(minimoVisible) + indice
-		)
-	);
-	const decimalesPeso = $derived(
-		Array.from({ length: 10 }, (_, decimal) => decimal).filter((decimal) => {
-			const valor = pesoEntero + decimal / 10;
-			return valor >= minimoVisible && valor <= maximoVisible;
-		})
-	);
 	const pesoSeleccionado = $derived(pesoEntero + pesoDecimal / 10);
 
 	function fijarSelector(valor: number) {
@@ -77,12 +66,6 @@
 		) {
 			fijarSelector(gramosAPeso(pesoActualGramos, unidadActual)!);
 			ultimoPesoSincronizado = pesoActualGramos;
-		}
-	});
-
-	$effect(() => {
-		if (decimalesPeso.length && !decimalesPeso.includes(pesoDecimal)) {
-			pesoDecimal = decimalesPeso[0]!;
 		}
 	});
 
@@ -212,41 +195,39 @@
 		<div class="flex items-center justify-between gap-3">
 			<div>
 				<h2 class="text-sm font-bold">{editandoFecha ? 'Editar medición' : 'Registrar peso'}</h2>
-				<p class="mt-0.5 text-xs" style="color: var(--muted)">Tocá cada rueda para girarla</p>
+				<p class="mt-0.5 text-xs" style="color: var(--muted)">Arrastrá la cinta con el dedo</p>
 			</div>
 			<span class="text-xs font-bold uppercase tracking-wider" style="color: var(--accent-text)"
 				>{ajustes.unidad}</span
 			>
 		</div>
 
-		<div
-			class="mt-3 grid grid-cols-[1fr_auto_1fr_auto] items-center gap-2"
-			aria-label="Elegir peso"
-		>
-			<label class="sr-only" for="peso-entero">Peso entero en {ajustes.unidad}</label>
-			<select
-				id="peso-entero"
-				bind:value={pesoEntero}
-				onchange={tocarSelector}
-				class="min-h-16 w-full appearance-none rounded-2xl border border-white/10 bg-white/[0.06] px-2 text-center text-3xl font-extrabold tabular-nums"
+		<!--
+			Una cifra manda y la cinta la mueve. Antes eran dos <select> nativos, uno para el
+			entero y otro para la décima: el dato salía bien pero se elegía con dos menús del
+			sistema, que es lo único de la app que no se siente parte de la app.
+		-->
+		<p class="mt-2 flex items-baseline justify-center">
+			<span class="cifra text-[3.4rem]"
+				>{formatoNumero(pesoSeleccionado)}<span class="cifra-u">{ajustes.unidad}</span></span
 			>
-				{#each enterosPeso as entero (entero)}
-					<option value={entero}>{entero}</option>
-				{/each}
-			</select>
-			<span class="text-3xl font-extrabold" style="color: var(--muted)">,</span>
-			<label class="sr-only" for="peso-decimal">Décima de peso</label>
-			<select
-				id="peso-decimal"
-				bind:value={pesoDecimal}
-				onchange={tocarSelector}
-				class="min-h-16 w-full appearance-none rounded-2xl border border-white/10 bg-white/[0.06] px-2 text-center text-3xl font-extrabold tabular-nums"
-			>
-				{#each decimalesPeso as decimal (decimal)}
-					<option value={decimal}>{decimal}</option>
-				{/each}
-			</select>
-			<span class="text-sm font-bold" style="color: var(--muted)">{ajustes.unidad}</span>
+		</p>
+		<div class="mt-1">
+			<CintaPeso
+				valor={pesoSeleccionado}
+				min={minimoVisible}
+				max={maximoVisible}
+				paso={0.1}
+				cadaMayor={5}
+				formato={formatoNumero}
+				unidad={ajustes.unidad}
+				vibracion={ajustes.vibracion ?? true}
+				etiqueta={`Peso en ${ajustes.unidad}`}
+				onCambio={(nuevo) => {
+					fijarSelector(nuevo);
+					tocarSelector();
+				}}
+			/>
 		</div>
 
 		<label class="mt-3 block text-xs font-semibold" style="color: var(--muted)"

@@ -11,7 +11,7 @@
 	import { fechaCorta, formatoSet, formatoVolumen } from '$lib/formato';
 	import { pasoPesoEfectivo } from '$lib/paso-peso';
 	import { serieCompleta } from '$lib/sesion-reglas';
-	import { fechaCalendarioValida } from '$lib/fechas';
+	import { fechaCalendarioValida, hoyCalendarioLocal } from '$lib/fechas';
 	import { popOnChange } from '$lib/pop-on-change';
 	import EditarSerieSheet, { type SerieEditable } from '$lib/components/EditarSerieSheet.svelte';
 	import { conPesoVisible } from '$lib/unidades';
@@ -121,6 +121,26 @@
 	function sinVolumen(s: SetSesion): boolean {
 		return s.peso == null || s.reps == null;
 	}
+
+	// El historial era la única puerta al pasado y sólo dejaba editar series YA marcadas:
+	// una serie que quedó sin marcar (se murió el teléfono, te olvidaste) no se podía
+	// arreglar desde ningún lado. La sesión de un día pasado se abre con la misma pantalla
+	// de entrenamiento, que sí sabe marcar, agregar y quitar.
+	const rutinasVigentes = $derived(new Set(datosSesiones.dias.map((d) => d.id)));
+	const esFutura = $derived(fechaValida && fecha > hoyCalendarioLocal());
+	/**
+	 * Sesiones de esa fecha SIN ninguna serie marcada. No tienen nada que mostrar, pero son
+	 * exactamente el caso que había que poder arreglar: cargaste el peso de todas las series
+	 * y te olvidaste de marcarlas. Sin esta salida, ese día quedaba invisible para siempre.
+	 */
+	const sinMarcar = $derived(
+		datosSesiones.sesiones.filter(
+			(s) =>
+				!s.ejercicios.some((e) => e.sets.some(serieCompleta)) &&
+				rutinasVigentes.has(s.diaId) &&
+				!esFutura
+		)
+	);
 </script>
 
 <main class="gb-page glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-28 pt-6">
@@ -174,6 +194,16 @@
 		>
 			No hay series registradas en esta fecha.
 		</p>
+		{#each sinMarcar as sesion (sesion.id)}
+			<a
+				href={`/dia/${sesion.diaId}?fecha=${fecha}`}
+				class="mt-3 flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 px-4 text-sm font-bold"
+				style="color: var(--accent-text)"
+			>
+				<Icono nombre="editar" tamano={15} />
+				Abrir {sesion.diaNombre ?? nombreDia.get(sesion.diaId) ?? 'la rutina'} de ese día
+			</a>
+		{/each}
 	{:else}
 		<section
 			class="mb-4 rounded-2xl border border-white/10 p-4"
@@ -232,6 +262,15 @@
 						</p>
 					{/if}
 				</div>
+				{#if rutinasVigentes.has(sesion.diaId) && !esFutura}
+					<a
+						href={`/dia/${sesion.diaId}?fecha=${fecha}`}
+						class="mb-2 flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 text-sm font-bold"
+						style="color: var(--accent-text)"
+					>
+						<Icono nombre="editar" tamano={15} /> Seguir editando este entrenamiento
+					</a>
+				{/if}
 				<div class="space-y-2">
 					{#each sesion.ejercicios.filter( (e) => e.sets.some(serieCompleta) ) as ejercicio (ejercicio.exerciseId)}
 						{@const ej = ejercicioPorId(ejercicio.exerciseId)}

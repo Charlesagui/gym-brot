@@ -83,7 +83,7 @@ describe('distribución muscular estimada', () => {
 		expect(resultado.seriesCompletadas).toBe(4);
 	});
 
-	it('sin filtro, consideradas y completadas coinciden', () => {
+	it('sin filtro, lo considerado más lo no representado da el total completado', () => {
 		const resultado = crearDistribucionMuscular(
 			[sesion('2026-08-24')],
 			'2026-08-24',
@@ -91,7 +91,16 @@ describe('distribución muscular estimada', () => {
 			false,
 			metadata
 		);
-		expect(resultado.seriesConsideradas).toBe(resultado.seriesCompletadas);
+		// `seriesConsideradas` es lo que el dibujo sostiene, no todo lo que se entrenó:
+		// 'cardio' no tiene músculos asignados y por eso no puede pintar nada. Que ambos
+		// números coincidieran sólo era cierto con el catálogo entero mapeado, y dejaba
+		// al encabezado contando series que el mapa no mostraba.
+		expect(resultado.seriesCompletadas).toBe(4);
+		expect(resultado.seriesSinRepresentacion).toBe(1);
+		expect(resultado.seriesConsideradas).toBe(3);
+		expect(resultado.seriesConsideradas + resultado.seriesSinRepresentacion).toBe(
+			resultado.seriesCompletadas
+		);
 	});
 
 	it('editar o borrar una serie cambia el resultado derivado de los datos crudos', () => {

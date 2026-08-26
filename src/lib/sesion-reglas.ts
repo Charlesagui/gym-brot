@@ -141,6 +141,77 @@ export function serieCompleta(set: SetSesion): boolean {
 	return set.hecha && repeticionesValidas(set.reps);
 }
 
+/**
+ * Si esta serie hecha es exactamente la que describe el snapshot de PR.
+ *
+ * Única definición para todo el producto: la usan el marcado de la serie en pantalla,
+ * el resumen del día y la reparación al importar un backup. Cuando vivía duplicada, la
+ * copia del import comparaba los valores y la de pantalla se conformaba con que el
+ * índice apuntara a una serie completa — así un snapshot adulterado marcaba como PR una
+ * serie que no lo era.
+ */
+export function coincideConPr(set: SetSesion | undefined, pr: PrCelebrado): boolean {
+	return (
+		!!set &&
+		serieCompleta(set) &&
+		(set.pesoGramos != null || pr.pesoGramos != null
+			? set.pesoGramos === pr.pesoGramos
+			: set.peso === pr.peso) &&
+		set.reps === pr.reps &&
+		!!set.esMax === !!pr.esMax &&
+		(set.extraGramos != null || pr.extraGramos != null
+			? (set.extraGramos ?? 0) === (pr.extraGramos ?? 0)
+			: (set.extraKg ?? 0) === (pr.extraKg ?? 0))
+	);
+}
+
+/**
+ * Índice de la serie ✓ que celebró el PR de la sesión; -1 si ninguna.
+ *
+ * `setIndex` sólo se respeta si esa serie SIGUE coincidiendo con el snapshot: es un
+ * desempate entre series idénticas, no una autorización para saltear la comprobación.
+ * Sin ese índice —los PR viejos no lo traen— se busca la primera que coincida, que con
+ * dos series iguales puede marcar la otra: es lo mejor disponible.
+ */
+export function indexSetPr(sets: SetSesion[], pr: PrCelebrado | undefined): number {
+	if (!pr) return -1;
+	if (pr.setIndex != null && coincideConPr(sets[pr.setIndex], pr)) return pr.setIndex;
+	return sets.findIndex((set) => coincideConPr(set, pr));
+}
+
+/** Un PR celebrado que ya no tiene una serie hecha detrás no es un PR: es un residuo. */
+export function prRespaldado(sets: SetSesion[], pr: PrCelebrado | undefined): boolean {
+	return indexSetPr(sets, pr) >= 0;
+}
+
+/**
+ * Un día terminado deja de estarlo cuando aparece trabajo sin resolver.
+ *
+ * El motivo se persiste, no se pasa por parámetro de navegación: la reapertura casi
+ * siempre se dispara desde la pantalla de ejercicio y se lee después, al volver al día.
+ * Sin él, la app se lleva en silencio una celebración que acababa de dar.
+ *
+ * Solo escribe el motivo si REALMENTE había un día terminado que romper: reabrir lo ya
+ * abierto no es una novedad y no tiene por qué dejar un cartel.
+ */
+export function reabrirSesion(
+	sesion: Pick<Sesion, 'diaTerminado' | 'diaTerminadoAt' | 'reaperturaMotivo' | 'reaperturaAt'>,
+	motivo: string
+): boolean {
+	if (!sesion.diaTerminado) return false;
+	sesion.diaTerminado = false;
+	sesion.diaTerminadoAt = undefined;
+	sesion.reaperturaMotivo = motivo;
+	sesion.reaperturaAt = new Date().toISOString();
+	return true;
+}
+
+/** Cierra el cartel de reapertura: el día volvió a terminarse o se descartó el aviso. */
+export function limpiarReapertura(sesion: Pick<Sesion, 'reaperturaMotivo' | 'reaperturaAt'>): void {
+	sesion.reaperturaMotivo = undefined;
+	sesion.reaperturaAt = undefined;
+}
+
 /** Estado visible sin convertir trabajo parcial ni un salto en un ejercicio completo. */
 export function estadoEjercicioSesion(sets: SetSesion[], saltado = false): EstadoEjercicio {
 	const hechas = sets.filter(serieCompleta).length;

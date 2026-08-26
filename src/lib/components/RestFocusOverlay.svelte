@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { fade, fly } from 'svelte/transition';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { descanso } from '$lib/descanso.svelte';
 	import { dur } from '$lib/motion';
 	import { modal } from '$lib/modal';
@@ -23,6 +25,24 @@
 				: 0
 	);
 	const dashOffset = $derived(CIRCUNFERENCIA * (1 - progreso));
+
+	/**
+	 * El descanso corre en todas las pantallas, así que este botón se puede tocar desde
+	 * el día o desde el historial. Antes sólo avisaba, y quien escuchaba era la pantalla
+	 * de ejercicio: fuera de ella el botón no hacía nada. Ahora vuelve a la fila.
+	 */
+	function irACorregir() {
+		const registrada = descanso.registrada;
+		descanso.pedirCorreccion();
+		if (!registrada) return;
+		// Sólo navegar si hace falta. Un goto estando ya en la pantalla correcta cambia los
+		// parámetros de la URL, la sesión se vuelve a cargar y la fila desaparece justo
+		// mientras se le busca el foco: el botón parecía no hacer nada, igual que antes.
+		const ruta = $page.url.pathname.replace(/\/$/, '');
+		const enSuPantalla =
+			ruta === `/ejercicio/${registrada.exerciseId}` && $page.url.searchParams.has('dia');
+		if (!enSuPantalla) void goto(registrada.href);
+	}
 
 	let arrastrando = $state(false);
 	let inicioY = 0;
@@ -205,7 +225,7 @@
 					<!-- El descanso tapa la lista justo cuando el peso recién tipeado todavía no
 					     se verificó: acá se lee, y con un toque se vuelve a la fila a corregirlo. -->
 					<button
-						onclick={() => descanso.pedirCorreccion()}
+						onclick={() => irACorregir()}
 						class="rest-focus-done-set mt-5 flex max-w-full items-center gap-2.5 rounded-2xl border border-white/10 px-4 py-2.5 text-left"
 						style="background: rgba(255,255,255,.05)"
 					>

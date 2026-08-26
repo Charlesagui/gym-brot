@@ -4,6 +4,11 @@
 	const ruta = $derived($page.url.pathname);
 	const rutinasActivas = $derived(ruta === '/' || ruta.startsWith('/dia/'));
 	const discosActivo = $derived(ruta.startsWith('/herramientas/discos'));
+	// `/peso` cae adentro de Cuerpo: era la única pantalla de la app sin entrada propia
+	// en la barra, y el objetivo de calorías se revisa mirando justamente esa serie.
+	const cuerpoActivo = $derived(
+		ruta === '/cuerpo' || ruta === '/peso' || ruta.startsWith('/herramientas/calorias')
+	);
 	const historialActivo = $derived(ruta === '/historial' || ruta.startsWith('/historial/'));
 	const ajustesActivo = $derived(ruta === '/ajustes');
 </script>
@@ -53,6 +58,31 @@
 			</svg>
 		</span>
 		<span class="label">Discos</span>
+	</a>
+	<a
+		href="/cuerpo"
+		class="nav-item"
+		class:active={cuerpoActivo}
+		aria-current={cuerpoActivo ? 'page' : undefined}
+	>
+		<span class="icono">
+			<svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+				<path
+					d="M12 3.4a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4z"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linejoin="round"
+				/>
+				<path
+					d="M8.5 20.5V15H7v-3.8a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2V15h-1.5v5.5"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
+			</svg>
+		</span>
+		<span class="label">Cuerpo</span>
 	</a>
 	<a
 		href="/historial"
