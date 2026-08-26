@@ -110,12 +110,30 @@ export function regresionLineal(mediciones: Medicion[]): Regresion | null {
 	};
 }
 
+/**
+ * La ventana que efectivamente se miró, para poder nombrarla en pantalla.
+ *
+ * Viaja con el estado porque es la única fuente que sabe cuál fue: arranca en
+ * `creadoAt + DIAS_DESCARTE` y no en un número fijo, así que un objetivo de tres semanas
+ * tiene una ventana mucho más corta que `DIAS_VENTANA_MAX`. Sin esto, la pantalla tenía
+ * que adivinarla, y adivinaba mal: contaba los pesajes de 63 días y los rotulaba «en este
+ * período» al lado de una tarjeta que mostraba el conteo real. Dos números distintos con
+ * el mismo rótulo, los dos en pantalla a la vez.
+ */
+export interface VentanaCalibracion {
+	/** Mediciones dentro de la ventana. Es el `n` de la regresión. */
+	pesajes: number;
+	/** Días que abarca, contando los dos extremos. */
+	dias: number;
+}
+
 export type EstadoCalibracion =
 	| { estado: 'esperando'; diasRestantes: number }
-	| { estado: 'pocos-pesajes'; pesajes: number; minimo: number }
-	| { estado: 'sin-senal'; kgPorSemana: number; errorKgPorSemana: number }
+	| { estado: 'pocos-pesajes'; ventana: VentanaCalibracion; minimo: number }
+	| { estado: 'sin-senal'; ventana: VentanaCalibracion; kgPorSemana: number; errorKgPorSemana: number }
 	| {
 			estado: 'listo';
+			ventana: VentanaCalibracion;
 			kgPorSemana: number;
 			errorKgPorSemana: number;
 			cambioKg: number;
@@ -155,18 +173,19 @@ export function estadoCalibracion(
 		.filter((m) => m.fecha >= desde && m.fecha <= hoy)
 		.sort((a, b) => a.fecha.localeCompare(b.fecha));
 	const diasVentana = diasEntre(desde, hoy) + 1;
+	const medida: VentanaCalibracion = { pesajes: ventana.length, dias: diasVentana };
 	const cobertura = ventana.length / diasVentana;
 	if (ventana.length < PESAJES_MIN || cobertura < COBERTURA_MIN) {
-		return { estado: 'pocos-pesajes', pesajes: ventana.length, minimo: PESAJES_MIN };
+		return { estado: 'pocos-pesajes', ventana: medida, minimo: PESAJES_MIN };
 	}
 
 	const ajuste = regresionLineal(ventana);
-	if (!ajuste) return { estado: 'pocos-pesajes', pesajes: ventana.length, minimo: PESAJES_MIN };
+	if (!ajuste) return { estado: 'pocos-pesajes', ventana: medida, minimo: PESAJES_MIN };
 
 	const kgPorSemana = ajuste.pendienteKgDia * 7;
 	const errorKgPorSemana = ajuste.errorEstandarKgDia * 7;
 	if (Math.abs(ajuste.pendienteKgDia) < UMBRAL_SENAL * ajuste.errorEstandarKgDia) {
-		return { estado: 'sin-senal', kgPorSemana, errorKgPorSemana };
+		return { estado: 'sin-senal', ventana: medida, kgPorSemana, errorKgPorSemana };
 	}
 
 	const dias = diasEntre(ventana[0]!.fecha, ventana.at(-1)!.fecha);
@@ -176,6 +195,7 @@ export function estadoCalibracion(
 
 	return {
 		estado: 'listo',
+		ventana: medida,
 		kgPorSemana,
 		errorKgPorSemana,
 		cambioKg,

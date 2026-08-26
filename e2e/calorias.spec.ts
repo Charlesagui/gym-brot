@@ -74,15 +74,23 @@ test('el resultado manda una sola cifra y dice de dónde sale', async ({ page })
 
 	// La banda va con su cobertura escrita en palabras, nunca un ± suelto. Los saltos de
 	// línea del código fuente llegan al DOM, así que el patrón tolera espacios.
-	const explicacion = page.getByText(/2 de cada\s+3 personas con tu perfil/);
+	const explicacion = page.getByText(/2 de cada\s+3\s+personas con tu perfil/);
 	await expect(explicacion).toBeVisible();
 	await expect(explicacion).toContainText('2.890');
 	await expect(explicacion).toContainText('2.550');
 	await expect(explicacion).toContainText('3.230');
 
-	// Ritmo y proteína son cifras secundarias: acompañan, no compiten.
+	// Los tres macros, y los tres siempre: es lo que la persona vino a ver.
+	await expect(page.getByText('148g')).toBeVisible(); // proteína
+	await expect(page.getByText('68g')).toBeVisible(); // grasa
+	await expect(page.getByText('309g')).toBeVisible(); // carbos
+	// Mantenimiento y ritmo acompañan, no compiten.
+	await expect(page.getByText('2.890kcal')).toBeVisible();
 	await expect(page.getByText('−0,41kg/sem')).toBeVisible();
-	await expect(page.getByText('148g')).toBeVisible();
+
+	// El riel nombra sus tres marcas: sin leyenda son tres rayas sin significado.
+	await expect(page.getByText('Objetivo', { exact: true })).toBeVisible();
+	await expect(page.getByText('Mantenimiento', { exact: true }).first()).toBeVisible();
 
 	// El descargo está siempre a la vista, no detrás de un desplegable.
 	await expect(page.getByText(/no una indicación\s+médica/)).toBeVisible();
@@ -208,15 +216,20 @@ test('la sección dice qué esperar, y por qué esa proteína', async ({ page })
 	await page.getByRole('button', { name: 'Guardar como objetivo' }).click();
 	await page.getByRole('link', { name: 'Macros' }).click();
 
-	// Sin ninguna medición, lo más útil que se puede decir es justamente eso.
+	// Sin ninguna medición, lo más útil que se puede decir es justamente eso, y es la
+	// única frase que queda a la vista: es la única que puede pedir una acción.
 	await expect(page.getByText(/Todavía no registraste ningún peso/)).toBeVisible();
-	// Y una predicción verificable, no un consejo.
-	await expect(page.getByText(/la fuerza se sostiene/)).toBeVisible();
-	// La proteína explica su número donde está el número.
-	await expect(page.getByText(/grasa y no músculo/)).toBeVisible();
 
-	// Nunca más de dos frases: con una sola cifra en pantalla, tres párrafos la entierran.
-	await expect(page.getByText(/Esperá bajar unos/)).toHaveCount(0);
+	// Las que explican viven plegadas. No desaparecieron: cuestan 200 px de prosa de
+	// 12 px abajo de la cifra, y abiertas empujaban la pantalla a un scroll entero.
+	await expect(page.getByText(/la fuerza se sostiene/)).toBeHidden();
+	await page.getByRole('group').filter({ hasText: '¿De dónde sale este número?' }).click();
+	await expect(page.getByText(/la fuerza se sostiene/)).toBeVisible();
+	// La proteína explica su número, y ahora también lo hacen la grasa y los carbos.
+	await expect(page.getByText(/grasa y no músculo/)).toBeVisible();
+	await expect(page.getByText(/los carbos son lo que queda/)).toBeVisible();
+
+	// Sigue habiendo un techo: la lista corta en tres, no vuelca el panfleto entero.
 	await expect(page.getByText(/La banda es ancha a propósito/)).toHaveCount(0);
 });
 
@@ -227,6 +240,8 @@ test('el objetivo se puede borrar, y hace falta confirmarlo', async ({ page }) =
 	await page.getByRole('link', { name: 'Macros' }).click();
 	await expect(page.getByText('2.440kcal')).toBeVisible();
 
+	// Acción secundaria y discreta: vive dentro del desplegable, no compitiendo con la cifra.
+	await page.getByRole('group').filter({ hasText: '¿De dónde sale este número?' }).click();
 	// Un solo toque no borra nada: pide confirmación en el mismo botón.
 	await page.getByRole('button', { name: 'Borrar objetivo' }).click();
 	await expect(page.getByText('2.440kcal')).toBeVisible();
@@ -250,7 +265,8 @@ test('la sección Macros tiene su lugar en la barra y arranca vacía', async ({ 
 	await expect(page.getByRole('link', { name: 'Macros' })).toHaveAttribute('aria-current', 'page');
 	await expect(page.getByRole('heading', { name: 'Macros' })).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Calcular mi objetivo' })).toBeVisible();
-	await expect(page.getByText('Sin mediciones todavía')).toBeVisible();
+	// El peso dejó de ser tarjeta y es una franja: acá no es el tema, es la puerta a /peso.
+	await expect(page.getByRole('link', { name: /Registrar mi primer peso/ })).toBeVisible();
 });
 
 test('/peso queda adentro de Macros y deja de estar huérfano en la barra', async ({ page }) => {
@@ -267,8 +283,16 @@ test('el objetivo guardado manda en la sección', async ({ page }) => {
 	await page.getByRole('link', { name: 'Macros' }).click();
 	await expect(page.getByText('Déficit moderado')).toBeVisible();
 	await expect(page.getByText('2.440kcal')).toBeVisible();
-	await expect(page.getByText(/2 de cada 3 personas/)).toBeVisible();
-	await expect(page.getByText('−0,41kg/sem')).toBeVisible();
+	// Los tres macros mandan la fila: es el nombre de la sección.
 	await expect(page.getByText('148g')).toBeVisible();
+	await expect(page.getByText('68g')).toBeVisible();
+	await expect(page.getByText('309g')).toBeVisible();
+	await expect(page.getByText('2.890kcal')).toBeVisible();
+	await expect(page.getByText('−0,41kg/sem')).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Cambiar objetivo' })).toBeVisible();
+
+	// La banda sigue estando, plegada con el resto de la explicación.
+	await expect(page.getByText(/2 de cada 3 personas/)).toBeHidden();
+	await page.getByRole('group').filter({ hasText: '¿De dónde sale este número?' }).click();
+	await expect(page.getByText(/2 de cada 3 personas/)).toBeVisible();
 });

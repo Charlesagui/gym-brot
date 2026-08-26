@@ -2,7 +2,7 @@
 	import Icono from '$lib/components/Icono.svelte';
 	import RielBanda from '$lib/components/RielBanda.svelte';
 	import { calibrar, DIAS_VENTANA_MAX, estadoCalibracion, type Adherencia } from '$lib/calibracion';
-	import { bandas, rotuloObjetivo } from '$lib/energia';
+	import { bandas, macros, rotuloObjetivo } from '$lib/energia';
 	import { fraseProteina, frasesPara } from '$lib/frases';
 	import { hoyCalendarioLocal } from '$lib/fechas';
 	import { AJUSTES_DEFAULT, ajustesObs } from '$lib/extras';
@@ -69,22 +69,47 @@
 
 	/**
 	 * Predicciones, no consejos: cada una es verificable y ninguna habla de comida.
-	 * Se muestran las dos primeras — con una sola cifra en pantalla, tres párrafos la
-	 * entierran, y la lista ya viene ordenada por lo que más le sirve al usuario hoy.
+	 *
+	 * Solo la primera queda a la vista y el resto se pliega. La lista viene ordenada por
+	 * lo que más le sirve al usuario hoy, así que la primera es la única que puede pedir
+	 * una acción —«hace nueve días que no te pesás»—; las que siguen explican, y explicar
+	 * abajo de la cifra son doscientos píxeles de prosa que empujaban la pantalla a un
+	 * scroll entero.
 	 */
 	const frases = $derived(
 		frasesPara({
 			objetivo: $objetivo,
 			pesoActualGramos: resumen.actual?.pesoGramos ?? null,
 			fechaUltimoPeso: resumen.actual?.fecha ?? null,
-			pesajesEnVentana: $pesos.length,
-			diasVentana: DIAS_VENTANA_MAX,
 			calibracion: revision,
 			tdeeAnteriorKcal,
 			unidad,
 			hoy: hoyCalendarioLocal()
-		}).slice(0, 2)
+		}).slice(0, 3)
 	);
+
+	/**
+	 * Los tres macros de la fila, en el orden en que se resuelven en el motor: la proteína
+	 * tiene objetivo propio, la grasa sale de un porcentaje con piso y los carbos son lo
+	 * que queda. Ese orden es también el de importancia para quien entrena.
+	 *
+	 * Se derivan del objetivo guardado, no se leen de la fila: `macros()` es función pura
+	 * de (peso, kcal, meta) y los tres campos ya están persistidos. Así la sección y el
+	 * asistente no pueden mostrar repartos distintos del mismo objetivo.
+	 */
+	const macrosVisibles = $derived.by(() => {
+		if (!$objetivo) return [];
+		const { proteinaG, grasaG, carbosG } = macros(
+			$objetivo.perfil.pesoGramos / 1000,
+			$objetivo.objetivoKcal,
+			$objetivo.meta
+		);
+		return [
+			{ rotulo: 'Proteína', gramos: proteinaG },
+			{ rotulo: 'Grasa', gramos: grasaG },
+			{ rotulo: 'Carbos', gramos: carbosG }
+		];
+	});
 
 	const COLOR_TONO = {
 		neutro: 'var(--muted)',
@@ -221,7 +246,7 @@
 				</p>
 			{:else}
 				<p class="mt-1.5 text-sm leading-relaxed">
-					Van {revision.pesajes} mediciones en este período y hacen falta al menos {revision.minimo}.
+					Van {revision.ventana.pesajes} mediciones en este período y hacen falta al menos {revision.minimo}.
 					Cuantos más días te peses, antes puedo corregir el número.
 				</p>
 			{/if}
@@ -261,18 +286,48 @@
 					sepv={$objetivo.sepvKcal}
 					objetivoKcal={$objetivo.objetivoKcal}
 				/>
-				{#if banda}
-					<p class="mt-2 text-xs leading-relaxed" style="color: var(--muted)">
-						Tu mantenimiento estimado es {formatoVolumen($objetivo.tdeeKcal)} kcal. 2 de cada 3 personas
-						con tu perfil están entre {formatoVolumen(banda.desde)} y {formatoVolumen(banda.hasta)}.
-						Es una cuenta, no una medición.
-					</p>
-				{/if}
 			</div>
 
+			<!--
+				Los tres macros, y los tres siempre.
+
+				Antes esta fila entera vivía dentro de un `{#if meta !== 'mantener'}`, así que
+				quien elegía mantenimiento entraba a una sección llamada Macros y no veía ni uno:
+				el asistente le había mostrado su proteína, la fila guardada la tenía, y la
+				pantalla la tapaba. Lo único que de verdad no aplica en mantenimiento es el ritmo,
+				y ese se esconde solo, más abajo.
+			-->
+			<div class="mt-4 grid grid-cols-3 gap-2">
+				{#each macrosVisibles as macro (macro.rotulo)}
+					<div class="min-w-0">
+						<p
+							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+							style="color: var(--muted)"
+						>
+							{macro.rotulo}
+						</p>
+						<p class="cifra text-2xl">{macro.gramos}<span class="cifra-u">g</span></p>
+					</div>
+				{/each}
+			</div>
+
+			<!-- El mantenimiento es una cifra, no un dato de la prosa: es contra lo que se
+			     compara el objetivo y merece leerse de un vistazo. En mantenimiento la fila
+			     entera se va: el objetivo *es* el mantenimiento y el ritmo es cero. -->
 			{#if $objetivo.meta !== 'mantener'}
-				<div class="mt-4 flex gap-6">
-					<div>
+				<div class="mt-3 grid grid-cols-2 gap-2">
+					<div class="min-w-0">
+						<p
+							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+							style="color: var(--muted)"
+						>
+							Mantenimiento
+						</p>
+						<p class="cifra text-2xl">
+							{formatoVolumen($objetivo.tdeeKcal)}<span class="cifra-u">kcal</span>
+						</p>
+					</div>
+					<div class="min-w-0">
 						<p
 							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
 							style="color: var(--muted)"
@@ -281,26 +336,16 @@
 						</p>
 						<p class="cifra text-2xl">{ritmoTexto}<span class="cifra-u">{unidad}/sem</span></p>
 					</div>
-					<div>
-						<p
-							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
-							style="color: var(--muted)"
-						>
-							Proteína
-						</p>
-						<p class="cifra text-2xl">{$objetivo.proteinaG}<span class="cifra-u">g</span></p>
-					</div>
 				</div>
-				<p class="mt-1.5 text-[0.7rem] leading-relaxed" style="color: var(--muted)">
-					{fraseProteina($objetivo)}
-				</p>
 			{/if}
 
-			{#each frases as frase (frase.id)}
-				<p class="mt-3 text-xs leading-relaxed" style="color: {COLOR_TONO[frase.tono]}">
-					{frase.texto}
+			<!-- La primera frase queda a la vista: es la única de la lista que puede pedir una
+			     acción. Las que siguen explican y viven abajo, plegadas. -->
+			{#if frases[0]}
+				<p class="mt-3 text-xs leading-relaxed" style="color: {COLOR_TONO[frases[0].tono]}">
+					{frases[0].texto}
 				</p>
-			{/each}
+			{/if}
 
 			<a
 				href="/herramientas/calorias"
@@ -308,13 +353,48 @@
 				style="background: var(--surface-3); color: var(--text)">Cambiar objetivo</a
 			>
 
-			<!-- Acción secundaria, discreta: no compite con nada y se confirma en dos toques. -->
-			<button
-				onclick={borrar}
-				class="mt-2 min-h-11 text-xs font-bold"
-				style="color: {confirmandoBorrado ? 'rgb(var(--max))' : 'var(--muted)'}"
-				>{confirmandoBorrado ? 'Tocá otra vez para borrarlo' : 'Borrar objetivo'}</button
-			>
+			<!--
+				Todo lo que explica el número, plegado.
+
+				No es prosa de relleno y por eso no se borra: la banda, el porqué de la proteína y
+				las predicciones son lo que separa esta sección de una calculadora. Pero son ~200 px
+				de texto de 12 px abajo de la cifra, y abiertos empujaban la pantalla a un scroll
+				entero. Quien quiere el número lo tiene arriba; quien quiere la razón, la abre.
+			-->
+			<details class="mt-2 rounded-2xl" style="background: var(--surface-2)">
+				<summary class="flex min-h-12 cursor-pointer items-center justify-between px-4 text-sm font-bold"
+					>¿De dónde sale este número?<Icono nombre="info" tamano={18} clase="shrink-0" /></summary
+				>
+				<div class="px-4 pb-4">
+					{#if banda}
+						<p class="text-xs leading-relaxed" style="color: var(--muted)">
+							Tu mantenimiento estimado es {formatoVolumen($objetivo.tdeeKcal)} kcal. 2 de cada 3 personas
+							con tu perfil están entre {formatoVolumen(banda.desde)} y {formatoVolumen(banda.hasta)}.
+							Es una cuenta, no una medición.
+						</p>
+					{/if}
+
+					<p class="mt-3 text-xs leading-relaxed" style="color: var(--muted)">
+						La proteína es un piso y sale de tu peso: {fraseProteina($objetivo)} La grasa es el 25 % de
+						las calorías, con un piso por kilo, y los carbos son lo que queda — son la palanca que
+						sostiene el entrenamiento.
+					</p>
+
+					{#each frases.slice(1) as frase (frase.id)}
+						<p class="mt-3 text-xs leading-relaxed" style="color: {COLOR_TONO[frase.tono]}">
+							{frase.texto}
+						</p>
+					{/each}
+
+					<!-- Acción secundaria, discreta: no compite con nada y se confirma en dos toques. -->
+					<button
+						onclick={borrar}
+						class="mt-4 min-h-11 text-xs font-bold"
+						style="color: {confirmandoBorrado ? 'rgb(var(--max))' : 'var(--muted)'}"
+						>{confirmandoBorrado ? 'Tocá otra vez para borrarlo' : 'Borrar objetivo'}</button
+					>
+				</div>
+			</details>
 		</section>
 	{:else}
 		<section class="rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
@@ -332,38 +412,38 @@
 		</section>
 	{/if}
 
-	<!-- ===== Peso corporal ===== -->
-	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
-		<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
-			Peso corporal
-		</p>
+	<!--
+		Peso corporal, en una franja y no en una tarjeta.
+
+		Acá el peso no es el tema: es el dato que corrige el objetivo y la puerta a /peso, que
+		es donde vive de verdad. Como tarjeta se llevaba ~190 px —rótulo, cifra de 2,6 rem,
+		deltas y un botón a ancho completo— para decir tres números y abrir un link.
+	-->
+	<a
+		href="/peso"
+		class="mt-3 flex min-h-14 items-center gap-3 rounded-2xl border border-white/10 px-4"
+		style="background: var(--surface)"
+	>
 		{#if resumen.actual}
-			<p class="mt-1 flex items-baseline">
-				<span class="cifra text-[2.6rem]"
-					>{formatoNumero(gramosAPeso(resumen.actual.pesoGramos, unidad)!)}<span class="cifra-u"
-						>{unidad}</span
-					></span
-				>
-			</p>
-			<div class="mt-2 flex gap-5 text-xs" style="color: var(--muted)">
+			<span class="text-[0.6rem] font-bold uppercase tracking-[0.14em]" style="color: var(--muted)"
+				>Peso hoy</span
+			>
+			<span class="cifra shrink-0 text-xl"
+				>{formatoNumero(gramosAPeso(resumen.actual.pesoGramos, unidad)!)}<span class="cifra-u"
+					>{unidad}</span
+				></span
+			>
+			<span class="ml-auto flex shrink-0 gap-3 text-xs" style="color: var(--muted)">
 				{#if cambio(resumen.cambio7DiasGramos)}
-					<span>7 días <b style="color: var(--text)">{cambio(resumen.cambio7DiasGramos)}</b></span>
+					<span>7 d <b style="color: var(--text)">{cambio(resumen.cambio7DiasGramos)}</b></span>
 				{/if}
 				{#if cambio(resumen.cambio30DiasGramos)}
-					<span>30 días <b style="color: var(--text)">{cambio(resumen.cambio30DiasGramos)}</b></span
-					>
+					<span>30 d <b style="color: var(--text)">{cambio(resumen.cambio30DiasGramos)}</b></span>
 				{/if}
-			</div>
+			</span>
 		{:else}
-			<p class="mt-1.5 text-sm leading-relaxed">
-				Sin mediciones todavía. Es el dato que después va a corregir tu objetivo.
-			</p>
+			<span class="text-sm font-bold">Registrar mi primer peso</span>
+			<span class="ml-auto text-xs" style="color: var(--muted)">corrige tu objetivo</span>
 		{/if}
-		<a
-			href="/peso"
-			class="mt-4 flex min-h-12 items-center justify-center rounded-2xl text-sm font-bold"
-			style="background: var(--surface-3); color: var(--text)"
-			>{resumen.actual ? 'Registrar peso y ver el historial' : 'Registrar mi primer peso'}</a
-		>
-	</section>
+	</a>
 </main>

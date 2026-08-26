@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import Icono from '$lib/components/Icono.svelte';
+	import RielBanda from '$lib/components/RielBanda.svelte';
 	import Stepper from '$lib/components/Stepper.svelte';
 	import {
 		calcularMantenimiento,
 		calcularObjetivo,
+		macros,
 		restricciones,
 		ritmosDisponibles,
 		type AvisoEnergia,
@@ -342,22 +344,18 @@
 	);
 
 	/**
-	 * El riel muestra dónde cae el objetivo dentro de la banda del mantenimiento. Un
-	 * déficit real queda por debajo de la banda entera, y verlo dice más que cualquier
-	 * porcentaje: no estás comiendo "un poco menos", estás fuera de donde vive tu gasto.
+	 * Los tres macros del objetivo elegido, en el orden en que los resuelve el motor.
+	 * Salen de la misma función que usa la sección: si divergieran, el reparto que
+	 * guardás y el que después ves en Macros no serían el mismo.
 	 */
-	const riel = $derived.by(() => {
-		if (!listo || !objetivo) return null;
-		const desde = Math.min(listo.banda95.desde, objetivo.objetivoKcal);
-		const hasta = Math.max(listo.banda95.hasta, objetivo.objetivoKcal);
-		const ancho = hasta - desde;
-		const pct = (v: number) => ((v - desde) / ancho) * 100;
-		return {
-			b68desde: pct(listo.banda68.desde),
-			b68ancho: pct(listo.banda68.hasta) - pct(listo.banda68.desde),
-			mantenimiento: pct(listo.tdee),
-			objetivo: pct(objetivo.objetivoKcal)
-		};
+	const macrosVisibles = $derived.by(() => {
+		if (!objetivo || !listo) return [];
+		const { proteinaG, grasaG, carbosG } = macros(listo.kg, objetivo.objetivoKcal, objetivo.meta);
+		return [
+			{ rotulo: 'Proteína', gramos: proteinaG },
+			{ rotulo: 'Grasa', gramos: grasaG },
+			{ rotulo: 'Carbos', gramos: carbosG }
+		];
 	});
 
 	/** Solo los avisos que le sirven a la persona; el resto es diagnóstico interno. */
@@ -409,52 +407,59 @@
 				>
 			</p>
 
-			<!-- La banda va como riel, no como gráfico: no puede competir con la cifra. -->
+			<!-- La banda va como riel, no como gráfico: no puede competir con la cifra.
+			     El componente es el mismo que usa la sección: dos copias del riel eran dos
+			     leyendas que mantener, y la de acá no tenía ninguna. -->
 			<div class="mt-3">
-				{#if riel}
-					<div class="relative h-[5px] rounded-full" style="background: var(--surface-3)">
-						<div
-							class="absolute inset-y-0 rounded-full"
-							style="left: {riel.b68desde}%; width: {riel.b68ancho}%; background: rgb(var(--glow) / .5)"
-						></div>
-						<div
-							class="absolute inset-y-[-3px] w-0.5"
-							style="left: {riel.mantenimiento}%; background: var(--muted)"
-						></div>
-						<div
-							class="absolute inset-y-[-5px] w-[3px] rounded-full"
-							style="left: {riel.objetivo}%; background: var(--text)"
-						></div>
-					</div>
-				{/if}
-				<p class="mt-2 text-xs leading-relaxed" style="color: var(--muted)">
-					Tu mantenimiento estimado es {formatoVolumen(listo.tdee)} kcal. Con esta ecuación, 2 de cada
-					3 personas con tu perfil están entre {formatoVolumen(listo.banda68.desde)} y {formatoVolumen(
-						listo.banda68.hasta
-					)}. Es una cuenta, no una medición: tu balanza la va a cerrar mejor que cualquier fórmula.
-				</p>
+				<RielBanda tdee={listo.tdee} sepv={listo.sepv} objetivoKcal={objetivo.objetivoKcal} />
 			</div>
 
-			<div class="mt-4 flex gap-6">
-				<div>
-					<p
-						class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
-						style="color: var(--muted)"
-					>
-						Ritmo
-					</p>
-					<p class="cifra text-2xl">{ritmoTexto}<span class="cifra-u">{unidad}/sem</span></p>
-				</div>
-				<div>
-					<p
-						class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
-						style="color: var(--muted)"
-					>
-						Proteína
-					</p>
-					<p class="cifra text-2xl">{objetivo.proteinaG}<span class="cifra-u">g</span></p>
-				</div>
+			<!-- Los tres macros, en el orden en que los resuelve el motor. -->
+			<div class="mt-4 grid grid-cols-3 gap-2">
+				{#each macrosVisibles as macro (macro.rotulo)}
+					<div class="min-w-0">
+						<p
+							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+							style="color: var(--muted)"
+						>
+							{macro.rotulo}
+						</p>
+						<p class="cifra text-2xl">{macro.gramos}<span class="cifra-u">g</span></p>
+					</div>
+				{/each}
 			</div>
+
+			{#if botonElegido?.meta !== 'mantener'}
+				<div class="mt-3 grid grid-cols-2 gap-2">
+					<div class="min-w-0">
+						<p
+							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+							style="color: var(--muted)"
+						>
+							Mantenimiento
+						</p>
+						<p class="cifra text-2xl">
+							{formatoVolumen(listo.tdee)}<span class="cifra-u">kcal</span>
+						</p>
+					</div>
+					<div class="min-w-0">
+						<p
+							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+							style="color: var(--muted)"
+						>
+							Ritmo
+						</p>
+						<p class="cifra text-2xl">{ritmoTexto}<span class="cifra-u">{unidad}/sem</span></p>
+					</div>
+				</div>
+			{/if}
+
+			<p class="mt-3 text-xs leading-relaxed" style="color: var(--muted)">
+				Tu mantenimiento estimado es {formatoVolumen(listo.tdee)} kcal. Con esta ecuación, 2 de cada 3
+				personas con tu perfil están entre {formatoVolumen(listo.banda68.desde)} y {formatoVolumen(
+					listo.banda68.hasta
+				)}. Es una cuenta, no una medición: tu balanza la va a cerrar mejor que cualquier fórmula.
+			</p>
 		</section>
 
 		{#each avisosVisibles as aviso (aviso.tipo)}
@@ -612,13 +617,9 @@
 												<button
 													onclick={() => (ecuacion = opcion.id)}
 													aria-pressed={ecuacion === opcion.id}
-													class="min-h-14 rounded-xl px-4 text-left text-sm font-semibold {ecuacion ===
-													opcion.id
-														? 'gb-relieve'
-														: ''}"
-													style={ecuacion === opcion.id
-														? 'background: rgb(var(--accent-rgb) / .18); box-shadow: inset 0 0 0 1px rgb(var(--accent-rgb) / .45)'
-														: 'background: var(--surface-3)'}>{opcion.rotulo}</button
+													class="min-h-14 rounded-xl px-4 text-left text-sm font-semibold {ecuacion === opcion.id
+										? 'gb-opcion-elegida'
+										: 'gb-opcion'}">{opcion.rotulo}</button
 												>
 											{/each}
 										</div>
@@ -640,13 +641,9 @@
 												<button
 													onclick={() => (ocupacion = opcion.id)}
 													aria-pressed={ocupacion === opcion.id}
-													class="min-h-14 rounded-xl px-4 text-left text-sm font-semibold {ocupacion ===
-													opcion.id
-														? 'gb-relieve'
-														: ''}"
-													style={ocupacion === opcion.id
-														? 'background: rgb(var(--accent-rgb) / .18); box-shadow: inset 0 0 0 1px rgb(var(--accent-rgb) / .45)'
-														: 'background: var(--surface-3)'}>{opcion.rotulo}</button
+													class="min-h-14 rounded-xl px-4 text-left text-sm font-semibold {ocupacion === opcion.id
+										? 'gb-opcion-elegida'
+										: 'gb-opcion'}">{opcion.rotulo}</button
 												>
 											{/each}
 										</div>
@@ -660,13 +657,9 @@
 												<button
 													onclick={() => (bandaPasos = opcion.id)}
 													aria-pressed={bandaPasos === opcion.id}
-													class="min-h-14 flex-1 basis-[46%] rounded-xl px-3 text-sm font-semibold {bandaPasos ===
-													opcion.id
-														? 'gb-relieve'
-														: ''}"
-													style={bandaPasos === opcion.id
-														? 'background: rgb(var(--accent-rgb) / .18); box-shadow: inset 0 0 0 1px rgb(var(--accent-rgb) / .45)'
-														: 'background: var(--surface-3)'}>{opcion.rotulo}</button
+													class="min-h-14 flex-1 basis-[46%] rounded-xl px-3 text-sm font-semibold {bandaPasos === opcion.id
+										? 'gb-opcion-elegida'
+										: 'gb-opcion'}">{opcion.rotulo}</button
 												>
 											{/each}
 										</div>
@@ -717,13 +710,9 @@
 												<button
 													onclick={() => (duracion = opcion.id)}
 													aria-pressed={duracion === opcion.id}
-													class="min-h-14 flex-1 rounded-xl px-2 text-sm font-semibold {duracion ===
-													opcion.id
-														? 'gb-relieve'
-														: ''}"
-													style={duracion === opcion.id
-														? 'background: rgb(var(--accent-rgb) / .18); box-shadow: inset 0 0 0 1px rgb(var(--accent-rgb) / .45)'
-														: 'background: var(--surface-3)'}>{opcion.corto}</button
+													class="min-h-14 flex-1 rounded-xl px-2 text-sm font-semibold {duracion === opcion.id
+										? 'gb-opcion-elegida'
+										: 'gb-opcion'}">{opcion.corto}</button
 												>
 											{/each}
 										</div>
@@ -737,13 +726,9 @@
 												<button
 													onclick={() => (densidad = opcion.id)}
 													aria-pressed={densidad === opcion.id}
-													class="min-h-14 rounded-xl px-4 text-left text-sm font-semibold {densidad ===
-													opcion.id
-														? 'gb-relieve'
-														: ''}"
-													style={densidad === opcion.id
-														? 'background: rgb(var(--accent-rgb) / .18); box-shadow: inset 0 0 0 1px rgb(var(--accent-rgb) / .45)'
-														: 'background: var(--surface-3)'}>{opcion.rotulo}</button
+													class="min-h-14 rounded-xl px-4 text-left text-sm font-semibold {densidad === opcion.id
+										? 'gb-opcion-elegida'
+										: 'gb-opcion'}">{opcion.rotulo}</button
 												>
 											{/each}
 										</div>
@@ -769,11 +754,9 @@
 												disabled={boton.bloqueado}
 												class="flex min-h-16 items-center justify-between gap-3 rounded-xl px-4 text-left disabled:opacity-40 {objetivoElegido ===
 												boton.id
-													? 'gb-relieve'
-													: ''}"
-												style={objetivoElegido === boton.id
-													? `background: rgb(${boton.aviso ? 'var(--max)' : 'var(--accent-rgb)'} / .18); box-shadow: inset 0 0 0 1px rgb(${boton.aviso ? 'var(--max)' : 'var(--accent-rgb)'} / .45)`
-													: 'background: var(--surface-3)'}
+													? 'gb-opcion-elegida'
+													: 'gb-opcion'}"
+												style={boton.aviso ? '--opcion-color: var(--max)' : ''}
 											>
 												<span class="flex min-w-0 items-center gap-2">
 													<span class="truncate text-sm font-bold">{boton.rotulo}</span>
@@ -823,10 +806,11 @@
 												<button
 													onclick={() => alternarCondicion(condicion.id)}
 													aria-pressed={condiciones.includes(condicion.id)}
-													class="min-h-14 rounded-xl px-4 text-left text-sm font-semibold"
-													style={condiciones.includes(condicion.id)
-														? 'background: rgb(var(--accent-rgb) / .18); box-shadow: inset 0 0 0 1px rgb(var(--accent-rgb) / .45)'
-														: 'background: var(--surface-3)'}>{condicion.rotulo}</button
+													class="min-h-14 rounded-xl px-4 text-left text-sm font-semibold {condiciones.includes(
+														condicion.id
+													)
+														? 'gb-opcion-elegida'
+														: 'gb-opcion'}">{condicion.rotulo}</button
 												>
 											{/each}
 											<p class="text-[0.7rem] leading-relaxed" style="color: var(--muted)">

@@ -35,8 +35,6 @@ function datos(parche: Partial<DatosFrases> = {}): DatosFrases {
 		objetivo: objetivo(),
 		pesoActualGramos: 82_000,
 		fechaUltimoPeso: '2026-03-15',
-		pesajesEnVentana: 10,
-		diasVentana: 28,
 		calibracion: null,
 		tdeeAnteriorKcal: null,
 		unidad: 'kg',
@@ -75,7 +73,7 @@ describe('el objetivo se quedó viejo', () => {
 		const frases = frasesPara(
 			datos({
 				pesoActualGramos: 78_900,
-				calibracion: { estado: 'sin-senal', kgPorSemana: -0.1, errorKgPorSemana: 0.2 }
+				calibracion: { estado: 'sin-senal', ventana: { pesajes: 10, dias: 28 }, kgPorSemana: -0.1, errorKgPorSemana: 0.2 }
 			})
 		);
 		expect(frases[0]!.id).toBe('viejo-bajaste');
@@ -144,7 +142,7 @@ describe('calibración', () => {
 
 	it('el estado sin señal se explica en vez de esconderse', () => {
 		const salida = ids(
-			datos({ calibracion: { estado: 'sin-senal', kgPorSemana: -0.08, errorKgPorSemana: 0.2 } })
+			datos({ calibracion: { estado: 'sin-senal', ventana: { pesajes: 10, dias: 28 }, kgPorSemana: -0.08, errorKgPorSemana: 0.2 } })
 		);
 		expect(salida).toContain('sin-senal');
 	});
@@ -152,8 +150,7 @@ describe('calibración', () => {
 	it('cuenta los pesajes que faltan con el número real', () => {
 		const frases = frasesPara(
 			datos({
-				pesajesEnVentana: 4,
-				calibracion: { estado: 'pocos-pesajes', pesajes: 4, minimo: 12 }
+				calibracion: { estado: 'pocos-pesajes', ventana: { pesajes: 4, dias: 21 }, minimo: 12 }
 			})
 		);
 		expect(frases.find((f) => f.id === 'pocos-pesajes')!.texto).toContain('4 veces');
@@ -161,8 +158,41 @@ describe('calibración', () => {
 	});
 
 	it('reconoce la racha buena', () => {
-		const frases = frasesPara(datos({ pesajesEnVentana: 22 }));
+		const frases = frasesPara(
+			datos({
+				calibracion: {
+					estado: 'listo',
+					ventana: { pesajes: 22, dias: 28 },
+					kgPorSemana: -0.4,
+					errorKgPorSemana: 0.1,
+					cambioKg: -1.6,
+					dias: 28,
+					tdeeMedido: 2800
+				}
+			})
+		);
 		expect(frases.find((f) => f.id === 'buena-racha')!.texto).toContain('22 de los últimos 28');
+	});
+
+	it('los pesajes que dice la frase son los de la ventana real, no los que cargó la pantalla', () => {
+		// El bug: la sección contaba sobre 63 días y lo rotulaba «en este período», mientras
+		// la tarjeta de arriba mostraba el conteo verdadero de la ventana. Con un objetivo de
+		// 30 días la ventana son 23, no 56, y los dos números convivían en pantalla.
+		const frases = frasesPara(
+			datos({
+				calibracion: { estado: 'pocos-pesajes', ventana: { pesajes: 8, dias: 23 }, minimo: 12 }
+			})
+		);
+		const texto = frases.find((f) => f.id === 'pocos-pesajes')!.texto;
+		expect(texto).toContain('8 veces');
+		expect(texto).not.toContain('19');
+	});
+
+	it('sin ventana no promete que alcanza para corregir', () => {
+		// `esperando` no tiene período que contar: el objetivo es demasiado joven. Antes
+		// bastaba con tener 20 pesajes cargados para prometer una corrección imposible.
+		const salida = ids(datos({ calibracion: { estado: 'esperando', diasRestantes: 12 } }));
+		expect(salida).not.toContain('buena-racha');
 	});
 });
 
@@ -215,14 +245,26 @@ describe('lo que ve el usuario son las dos primeras', () => {
 				pesoActualGramos: 78_900,
 				hoy: '2026-06-10',
 				fechaUltimoPeso: '2026-06-09',
-				calibracion: { estado: 'sin-senal', kgPorSemana: -0.05, errorKgPorSemana: 0.2 }
+				calibracion: { estado: 'sin-senal', ventana: { pesajes: 10, dias: 28 }, kgPorSemana: -0.05, errorKgPorSemana: 0.2 }
 			})
 		);
 		expect(frases.slice(0, 2).map((f) => f.id)).toEqual(['viejo-bajaste', 'viejo-tiempo']);
 	});
 
 	it('en el mejor caso las dos primeras siguen diciendo algo', () => {
-		const frases = frasesPara(datos({ pesajesEnVentana: 22 }));
+		const frases = frasesPara(
+			datos({
+				calibracion: {
+					estado: 'listo',
+					ventana: { pesajes: 22, dias: 28 },
+					kgPorSemana: -0.4,
+					errorKgPorSemana: 0.1,
+					cambioKg: -1.6,
+					dias: 28,
+					tdeeMedido: 2800
+				}
+			})
+		);
 		expect(frases.length).toBeGreaterThanOrEqual(2);
 		expect(frases[0]!.id).toBe('buena-racha');
 	});

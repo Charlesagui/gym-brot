@@ -118,6 +118,31 @@
 	background: rgb(var(--foco-color, var(--glow)));
 }
 
+/*
+ * Las dos caras de una opción de cuestionario.
+ *
+ * Existen como clases y no como `style` inline porque un `box-shadow` inline pisa el de
+ * `.gb-relieve` ENTERO: durante seis grupos de opciones la clase estaba puesta y no
+ * dibujaba nada, así que la opción elegida quedaba plana —un rectángulo pintado con un
+ * anillo de 1 px— que es exactamente lo que `.gb-relieve` está para evitar. Acá el
+ * bisel, la sombra y el anillo viajan en la misma declaración y no compiten.
+ *
+ * `--opcion-color` deja que el mismo par sirva para el acento y para el naranja de
+ * advertencia sin duplicar las reglas.
+ */
+.gb-opcion {
+	background: var(--surface-3);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.gb-opcion-elegida {
+	background: rgb(var(--opcion-color, var(--accent-rgb)) / 0.18);
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.14),
+		inset 0 0 0 1px rgb(var(--opcion-color, var(--accent-rgb)) / 0.55),
+		0 8px 22px rgba(0, 0, 0, 0.32);
+}
+
 html {
 	color-scheme: dark;
 }
