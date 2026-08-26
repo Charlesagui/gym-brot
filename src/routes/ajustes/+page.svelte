@@ -8,6 +8,7 @@
 		toggleSonido,
 		toggleVibracion,
 		toggleDescansoPantallaCompleta,
+		toggleEjercicioPantallaEncendida,
 		toggleSonidoLogros,
 		setMetricaPr,
 		setModoEsfuerzo,
@@ -655,6 +656,41 @@
 					>{ajustes.descansoPantallaCompleta ? 'On' : 'Off'}</button
 				>
 			</div>
+		</section>
+
+		<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
+			<div class="flex items-center justify-between gap-4">
+				<div>
+					<p class="text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
+						Pantalla en el ejercicio
+					</p>
+					<p class="mt-1 text-xs" style="color: var(--muted)">
+						No se apaga mientras entrenás, no solo en el descanso
+					</p>
+				</div>
+				<button
+					onclick={() =>
+						guardarAjuste(toggleEjercicioPantallaEncendida(), 'la pantalla del ejercicio')}
+					aria-pressed={hayWakeLock && ajustes.ejercicioPantallaEncendida}
+					disabled={!hayWakeLock}
+					class="min-h-11 min-w-18 rounded-full px-4 py-2 text-sm font-bold disabled:opacity-45"
+					style={hayWakeLock && ajustes.ejercicioPantallaEncendida
+						? 'background: var(--accent); color: var(--on-accent)'
+						: 'background: rgba(255,255,255,.06); color: var(--muted)'}
+					>{hayWakeLock && ajustes.ejercicioPantallaEncendida ? 'On' : 'Off'}</button
+				>
+			</div>
+			{#if hayWakeLock}
+				<p class="mt-2 text-xs leading-relaxed" style="color: var(--muted)">
+					Gasta más batería en un ejercicio largo. Apagado, la pantalla sigue encendida durante el
+					descanso: eso no se toca porque de ahí depende la alarma.
+				</p>
+			{:else}
+				<p class="mt-2 text-xs leading-relaxed" style="color: rgb(var(--max))">
+					Este navegador no permite mantener la pantalla encendida. Suele pasar al abrir la app por
+					una dirección sin HTTPS, como el server de desarrollo en la red local.
+				</p>
+			{/if}
 		</section>
 
 		<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">

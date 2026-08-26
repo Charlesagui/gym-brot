@@ -137,6 +137,13 @@ export interface Ajustes {
 	vibracion: boolean;
 	/** Abre el descanso como pantalla enfocada al marcar una serie. */
 	descansoPantallaCompleta: boolean;
+	/**
+	 * Mantiene la pantalla encendida mientras hay un ejercicio en curso. El descanso ya
+	 * la sostenía solo (la alarma depende de eso); esto cubre el resto de la serie, que
+	 * es donde el teléfono se apagaba entre repetición y repetición. Se puede apagar
+	 * porque un ejercicio largo con la pantalla encendida se come batería.
+	 */
+	ejercicioPantallaEncendida: boolean;
 	metricaPr: MetricaPr;
 	/** Sobrescritura por ejercicio; ausente = usa `metricaPr`. */
 	metricasPrEjercicio?: Record<string, MetricaPr>;

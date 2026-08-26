@@ -48,6 +48,7 @@ export const AJUSTES_DEFAULT: Ajustes = {
 	volumen: 1,
 	vibracion: true,
 	descansoPantallaCompleta: true,
+	ejercicioPantallaEncendida: true,
 	metricaPr: 'peso',
 	metricasPrEjercicio: {},
 	modoEsfuerzo: 'off',
@@ -82,6 +83,8 @@ export function normalizarAjustes(a?: Ajustes | null): Ajustes {
 		vibracion: a?.vibracion ?? AJUSTES_DEFAULT.vibracion,
 		descansoPantallaCompleta:
 			a?.descansoPantallaCompleta ?? AJUSTES_DEFAULT.descansoPantallaCompleta,
+		ejercicioPantallaEncendida:
+			a?.ejercicioPantallaEncendida ?? AJUSTES_DEFAULT.ejercicioPantallaEncendida,
 		metricaPr: a?.metricaPr ?? AJUSTES_DEFAULT.metricaPr,
 		metricasPrEjercicio: a?.metricasPrEjercicio ?? {},
 		modoEsfuerzo: a?.modoEsfuerzo ?? 'off',
@@ -169,6 +172,12 @@ export async function setDescansoPantallaCompleta(
 export async function toggleDescansoPantallaCompleta(): Promise<void> {
 	await actualizarAjustes((a) => {
 		a.descansoPantallaCompleta = !a.descansoPantallaCompleta;
+	});
+}
+
+export async function toggleEjercicioPantallaEncendida(): Promise<void> {
+	await actualizarAjustes((a) => {
+		a.ejercicioPantallaEncendida = !a.ejercicioPantallaEncendida;
 	});
 }
 
@@ -525,6 +534,8 @@ function esAjustes(value: unknown): value is Ajustes {
 		(value.volumen === undefined || esNumeroNoNegativo(value.volumen)) &&
 		(value.vibracion === undefined || esBoolean(value.vibracion)) &&
 		(value.descansoPantallaCompleta === undefined || esBoolean(value.descansoPantallaCompleta)) &&
+		(value.ejercicioPantallaEncendida === undefined ||
+			esBoolean(value.ejercicioPantallaEncendida)) &&
 		(value.metricaPr === undefined || value.metricaPr === 'peso' || value.metricaPr === 'e1rm') &&
 		(value.metricasPrEjercicio === undefined || esMetricasPrEjercicio(value.metricasPrEjercicio)) &&
 		(value.modoEsfuerzo === undefined ||

@@ -20,10 +20,21 @@ function montarDom() {
 	const escuchar = (tipo: string, fn: Handler) => {
 		listeners.set(tipo, [...(listeners.get(tipo) ?? []), fn]);
 	};
+	// El wake lock también se suscribe a `visibilitychange` y se da de baja al soltarse.
+	const dejarDeEscuchar = (tipo: string, fn: Handler) => {
+		listeners.set(
+			tipo,
+			(listeners.get(tipo) ?? []).filter((otro) => otro !== fn)
+		);
+	};
 
 	Object.assign(globalThis, {
 		window: { addEventListener: escuchar, removeEventListener: () => {} },
-		document: { addEventListener: escuchar, visibilityState: 'visible' },
+		document: {
+			addEventListener: escuchar,
+			removeEventListener: dejarDeEscuchar,
+			visibilityState: 'visible'
+		},
 		localStorage: {
 			getItem: (k: string) => almacen.get(k) ?? null,
 			setItem: (k: string, v: string) => {
