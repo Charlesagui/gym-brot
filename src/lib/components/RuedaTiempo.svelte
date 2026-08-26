@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import { vibrar } from '$lib/vibracion';
 
 	/**
@@ -12,6 +13,12 @@
 	 * El gesto es rotación relativa: importa cuánto giraste desde el punto anterior, no
 	 * dónde tocaste. Así se puede girar cerca del borde (más preciso) o cerca del
 	 * centro, y arrancar el giro en cualquier parte del anillo.
+	 *
+	 * Girar es EXPLORAR, y explorar no se guarda. `onCambio` avisa el valor en vivo para
+	 * que la pantalla lo muestre; `onFin` avisa una sola vez, cuando el gesto termina, y
+	 * es el único que debe persistir. Antes había un solo callback y cada detent (18°)
+	 * escribía en IndexedDB: una vuelta eran 20 escrituras, cada una re-corría media
+	 * pantalla y la rueda se movía debajo del dedo mientras giraba.
 	 */
 	let {
 		segundos,
@@ -21,7 +28,8 @@
 		glow,
 		etiqueta = 'Tiempo',
 		vibracion = true,
-		onCambio
+		onCambio,
+		onFin
 	}: {
 		segundos: number;
 		min?: number;
@@ -30,7 +38,10 @@
 		glow: string;
 		etiqueta?: string;
 		vibracion?: boolean;
+		/** Valor en vivo mientras se gira. Barato: sólo para pintar. */
 		onCambio: (segundos: number) => void;
+		/** El gesto terminó y el valor cambió. Acá y sólo acá se persiste. */
+		onFin?: (segundos: number) => void;
 	} = $props();
 
 	/** Cuántos grados de giro cuesta un paso. 18° = 20 pasos por vuelta completa. */
@@ -43,6 +54,12 @@
 	let sobra = 0;
 	let anguloPrevio: number | null = null;
 	let agarrada = $state(false);
+	/**
+	 * Valor con el que arrancó el gesto en curso, o `null` si no hay ninguno. Sirve para
+	 * dos cosas: saber que hay algo sin confirmar y no confirmar un gesto que no movió
+	 * nada (girar y volver al mismo lugar no es un cambio que valga una escritura).
+	 */
+	let valorAlEmpezar: number | null = null;
 
 	const texto = $derived(reloj(segundos));
 
@@ -66,6 +83,22 @@
 		vibrar(6, vibracion);
 	}
 
+	/** Marca el arranque de un gesto. Idempotente: un gesto puede tener muchos detents. */
+	function empezar() {
+		if (valorAlEmpezar === null) valorAlEmpezar = segundos;
+	}
+
+	/**
+	 * El gesto terminó: recién ahora el valor es una decisión y no una exploración.
+	 * `segundos` ya viene actualizado porque la pantalla lo espeja desde `onCambio`.
+	 */
+	function confirmar() {
+		if (valorAlEmpezar === null) return;
+		const desde = valorAlEmpezar;
+		valorAlEmpezar = null;
+		if (segundos !== desde) onFin?.(segundos);
+	}
+
 	function anguloDe(evento: PointerEvent): number {
 		if (!nodo) return 0;
 		const caja = nodo.getBoundingClientRect();
@@ -80,6 +113,7 @@
 		anguloPrevio = anguloDe(evento);
 		sobra = 0;
 		agarrada = true;
+		empezar();
 	}
 
 	function alMover(evento: PointerEvent) {
@@ -104,6 +138,7 @@
 		anguloPrevio = null;
 		agarrada = false;
 		if (nodo?.hasPointerCapture(evento.pointerId)) nodo.releasePointerCapture(evento.pointerId);
+		confirmar();
 	}
 
 	function alTeclado(evento: KeyboardEvent) {
@@ -117,9 +152,24 @@
 		const pasos = finos[evento.key] ?? gruesos[evento.key];
 		if (pasos === undefined) return;
 		evento.preventDefault();
+		empezar();
 		giro += pasos * GRADOS_POR_PASO;
 		mover(pasos);
 	}
+
+	/**
+	 * Mantener la flecha apretada repite `keydown` y emite un solo `keyup`: el gesto de
+	 * teclado es "desde que apretás hasta que soltás", igual que el del dedo.
+	 */
+	function alSoltarTecla() {
+		confirmar();
+	}
+
+	/**
+	 * Red de seguridad: perder el foco (o desmontarse la rueda) a mitad de un gesto no
+	 * puede tragarse el valor elegido. `confirmar()` no hace nada si no hay nada pendiente.
+	 */
+	onDestroy(confirmar);
 </script>
 
 <div
@@ -139,6 +189,8 @@
 	onpointerup={alSoltar}
 	onpointercancel={alSoltar}
 	onkeydown={alTeclado}
+	onkeyup={alSoltarTecla}
+	onblur={confirmar}
 >
 	<svg viewBox="0 0 200 200" aria-hidden="true">
 		<g style="transform: rotate({giro}deg); transform-origin: 100px 100px">

@@ -13,6 +13,24 @@
 	const ajustes = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
 	/** La rueda solo aparece si la pedís: el descanso normal no necesita que la toques. */
 	let mostrarRueda = $state(false);
+	/**
+	 * Lo que falta según la rueda mientras la estás girando, o `null` si no la estás
+	 * tocando. Sin esto la rueda mostraba `descanso.restoSeg`, que baja solo cada medio
+	 * segundo: el número se caía debajo del dedo y cinco detents de +15 no daban +75.
+	 */
+	let restoElegido = $state<number | null>(null);
+	const segundosRueda = $derived(restoElegido ?? descanso.restoSeg);
+
+	/** Girar sólo mueve el número; el cronómetro no se toca hasta soltar. */
+	function girarResto(segundos: number) {
+		restoElegido = segundos;
+	}
+
+	/** Soltó: `ajustarResto` cuenta desde AHORA, que es justo lo que la rueda promete. */
+	function soltarResto(segundos: number) {
+		descanso.ajustarResto(segundos);
+		restoElegido = null;
+	}
 
 	const RADIO = 44;
 	const CIRCUNFERENCIA = 2 * Math.PI * RADIO;
@@ -136,14 +154,15 @@
 				{#if mostrarRueda && !descanso.vencido}
 					<div class="mt-8 flex flex-col items-center gap-4" data-sin-arrastre>
 						<RuedaTiempo
-							segundos={descanso.restoSeg}
+							segundos={segundosRueda}
 							min={15}
 							max={900}
 							paso={15}
 							glow={descanso.glow}
 							vibracion={$ajustes.vibracion ?? true}
 							etiqueta="Ajustar lo que falta de descanso"
-							onCambio={(segundos) => descanso.ajustarResto(segundos)}
+							onCambio={girarResto}
+							onFin={soltarResto}
 						/>
 						<button
 							onclick={() => (mostrarRueda = false)}

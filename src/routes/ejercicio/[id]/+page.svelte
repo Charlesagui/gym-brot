@@ -1055,8 +1055,19 @@
 		mostrarRuedaDescanso = !mostrarRuedaDescanso;
 	}
 
+	/** Mientras el dedo gira sólo se mueve el número de la rueda: nada toca la base. */
 	function girarDescanso(segundos: number) {
 		segundosRueda = segundos;
+	}
+
+	/**
+	 * Soltó: recién ahora el valor es una decisión y se guarda, una sola vez.
+	 *
+	 * Antes esto vivía adentro de `girarDescanso`, así que cada detent (18°) escribía en
+	 * IndexedDB: una vuelta eran 20 escrituras, cada una re-corría media pantalla y la
+	 * rueda se movía debajo del dedo mientras giraba.
+	 */
+	function soltarRuedaDescanso(segundos: number) {
 		cambiarDescansoEjercicio(segundosAMinutos(segundos));
 	}
 </script>
@@ -1595,6 +1606,7 @@
 										vibracion={vibracionActiva}
 										etiqueta="Descanso de este ejercicio"
 										onCambio={girarDescanso}
+										onFin={soltarRuedaDescanso}
 									/>
 									<button
 										onclick={() => (mostrarRuedaDescanso = false)}
