@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from './db';
-import type { PerfilEnergia } from './energia';
+import { RITMOS, type PerfilEnergia } from './energia';
 import {
 	borrarObjetivos,
 	calcularYGuardar,
@@ -68,6 +68,18 @@ describe('guardar objetivos', () => {
 		const dos = await calcularYGuardar(PERFIL, 'bajar', -0.25, { creadoAt });
 		expect(uno!.id).not.toBe(dos!.id);
 		expect(await db.objetivosEnergia.count()).toBe(2);
+	});
+
+	it('conserva el nivel, que es lo que rotula el objetivo en pantalla', async () => {
+		// Guardar con el ritmo que devuelve el cálculo —redondeado por el objetivo en
+		// kcal— en vez del canónico dejaba el nivel en null y la sección mostraba
+		// "Déficit a medida" en vez de "Déficit moderado".
+		const moderado = (await calcularYGuardar(PERFIL, 'bajar', RITMOS.bajar.moderado))!;
+		expect(moderado.nivel).toBe('moderado');
+		const agresivo = (await calcularYGuardar(PERFIL, 'bajar', RITMOS.bajar.agresivo))!;
+		expect(agresivo.nivel).toBe('agresivo');
+		const mantener = (await calcularYGuardar(PERFIL, 'mantener', 0))!;
+		expect(mantener.nivel).toBeNull();
 	});
 
 	it('encadena la revisión con el objetivo que reemplaza', async () => {

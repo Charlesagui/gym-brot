@@ -213,6 +213,12 @@
 		objetivo: Objetivo | null;
 		aviso: MotivoAviso | null;
 		bloqueado: boolean;
+		/**
+		 * El ritmo canónico del menú, no el que salió del cálculo. Guardar con el
+		 * calculado —que viene redondeado por el objetivo en kcal— hacía que el nivel
+		 * no coincidiera con la tabla y el objetivo quedara rotulado "a medida".
+		 */
+		ritmoPedido: number;
 	}
 
 	const limites = $derived(listo ? restricciones(listo.imc, condiciones) : null);
@@ -229,11 +235,21 @@
 								meta,
 								objetivo: r.estado === 'calculado' ? r : null,
 								aviso: null,
-								bloqueado: false
+								bloqueado: false,
+								ritmoPedido: 0
 							};
 						}
 						const opcion = ritmosDisponibles(meta, listo.imc).find((o) => o.id === nivel);
-						if (!opcion) return { id, rotulo, meta, objetivo: null, aviso: null, bloqueado: true };
+						if (!opcion)
+							return {
+								id,
+								rotulo,
+								meta,
+								objetivo: null,
+								aviso: null,
+								bloqueado: true,
+								ritmoPedido: 0
+							};
 						const r = calcularObjetivo(listo, meta, opcion.pctSemana);
 						return {
 							id,
@@ -241,7 +257,8 @@
 							meta,
 							objetivo: r.estado === 'calculado' ? r : null,
 							aviso: opcion.aviso,
-							bloqueado: r.estado !== 'calculado'
+							bloqueado: r.estado !== 'calculado',
+							ritmoPedido: opcion.pctSemana
 						};
 					}
 				)
@@ -305,11 +322,9 @@
 		if (!perfil || !botonElegido?.objetivo) return;
 		errorGuardado = null;
 		try {
-			const fila = await calcularYGuardar(
-				perfil,
-				botonElegido.meta,
-				botonElegido.objetivo.ritmoPctSemana
-			);
+			// El ritmo del menú, no el que devolvió el cálculo: es el mismo con el que se
+			// armó el botón que el usuario tocó.
+			const fila = await calcularYGuardar(perfil, botonElegido.meta, botonElegido.ritmoPedido);
 			guardado = fila != null;
 			if (!fila)
 				errorGuardado = 'No pudimos guardar el objetivo. Revisá los datos e intentá de nuevo.';
