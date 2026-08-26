@@ -30,7 +30,9 @@ test('terminar con menos series de las planeadas cierra el ejercicio de verdad',
 	await expect(page.getByLabel('2 de 4 series hechas')).toBeVisible();
 
 	await page.getByRole('button', { name: 'Terminar con 2 series' }).click();
-	await page.getByRole('button', { name: 'Terminar', exact: true }).click();
+	const avisoCierre = page.getByRole('alertdialog');
+	await expect(avisoCierre).toContainText('Se quitan las 2 series que quedaron sin marcar');
+	await avisoCierre.getByRole('button', { name: 'Terminar', exact: true }).click();
 
 	// Vuelve al día, y el ejercicio queda hecho: antes decía "Faltan 1 ejercicio".
 	await expect(page).toHaveURL(/\/dia\/dia-piernas/);
@@ -55,12 +57,19 @@ test('una serie del medio se quita sola, sin arrastrar a las de abajo', async ({
 	// La 2 estaba mal cargada: se abre y se quita esa, no la última.
 	await page.getByRole('button', { name: 'Corregir serie 2' }).click();
 	await page.getByRole('button', { name: 'Quitar la serie 2 de hoy' }).click();
-	await page.getByRole('button', { name: 'Quitar', exact: true }).click();
+	const avisoQuitar = page.getByRole('alertdialog');
+	await expect(avisoQuitar).toContainText('La serie 2 está marcada como hecha');
+	await avisoQuitar.getByRole('button', { name: 'Quitar', exact: true }).click();
 
 	// Quedan la de 100 y la de 120; la de 80 desapareció.
 	await expect(page.getByLabel('2 de 3 series hechas')).toBeVisible();
 	await expect(page.getByRole('button', { name: 'Corregir serie 1' })).toContainText('100');
 	await expect(page.getByRole('button', { name: 'Corregir serie 2' })).toContainText('120');
+
+	// Borrar un registro real tiene vuelta atrás, igual que reiniciar.
+	await page.getByRole('status').getByRole('button', { name: 'Deshacer' }).click();
+	await expect(page.getByLabel('3 de 4 series hechas')).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Corregir serie 2' })).toContainText('80');
 });
 
 test('el día terminado dice por qué se reabre en vez de descelebrarse en silencio', async ({
@@ -154,4 +163,29 @@ test('reiniciar el día limpia series y saltos, y también se deshace', async ({
 
 	await page.getByRole('status').getByRole('button', { name: 'Deshacer' }).click();
 	await expect(page.getByText('· 1 saltado')).toBeVisible();
+});
+
+test('el deshacer de terminar con menos series sobrevive la navegación', async ({ page }) => {
+	await page.clock.install({ time: new Date('2026-08-15T10:00:00-03:00') });
+	await page.goto(RUTA);
+	await page.getByRole('button', { name: 'Sin descanso en este ejercicio' }).click();
+	await hacerSerie(page, 1, '100');
+	await hacerSerie(page, 2, '105');
+
+	await page.getByRole('button', { name: 'Terminar con 2 series' }).click();
+	await page
+		.getByRole('alertdialog')
+		.getByRole('button', { name: 'Terminar', exact: true })
+		.click();
+
+	// La acción navega al día: el ofrecimiento tiene que haber viajado con nosotros.
+	await expect(page).toHaveURL(/\/dia\/dia-piernas/);
+	const deshacer = page.getByRole('status');
+	await expect(deshacer).toContainText('Ejercicio terminado con 2 series');
+
+	await deshacer.getByRole('button', { name: 'Deshacer' }).click();
+	// Vuelven las dos series sin marcar que se habían quitado.
+	await expect(page.getByRole('link', { name: /Prensa de pierna 45° Prensa/ })).toContainText(
+		'2/4'
+	);
 });
