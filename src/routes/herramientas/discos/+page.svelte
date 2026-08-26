@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import BarraCargada from '$lib/components/BarraCargada.svelte';
+	import CintaPeso from '$lib/components/CintaPeso.svelte';
 	import { colorDisco } from '$lib/discos-color';
 	import Icono from '$lib/components/Icono.svelte';
-	import Stepper from '$lib/components/Stepper.svelte';
 	import { calcularDiscos, type CargaBarra } from '$lib/discos';
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
 	import { fromLiveQuery } from '$lib/live';
-	import { leerPeso, sumarPeso } from '$lib/numeros';
+	import { leerPeso } from '$lib/numeros';
 	import type { UnidadPeso } from '$lib/unidades';
 
 	interface ConfigUnidad {
@@ -153,8 +153,11 @@
 		return new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 }).format(valor);
 	}
 
-	function cambiarObjetivo(delta: number) {
-		objetivo = sumarPeso(objetivo, delta);
+	/** Tope del objetivo, alineado con el que valida `calcularDiscos`. */
+	const MAX_OBJETIVO = 2_000;
+
+	function fijarObjetivo(nuevo: number) {
+		objetivo = nuevo;
 		guardar();
 	}
 
@@ -211,21 +214,39 @@
 		<p class="mb-2 text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
 			Peso total
 		</p>
-		<Stepper
-			value={objetivo}
-			format={formatoPeso}
+		<!--
+			La cifra sigue siendo un campo: para saltar de 60 a 180 escribirlo gana, y la
+			cinta es para explorar lo que hay alrededor. El teclado numérico está a un
+			toque, y el barrido a cero.
+		-->
+		<input
+			type="text"
 			inputmode="decimal"
-			step={config.paso}
-			glow="var(--glow)"
-			grande
-			barrido
-			vibracion={$ajustesStore.vibracion ?? true}
+			value={objetivo != null ? formatoPeso(objetivo) : ''}
+			placeholder="—"
+			onfocus={(e) => e.currentTarget.select()}
+			onchange={(e) => confirmarObjetivo(e.currentTarget)}
+			onkeydown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+			class="cifra w-full rounded-xl bg-white/[0.035] py-1 text-center text-[3.4rem] outline-none focus:bg-white/[0.08]"
+			aria-label={`Peso total objetivo en ${unidad}`}
+		/>
+		<p
+			class="pointer-events-none -mt-1 text-center text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+			style="color: var(--muted)"
+			aria-hidden="true"
+		>
 			{unidad}
-			onStep={cambiarObjetivo}
-			onCommit={confirmarObjetivo}
-			ariaDown={`Bajar peso objetivo ${config.paso} ${unidad}`}
-			ariaUp={`Subir peso objetivo ${config.paso} ${unidad}`}
-			ariaInput={`Peso total objetivo en ${unidad}`}
+		</p>
+		<CintaPeso
+			valor={objetivo ?? config.objetivo}
+			min={config.paso}
+			max={MAX_OBJETIVO}
+			paso={config.paso}
+			formato={formatoPeso}
+			{unidad}
+			onCambio={fijarObjetivo}
+			vibracion={$ajustesStore.vibracion ?? true}
+			etiqueta={`Peso total objetivo en ${unidad}`}
 		/>
 	</section>
 
@@ -353,8 +374,13 @@
 			/>
 		</div>
 
+		<!--
+			"Discos por lado" se leía como cuántos discos vas a usar, cuando en realidad es
+			qué pesos de disco hay en el gimnasio. La cantidad la resuelve el cálculo; acá
+			sólo se marca cuáles existen.
+		-->
 		<h2 class="mt-4 text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
-			Discos por lado
+			Pesos de disco que tenés
 		</h2>
 		<div class="mt-2 grid grid-cols-4 gap-2">
 			{#each config.discos as peso}
