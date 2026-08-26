@@ -481,6 +481,8 @@ test('abrir y cerrar series deja una sola desplegada y siempre con salida', asyn
 	await expect(page.getByRole('textbox', { name: 'Reps de la serie 2' })).toBeVisible();
 
 	// Desmarcar es lo contrario: la serie que vas a rehacer queda desplegada.
+	// La hecha se fue al renglón de hechas, así que primero se abre ese renglón.
+	await page.getByRole('button', { name: /^Ver todas:/ }).click();
 	await page.getByRole('button', { name: 'Desmarcar serie 1' }).click();
 	await expect(page.getByRole('textbox', { name: 'Reps de la serie 1' })).toBeVisible();
 });

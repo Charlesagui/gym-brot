@@ -85,9 +85,11 @@ test('el RIR es opcional y se registra por serie', async ({ page }) => {
 	await page.getByRole('textbox', { name: 'Peso de la serie 1 en kg' }).fill('50');
 	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
 	await page.getByRole('button', { name: 'Marcar serie 1' }).click();
-	await expect(page.getByRole('button', { name: 'Desmarcar serie 1' })).toBeVisible();
+	// La serie marcada se va al renglón de hechas: el conteo del grupo es el acuse.
+	await expect(page.getByText('1 serie hecha', { exact: true })).toBeVisible();
 
 	// El esfuerzo queda guardado con la serie, no se pierde al contraerse la fila.
+	await page.getByRole('button', { name: /^Ver todas:/ }).click();
 	await page.getByRole('button', { name: 'Corregir serie 1' }).click();
 	await expect(page.getByLabel('RIR de la serie 1')).toHaveValue('2');
 });
