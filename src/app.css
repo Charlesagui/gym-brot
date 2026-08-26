@@ -338,26 +338,44 @@ body {
 }
 
 /*
- * Respiración del confirmar: el botón de marcar la serie no lleva texto, así que el
- * aro vacío es todo lo que dice "falta esto". Un pulso lento y de poca amplitud lo
- * señala sin titilar —dos segundos y medio por ciclo, opacidad entre .5 y 1— y solo
- * hay uno en pantalla, porque solo la serie en curso está abierta.
+ * Barrido del confirmar: el botón de marcar la serie no lleva texto, así que hace falta
+ * otra señal de que es lo próximo que hay que tocar. Un destello cruza la superficie
+ * cada 4,5 s, como la luz sobre metal pulido.
  *
- * La opacidad de reposo (.85) es la que queda bajo movimiento reducido, donde la regla
- * global corta la animación: el aro tiene que seguir viéndose, nada más que quieto.
+ * Se probó primero con la opacidad del aro y estaba al revés: el botón se apagaba para
+ * llamar la atención, justo cuando el aro es lo único que se lee. Acá el aro no se toca
+ * —contraste siempre pleno— y lo que se mueve es el material.
+ *
+ * El destello vive dentro del botón (`overflow: hidden`) y no recibe toques. Bajo
+ * movimiento reducido la regla global lo deja quieto fuera de cuadro: se pierde la
+ * señal, no la legibilidad.
  */
-@keyframes gb-respirar {
+@keyframes gb-barrido {
 	0%,
-	100% {
-		opacity: 0.5;
+	68% {
+		transform: translateX(-110%);
 	}
-	50% {
-		opacity: 1;
+	100% {
+		transform: translateX(110%);
 	}
 }
-.gb-respira {
-	opacity: 0.85;
-	animation: gb-respirar 2.6s ease-in-out infinite;
+.gb-barrido {
+	position: relative;
+	overflow: hidden;
+}
+.gb-barrido::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background: linear-gradient(
+		104deg,
+		transparent 38%,
+		rgba(255, 255, 255, 0.42) 50%,
+		transparent 62%
+	);
+	transform: translateX(-110%);
+	animation: gb-barrido 4.5s ease-in-out infinite;
 }
 
 /* Glow localizado breve (fila que acaba de confirmar un cambio) */

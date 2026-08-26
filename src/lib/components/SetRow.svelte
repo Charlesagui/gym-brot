@@ -391,7 +391,7 @@
 			disabled={pendiente}
 			class="mt-2.5 flex min-h-14 w-full touch-manipulation items-center justify-center gap-2 rounded-xl px-4 {flash
 				? 'gb-pop'
-				: ''} {set.hecha ? '' : 'gb-relieve'}"
+				: ''} {set.hecha ? '' : 'gb-relieve gb-barrido'}"
 			style={set.hecha
 				? 'background: rgba(255,255,255,.06); color: var(--muted)'
 				: `background: rgb(${glow}); color: var(--on-bright)`}
@@ -409,9 +409,7 @@
 					mientras guarda, el anillo del spinner ocupa su lugar.
 				-->
 				<span
-					class="grid size-11 place-items-center rounded-full border-[2.5px] border-current {pendiente
-						? ''
-						: 'gb-respira'}"
+					class="grid size-11 place-items-center rounded-full border-[2.5px] border-current"
 					aria-hidden="true"
 				>
 					{#if pendiente}
