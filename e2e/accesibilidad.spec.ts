@@ -340,7 +340,7 @@ test('el progreso completo incluye hoy en todos sus rangos y el calendario conse
 	await page.goto('/historial');
 	// El día entrenado dice cuántas series entraron, no sólo que entrenaste: esa
 	// intensidad vivía en un mapa anual aparte que se retiró por redundante.
-	const entrenado = page.getByRole('link', { name: /completadas? · .*ver detalle$/ }).first();
+	const entrenado = page.getByRole('link', { name: /completadas?( de \d+ planeadas)? · .*ver detalle$/ }).first();
 	const cajaDia = await entrenado.boundingBox();
 	expect(cajaDia?.width).toBeGreaterThanOrEqual(44);
 	expect(cajaDia?.height).toBeGreaterThanOrEqual(44);
@@ -507,6 +507,30 @@ test('la rueda alcanza los descansos que ya no tienen chip propio', async ({ pag
 	// El botón deja de decir "Otro" y muestra el valor elegido.
 	await expect(otro).toHaveAttribute('aria-pressed', 'true');
 	await expect(otro).toContainText('45s');
+});
+
+test('la rueda no guarda hasta que soltás', async ({ page }) => {
+	await page.goto('/ejercicio/prensa-pierna-45?dia=dia-piernas&fecha=2026-08-16');
+
+	const otro = page.getByRole('button', { name: 'Elegir otro descanso con la rueda' });
+	await otro.click();
+	const rueda = page.getByRole('slider', { name: 'Descanso de este ejercicio' });
+	await expect(rueda).toBeVisible();
+	// Arranca en Auto: el ejercicio todavía no tiene descanso propio.
+	await expect(otro).toHaveAttribute('aria-pressed', 'false');
+	const antes = await rueda.getAttribute('aria-valuenow');
+
+	// Con la tecla apretada el número de la rueda ya se movió...
+	await rueda.focus();
+	await page.keyboard.down('ArrowUp');
+	await expect(rueda).not.toHaveAttribute('aria-valuenow', antes!);
+	// ...y el ejercicio sigue en Auto. Girar es explorar, y explorar no se guarda: antes
+	// cada detent escribía en la base y re-cargaba media pantalla debajo del dedo.
+	await expect(otro).toHaveAttribute('aria-pressed', 'false');
+
+	// Recién al soltar se guarda, una sola vez.
+	await page.keyboard.up('ArrowUp');
+	await expect(otro).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('las salidas del descanso a pantalla completa responden al toque', async ({ page }) => {

@@ -110,8 +110,13 @@
 		mostrarRuedaDescanso = !mostrarRuedaDescanso;
 	}
 
+	/** Mientras el dedo gira sólo se mueve el número de la rueda: nada toca la base. */
 	function girarDescanso(segundos: number) {
 		segundosRueda = segundos;
+	}
+
+	/** Soltó: recién ahora el valor es una decisión y se guarda, una sola vez. */
+	function soltarRuedaDescanso(segundos: number) {
 		guardarAjuste(setTimer(true, segundosAMinutos(segundos)), 'el descanso');
 	}
 
@@ -534,6 +539,7 @@
 						vibracion={ajustes.vibracion ?? true}
 						etiqueta="Descanso por defecto"
 						onCambio={girarDescanso}
+						onFin={soltarRuedaDescanso}
 					/>
 					<button
 						onclick={() => (mostrarRuedaDescanso = false)}
