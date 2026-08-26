@@ -235,11 +235,28 @@ class Descanso {
 		if (this.#sonido) mantenerAudioDespierto();
 	}
 
-	/** Si hay un descanso en curso, mueve su fin a inicio + minutos (no reinicia). */
+	/**
+	 * Si hay un descanso en curso, mueve su fin a inicio + minutos (no reinicia).
+	 *
+	 * Acepta un descanso YA VENCIDO y lo revive si la duración nueva todavía no se
+	 * cumplió. Esto viene de elegir cuánto dura el descanso del ejercicio: bajarlo por
+	 * debajo del tiempo ya transcurrido lo da por terminado —correcto—, pero antes el
+	 * `vencido` de la guarda hacía que subirlo de nuevo no hiciera nada. Quedabas con la
+	 * alarma sonando por un valor que acababas de corregir y sin forma de volver atrás.
+	 *
+	 * `ajustarResto` no hace esto a propósito: ahí la alarma ya sonó y el usuario ya se
+	 * enteró; revivir ese descanso sería resucitar algo que terminó, no corregir un número.
+	 */
 	ajustarFin(minutos: number) {
-		if (this.#inicio == null || this.#hasta == null || this.vencido) return;
+		if (this.#inicio == null || this.#hasta == null) return;
 		this.#hasta = this.#inicio + minutos * 60_000;
 		this.totalSeg = Math.max(1, Math.round((this.#hasta - this.#inicio) / 1000));
+		// Vuelve a tener futuro: la próxima vez que venza tiene que poder avisar de nuevo.
+		if (this.#hasta > Date.now()) {
+			this.#notificado = false;
+			this.#ultimaAlarma = 0;
+			this.#ultimoTic = null;
+		}
 		this.#armarTimers();
 		this.#guardar();
 		this.#recalc();
