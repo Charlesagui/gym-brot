@@ -2,7 +2,7 @@
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
-	import { onNavigate } from '$app/navigation';
+	import { beforeNavigate, onNavigate } from '$app/navigation';
 	import { useRegisterSW } from 'virtual:pwa-register/svelte';
 	import { completarNombresSnapshotFaltantes, db, onDbBloqueada } from '$lib/db';
 	import { seedSiVacio } from '$lib/seed';
@@ -64,13 +64,46 @@
 	// Nunca durante el entrenamiento — recargar a mitad de una serie es justo lo que
 	// el manifiesto pide no hacer; el aviso espera a que salgas del ejercicio.
 	let registroSW: ServiceWorkerRegistration | undefined;
+	/**
+	 * El service worker nuevo puede activarse sin que lo pidamos en ESTA pantalla: alcanza
+	 * con que otro cliente —la app instalada y una pestaña del navegador conviven, es la
+	 * situación que describe "Gym-brot está abierto dos veces"— toque "Actualizar" para que
+	 * tome el control de todos a la vez. Esconder el aviso mientras entrenás no frena esa
+	 * recarga: vite-plugin-pwa engancha su listener de `controlling` apenas hay versión
+	 * esperando, no cuando tocás el botón, y queda armado en todos los clientes.
+	 */
+	let recargaPendiente = $state(false);
 	const { needRefresh, updateServiceWorker } = useRegisterSW({
 		onRegisteredSW(_url, registro) {
 			registroSW = registro;
+		},
+		// Definirlo es lo que evita el `location.reload()` propio del plugin. Decidimos acá.
+		onNeedReload() {
+			if (entrenando) recargaPendiente = true;
+			else location.reload();
 		}
 	});
 	const entrenando = $derived(sinNav || descanso.restoSeg > 0 || descanso.vencido);
 	let actualizando = $state(false);
+
+	// Soltaste el ejercicio y acusaste recibo del descanso: recién ahí la recarga no
+	// interrumpe nada. Si estabas navegando, `beforeNavigate` ya se ocupó antes que esto.
+	$effect(() => {
+		if (recargaPendiente && !entrenando) location.reload();
+	});
+
+	/**
+	 * Mientras la recarga espera, esta pantalla corre el código viejo pero ya la controla el
+	 * service worker nuevo, que borró del precache los chunks del build anterior. Una
+	 * navegación client-side los pediría y el fallback SPA los devolvería como HTML, que es
+	 * justo lo que rompe la carga del módulo. Por eso salir va con navegación dura: trae el
+	 * build nuevo entero de una vez.
+	 */
+	beforeNavigate((navegacion) => {
+		if (!recargaPendiente || !navegacion.to) return;
+		navegacion.cancel();
+		location.href = navegacion.to.url.href;
+	});
 
 	// Sin esto el navegador solo busca versión nueva al registrar el service worker,
 	// o sea al cargar la página: en la app instalada, que no se cierra nunca, un
