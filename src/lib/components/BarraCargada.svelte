@@ -133,7 +133,7 @@
 <svg
 	viewBox="0 0 {ancho} {H}"
 	preserveAspectRatio="xMidYMid meet"
-	class="gb-barra block h-28 w-full"
+	class="gb-barra block h-24 w-full"
 	aria-hidden="true"
 >
 	<defs>
