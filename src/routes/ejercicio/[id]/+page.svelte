@@ -241,12 +241,24 @@
 	// Ajustes, historial (PR) y nota como stores legibles con `$` (ver $lib/live).
 	const ajustesStore = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
 	const ajustes = $derived($ajustesStore);
+	/**
+	 * Las preferencias que disparan trabajo se derivan de a UNA, y lo que las consume lee
+	 * el escalar y nunca `ajustes` entero.
+	 *
+	 * `ajustesObs()` es un liveQuery que normaliza: cada emisión es un objeto NUEVO aunque
+	 * no haya cambiado ningún campo. Un efecto que lee `ajustes.unidad` depende del objeto,
+	 * así que se re-corría con CUALQUIER preferencia que se guardara —y guardar el descanso
+	 * con la rueda escribe una vez por gesto. Cada re-corrida volvía a poner
+	 * `cargandoSeries`, así que la lista de series se colapsaba a "Preparando…" y la tarjeta
+	 * de récord se desmontaba mientras el dedo giraba. Derivando el escalar, la igualdad de
+	 * Svelte corta la propagación cuando el valor no cambió.
+	 */
+	const unidad = $derived(ajustes.unidad);
+	const metrica = $derived(metricaConfigurada(ajustes, $page.params.id!));
+	const pantallaEncendida = $derived(ajustes.ejercicioPantallaEncendida);
 	// El historial se recalcula al cambiar de ejercicio o de métrica; el `$` re-suscribe solo.
 	const historial = $derived(
-		fromLiveQuery(
-			historialObs($page.params.id!, metricaConfigurada(ajustes, $page.params.id!), ajustes.unidad),
-			[] as MejorSet[]
-		)
+		fromLiveQuery(historialObs($page.params.id!, metrica, unidad), [] as MejorSet[])
 	);
 	const puntos = $derived($historial);
 	const notaStore = $derived(fromLiveQuery(notaObs($page.params.id!), undefined));
@@ -311,7 +323,7 @@
 		anteriores = [];
 		anterioresFecha = null;
 		(async () => {
-			const preparacion = await prepararEjercicioSesion(dId, exId, fecha, ajustes.unidad);
+			const preparacion = await prepararEjercicioSesion(dId, exId, fecha, unidad);
 			if (cancelado) return;
 			if (!preparacion.disponible) {
 				sets = [];
@@ -322,7 +334,7 @@
 			}
 			anteriores = preparacion.anteriores;
 			anterioresFecha = preparacion.anterioresFecha;
-			sub = ejercicioSesionObs(dId, exId, fecha, ajustes.unidad).subscribe((estado) => {
+			sub = ejercicioSesionObs(dId, exId, fecha, unidad).subscribe((estado) => {
 				if (cancelado) return;
 				prCelebrado = estado.prCelebrado;
 				cargandoSeries = false;
@@ -358,7 +370,7 @@
 	 */
 	const pantallaEjercicio = new WakeLockSeguro();
 	$effect(() => {
-		if (!diaId || !ajustes.ejercicioPantallaEncendida) return;
+		if (!diaId || !pantallaEncendida) return;
 		void pantallaEjercicio.activar();
 		return () => pantallaEjercicio.desactivar();
 	});
@@ -402,12 +414,10 @@
 		});
 	});
 	const completo = $derived(sets.length > 0 && sets.every(serieCompleta));
-	const unidad = $derived(ajustes.unidad);
 	// Los logros tienen su propio canal: la alarma de descanso es funcional y esto
 	// es celebratorio, así que se puede querer una sin la otra.
 	const sonidoActivo = $derived(ajustes.sonido && ajustes.sonidoLogros);
 	const vibracionActiva = $derived(ajustes.vibracion ?? true);
-	const metrica = $derived(metricaConfigurada(ajustes, $page.params.id!));
 	const metricaOverride = $derived(ajustes.metricasPrEjercicio?.[$page.params.id!]);
 	const modo = $derived<ModoPr>(modoEjercicioActivo(puntos, sets));
 	const metricaEfectiva = $derived<MetricaEfectiva>(metricaEfectivaEjercicio(modo, metrica));
@@ -1283,7 +1293,7 @@
 					<Progreso
 						exerciseId={$page.params.id!}
 						glow={g.glow}
-						unidad={ajustes.unidad}
+						{unidad}
 						{metrica}
 						{pasoPeso}
 						maquinaPlacas={!!ej.maquinaPlacas}
