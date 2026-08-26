@@ -14,10 +14,12 @@ test('la calculadora vive fuera de la sesión, propone alternativas y recuerda l
 	// La cifra y su unidad viven en el mismo párrafo, sin espacio entre medio.
 	await expect(page.getByText('20kg', { exact: true })).toBeVisible();
 
-	// El dibujo es visual: quien lo lee en voz alta es la lista de discos de al lado.
-	// Ahi tambien se nombra la barra: es el unico peso que el grafico no puede decir solo,
-	// porque el disco se identifica por su color y su numero y la barra no.
-	await expect(page.getByText('Barra 20 · Discos: 20')).toBeVisible();
+	// Debajo del dibujo se nombra la barra y nada mas: es el unico peso que el grafico no
+	// puede decir solo, porque cada disco lleva su color y su numero encima.
+	await expect(page.getByText('Barra 20', { exact: true })).toBeVisible();
+	// La combinacion salio de la pantalla pero no del DOM: el SVG es `aria-hidden`, asi
+	// que este texto es lo unico que narra la carga a un lector de pantalla.
+	await expect(page.getByText('Discos por lado: 20')).toBeAttached();
 
 	// El rótulo dice qué pesos hay, no cuántos discos se van a usar.
 	await expect(page.getByRole('heading', { name: 'Pesos de disco que tenés' })).toBeVisible();
@@ -39,7 +41,7 @@ test('la calculadora vive fuera de la sesión, propone alternativas y recuerda l
 	await expect(page.getByText('Sin carga exacta · lo más cerca')).toBeVisible();
 	await expect(page.getByText('60kg', { exact: true })).toBeVisible();
 	await expect(page.getByText('Menos que el objetivo')).toBeVisible();
-	await expect(page.getByText('Barra 20 · Por lado: 20')).toBeVisible();
+	await expect(page.getByText('Barra 20', { exact: true })).toBeVisible();
 
 	// La otra opción sigue estando, como alternativa y sin competir con la cifra.
 	await expect(page.getByText('O más', { exact: true })).toBeVisible();
