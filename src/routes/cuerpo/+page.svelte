@@ -538,9 +538,21 @@
 				</div>
 
 				<!--
-				Contra qué se compara, cuánto te corrés y a qué velocidad. En mantenimiento la fila
-				entera se va, porque las tres son degeneradas: el objetivo *es* el mantenimiento,
-				la diferencia es cero y el ritmo también.
+				Contra qué se compara, cuánto te corrés y a qué velocidad. La fila va **siempre**,
+				también en mantenimiento.
+
+				Antes ahí se escondía entera, porque las tres celdas son degeneradas: el objetivo
+				*es* el mantenimiento, la diferencia es cero y el ritmo también. El costo de
+				esconderla se ve al usar el riel: medido, cuatro posiciones dan 577 px de tarjeta y
+				mantenimiento daba 531 — 46 px de salto y la tarjeta bajando 22 justo cuando el
+				dedo está recorriendo las muescas. Es el mismo defecto que la grilla apilada de más
+				abajo está para evitar, sobreviviendo en una sola posición.
+
+				Y los ceros no son relleno: "diferencia 0" y "ritmo 0,00" son exactamente lo que se
+				elige al mantener, dicho en las mismas dos celdas donde se lee cuánto te corrés en
+				los otros cuatro. Lo único que se repite es el mantenimiento, que ahí es igual a la
+				cifra grande — un número duplicado en un estado, a cambio de que el control no se
+				mueva mientras lo usás.
 
 				**La diferencia es la celda que reemplazó al riel de banda**, que dibujaba dónde
 				caía el objetivo contra la banda del mantenimiento en 5 px, con una leyenda de tres
@@ -550,39 +562,37 @@
 				La banda no se perdió: esa misma frase la da con números ("2 de cada 3 personas
 				están entre X e Y"), que es más de lo que se podía leer del gráfico.
 			-->
-				{#if vista?.meta !== 'mantener'}
-					<div class="mt-3 grid grid-cols-3 gap-2">
-						<div class="min-w-0">
-							<p
-								class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
-								style="color: var(--muted)"
-							>
-								Mantenimiento
-							</p>
-							<p class="cifra text-xl">
-								{formatoVolumen($objetivo.tdeeKcal)}<span class="cifra-u">kcal</span>
-							</p>
-						</div>
-						<div class="min-w-0">
-							<p
-								class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
-								style="color: var(--muted)"
-							>
-								Diferencia
-							</p>
-							<p class="cifra text-xl">{diferenciaTexto}<span class="cifra-u">kcal</span></p>
-						</div>
-						<div class="min-w-0">
-							<p
-								class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
-								style="color: var(--muted)"
-							>
-								Ritmo
-							</p>
-							<p class="cifra text-xl">{ritmoTexto}<span class="cifra-u">{unidad}/sem</span></p>
-						</div>
+				<div class="mt-3 grid grid-cols-3 gap-2">
+					<div class="min-w-0">
+						<p
+							class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
+							style="color: var(--muted)"
+						>
+							Mantenimiento
+						</p>
+						<p class="cifra text-xl">
+							{formatoVolumen($objetivo.tdeeKcal)}<span class="cifra-u">kcal</span>
+						</p>
 					</div>
-				{/if}
+					<div class="min-w-0">
+						<p
+							class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
+							style="color: var(--muted)"
+						>
+							Diferencia
+						</p>
+						<p class="cifra text-xl">{diferenciaTexto}<span class="cifra-u">kcal</span></p>
+					</div>
+					<div class="min-w-0">
+						<p
+							class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
+							style="color: var(--muted)"
+						>
+							Ritmo
+						</p>
+						<p class="cifra text-xl">{ritmoTexto}<span class="cifra-u">{unidad}/sem</span></p>
+					</div>
+				</div>
 
 				<!--
 					Las dos caras del área de acción, apiladas en la misma celda de una grilla.

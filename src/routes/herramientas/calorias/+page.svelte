@@ -494,8 +494,13 @@
 
 				<!--
 				Mantenimiento, diferencia y ritmo: contra qué se compara, cuánto te corrés y a qué
-				velocidad. En mantenimiento la fila entera se va, porque las tres son degeneradas:
-				el objetivo *es* el mantenimiento, la diferencia es cero y el ritmo también.
+				velocidad. La fila va **siempre**, también en mantenimiento.
+
+				Antes ahí se escondía entera, porque las tres celdas son degeneradas. El costo se
+				ve al usar el riel: cuatro posiciones dan una altura de tarjeta y mantenimiento
+				daba 46 px menos, así que la tarjeta saltaba justo cuando el dedo está recorriendo
+				las muescas. Y los ceros no son relleno: "diferencia 0" y "ritmo 0,00" son
+				exactamente lo que se elige al mantener.
 
 				**La diferencia es la celda que reemplazó al riel de banda.** Ese riel dibujaba
 				dónde caía el objetivo contra la banda del mantenimiento, en 5 px y con una leyenda
@@ -512,39 +517,37 @@
 				`text-xl` y no `text-2xl` porque ahora son tres celdas y no dos: a 375 px cada una
 				tiene ~98 px y "−0,41kg/sem" no entra a 24 px.
 			-->
-				{#if botonElegido?.meta !== 'mantener'}
-					<div class="mt-3 grid grid-cols-3 gap-2">
-						<div class="min-w-0">
-							<p
-								class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
-								style="color: var(--muted)"
-							>
-								Mantenimiento
-							</p>
-							<p class="cifra text-xl">
-								{formatoVolumen(listo.tdee)}<span class="cifra-u">kcal</span>
-							</p>
-						</div>
-						<div class="min-w-0">
-							<p
-								class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
-								style="color: var(--muted)"
-							>
-								Diferencia
-							</p>
-							<p class="cifra text-xl">{diferenciaTexto}<span class="cifra-u">kcal</span></p>
-						</div>
-						<div class="min-w-0">
-							<p
-								class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
-								style="color: var(--muted)"
-							>
-								Ritmo
-							</p>
-							<p class="cifra text-xl">{ritmoTexto}<span class="cifra-u">{unidad}/sem</span></p>
-						</div>
+				<div class="mt-3 grid grid-cols-3 gap-2">
+					<div class="min-w-0">
+						<p
+							class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
+							style="color: var(--muted)"
+						>
+							Mantenimiento
+						</p>
+						<p class="cifra text-xl">
+							{formatoVolumen(listo.tdee)}<span class="cifra-u">kcal</span>
+						</p>
 					</div>
-				{/if}
+					<div class="min-w-0">
+						<p
+							class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
+							style="color: var(--muted)"
+						>
+							Diferencia
+						</p>
+						<p class="cifra text-xl">{diferenciaTexto}<span class="cifra-u">kcal</span></p>
+					</div>
+					<div class="min-w-0">
+						<p
+							class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
+							style="color: var(--muted)"
+						>
+							Ritmo
+						</p>
+						<p class="cifra text-xl">{ritmoTexto}<span class="cifra-u">{unidad}/sem</span></p>
+					</div>
+				</div>
 
 				<p class="mt-3 text-xs leading-relaxed" style="color: var(--muted)">
 					Tu mantenimiento estimado es {formatoVolumen(listo.tdee)} kcal. Con esta ecuación, 2 de cada
