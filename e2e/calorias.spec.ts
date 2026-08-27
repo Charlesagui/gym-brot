@@ -96,6 +96,88 @@ test('el resultado manda una sola cifra y dice de dónde sale', async ({ page })
 	await expect(page.getByText(/no una indicación\s+médica/)).toBeVisible();
 });
 
+test('el riel del resultado cambia el objetivo entero con un toque', async ({ page }) => {
+	await completarPerfilA(page);
+	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
+	await expect(page.getByText('2.440kcal')).toBeVisible();
+
+	// Las muescas llevan el nombre entero en su etiqueta accesible: adentro no entra, y
+	// "++" solo no le sirve a nadie que no vea la pantalla.
+	await page.getByRole('button', { name: 'Volumen agresivo' }).click();
+
+	// No cambia la cifra sola: cambian los macros, el ritmo y el rótulo de arriba. Eso es
+	// lo que el riel vino a mostrar y lo que los cinco botones del paso 4 no pueden.
+	await expect(page.getByText('3.340kcal')).toBeVisible();
+	// El nombre entero vive arriba de la cifra: en la muesca sólo entra la marca.
+	await expect(page.getByText('Volumen agresivo', { exact: true })).toBeVisible();
+	await expect(page.getByText('+0,41kg/sem')).toBeVisible();
+	await expect(page.getByText('131g')).toBeVisible(); // proteína, ya sin el 1,8 del déficit
+	await expect(page.getByText('495g')).toBeVisible(); // carbos
+
+	// Y viaja con su advertencia. Antes del riel este texto vivía sólo en el paso 4,
+	// porque al agresivo se llegaba tocándolo ahí; ahora se puede entrar en moderado y
+	// salir en agresivo sin pasar por esa pantalla.
+	await expect(page.getByText(/no te va a hacer ganar más músculo/)).toBeVisible();
+
+	// El mantenimiento no se mueve: es el mismo cuerpo mirando otro objetivo.
+	await expect(page.getByText('2.890kcal')).toBeVisible();
+});
+
+test('el riel se recorre arrastrando, y cada muesca es una parada', async ({ page }) => {
+	await completarPerfilA(page);
+	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
+
+	const agresivoBajar = await page.getByRole('button', { name: 'Déficit agresivo' }).boundingBox();
+	const agresivoSubir = await page.getByRole('button', { name: 'Volumen agresivo' }).boundingBox();
+	if (!agresivoBajar || !agresivoSubir) throw new Error('El riel no está en pantalla.');
+
+	// Un solo gesto de punta a punta: arrastrar es explorar, y tiene que aterrizar en la
+	// muesca de abajo del dedo, no en la que lo vio empezar.
+	await page.mouse.move(agresivoBajar.x + 10, agresivoBajar.y + agresivoBajar.height / 2);
+	await page.mouse.down();
+	await expect(page.getByText('2.210kcal')).toBeVisible();
+	await page.mouse.move(agresivoSubir.x + agresivoSubir.width / 2, agresivoSubir.y + 10, {
+		steps: 12
+	});
+	await page.mouse.up();
+
+	await expect(page.getByText('3.340kcal')).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Volumen agresivo' })).toHaveAttribute(
+		'aria-pressed',
+		'true'
+	);
+});
+
+test('moverse por el riel apaga el acuse de guardado', async ({ page }) => {
+	await completarPerfilA(page);
+	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
+	await page.getByRole('button', { name: 'Guardar como objetivo' }).click();
+	await expect(page.getByText('Guardado como tu objetivo')).toBeVisible();
+
+	// El cartel habla de lo que hay en la base; el riel cambia lo que hay en pantalla. Si
+	// el cartel sobrevive al movimiento, dice la verdad sobre una y miente sobre la otra.
+	await page.getByRole('button', { name: 'Déficit agresivo' }).click();
+	await expect(page.getByText('Guardado como tu objetivo')).toHaveCount(0);
+	await expect(page.getByRole('button', { name: 'Guardar como objetivo' })).toBeVisible();
+
+	// Y lo guardado sigue siendo lo guardado hasta que se vuelva a tocar el botón.
+	await page.goto('/cuerpo');
+	await expect(page.getByText('2.440kcal')).toBeVisible();
+});
+
+test('con una sola posición no hay riel que recorrer', async ({ page }) => {
+	await completarPerfilA(page);
+	await page.getByText('¿Algo de esto aplica?').click();
+	await page.getByRole('button', { name: 'Estoy embarazada o amamantando' }).click();
+	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
+
+	// Queda mantenimiento solo: un selector de una tecla es un adorno que promete opciones
+	// que no existen. Y el riel tampoco puede devolver lo que lo declarado retiró.
+	await expect(page.getByRole('group', { name: 'Cambiar de objetivo' })).toHaveCount(0);
+	await expect(page.getByRole('button', { name: 'Déficit agresivo' })).toHaveCount(0);
+	await expect(page.getByText('2.890kcal')).toBeVisible();
+});
+
 test('guarda el objetivo y lo recuerda al volver a entrar', async ({ page }) => {
 	await completarPerfilA(page);
 	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
@@ -199,7 +281,7 @@ test('cambiar de unidad no reinterpreta el peso guardado', async ({ page }) => {
 
 	// El peso vive en gramos: al pasar a libras cambia cómo se muestra, no cuánto pesa.
 	await page.goto('/herramientas/calorias');
-	await expect(page.getByRole('textbox', { name: 'Peso corporal en lb' })).toHaveValue('180.8');
+	await expect(page.getByRole('textbox', { name: 'Peso corporal en lb' })).toHaveValue('180,8');
 	await page.getByRole('button', { name: 'Continuar' }).click();
 	await page.getByRole('button', { name: 'Continuar' }).click();
 	await page.getByRole('button', { name: 'Continuar' }).click();
