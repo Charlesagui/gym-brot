@@ -1,8 +1,21 @@
 <script lang="ts">
 	import Icono from '$lib/components/Icono.svelte';
 	import RielBanda from '$lib/components/RielBanda.svelte';
+	import RielObjetivo, { type ParadaObjetivo } from '$lib/components/RielObjetivo.svelte';
 	import { calibrar, DIAS_VENTANA_MAX, estadoCalibracion, type Adherencia } from '$lib/calibracion';
-	import { bandas, macros, rotuloObjetivo } from '$lib/energia';
+	import {
+		bandas,
+		calcularMantenimiento,
+		calcularObjetivo,
+		macros,
+		OPCIONES_OBJETIVO,
+		ritmoDeOpcion,
+		rotuloObjetivo,
+		tonoObjetivo,
+		type Mantenimiento,
+		type Objetivo,
+		type OpcionObjetivo
+	} from '$lib/energia';
 	import { fraseProteina, frasesPara } from '$lib/frases';
 	import { hoyCalendarioLocal } from '$lib/fechas';
 	import { AJUSTES_DEFAULT, ajustesObs } from '$lib/extras';
@@ -10,6 +23,7 @@
 	import { fromLiveQuery } from '$lib/live';
 	import {
 		borrarObjetivos,
+		guardarObjetivo,
 		guardarRevision,
 		objetivoAnterior,
 		objetivoVigenteObs
@@ -29,9 +43,124 @@
 	const resumen = $derived(resumirPesoCorporal($pesos, $ajustes.metaPesoGramos));
 	const banda = $derived($objetivo ? bandas($objetivo.tdeeKcal, $objetivo.sepvKcal).banda68 : null);
 
+	// ===== Cambiar de objetivo desde acá =====
+
+	/**
+	 * El mantenimiento del objetivo guardado, recompuesto para poder calcular las otras
+	 * posiciones del riel.
+	 *
+	 * El `tdee` se **pisa** con el guardado en vez de recalcularse, y es lo único que hay
+	 * que entender de esta función: si el objetivo ya pasó por una revisión, su `tdeeKcal`
+	 * es el que salió de la balanza y no el que salió de la fórmula. Recalcular acá tiraría
+	 * esa corrección a la basura y devolvería a la persona al número que ya sabemos que
+	 * estaba mal. Es el mismo truco que hace `guardarRevision` con `conTdeeMedido`.
+	 */
+	const mantenimientoVigente = $derived.by<Mantenimiento | null>(() => {
+		if (!$objetivo) return null;
+		const m = calcularMantenimiento($objetivo.perfil);
+		if (m.estado !== 'calculado') return null;
+		return { ...m, tdee: $objetivo.tdeeKcal };
+	});
+
+	/** Cuál de las cinco posiciones es la que está guardada, si es alguna. */
+	const idVigente = $derived(
+		OPCIONES_OBJETIVO.find(
+			(o) => o.meta === $objetivo?.meta && o.nivel === ($objetivo?.nivel ?? null)
+		)?.id ?? null
+	);
+
+	/**
+	 * Qué posiciones se pueden cambiar acá, sin volver a preguntar nada.
+	 *
+	 * **La regla es que sólo se ofrece lo que la persona ya atravesó.** Las condiciones que
+	 * retiran objetivos —embarazo, un antecedente de trastorno alimentario— se declaran en
+	 * el asistente y **no se guardan en ninguna parte**, a propósito. Acá no existen, así
+	 * que la sección no tiene con qué saber si a esta persona el déficit se le retiró o
+	 * simplemente no lo eligió: las dos terminan con "mantenimiento" guardado y son
+	 * indistinguibles.
+	 *
+	 * Entonces se ofrece la dirección que ya está guardada —haberla elegido es prueba de
+	 * que se le ofreció— más mantenimiento, que `restricciones` no le niega a nadie nunca.
+	 * Cambiar de dirección sale por el botón de abajo, que lleva a donde vive la pregunta.
+	 *
+	 * Y lo que no se ofrece **no aparece**, ni siquiera apagado: una muesca gris que dice
+	 * "Déficit agresivo" y no se deja tocar sigue diciendo "esto existe y vos no llegás", y
+	 * con calorías eso empuja para el lado malo. Es la misma decisión que ya toma el paso 4
+	 * con el déficit bajo IMC 18,5.
+	 */
+	const posiciones = $derived.by(() => {
+		const m = mantenimientoVigente;
+		const metaGuardada = $objetivo?.meta;
+		if (!m || !metaGuardada) return [];
+		return OPCIONES_OBJETIVO.filter((o) => o.meta === 'mantener' || o.meta === metaGuardada)
+			.map((opcion) => ({
+				opcion,
+				resultado: calcularObjetivo(m, opcion.meta, ritmoDeOpcion(opcion))
+			}))
+			.flatMap(({ opcion, resultado }) =>
+				resultado.estado === 'calculado' ? [{ opcion, objetivo: resultado }] : []
+			);
+	});
+
+	/**
+	 * La posición que el dedo está mirando, o `null` si está mirando la guardada. Moverse
+	 * por el riel no escribe nada: cambia esta variable y nada más.
+	 */
+	let previsualizado = $state<string | null>(null);
+
+	/** Si el objetivo guardado cambia debajo nuestro, lo que se estaba mirando ya no vale. */
+	$effect(() => {
+		void $objetivo?.id;
+		previsualizado = null;
+	});
+
+	/**
+	 * Lo que la tarjeta muestra: la posición previsualizada si hay una, y si no la guardada.
+	 *
+	 * Existe para que la cifra, los macros, el ritmo y la banda salgan todos del mismo lugar.
+	 * Sin esto cada uno leería por su cuenta de `$objetivo` o de la previsualización, y la
+	 * primera vez que uno se olvidara la pantalla mostraría los macros de un objetivo arriba
+	 * de las calorías de otro.
+	 */
+	const vista = $derived.by(() => {
+		if (!$objetivo) return null;
+		const guardada = {
+			enPrevisualizacion: false,
+			opcion: null as OpcionObjetivo | null,
+			rotulo: rotuloObjetivo($objetivo.meta, $objetivo.nivel),
+			meta: $objetivo.meta,
+			objetivoKcal: $objetivo.objetivoKcal,
+			ritmoPctSemana: $objetivo.ritmoPctSemana,
+			avisos: [] as Objetivo['avisos']
+		};
+		// Volver con el dedo a la muesca guardada no es previsualizar: es cancelar.
+		if (!previsualizado || previsualizado === idVigente) return guardada;
+		const p = posiciones.find((x) => x.opcion.id === previsualizado);
+		if (!p) return guardada;
+		return {
+			enPrevisualizacion: true,
+			opcion: p.opcion,
+			rotulo: rotuloObjetivo(p.opcion.meta, p.opcion.nivel),
+			meta: p.opcion.meta,
+			objetivoKcal: p.objetivo.objetivoKcal,
+			ritmoPctSemana: p.objetivo.ritmoPctSemana,
+			avisos: p.objetivo.avisos
+		};
+	});
+
+	const paradas = $derived<ParadaObjetivo[]>(
+		posiciones.map(({ opcion }) => ({
+			id: opcion.id,
+			rotulo: rotuloObjetivo(opcion.meta, opcion.nivel),
+			marca: opcion.marca,
+			tono: tonoObjetivo(opcion.nivel),
+			disponible: true
+		}))
+	);
+
 	const ritmoTexto = $derived.by(() => {
-		if (!$objetivo) return '';
-		const kgSemana = ($objetivo.ritmoPctSemana / 100) * ($objetivo.perfil.pesoGramos / 1000);
+		if (!$objetivo || !vista) return '';
+		const kgSemana = (vista.ritmoPctSemana / 100) * ($objetivo.perfil.pesoGramos / 1000);
 		const visible = unidad === 'kg' ? kgSemana : kgSemana * KG_TO_LB;
 		const signo = visible > 0 ? '+' : visible < 0 ? '−' : '';
 		return `${signo}${Math.abs(visible).toFixed(2).replace('.', ',')}`;
@@ -98,11 +227,13 @@
 	 * asistente no pueden mostrar repartos distintos del mismo objetivo.
 	 */
 	const macrosVisibles = $derived.by(() => {
-		if (!$objetivo) return [];
+		if (!$objetivo || !vista) return [];
+		// De `vista` y no de `$objetivo`: mientras se recorre el riel los macros son los de
+		// la posición que se está mirando, que es justamente lo que se fue a mirar.
 		const { proteinaG, grasaG, carbosG } = macros(
 			$objetivo.perfil.pesoGramos / 1000,
-			$objetivo.objetivoKcal,
-			$objetivo.meta
+			vista.objetivoKcal,
+			vista.meta
 		);
 		return [
 			{ rotulo: 'Proteína', gramos: proteinaG },
@@ -110,6 +241,61 @@
 			{ rotulo: 'Carbos', gramos: carbosG }
 		];
 	});
+
+	let cambiando = $state(false);
+	let errorCambio = $state<string | null>(null);
+	/**
+	 * El acuse de que el cambio quedó escrito.
+	 *
+	 * Hace falta porque al confirmar no se ve pasar nada: la cifra, los macros y el rótulo
+	 * ya venían mostrando la posición nueva desde que el dedo la tocó, así que lo único que
+	 * cambia en pantalla es que los botones se intercambian. Sin una palabra, tocar
+	 * "Cambiar a…" se siente igual que no tocarlo.
+	 *
+	 * Dice lo mismo y se ve igual que el del asistente a propósito: es el mismo hecho.
+	 */
+	let cambioGuardado = $state(false);
+
+	/**
+	 * Guarda la posición que se está mirando como el objetivo nuevo.
+	 *
+	 * Dos decisiones que no se ven en el código:
+	 *
+	 * **No usa `calcularYGuardar`,** que sería lo obvio, porque esa función recalcula el
+	 * mantenimiento desde el perfil — y con eso perdería el `tdee` corregido con la
+	 * balanza. Va por `guardarObjetivo` con el mantenimiento ya recompuesto.
+	 *
+	 * **`calibradoDe` se hereda, no se apunta al objetivo que reemplaza.** Ese campo
+	 * significa "de acá salió el número calibrado", y lo usan el rótulo "revisado con tu
+	 * peso" y la frase que dice cuánto se corrigió. Un cambio de objetivo no es una
+	 * revisión —nadie se pesó— pero sí conserva el `tdee` que la revisión dejó, así que
+	 * apuntar al eslabón viejo mantiene las dos cosas ciertas: el número sigue siendo el
+	 * corregido, y la cadena sigue midiendo la corrección contra el mismo origen.
+	 */
+	async function aplicarCambio() {
+		const m = mantenimientoVigente;
+		const destino = vista?.opcion;
+		if (!$objetivo || !m || !destino) return;
+		const posicion = posiciones.find((p) => p.opcion.id === destino.id);
+		if (!posicion) return;
+
+		errorCambio = null;
+		cambiando = true;
+		try {
+			await guardarObjetivo({
+				perfil: $objetivo.perfil,
+				mantenimiento: m,
+				objetivo: posicion.objetivo,
+				calibradoDe: $objetivo.calibradoDe
+			});
+			previsualizado = null;
+			cambioGuardado = true;
+		} catch {
+			errorCambio = 'No pudimos guardar el objetivo nuevo. Recargá la app e intentá de nuevo.';
+		} finally {
+			cambiando = false;
+		}
+	}
 
 	const COLOR_TONO = {
 		neutro: 'var(--muted)',
@@ -269,14 +455,36 @@
 			class="gb-relieve rounded-2xl border border-white/10 p-4"
 			style="background: var(--surface)"
 		>
+			<!--
+				El riel manda sobre toda la tarjeta, así que va a la cabeza, igual que en el
+				resultado del asistente. Con una sola posición no hay nada que recorrer.
+			-->
+			{#if paradas.length > 1}
+				<div class="mb-3">
+					<RielObjetivo
+						{paradas}
+						valor={previsualizado ?? idVigente ?? ''}
+						vibracion={$ajustes.vibracion}
+						etiqueta="Cambiar de objetivo"
+						onElegir={(id) => {
+							previsualizado = id;
+							// Volver a recorrer deja atrás el acuse: ya no describe lo que se ve.
+							cambioGuardado = false;
+						}}
+					/>
+				</div>
+			{/if}
+
 			<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
-				{rotuloObjetivo($objetivo.meta, $objetivo.nivel)}{$objetivo.calibradoDe
-					? ' · revisado con tu peso'
-					: ''}
+				<!-- En previsualización el rótulo dice lo que se está mirando, no lo guardado; y
+				     "revisado con tu peso" habla del mantenimiento, que no cambia al recorrer. -->
+				{vista?.rotulo}{$objetivo.calibradoDe ? ' · revisado con tu peso' : ''}
 			</p>
 			<p class="mt-1 flex items-baseline">
 				<span class="cifra text-[4.2rem]"
-					>{formatoVolumen($objetivo.objetivoKcal)}<span class="cifra-u">kcal</span></span
+					>{formatoVolumen(vista?.objetivoKcal ?? $objetivo.objetivoKcal)}<span class="cifra-u"
+						>kcal</span
+					></span
 				>
 			</p>
 
@@ -284,7 +492,7 @@
 				<RielBanda
 					tdee={$objetivo.tdeeKcal}
 					sepv={$objetivo.sepvKcal}
-					objetivoKcal={$objetivo.objetivoKcal}
+					objetivoKcal={vista?.objetivoKcal ?? $objetivo.objetivoKcal}
 				/>
 			</div>
 
@@ -314,7 +522,7 @@
 			<!-- El mantenimiento es una cifra, no un dato de la prosa: es contra lo que se
 			     compara el objetivo y merece leerse de un vistazo. En mantenimiento la fila
 			     entera se va: el objetivo *es* el mantenimiento y el ritmo es cero. -->
-			{#if $objetivo.meta !== 'mantener'}
+			{#if vista?.meta !== 'mantener'}
 				<div class="mt-3 grid grid-cols-2 gap-2">
 					<div class="min-w-0">
 						<p
@@ -339,19 +547,83 @@
 				</div>
 			{/if}
 
-			<!-- La primera frase queda a la vista: es la única de la lista que puede pedir una
-			     acción. Las que siguen explican y viven abajo, plegadas. -->
-			{#if frases[0]}
-				<p class="mt-3 text-xs leading-relaxed" style="color: {COLOR_TONO[frases[0].tono]}">
-					{frases[0].texto}
+			{#if vista?.enPrevisualizacion}
+				<!--
+					Previsualizar no escribe nada, y por eso hay un botón: mientras el dedo recorre
+					el riel, esta tarjeta muestra un objetivo que la base no tiene. Guardar es un
+					acto aparte y con nombre propio.
+
+					Y dice lo que cuesta. Cada objetivo guardado es una fila nueva, y la ventana de
+					revisión arranca en su fecha: cambiar de objetivo pone el reloj en cero. Esa es
+					la razón de fondo por la que el riel no guarda solo — si lo hiciera, recorrerlo
+					reiniciaría la calibración en cada muesca y la sección nunca llegaría a decir
+					"hora de revisar".
+				-->
+				<button
+					onclick={aplicarCambio}
+					disabled={cambiando}
+					class="gb-relieve mt-4 min-h-14 w-full rounded-2xl text-base font-bold disabled:opacity-50"
+					style="background: var(--accent); color: var(--on-accent)"
+					>Cambiar a {vista.rotulo}</button
+				>
+				<button
+					onclick={() => (previsualizado = null)}
+					class="mt-2 min-h-12 w-full rounded-2xl text-sm font-bold"
+					style="background: var(--surface-3); color: var(--text)">Dejar el que tenía</button
+				>
+				<p class="mt-2 text-[0.7rem] leading-relaxed" style="color: var(--muted)">
+					{#if revision?.estado === 'listo'}
+						Ojo: tenés una revisión lista con tu peso de estos días. Si cambiás de objetivo ahora,
+						esa medición se pierde y la cuenta vuelve a empezar.
+					{:else}
+						Cambiar de objetivo reinicia la cuenta para revisarlo con tu peso.
+					{/if}
 				</p>
+			{:else}
+				{#if cambioGuardado}
+					<p
+						class="mt-4 flex min-h-14 items-center justify-center gap-2 rounded-2xl text-sm font-bold"
+						style="background: rgb(var(--exito) / .14); color: rgb(var(--exito))"
+						aria-live="polite"
+					>
+						<Icono nombre="hecha" tamano={18} />
+						Guardado como tu objetivo
+					</p>
+				{/if}
+
+				<!-- La primera frase queda a la vista: es la única de la lista que puede pedir una
+				     acción. Las que siguen explican y viven abajo, plegadas. -->
+				{#if frases[0]}
+					<p class="mt-3 text-xs leading-relaxed" style="color: {COLOR_TONO[frases[0].tono]}">
+						{frases[0].texto}
+					</p>
+				{/if}
+
+				<!--
+					Antes decía "Cambiar objetivo". El objetivo ahora se cambia con el riel de
+					arriba, así que lo que queda atrás de este botón es lo otro: los datos con los
+					que se calculó todo — y la pregunta de "¿Algo de esto aplica?", que es lo único
+					que puede devolver una dirección que el riel no ofrece.
+
+					Por eso entra en el paso 4 y no en el 1: desde ahí los tres pasos de datos están
+					contraídos y se abren de un toque, y además es donde vive esa pregunta.
+				-->
+				<a
+					href="/herramientas/calorias?paso=4"
+					class="mt-4 flex min-h-12 items-center justify-center rounded-2xl text-sm font-bold"
+					style="background: var(--surface-3); color: var(--text)">Cambiar mis datos</a
+				>
 			{/if}
 
-			<a
-				href="/herramientas/calorias"
-				class="mt-4 flex min-h-12 items-center justify-center rounded-2xl text-sm font-bold"
-				style="background: var(--surface-3); color: var(--text)">Cambiar objetivo</a
-			>
+			{#if errorCambio}
+				<p
+					class="mt-3 flex gap-2 rounded-xl border p-3 text-xs leading-relaxed"
+					style="border-color: rgb(var(--max) / .35); background: rgb(var(--max) / .08); color: rgb(var(--max))"
+				>
+					<Icono nombre="aviso" tamano={16} clase="mt-px shrink-0" />
+					<span>{errorCambio}</span>
+				</p>
+			{/if}
 
 			<!--
 				Todo lo que explica el número, plegado.

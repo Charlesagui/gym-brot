@@ -371,10 +371,93 @@ test('el objetivo guardado manda en la sección', async ({ page }) => {
 	await expect(page.getByText('309g')).toBeVisible();
 	await expect(page.getByText('2.890kcal')).toBeVisible();
 	await expect(page.getByText('−0,41kg/sem')).toBeVisible();
-	await expect(page.getByRole('link', { name: 'Cambiar objetivo' })).toBeVisible();
+	// El botón dejó de decir "Cambiar objetivo": eso ahora lo hace el riel de arriba, y lo
+	// que queda atrás del botón son los datos con los que se calculó todo.
+	await expect(page.getByRole('link', { name: 'Cambiar mis datos' })).toBeVisible();
 
 	// La banda sigue estando, plegada con el resto de la explicación.
 	await expect(page.getByText(/2 de cada 3 personas/)).toBeHidden();
 	await page.getByRole('group').filter({ hasText: '¿De dónde sale este número?' }).click();
 	await expect(page.getByText(/2 de cada 3 personas/)).toBeVisible();
+});
+
+/** Deja el perfil A guardado con déficit moderado y termina parado en Macros. */
+async function guardarYAbrirMacros(page: import('@playwright/test').Page) {
+	await completarPerfilA(page);
+	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
+	await page.getByRole('button', { name: 'Guardar como objetivo' }).click();
+	await expect(page.getByText('Guardado como tu objetivo')).toBeVisible();
+	await page.getByRole('link', { name: 'Macros' }).click();
+	await expect(page.getByText('2.440kcal')).toBeVisible();
+}
+
+test('la sección deja recorrer el objetivo, y recorrer no guarda', async ({ page }) => {
+	await guardarYAbrirMacros(page);
+
+	// Recorrer muestra el objetivo entero de la otra muesca, no sólo su cifra.
+	await page.getByRole('button', { name: 'Déficit agresivo' }).click();
+	await expect(page.getByText('2.210kcal')).toBeVisible();
+	await expect(page.getByText('61g')).toBeVisible(); // grasa, era 68
+	await expect(page.getByText('267g')).toBeVisible(); // carbos, eran 309
+	await expect(page.getByText('−0,62kg/sem')).toBeVisible();
+
+	// Pero no escribió nada: la base sigue teniendo el que estaba. Es la razón por la que
+	// el riel no guarda solo — cada guardado reinicia la ventana de calibración.
+	await page.reload();
+	await expect(page.getByText('2.440kcal')).toBeVisible();
+
+	// Y volver con el dedo a la muesca guardada cancela, sin pasar por el botón.
+	await page.getByRole('button', { name: 'Déficit agresivo' }).click();
+	await expect(page.getByRole('button', { name: 'Cambiar a Déficit agresivo' })).toBeVisible();
+	await page.getByRole('button', { name: 'Déficit moderado' }).click();
+	await expect(page.getByRole('button', { name: /^Cambiar a/ })).toHaveCount(0);
+	await expect(page.getByRole('link', { name: 'Cambiar mis datos' })).toBeVisible();
+});
+
+test('confirmar el cambio guarda el objetivo nuevo y avisa qué cuesta', async ({ page }) => {
+	await guardarYAbrirMacros(page);
+
+	await page.getByRole('button', { name: 'Déficit agresivo' }).click();
+	// Guardar es un acto aparte y dice lo que cuesta antes de tocarlo.
+	await expect(page.getByText(/reinicia la cuenta para revisarlo con tu peso/)).toBeVisible();
+	await page.getByRole('button', { name: 'Cambiar a Déficit agresivo' }).click();
+
+	// El acuse es lo único que se mueve al confirmar: la cifra y los macros ya venían
+	// mostrando esta posición desde que el dedo la tocó. Sin él, tocar "Cambiar a…" se
+	// siente igual que no tocarlo — y esperar acá es esperar a la escritura de verdad,
+	// no a un texto que ya estaba en pantalla antes de guardar.
+	await expect(page.getByText('Guardado como tu objetivo')).toBeVisible();
+	await expect(page.getByText('Déficit agresivo', { exact: true })).toBeVisible();
+	await expect(page.getByText('2.210kcal')).toBeVisible();
+
+	// Y ahora sí quedó escrito.
+	await page.reload();
+	await expect(page.getByText('2.210kcal')).toBeVisible();
+	await expect(page.getByText('2.440kcal')).toHaveCount(0);
+});
+
+test('la sección no ofrece una dirección que la persona no atravesó', async ({ page }) => {
+	await guardarYAbrirMacros(page);
+
+	// Con déficit guardado, el riel ofrece los dos déficits y mantenimiento. El volumen no
+	// aparece —ni apagado—: la pregunta que retira objetivos vive en el asistente y no se
+	// guarda, así que la sección no tiene con qué saber si acá corresponde ofrecerlo.
+	await expect(page.getByRole('button', { name: 'Déficit agresivo' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Mantenimiento' })).toBeVisible();
+	await expect(page.getByRole('button', { name: /^Volumen/ })).toHaveCount(0);
+});
+
+test('cambiar mis datos entra directo donde se elige el objetivo', async ({ page }) => {
+	await guardarYAbrirMacros(page);
+
+	// Cae en el paso 4 y no en el 1: desde ahí los datos están contraídos a un toque, y es
+	// donde vive la pregunta que puede devolver una dirección que el riel no ofrece.
+	await page.getByRole('link', { name: 'Cambiar mis datos' }).click();
+	await expect(page.getByText('4 de 4')).toBeVisible();
+	await expect(page.getByText('¿Algo de esto aplica?')).toBeVisible();
+	await expect(page.getByRole('button', { name: /Volumen agresivo/ })).toBeVisible();
+
+	// Y los pasos de datos se abren de un toque desde ahí.
+	await page.getByRole('button', { name: /32 a · 178 cm/ }).click();
+	await expect(page.getByText('1 de 4')).toBeVisible();
 });
