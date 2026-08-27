@@ -1,18 +1,19 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import { page } from '$app/stores';
 	import Icono from '$lib/components/Icono.svelte';
 	import RielBanda from '$lib/components/RielBanda.svelte';
-	import RielObjetivo, {
-		type ParadaObjetivo,
-		type TonoObjetivo
-	} from '$lib/components/RielObjetivo.svelte';
+	import RielObjetivo, { type ParadaObjetivo } from '$lib/components/RielObjetivo.svelte';
 	import Stepper from '$lib/components/Stepper.svelte';
 	import {
 		calcularMantenimiento,
 		calcularObjetivo,
 		macros,
+		OPCIONES_OBJETIVO,
 		restricciones,
 		ritmosDisponibles,
+		rotuloObjetivo,
+		tonoObjetivo,
 		type AvisoEnergia,
 		type Condicion,
 		type Densidad,
@@ -24,7 +25,8 @@
 		type Objetivo,
 		type Ocupacion,
 		type BandaPasos,
-		type PerfilEnergia
+		type PerfilEnergia,
+		type TonoObjetivo
 	} from '$lib/energia';
 	import { AJUSTES_DEFAULT, ajustesObs } from '$lib/extras';
 	import { formatoNumero, formatoVolumen } from '$lib/formato';
@@ -71,62 +73,6 @@
 		{ id: 'circuito', rotulo: 'Casi sin descanso, circuitos', corto: 'Circuitos' }
 	];
 
-	/**
-	 * Los cinco de siempre. El orden es el de la conversación: bajar, quedarse, subir —
-	 * y también el del riel, que por eso puede recorrerlos con el dedo sin reordenar nada.
-	 *
-	 * `marca` es lo que entra en una muesca de ~60 px. El nombre entero no entra y tampoco
-	 * hace falta: arriba de la cifra ya está, y al lector de pantalla le llega por
-	 * `aria-label`. El signo es el menos tipográfico (−), el mismo que usa el ritmo.
-	 */
-	const OBJETIVOS: Array<{
-		id: string;
-		rotulo: string;
-		marca: string;
-		meta: Meta;
-		nivel: 'moderado' | 'agresivo' | null;
-	}> = [
-		{
-			id: 'bajar-agresivo',
-			rotulo: 'Déficit agresivo',
-			marca: '−−',
-			meta: 'bajar',
-			nivel: 'agresivo'
-		},
-		{
-			id: 'bajar-moderado',
-			rotulo: 'Déficit moderado',
-			marca: '−',
-			meta: 'bajar',
-			nivel: 'moderado'
-		},
-		{ id: 'mantener', rotulo: 'Mantenimiento', marca: '=', meta: 'mantener', nivel: null },
-		{
-			id: 'subir-moderado',
-			rotulo: 'Volumen moderado',
-			marca: '+',
-			meta: 'subir',
-			nivel: 'moderado'
-		},
-		{
-			id: 'subir-agresivo',
-			rotulo: 'Volumen agresivo',
-			marca: '++',
-			meta: 'subir',
-			nivel: 'agresivo'
-		}
-	];
-
-	/**
-	 * El tono es el nivel, y por eso se deriva en vez de escribirse en la tabla: son la
-	 * misma información y dos copias se despegan. Tres tonos y no cinco a propósito —
-	 * el color dice cuánto empuja el objetivo, no cuál de los cinco es.
-	 */
-	function tonoDe(nivel: 'moderado' | 'agresivo' | null): TonoObjetivo {
-		if (nivel === null) return 'calmo';
-		return nivel === 'moderado' ? 'normal' : 'fuerte';
-	}
-
 	const TEXTO_AVISO: Record<MotivoAviso, string> = {
 		'sobre-tope-imc':
 			'Con tu peso actual este ritmo es más rápido de lo que conviene: vas a perder músculo junto con la grasa.',
@@ -135,8 +81,21 @@
 		'grasa-de-mas': 'Subir más rápido no te va a hacer ganar más músculo, solo más grasa.'
 	};
 
+	/**
+	 * `?paso=4` abre el asistente directo en la elección de objetivo.
+	 *
+	 * Existe para una sola cosa: el riel de la sección no puede ofrecer un objetivo de otra
+	 * dirección sin volver a hacer la pregunta de "¿Algo de esto aplica?", que es lo único
+	 * que retira el déficit y que no se guarda en ninguna parte. En vez de esconder la
+	 * opción, la sección manda acá, que es donde la pregunta vive.
+	 *
+	 * Se lee una vez y no de forma reactiva: es de dónde arranca el asistente, no un estado
+	 * que la URL sigue mandando. Después el usuario navega los pasos y la URL no lo persigue.
+	 */
+	const pasoInicial = $page.url.searchParams.get('paso') === '4' ? 4 : 1;
+
 	// --- estado del asistente ---
-	let paso = $state<1 | 2 | 3 | 4>(1);
+	let paso = $state<1 | 2 | 3 | 4>(pasoInicial);
 	let mostrandoResultado = $state(false);
 	let guardado = $state(false);
 	let errorGuardado = $state<string | null>(null);
@@ -275,10 +234,16 @@
 
 	const botones = $derived<Boton[]>(
 		listo && limites
-			? OBJETIVOS.filter(({ meta }) => limites.metas.includes(meta)).map(
-					({ id, rotulo, marca, meta, nivel }) => {
+			? OPCIONES_OBJETIVO.filter(({ meta }) => limites.metas.includes(meta)).map(
+					({ id, marca, meta, nivel }) => {
 						// Lo que la posición es antes de saber cuánto da: identidad, no resultado.
-						const base = { id, rotulo, marca, tono: tonoDe(nivel), meta };
+						const base = {
+							id,
+							rotulo: rotuloObjetivo(meta, nivel),
+							marca,
+							tono: tonoObjetivo(nivel),
+							meta
+						};
 
 						if (meta === 'mantener') {
 							const r = calcularObjetivo(listo, 'mantener', 0);
@@ -636,10 +601,21 @@
 					style="background: var(--accent); color: var(--on-accent)">Guardar como objetivo</button
 				>
 			{/if}
+			<!--
+				Antes decía "Cambiar objetivo" y llevaba al paso 4, porque el paso 4 era el único
+				lugar donde se cambiaba el objetivo. Ahora el objetivo se cambia acá arriba con
+				el riel, y lo que quedó atrás del botón es otra cosa: los datos con los que se
+				calculó todo. El rótulo dice eso, que es lo que el botón hace.
+
+				Sigue llevando al paso 4 y no al 1: desde el 4 los tres pasos anteriores están
+				contraídos y se abren de un toque, mientras que desde el 1 los que siguen todavía
+				no existen. Es el punto del asistente desde donde se llega a todo lo demás — y
+				también donde vive "¿Algo de esto aplica?".
+			-->
 			<button
 				onclick={() => abrir(4)}
 				class="min-h-12 rounded-2xl text-sm font-bold"
-				style="background: var(--surface-3); color: var(--text)">Cambiar objetivo</button
+				style="background: var(--surface-3); color: var(--text)">Cambiar mis datos</button
 			>
 		</div>
 	{:else}

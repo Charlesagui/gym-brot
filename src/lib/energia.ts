@@ -567,6 +567,58 @@ export function rotuloObjetivo(meta: Meta, nivel: NivelRitmo | null): string {
 	return `${direccion} ${nivel ?? 'a medida'}`;
 }
 
+/**
+ * Cuánto empuja una opción, que es lo único que el color tiene permitido decir. Tres
+ * tonos y no cinco a propósito: déficit agresivo y volumen agresivo comparten el naranja
+ * porque comparten la advertencia, no porque sean lo mismo.
+ */
+export type TonoObjetivo = 'calmo' | 'normal' | 'fuerte';
+
+export interface OpcionObjetivo {
+	id: string;
+	/** Lo que entra en una muesca de riel: dos caracteres que se leen como escala. */
+	marca: string;
+	meta: Meta;
+	nivel: NivelRitmo | null;
+}
+
+/**
+ * Las cinco posiciones, en el orden de la conversación: bajar, quedarse, subir — que es
+ * también el del riel, y por eso se lo puede recorrer con el dedo sin reordenar nada.
+ *
+ * Viven acá por la misma razón que `rotuloObjetivo`: las comparten el asistente y la
+ * sección, y dos copias de esta tabla es la forma más fácil de que una pantalla ofrezca
+ * un objetivo que la otra no. El rótulo **no** está en la tabla justamente por eso:
+ * `rotuloObjetivo(meta, nivel)` ya lo arma, y escribirlo acá sería la tercera copia.
+ *
+ * La marca sí, porque es arbitraria: el signo es el menos tipográfico (−), el mismo que
+ * usa el ritmo, y no el guion del teclado.
+ */
+export const OPCIONES_OBJETIVO: readonly OpcionObjetivo[] = [
+	{ id: 'bajar-agresivo', marca: '−−', meta: 'bajar', nivel: 'agresivo' },
+	{ id: 'bajar-moderado', marca: '−', meta: 'bajar', nivel: 'moderado' },
+	{ id: 'mantener', marca: '=', meta: 'mantener', nivel: null },
+	{ id: 'subir-moderado', marca: '+', meta: 'subir', nivel: 'moderado' },
+	{ id: 'subir-agresivo', marca: '++', meta: 'subir', nivel: 'agresivo' }
+];
+
+/** El tono es el nivel: son la misma información y dos copias se despegan. */
+export function tonoObjetivo(nivel: NivelRitmo | null): TonoObjetivo {
+	if (nivel === null) return 'calmo';
+	return nivel === 'moderado' ? 'normal' : 'fuerte';
+}
+
+/**
+ * El ritmo canónico de una opción, que es el que hay que pasarle a `calcularObjetivo` y
+ * el que hay que guardar. Sale de la tabla y no del cálculo: el ritmo que devuelve
+ * `calcularObjetivo` puede venir movido por el piso de ingesta, y guardar ése deja al
+ * objetivo sin nivel —rotulado "a medida"— aunque se haya tocado uno de los cinco.
+ */
+export function ritmoDeOpcion(opcion: OpcionObjetivo): number {
+	if (opcion.meta === 'mantener' || opcion.nivel === null) return 0;
+	return RITMOS[opcion.meta === 'bajar' ? 'bajar' : 'subir'][opcion.nivel];
+}
+
 export type MotivoAviso =
 	/** El ritmo supera lo que tolera esa composición corporal. El más serio de los tres. */
 	| 'sobre-tope-imc'

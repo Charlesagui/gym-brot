@@ -1,10 +1,5 @@
 <script module lang="ts">
-	/**
-	 * Cuánto empuja una posición, que es lo único que el color tiene permitido decir.
-	 * No es una escala de cinco tonos a propósito: déficit agresivo y volumen agresivo
-	 * comparten el naranja porque comparten la advertencia, no porque sean lo mismo.
-	 */
-	export type TonoObjetivo = 'calmo' | 'normal' | 'fuerte';
+	import type { TonoObjetivo } from '$lib/energia';
 
 	export interface ParadaObjetivo {
 		id: string;
