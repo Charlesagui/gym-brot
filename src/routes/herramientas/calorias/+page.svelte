@@ -406,7 +406,9 @@
 	}
 </script>
 
-<main class="gb-page glow-bg min-h-[calc(100dvh-4rem)] px-4 pb-8 pt-3">
+<main
+	class="gb-page glow-bg flex min-h-[calc(100dvh-4rem-env(safe-area-inset-bottom,0px))] flex-col px-4 pb-8 pt-3"
+>
 	<header class="mb-3 flex min-h-10 items-center justify-between gap-3">
 		<h1 class="text-xl font-extrabold">Tu objetivo</h1>
 		{#if !mostrandoResultado}
@@ -555,7 +557,10 @@
 			<p class="mt-3 text-xs font-bold" style="color: rgb(var(--max))">{errorGuardado}</p>
 		{/if}
 
-		<div class="mt-4 flex flex-col gap-2">
+		<!-- Las acciones se van al fondo: `main` tiene alto mínimo de viewport, así que con
+		     contenido corto quedaba un pozo muerto abajo. Ahora el sobrante queda arriba de
+		     los botones y el primario cae bajo el pulgar. Con contenido largo vale cero. -->
+		<div class="mt-auto flex flex-col gap-2 pt-4">
 			{#if guardado}
 				<p
 					class="flex min-h-14 items-center justify-center gap-2 rounded-2xl text-sm font-bold"
