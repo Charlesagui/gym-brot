@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { apagarDescanso } from './descanso';
 
 /** Lleva la cinta hasta un valor: PageUp/PageDown mueven 0,5 y las flechas 0,1. */
 async function mover(cinta: import('@playwright/test').Locator, destino: number) {
@@ -24,14 +25,14 @@ test('peso corporal conserva el valor canónico al alternar kg y lb', async ({ p
 	// que es lo que permite manejarla desde un test.
 	const cinta = registro.getByRole('slider', { name: 'Peso en kg' });
 	await mover(cinta, 80.5);
-	await expect(cinta).toHaveAttribute('aria-valuetext', '80.5 kg');
+	await expect(cinta).toHaveAttribute('aria-valuetext', '80,5 kg');
 	await registro.getByRole('button', { name: 'Guardar' }).click();
 	await expect(page.getByRole('status')).toHaveText('Medición guardada.');
-	await expect(page.getByText('80.5 kg', { exact: true }).first()).toBeVisible();
+	await expect(page.getByText('80,5 kg', { exact: true }).first()).toBeVisible();
 	// El peso se mudó de la portada a la sección Macros, donde vive junto al objetivo
 	// de calorías: la portada volvió a ser solo las rutinas.
 	await page.goto('/cuerpo');
-	await expect(page.getByText('80.5kg')).toBeVisible();
+	await expect(page.getByText('80,5kg')).toBeVisible();
 	await expect(page.getByText('Sin mediciones todavía')).toHaveCount(0);
 	await page.goto('/peso');
 
@@ -46,7 +47,7 @@ test('peso corporal conserva el valor canónico al alternar kg y lb', async ({ p
 	await unidadLb.click();
 	await expect(unidadLb).toHaveAttribute('aria-pressed', 'true');
 	await page.goto('/peso');
-	await expect(page.getByText('177.5 lb', { exact: true }).first()).toBeVisible();
+	await expect(page.getByText('177,5 lb', { exact: true }).first()).toBeVisible();
 	await expect(
 		page.locator('details').filter({ hasText: 'Meta opcional' }).locator('summary')
 	).toContainText('172 lb');
@@ -56,7 +57,7 @@ test('peso corporal conserva el valor canónico al alternar kg y lb', async ({ p
 	await unidadKg.click();
 	await expect(unidadKg).toHaveAttribute('aria-pressed', 'true');
 	await page.goto('/peso');
-	await expect(page.getByText('80.5 kg', { exact: true }).first()).toBeVisible();
+	await expect(page.getByText('80,5 kg', { exact: true }).first()).toBeVisible();
 	const rango7Dias = page.getByRole('button', { name: '7 días' });
 	await rango7Dias.click();
 	await expect(rango7Dias).toHaveAttribute('aria-pressed', 'true');
@@ -81,7 +82,7 @@ test('el RIR es opcional y se registra por serie', async ({ page }) => {
 	await expect(page.getByRole('button', { name: '+ RIR' }).first()).toBeVisible();
 	await page.getByRole('button', { name: '+ RIR' }).first().click();
 	await page.getByLabel('RIR de la serie 1').selectOption('2');
-	await page.getByRole('button', { name: 'Sin descanso en este ejercicio' }).click();
+	await apagarDescanso(page);
 	await page.getByRole('textbox', { name: 'Peso de la serie 1 en kg' }).fill('50');
 	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
 	await page.getByRole('button', { name: 'Marcar serie 1' }).click();
@@ -100,7 +101,7 @@ test('el mapa corporal comparte datos con la lista y responde a borrar historial
 	await page.emulateMedia({ reducedMotion: 'reduce' });
 	await page.setViewportSize({ width: 320, height: 740 });
 	await page.goto('/ejercicio/prensa-pierna-45?dia=dia-piernas&fecha=2026-08-24');
-	await page.getByRole('button', { name: 'Sin descanso en este ejercicio' }).click();
+	await apagarDescanso(page);
 	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
 	await page.getByRole('button', { name: 'Marcar serie 1' }).click();
 

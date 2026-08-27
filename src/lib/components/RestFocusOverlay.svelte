@@ -7,29 +7,48 @@
 	import { modal } from '$lib/modal';
 	import RuedaTiempo from './RuedaTiempo.svelte';
 	import Icono from './Icono.svelte';
-	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
+	import { ajustesObs, AJUSTES_DEFAULT, setDescansoEjercicio } from '$lib/extras';
 	import { fromLiveQuery } from '$lib/live';
+	import { RUEDA_DESCANSO, segundosAMinutos } from '$lib/descanso-preset';
 
 	const ajustes = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
 	/** La rueda solo aparece si la pedís: el descanso normal no necesita que la toques. */
 	let mostrarRueda = $state(false);
+	/** Un guardado que falló. La duración de ESTA vez ya se aplicó igual. */
+	let errorGuardado = $state<string | null>(null);
 	/**
-	 * Lo que falta según la rueda mientras la estás girando, o `null` si no la estás
-	 * tocando. Sin esto la rueda mostraba `descanso.restoSeg`, que baja solo cada medio
-	 * segundo: el número se caía debajo del dedo y cinco detents de +15 no daban +75.
+	 * La duración según la rueda mientras la estás girando, o `null` si no la estás
+	 * tocando. Sin esto la rueda mostraba un valor que se mueve solo y el número se caía
+	 * debajo del dedo: cinco detents de +15 no daban +75.
 	 */
-	let restoElegido = $state<number | null>(null);
-	const segundosRueda = $derived(restoElegido ?? descanso.restoSeg);
+	let duracionElegida = $state<number | null>(null);
+	const segundosRueda = $derived(duracionElegida ?? descanso.duracionSeg);
 
-	/** Girar sólo mueve el número; el cronómetro no se toca hasta soltar. */
-	function girarResto(segundos: number) {
-		restoElegido = segundos;
+	/**
+	 * La rueda dice cuánto DURA el descanso, y eso se guarda en el ejercicio.
+	 *
+	 * Antes editaba lo que faltaba y no persistía nada: era el único lugar donde se podía
+	 * cambiar el descanso mientras descansabas, pero al día siguiente arrancabas de cero.
+	 * Ahora se elige acá —donde el número está a la vista— y queda. Estirar "un poco más"
+	 * es otra cosa y tiene su propio botón (`+30 s`), que no toca la duración elegida.
+	 */
+	function girarDuracion(segundos: number) {
+		duracionElegida = segundos;
 	}
 
-	/** Soltó: `ajustarResto` cuenta desde AHORA, que es justo lo que la rueda promete. */
-	function soltarResto(segundos: number) {
-		descanso.ajustarResto(segundos);
-		restoElegido = null;
+	async function soltarDuracion(segundos: number) {
+		duracionElegida = null;
+		errorGuardado = null;
+		descanso.ajustarFin(segundosAMinutos(segundos));
+		// El descanso es global: se guarda en el ejercicio que lo arrancó, no en el que
+		// esté abierto en pantalla, que puede ser otro (o ninguno).
+		const exerciseId = descanso.registrada?.exerciseId;
+		if (!exerciseId) return;
+		try {
+			await setDescansoEjercicio(exerciseId, segundosAMinutos(segundos));
+		} catch {
+			errorGuardado = 'Se aplicó a este descanso, pero no se pudo guardar para el ejercicio.';
+		}
 	}
 
 	const RADIO = 44;
@@ -155,15 +174,22 @@
 					<div class="mt-8 flex flex-col items-center gap-4" data-sin-arrastre>
 						<RuedaTiempo
 							segundos={segundosRueda}
-							min={15}
-							max={900}
-							paso={15}
+							min={RUEDA_DESCANSO.min}
+							max={RUEDA_DESCANSO.max}
+							paso={RUEDA_DESCANSO.paso}
 							glow={descanso.glow}
 							vibracion={$ajustes.vibracion ?? true}
-							etiqueta="Ajustar lo que falta de descanso"
-							onCambio={girarResto}
-							onFin={soltarResto}
+							etiqueta="Duración del descanso de este ejercicio"
+							onCambio={girarDuracion}
+							onFin={soltarDuracion}
 						/>
+						<p class="max-w-[16rem] text-balance text-xs" style="color: var(--muted)">
+							{#if errorGuardado}
+								{errorGuardado}
+							{:else}
+								Queda guardado como el descanso de este ejercicio.
+							{/if}
+						</p>
 						<button
 							onclick={() => (mostrarRueda = false)}
 							class="min-h-11 rounded-full px-5 text-sm font-bold"
@@ -220,14 +246,27 @@
 					</div>
 
 					{#if !descanso.vencido}
-						<button
-							onclick={() => (mostrarRueda = true)}
-							class="mt-6 flex min-h-11 items-center gap-2 rounded-full border border-white/10 px-4 text-sm font-bold"
-							style="background: rgba(255,255,255,.05); color: var(--muted)"
-							aria-label="Ajustar lo que falta de descanso con la rueda"
-						>
-							<Icono nombre="rueda" tamano={16} /> Ajustar
-						</button>
+						<!--
+							Dos cosas distintas, dos controles: "+30 s" estira ESTE descanso y no se
+							guarda; la rueda fija cuánto dura el del ejercicio y sí. Antes las hacía la
+							misma rueda, así que no había forma de decir cuál de las dos querías.
+						-->
+						<div class="mt-6 flex items-center gap-2">
+							<button
+								onclick={() => descanso.estirar(30)}
+								class="flex min-h-11 items-center gap-1.5 rounded-full border border-white/10 px-4 text-sm font-bold"
+								style="background: rgba(255,255,255,.05); color: var(--muted)"
+								aria-label="Sumar 30 segundos a este descanso">+30 s</button
+							>
+							<button
+								onclick={() => (mostrarRueda = true)}
+								class="flex min-h-11 items-center gap-2 rounded-full border border-white/10 px-4 text-sm font-bold"
+								style="background: rgba(255,255,255,.05); color: var(--muted)"
+								aria-label="Elegir cuánto dura el descanso de este ejercicio"
+							>
+								<Icono nombre="rueda" tamano={16} /> Duración
+							</button>
+						</div>
 					{/if}
 				{/if}
 

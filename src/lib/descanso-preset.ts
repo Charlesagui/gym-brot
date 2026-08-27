@@ -70,6 +70,18 @@ export function etiquetaCortaDescanso(minutos: number): string {
 	return `${segundos / 60}′`;
 }
 
+/**
+ * El descanso en formato reloj: "2:00" · "0:45".
+ *
+ * Es el mismo que muestra el cronómetro mientras descansás. Se usa donde el valor se
+ * elige —la fila del ejercicio y la rueda—, para que configurarlo y verlo correr no
+ * sean dos números distintos; `etiquetaCortaDescanso` sigue siendo la del chip angosto.
+ */
+export function relojDescanso(minutos: number): string {
+	const segundos = descansoEnSegundos(minutos);
+	return `${Math.floor(segundos / 60)}:${String(segundos % 60).padStart(2, '0')}`;
+}
+
 /** Etiqueta hablada, para `aria-label` y textos de apoyo: "45 segundos" · "2 minutos". */
 export function etiquetaDescanso(minutos: number): string {
 	const segundos = descansoEnSegundos(minutos);

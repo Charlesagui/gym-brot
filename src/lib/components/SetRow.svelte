@@ -2,7 +2,7 @@
 	import type { SetSesion, Ajustes, ModoEsfuerzo } from '$lib/db';
 	import { pulsar } from '$lib/pulsar';
 	import { formatoNumero, formatoAnterior, formatoSet } from '$lib/formato';
-	import { redondear, sumarPeso } from '$lib/numeros';
+	import { sumarPeso } from '$lib/numeros';
 	import Stepper from './Stepper.svelte';
 	import Icono from './Icono.svelte';
 	import { etiquetaEsfuerzo, rpeARir } from '$lib/esfuerzo';
@@ -115,34 +115,12 @@
 	});
 
 	/**
-	 * Cuánto se movió la carga respecto de la misma serie de la vez pasada. Cierra el
-	 * renglón contraído por la derecha porque contesta la pregunta que uno se hace
-	 * mirando una serie hecha: ¿subí?
-	 */
-	const delta = $derived.by(() => {
-		if (set.peso == null || anterior?.peso == null) return null;
-		const diferencia = redondear(set.peso - anterior.peso);
-		// El signo va explícito: "2.5" a secas se confunde con un peso, "+2.5" es un salto.
-		const texto =
-			diferencia === 0
-				? '='
-				: `${diferencia > 0 ? '+' : '−'}${formatoNumero(Math.abs(diferencia))}`;
-		const frase =
-			diferencia === 0
-				? 'igual que la vez pasada'
-				: `${formatoNumero(Math.abs(diferencia))} ${unidad} ${diferencia > 0 ? 'más' : 'menos'} que la vez pasada`;
-		return { diferencia, texto, frase };
-	});
-
-	/**
 	 * Nombre accesible del renglón contraído. El `aria-label` REEMPLAZA al contenido del
 	 * botón, así que "Corregir serie 2" a secas dejaba el peso y las reps inaudibles: la
 	 * lista entera se escuchaba "corregir serie 1, corregir serie 2, corregir serie 3".
 	 * Mismo criterio que el historial, que ya nombraba la serie con lo que levantaste.
 	 */
-	const etiquetaCorregir = $derived(
-		`Corregir serie ${index + 1}: ${formatoSet(set, unidad)}${delta ? `, ${delta.frase}` : ''}`
-	);
+	const etiquetaCorregir = $derived(`Corregir serie ${index + 1}: ${formatoSet(set, unidad)}`);
 
 	/**
 	 * Qué es el número que muestra una serie que todavía no hiciste. Es el prellenado de
@@ -178,31 +156,28 @@
 
 {#if compacta}
 	<!--
-		Serie hecha: el aro con el número ES el check. Al confirmar, la tarjeta se contrae a
-		ese mismo aro ya lleno de verde, que es lo que el botón grande venía prometiendo:
-		antes el número quedaba en gris a la izquierda y el ✓ aparecía como otro botón a
-		262 px de distancia, sin continuidad entre la acción y su resultado.
+		Serie hecha: un indicador y una tarjeta. El aro con el número ES el check —al
+		confirmar, la fila se contrae a ese mismo aro ya lleno de verde— y todo lo demás
+		vive dentro de un solo botón que abre la serie para corregirla.
 
-		Los valores se pegan al aro como un solo bloque. La versión anterior los ponía en una
-		columna fija de 4.4rem dimensionada para el peor caso ("137.5") y alineada a la
-		derecha: con un peso de dos dígitos dejaba 42 px de vacío contra el número de serie y
-		otros 48 en la columna de insignias, así que la fila entera se leía corrida. Alinear
-		la coma entre renglones no se puede hacer bien fila por fila —cada una es su propio
-		grid— y con tres o cuatro series no compensa el hueco.
+		Antes ese botón eran las cifras a secas: sin fondo, sin canto y sin sombra, o sea
+		un texto que no anunciaba en ninguna parte que se pudiera tocar. Y sólo medía lo
+		que medían los números: las insignias, que ocupan media fila, eran `span` muertos
+		donde el dedo no hacía nada. Ahora la tarjeta es el blanco entero y
+		lleva relieve, que es lo que en esta app dice "apretame" (ver CLAUDE.md).
 
-		Las unidades no van acá: las dice el rótulo de la tarjeta, y repetidas por fila
-		costaban 30 px que son del número.
+		La unidad va pegada a la cifra (`.cifra-u`). Vivía sola en el rótulo de la tarjeta
+		—"Sesión actual · kg"—, 11 px en gris y a varias filas de distancia: para saber si
+		"62,5 × 10" era carga o repeticiones había que ir a buscarlo.
 	-->
 	<div
-		class="gb-set-row gb-set-row--hecha grid grid-cols-[2.75rem_auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl px-1.5 py-1 {flash
-			? 'gb-row-flash'
-			: ''}"
-		style="background: var(--surface-2); --row-glow: {glow}"
+		class="gb-set-row gb-set-row--hecha grid grid-cols-[2.75rem_minmax(0,1fr)] items-center gap-2 px-1.5"
+		style="--row-glow: {glow}"
 	>
 		<button
 			onclick={alternar}
 			disabled={pendiente}
-			class="grid size-11 shrink-0 touch-manipulation place-items-center rounded-full {flash
+			class="grid size-11 shrink-0 touch-manipulation place-items-center justify-self-center rounded-full {flash
 				? 'gb-pop'
 				: ''}"
 			aria-pressed={set.hecha}
@@ -219,76 +194,108 @@
 				>
 			{/if}
 		</button>
+		<!--
+			El contenido va `aria-hidden`: `etiquetaCorregir` ya nombra la carga y las reps,
+			y sin esto el lector leería todo dos veces.
+		-->
 		<button
 			onclick={onAbrir}
-			class="flex min-h-11 items-baseline gap-1 rounded-lg text-left"
+			class="gb-relieve-suave flex min-h-12 items-center gap-3 rounded-xl px-3 py-2 text-left {flash
+				? 'gb-row-flash'
+				: ''}"
+			style="background: var(--surface-2); --row-glow: {glow}"
 			aria-label={etiquetaCorregir}
 		>
-			<span class="cifra text-2xl">{set.peso != null ? formatoNumero(set.peso) : '—'}</span>
-			<span class="cifra text-xl" style="color: var(--muted)">×</span>
-			<span class="cifra text-2xl" style="color: #c2c6d6">{set.reps ?? '—'}</span>
+			<span class="flex shrink-0 items-baseline gap-1.5" aria-hidden="true">
+				{#if set.peso != null}
+					<span class="cifra text-2xl"
+						>{formatoNumero(set.peso)}<span class="cifra-u cifra-u--fila">{unidad}</span></span
+					>
+					<!-- El × es el separador, no una tercera cifra: va más chico y apagado. -->
+					<span class="cifra text-base" style="color: var(--muted)">×</span>
+					<span class="cifra text-2xl" style="color: #c2c6d6">{set.reps ?? '—'}</span>
+				{:else}
+					<!-- Ejercicio sin carga: el renglón decía "— × 12", un guión donde no falta nada. -->
+					<span class="cifra text-2xl" style="color: #c2c6d6"
+						>{set.reps ?? '—'}<span class="cifra-u cifra-u--fila">reps</span></span
+					>
+				{/if}
+			</span>
+			<span class="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden" aria-hidden="true">
+				{#if set.esMax}
+					<span
+						class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+						style="background: rgb(var(--max) / .16); color: rgb(var(--max))"
+						>MAX{set.extraKg ? ` +${formatoNumero(set.extraKg)}` : ''}</span
+					>
+				{/if}
+				{#if set.rir != null}
+					<span class="shrink-0 text-[10px] font-bold" style="color: var(--muted)"
+						>{escala.toUpperCase()}
+						{escala === 'rir' ? set.rir : 10 - set.rir}</span
+					>
+				{/if}
+			</span>
+			<span class="shrink-0 rotate-180 opacity-60" style="color: var(--muted)" aria-hidden="true"
+				><Icono nombre="volver" tamano={16} /></span
+			>
 		</button>
-		<span class="flex min-w-0 items-center gap-1.5 overflow-hidden" aria-hidden="true">
-			{#if set.esMax}
-				<span
-					class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold"
-					style="background: rgb(var(--max) / .16); color: rgb(var(--max))"
-					>MAX{set.extraKg ? ` +${formatoNumero(set.extraKg)}` : ''}</span
-				>
-			{/if}
-			{#if set.rir != null}
-				<span class="shrink-0 text-[10px] font-bold" style="color: var(--muted)"
-					>{escala.toUpperCase()}
-					{escala === 'rir' ? set.rir : 10 - set.rir}</span
-				>
-			{/if}
-		</span>
-		<!--
-			El delta va oculto para el lector de pantalla porque `aria-label` sobre un span
-			genérico se descarta: lo dice `etiquetaCorregir`, que sí es el nombre de un botón.
-		-->
-		<span class="gb-delta flex justify-end pr-1" aria-hidden="true">
-			{#if delta}
-				<span
-					class="cifra text-base"
-					style="color: {delta.diferencia > 0 ? 'rgb(var(--exito))' : 'var(--muted)'}"
-					>{delta.texto}</span
-				>
-			{/if}
-		</span>
 	</div>
 {:else if porHacer}
 	<!--
-		Serie que todavía no llegaste: lo que tiene cargado, en un renglón punteado. Tocarla
-		la abre por si querés dejar la carga preparada antes de tiempo.
+		Serie que todavía no llegaste: la misma gramática que la hecha —indicador a la
+		izquierda, tarjeta a la derecha— para que la lista no parezca dos sistemas
+		distintos. El canto punteado y el hueco del relieve son la diferencia: esta no la
+		hiciste todavía, así que no se ve hundida ni levantada.
 
-		El rótulo dice de dónde sale el número. Decía "Objetivo", pero el prellenado viene de
-		la sesión anterior (`serieDesdeAnterior`), no de la rutina: bajar el peso una vez por
-		una molestia convertía ese peso reducido en tu "objetivo" de la vez siguiente.
+		El rótulo dice de dónde sale el número. Decía "Objetivo", pero el prellenado viene
+		de la sesión anterior (`serieDesdeAnterior`), no de la rutina: bajar el peso una vez
+		por una molestia convertía ese peso reducido en tu "objetivo" de la vez siguiente.
 	-->
-	<button
-		onclick={onAbrir}
-		class="gb-set-row grid min-h-11 w-full grid-cols-[2.75rem_auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-dashed border-white/10 px-1.5 py-1 text-left"
-		aria-label={etiquetaAbrir}
-	>
+	<div class="gb-set-row grid grid-cols-[2.75rem_minmax(0,1fr)] items-center gap-2 px-1.5">
 		<span
 			class="cifra grid size-9 place-items-center justify-self-center rounded-full border text-[0.95rem]"
-			style="border-color: rgba(255,255,255,.12); color: var(--muted)">{index + 1}</span
+			style="border-color: rgba(255,255,255,.12); color: var(--muted)"
+			aria-hidden="true">{index + 1}</span
 		>
-		{#if set.peso != null || set.reps != null}
-			<span class="flex items-baseline gap-1" style="color: var(--muted)">
-				<span class="cifra text-2xl">{set.peso != null ? formatoNumero(set.peso) : '—'}</span>
-				<span class="cifra text-xl">×</span>
-				<span class="cifra text-2xl">{set.reps ?? '—'}</span>
-			</span>
-			<span></span>
-			<span class="pr-1 text-[10px] font-bold uppercase tracking-wider" style="color: var(--muted)"
-				>{rotuloFalta}</span
+		<button
+			onclick={onAbrir}
+			class="flex min-h-12 items-center gap-3 rounded-xl border border-dashed border-white/10 px-3 py-2 text-left"
+			aria-label={etiquetaAbrir}
+		>
+			{#if set.peso != null || set.reps != null}
+				<span
+					class="flex shrink-0 items-baseline gap-1.5"
+					style="color: var(--muted)"
+					aria-hidden="true"
+				>
+					{#if set.peso != null}
+						<span class="cifra text-2xl"
+							>{formatoNumero(set.peso)}<span class="cifra-u cifra-u--fila">{unidad}</span></span
+						>
+						<span class="cifra text-base">×</span>
+						<span class="cifra text-2xl">{set.reps ?? '—'}</span>
+					{:else}
+						<span class="cifra text-2xl"
+							>{set.reps ?? '—'}<span class="cifra-u cifra-u--fila">reps</span></span
+						>
+					{/if}
+				</span>
+				<span class="min-w-0 flex-1"></span>
+				<span
+					class="shrink-0 text-[10px] font-bold uppercase tracking-wider"
+					style="color: var(--muted)"
+					aria-hidden="true">{rotuloFalta}</span
+				>
+			{:else}
+				<span class="flex-1 text-sm" style="color: var(--muted)" aria-hidden="true">Sin cargar</span
+				>
+			{/if}
+			<span class="shrink-0 rotate-180 opacity-60" style="color: var(--muted)" aria-hidden="true"
+				><Icono nombre="volver" tamano={16} /></span
 			>
-		{:else}
-			<span class="col-span-3 text-sm" style="color: var(--muted)">Sin cargar</span>
-		{/if}
-	</button>
+		</button>
+	</div>
 {:else}
 	<div
 		class="gb-set-row rounded-xl p-2.5 {activa ? 'gb-foco' : ''} {flash ? 'gb-row-flash' : ''}"
@@ -577,14 +584,12 @@
 
 	/*
 	 * Renglón muy angosto —la columna de trabajo en apaisado, o 320 px con zoom de
-	 * pantalla—: "137.5 × 12" con el aro y el delta no entra. Lo primero que se va es el
-	 * delta; los números que levantaste, que son el dato, quedan siempre.
-	 *
-	 * (La regla que escondía `.cifra-u` se borró: el renglón contraído ya no imprime
-	 * unidades, las dice el rótulo de la tarjeta.)
+	 * pantalla—: "137,5 kg × 12" con el aro no entra. Lo primero que se descarta es la
+	 * unidad, que el rótulo de la tarjeta todavía dice; los números que levantaste quedan
+	 * siempre.
 	 */
-	@container (max-width: 17rem) {
-		.gb-set-row--hecha .gb-delta {
+	@container (max-width: 14rem) {
+		.gb-set-row .cifra-u--fila {
 			display: none;
 		}
 	}

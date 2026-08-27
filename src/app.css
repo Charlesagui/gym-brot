@@ -82,6 +82,91 @@
 }
 
 /*
+ * La misma unidad, al lado de una cifra de lista. El 0.34em de `.cifra-u` está calibrado
+ * para el número gigante de un récord; sobre los 24 px de una fila de series daría 8 px,
+ * por debajo de cualquier otro rótulo de la app. Acá el tamaño es fijo.
+ */
+.cifra-u--fila {
+	font-size: 0.68rem;
+	/*
+	 * `.cifra-u` separa con 0.12em, que sobre el número gigante de un récord son varios
+	 * píxeles y acá, a 0,68rem, es 1,3: la unidad quedaba pegada al número y "62,5kg" se
+	 * leía como una sola cifra larga.
+	 */
+	margin-left: 0.34em;
+	/*
+	 * Y a la derecha también: en el resumen agrupado la unidad la sigue el "×10" del par
+	 * pegado, y "62,5 KG×10" vuelve a leerse como una sola cifra.
+	 */
+	margin-right: 0.34em;
+}
+
+/*
+ * El resumen de las series hechas separa sus cifras con " · ". A cuerpo 18 el punto
+ * queda pegado a los números y tres series se leen como un número largo. El espaciado
+ * de palabra abre exactamente en los separadores —y en el " × "— sin tocar el "62,5"
+ * ni el "×10" de un par, que sí tienen que ir juntos.
+ */
+.gb-resumen-series {
+	word-spacing: 0.24em;
+}
+
+/*
+ * Interruptor. Un solo control para prender y apagar algo que no tiene grados, como el
+ * descanso de un ejercicio. El blanco táctil son 44 px aunque la vía mida 28: lo que se
+ * toca no puede ser del tamaño de lo que se dibuja.
+ *
+ * El estado nunca queda sólo en la posición de la perilla — el rótulo de al lado dice
+ * "Sin descanso" o el tiempo—, así que esto es refuerzo y no la única señal.
+ */
+.gb-switch {
+	display: grid;
+	place-items: center;
+	width: 3.5rem;
+	min-height: 2.75rem;
+	touch-action: manipulation;
+}
+
+.gb-switch-via {
+	position: relative;
+	display: block;
+	width: 3.25rem;
+	height: 1.75rem;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.1);
+	box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+	transition: background 160ms ease;
+}
+
+.gb-switch--on .gb-switch-via {
+	background: rgb(var(--switch-glow) / 0.55);
+}
+
+.gb-switch-perilla {
+	position: absolute;
+	top: 0.1875rem;
+	left: 0.1875rem;
+	width: 1.375rem;
+	height: 1.375rem;
+	border-radius: 999px;
+	background: #e8e9f2;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+	transition: transform 160ms ease;
+}
+
+.gb-switch--on .gb-switch-perilla {
+	/* 52 de vía − 22 de perilla − 3+3 de aire = 24 px de recorrido. */
+	transform: translateX(1.5rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.gb-switch-via,
+	.gb-switch-perilla {
+		transition: none;
+	}
+}
+
+/*
  * Relieve: bisel arriba y sombra abajo. Es lo que hace que un botón grande parezca
  * apretable en vez de un rectángulo pintado; sin esto, agrandar no alcanza.
  */
@@ -89,6 +174,18 @@
 	box-shadow:
 		inset 0 1px 0 rgba(255, 255, 255, 0.1),
 		0 8px 22px rgba(0, 0, 0, 0.32);
+}
+
+/*
+ * El mismo bisel-arriba/sombra-abajo de `.gb-relieve`, a la escala de un renglón que se
+ * repite. La sombra de 8/22 px del botón grande, multiplicada por ocho series, ensucia
+ * la lista entera: acá alcanza con insinuar el canto para que la fila se vea apretable
+ * en vez de pintada.
+ */
+.gb-relieve-suave {
+	box-shadow:
+		inset 0 1px 0 rgba(255, 255, 255, 0.09),
+		0 2px 5px rgba(0, 0, 0, 0.3);
 }
 
 /*
@@ -613,7 +710,7 @@ body {
 	}
 
 	.gb-filter-row button,
-	.gb-rest-presets button {
+	.gb-rest-presets button:not(.gb-switch) {
 		min-height: 2.5rem;
 	}
 

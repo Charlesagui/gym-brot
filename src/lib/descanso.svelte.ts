@@ -55,6 +55,8 @@ interface Persistido {
 	inicio: number;
 	hasta: number;
 	glow?: string;
+	/** Duración elegida, en segundos. Ausente en lo que escribieron versiones anteriores. */
+	duracion?: number;
 	siguiente?: string;
 	registrada?: SerieRegistrada;
 }
@@ -107,6 +109,14 @@ class Descanso {
 	vencidoSeg = $state(0);
 	/** Duración total del descanso activo, usada para mostrar progreso visual. */
 	totalSeg = $state(0);
+	/**
+	 * Cuánto se decidió que dure este descanso, que es lo que la rueda edita y lo que se
+	 * guarda en el ejercicio. No es lo mismo que `totalSeg`: estirar el descanso con
+	 * "+30 s" alarga el total real de ESTA vez sin cambiar la duración elegida, y sin
+	 * esta separación la rueda se abría en un valor inflado por los estirones y guardaba
+	 * como preferencia algo que el usuario nunca eligió.
+	 */
+	duracionSeg = $state(0);
 	/** Capa visual enfocada: puede cerrarse sin cortar el timer. */
 	focusAbierto = $state(false);
 	/** Color del ejercicio que inició el descanso, para teñir la barra. */
@@ -218,6 +228,7 @@ class Descanso {
 		this.vencido = false;
 		this.vencidoSeg = 0;
 		this.totalSeg = Math.max(1, Math.round(minutos * 60));
+		this.duracionSeg = this.totalSeg;
 		this.focusAbierto = this.#focusHabilitado;
 		this.#notificado = false;
 		this.#ultimaAlarma = 0;
@@ -251,6 +262,8 @@ class Descanso {
 		if (this.#inicio == null || this.#hasta == null) return;
 		this.#hasta = this.#inicio + minutos * 60_000;
 		this.totalSeg = Math.max(1, Math.round((this.#hasta - this.#inicio) / 1000));
+		// Esto SÍ es elegir cuánto dura: la rueda se tiene que volver a abrir acá.
+		this.duracionSeg = this.totalSeg;
 		// Vuelve a tener futuro: la próxima vez que venza tiene que poder avisar de nuevo.
 		if (this.#hasta > Date.now()) {
 			this.#notificado = false;
@@ -278,6 +291,18 @@ class Descanso {
 		this.#armarTimers();
 		this.#guardar();
 		this.#recalc();
+	}
+
+	/**
+	 * "Un poco más": estira lo que falta sin tocar la duración elegida.
+	 *
+	 * Es el gesto que antes hacía la rueda ("necesito medio minuto más"), y para el que un
+	 * botón de un toque le gana a girar. Separarlos deja que la rueda signifique una sola
+	 * cosa —cuánto dura este descanso— y que eso se pueda guardar sin ambigüedad.
+	 */
+	estirar(segundos: number) {
+		if (this.#inicio == null || this.#hasta == null || this.vencido) return;
+		this.ajustarResto(this.restoSeg + segundos);
 	}
 
 	/** Corta el descanso sin señal alguna (Saltar, destildar serie, terminar ejercicio). */
@@ -339,6 +364,10 @@ class Descanso {
 			this.#inicio = d.inicio!;
 			this.#hasta = d.hasta!;
 			this.totalSeg = Math.max(1, Math.round((this.#hasta - this.#inicio) / 1000));
+			// Sin `duracion` guardada (descanso escrito por una versión anterior) el total
+			// es la mejor aproximación que hay: es lo que era antes de existir la distinción.
+			this.duracionSeg =
+				typeof d.duracion === 'number' && d.duracion > 0 ? d.duracion : this.totalSeg;
 			if (typeof d.glow === 'string') this.glow = d.glow;
 			if (typeof d.siguiente === 'string') this.siguiente = d.siguiente;
 			this.registrada = serieRegistradaValida(d.registrada) ? d.registrada : null;
@@ -366,6 +395,7 @@ class Descanso {
 				inicio: this.#inicio,
 				hasta: this.#hasta,
 				glow: this.glow,
+				duracion: this.duracionSeg || undefined,
 				siguiente: this.siguiente || undefined,
 				registrada: this.registrada ?? undefined
 			})
@@ -509,6 +539,7 @@ class Descanso {
 		this.vencido = false;
 		this.vencidoSeg = 0;
 		this.totalSeg = 0;
+		this.duracionSeg = 0;
 		this.focusAbierto = false;
 		this.siguiente = '';
 		this.registrada = null;

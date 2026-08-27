@@ -23,20 +23,20 @@ const MAX_SHELL_GZIP_BYTES = 120 * 1024;
  * deploy. Sube cuando la app crece de verdad, no para tapar un asset que no debería
  * estar acá — por eso el guardia de arriba rechaza los videos.
  *
- * Medido el 25/8/2026: 1372,6 KiB en 125 entradas, de las cuales 1273,8 KiB (93 %) son
- * el JavaScript de las rutas, 63,3 KiB de CSS, 20,7 KiB de íconos y 13,7 KiB de la
- * tipografía de las cifras. Es decir: el número sigue el tamaño de la app, y la forma
- * de bajarlo sería partir rutas, no borrar assets.
+ * Medido el 26/8/2026: 1427,1 KiB en 131 entradas, de las cuales 1326,9 KiB (93 %) son
+ * el JavaScript de las rutas, 64,7 KiB de CSS, 20,7 KiB de íconos y 13,7 KiB de la
+ * tipografía de las cifras. La proporción no se movió desde agosto: el número sigue el
+ * tamaño de la app, y la forma de bajarlo sería partir rutas, no borrar assets.
  *
- * Remedido el 27/8/2026: 1422,8 KiB en 133 entradas, o sea que el techo de 1425 KiB ya
- * estaba consumido —quedaban 1,8 KiB— antes de tocar nada. La reforma del mapa corporal
- * (tacto con radio de perdón, escala absoluta) suma 3,5 KiB de código sobre esa base:
- * no entró ningún asset nuevo ni ninguna dependencia, las entradas siguen siendo 133.
+ * El techo anterior (1425 KiB) se había comido su aire: quedaban 5,3 KiB. Antes de
+ * subirlo se verificó que el crecimiento fuera código y no un asset colado ni una
+ * dependencia duplicada — la rueda del tiempo sigue estando en dos chunks, los mismos
+ * que antes, y ningún binario nuevo entró al precache.
  *
- * 1440 KiB devuelve ~13 KiB de aire y sigue siendo chico para que un mp4 o una imagen
+ * 1480 KiB devuelve ~53 KiB de aire y sigue siendo chico para que un mp4 o una imagen
  * grande lo rompan enseguida.
  */
-const MAX_PRECACHE_BYTES = 1440 * 1024;
+const MAX_PRECACHE_BYTES = 1480 * 1024;
 
 async function tamanio(url) {
 	return stat(url).then((archivo) => archivo.size);

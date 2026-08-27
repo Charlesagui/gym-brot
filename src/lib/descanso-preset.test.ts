@@ -7,7 +7,8 @@ import {
 	descansoEnSegundos,
 	descansoPersonalizado,
 	etiquetaCortaDescanso,
-	etiquetaDescanso
+	etiquetaDescanso,
+	relojDescanso
 } from './descanso-preset';
 import { AJUSTES_DEFAULT } from './extras';
 import type { Ajustes } from './db';
@@ -113,5 +114,14 @@ describe('PRESETS_DESCANSO', () => {
 			// Y siguen guardándose en minutos, como todo lo demás.
 			expect(descansoEnSegundos(segundosAMinutos(segundos))).toBe(segundos);
 		}
+	});
+});
+
+describe('relojDescanso', () => {
+	it('escribe el descanso como lo muestra el cronometro', () => {
+		expect(relojDescanso(2)).toBe('2:00');
+		expect(relojDescanso(0.75)).toBe('0:45');
+		expect(relojDescanso(1.5)).toBe('1:30');
+		expect(relojDescanso(10)).toBe('10:00');
 	});
 });

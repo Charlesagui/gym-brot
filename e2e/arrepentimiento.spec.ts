@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { apagarDescanso } from './descanso';
 
 /**
  * El usuario real no va en línea recta: termina, se arrepiente, vuelve, borra y agrega.
@@ -31,7 +32,7 @@ test('terminar con menos series de las planeadas cierra el ejercicio de verdad',
 	await page.clock.install({ time: new Date('2026-08-15T10:00:00-03:00') });
 	await page.goto(RUTA);
 	// Sin descanso: el overlay taparía la lista entre serie y serie.
-	await page.getByRole('button', { name: 'Sin descanso en este ejercicio' }).click();
+	await apagarDescanso(page);
 
 	// La rutina pide 4 series; hoy salieron 2.
 	await hacerSerie(page, 1, '100');
@@ -57,7 +58,7 @@ test('terminar con menos series de las planeadas cierra el ejercicio de verdad',
 test('una serie del medio se quita sola, sin arrastrar a las de abajo', async ({ page }) => {
 	await page.clock.install({ time: new Date('2026-08-15T10:00:00-03:00') });
 	await page.goto(RUTA);
-	await page.getByRole('button', { name: 'Sin descanso en este ejercicio' }).click();
+	await apagarDescanso(page);
 
 	await hacerSerie(page, 1, '100');
 	await hacerSerie(page, 2, '80');
@@ -123,7 +124,7 @@ test('reiniciar el ejercicio pide confirmación en el aviso y se puede deshacer'
 }) => {
 	await page.clock.install({ time: new Date('2026-08-15T10:00:00-03:00') });
 	await page.goto(RUTA);
-	await page.getByRole('button', { name: 'Sin descanso en este ejercicio' }).click();
+	await apagarDescanso(page);
 
 	await hacerSerie(page, 1, '100');
 	await hacerSerie(page, 2, '105');
@@ -149,7 +150,7 @@ test('reiniciar el ejercicio pide confirmación en el aviso y se puede deshacer'
 test('el aviso de reinicio se va solo si lo ignorás', async ({ page }) => {
 	await page.clock.install({ time: new Date('2026-08-15T10:00:00-03:00') });
 	await page.goto(RUTA);
-	await page.getByRole('button', { name: 'Sin descanso en este ejercicio' }).click();
+	await apagarDescanso(page);
 	await hacerSerie(page, 1, '100');
 
 	await page.getByRole('button', { name: 'Reiniciar este ejercicio' }).click();
@@ -162,7 +163,7 @@ test('el aviso de reinicio se va solo si lo ignorás', async ({ page }) => {
 test('reiniciar el día limpia series y saltos, y también se deshace', async ({ page }) => {
 	await page.clock.install({ time: new Date('2026-08-15T10:00:00-03:00') });
 	await page.goto(RUTA);
-	await page.getByRole('button', { name: 'Sin descanso en este ejercicio' }).click();
+	await apagarDescanso(page);
 	await hacerSerie(page, 1, '100');
 	await page.getByRole('button', { name: 'Volver al día' }).click();
 
@@ -185,7 +186,7 @@ test('reiniciar el día limpia series y saltos, y también se deshace', async ({
 test('el deshacer de terminar con menos series sobrevive la navegación', async ({ page }) => {
 	await page.clock.install({ time: new Date('2026-08-15T10:00:00-03:00') });
 	await page.goto(RUTA);
-	await page.getByRole('button', { name: 'Sin descanso en este ejercicio' }).click();
+	await apagarDescanso(page);
 	await hacerSerie(page, 1, '100');
 	await hacerSerie(page, 2, '105');
 

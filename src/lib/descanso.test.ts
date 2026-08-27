@@ -208,6 +208,38 @@ describe('descanso', () => {
 		expect(descanso.restoSeg).toBe(0);
 	});
 
+	it('estirar suma a lo que falta sin tocar la duracion elegida', () => {
+		descanso.iniciar(2, GLOW);
+		vi.advanceTimersByTime(30_000);
+		expect(descanso.restoSeg).toBe(90);
+
+		descanso.estirar(30);
+		expect(descanso.restoSeg).toBe(120);
+		// El total real de esta vez crece; la duracion elegida es la que se guarda y no.
+		expect(descanso.totalSeg).toBe(150);
+		expect(descanso.duracionSeg).toBe(120);
+
+		// Dos estirones tampoco: si `duracionSeg` los acumulara, la rueda se abriria en
+		// 3:00 y guardaria como preferencia un valor que nadie eligio.
+		descanso.estirar(30);
+		expect(descanso.duracionSeg).toBe(120);
+	});
+
+	it('estirar no revive un descanso ya vencido', () => {
+		descanso.iniciar(1, GLOW);
+		vi.advanceTimersByTime(61_000);
+		descanso.estirar(30);
+		expect(descanso.vencido).toBe(true);
+		expect(descanso.restoSeg).toBe(0);
+	});
+
+	it('la rueda de duracion si mueve la duracion elegida', () => {
+		descanso.iniciar(2, GLOW);
+		expect(descanso.duracionSeg).toBe(120);
+		descanso.ajustarFin(3);
+		expect(descanso.duracionSeg).toBe(180);
+	});
+
 	it('expandir y minimizar la pantalla enfocada no cortan el timer', () => {
 		descanso.iniciar(2, GLOW);
 		descanso.expandirFocus();
