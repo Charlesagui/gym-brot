@@ -14,7 +14,6 @@ import {
 	ritmosDisponibles,
 	rmrMifflin,
 	topeRitmoBajar,
-	type Condicion,
 	type Ecuacion,
 	type Mantenimiento,
 	type PerfilEnergia
@@ -345,10 +344,9 @@ describe('ritmos disponibles', () => {
 });
 
 describe('qué se le ofrece a cada persona', () => {
-	it('sin nada declarado se ofrecen las tres metas', () => {
+	it('con un peso normal se ofrecen las tres metas', () => {
 		expect(restricciones(25)).toEqual({
 			metas: ['bajar', 'mantener', 'subir'],
-			consultar: false,
 			motivo: null
 		});
 	});
@@ -358,43 +356,20 @@ describe('qué se le ofrece a cada persona', () => {
 		expect(restricciones(17.9).motivo).toBe('imc-bajo');
 	});
 
-	it('en embarazo o lactancia solo queda mantenimiento', () => {
-		const r = restricciones(24, ['embarazo']);
-		expect(r.metas).toEqual(['mantener']);
-		expect(r.consultar).toBe(true);
-		expect(r.motivo).toBe('embarazo');
+	it('justo en 18,5 el déficit vuelve: el corte es estricto', () => {
+		expect(restricciones(18.5).metas).toContain('bajar');
+		expect(restricciones(18.49).metas).not.toContain('bajar');
 	});
 
-	it('con historial de trastorno alimentario se retira el déficit', () => {
-		const r = restricciones(24, ['trastorno-alimentario']);
-		expect(r.metas).not.toContain('bajar');
-		expect(r.metas).toEqual(['mantener', 'subir']);
-		expect(r.consultar).toBe(true);
-	});
-
-	it('el embarazo manda sobre el resto de lo declarado', () => {
-		expect(restricciones(24, ['medica', 'trastorno-alimentario', 'embarazo']).metas).toEqual([
-			'mantener'
-		]);
-	});
-
-	it('una condición médica no recorta metas pero pide consultar', () => {
-		const r = restricciones(28, ['medica']);
-		expect(r.metas).toEqual(['bajar', 'mantener', 'subir']);
-		expect(r.consultar).toBe(true);
-		expect(r.motivo).toBeNull();
-	});
-
+	/**
+	 * Acá había cuatro casos más, de embarazo, lactancia y antecedente de trastorno
+	 * alimentario. La pregunta que los declaraba se sacó del asistente por decisión de
+	 * producto; el porqué está en el comentario de `restricciones`. Lo que queda es la
+	 * regla que no depende de que nadie declare nada.
+	 */
 	it('el mantenimiento nunca se retira: es la salida que siempre queda', () => {
-		const casos: Array<[number, Condicion[]]> = [
-			[16, []],
-			[24, ['embarazo']],
-			[24, ['trastorno-alimentario']],
-			[40, ['medica']],
-			[17, ['trastorno-alimentario', 'medica']]
-		];
-		for (const [imc, condiciones] of casos) {
-			expect(restricciones(imc, condiciones).metas).toContain('mantener');
+		for (const imc of [14, 16, 18.4, 18.5, 25, 40, 60]) {
+			expect(restricciones(imc).metas).toContain('mantener');
 		}
 	});
 });

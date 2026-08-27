@@ -70,36 +70,30 @@
 	);
 
 	/**
-	 * Qué posiciones se pueden cambiar acá, sin volver a preguntar nada.
+	 * Las cinco posiciones, calculadas contra el mantenimiento del objetivo guardado.
 	 *
-	 * **La regla es que sólo se ofrece lo que la persona ya atravesó.** Las condiciones que
-	 * retiran objetivos —embarazo, un antecedente de trastorno alimentario— se declaran en
-	 * el asistente y **no se guardan en ninguna parte**, a propósito. Acá no existen, así
-	 * que la sección no tiene con qué saber si a esta persona el déficit se le retiró o
-	 * simplemente no lo eligió: las dos terminan con "mantenimiento" guardado y son
-	 * indistinguibles.
+	 * Se ofrecen todas, incluida la dirección contraria a la que está guardada. Hubo una
+	 * versión que ofrecía sólo la dirección guardada más mantenimiento, porque la pregunta
+	 * de "¿Algo de esto aplica?" no se persistía y la sección no podía saber si a esa
+	 * persona el déficit se le había retirado. Esa pregunta ya no existe —se sacó del
+	 * asistente— así que la asimetría dejó de tener a qué protegerse: acá se ofrece
+	 * exactamente lo mismo que ofrece el paso 4.
 	 *
-	 * Entonces se ofrece la dirección que ya está guardada —haberla elegido es prueba de
-	 * que se le ofreció— más mantenimiento, que `restricciones` no le niega a nadie nunca.
-	 * Cambiar de dirección sale por el botón de abajo, que lleva a donde vive la pregunta.
-	 *
-	 * Y lo que no se ofrece **no aparece**, ni siquiera apagado: una muesca gris que dice
-	 * "Déficit agresivo" y no se deja tocar sigue diciendo "esto existe y vos no llegás", y
-	 * con calorías eso empuja para el lado malo. Es la misma decisión que ya toma el paso 4
-	 * con el déficit bajo IMC 18,5.
+	 * Lo que sigue recortando es el motor y no esta pantalla: bajo IMC 18,5 `calcularObjetivo`
+	 * devuelve `bloqueado` para bajar de peso, y el `flatMap` la deja afuera. Esa posición
+	 * **no aparece**, ni siquiera apagada — una muesca gris que dice "Déficit agresivo" y no
+	 * se deja tocar sigue diciendo "esto existe y vos no llegás", y con calorías eso empuja
+	 * para el lado malo. Es la misma decisión que ya toma el paso 4.
 	 */
 	const posiciones = $derived.by(() => {
 		const m = mantenimientoVigente;
-		const metaGuardada = $objetivo?.meta;
-		if (!m || !metaGuardada) return [];
-		return OPCIONES_OBJETIVO.filter((o) => o.meta === 'mantener' || o.meta === metaGuardada)
-			.map((opcion) => ({
-				opcion,
-				resultado: calcularObjetivo(m, opcion.meta, ritmoDeOpcion(opcion))
-			}))
-			.flatMap(({ opcion, resultado }) =>
-				resultado.estado === 'calculado' ? [{ opcion, objetivo: resultado }] : []
-			);
+		if (!m) return [];
+		return OPCIONES_OBJETIVO.map((opcion) => ({
+			opcion,
+			resultado: calcularObjetivo(m, opcion.meta, ritmoDeOpcion(opcion))
+		})).flatMap(({ opcion, resultado }) =>
+			resultado.estado === 'calculado' ? [{ opcion, objetivo: resultado }] : []
+		);
 	});
 
 	/**
@@ -151,8 +145,7 @@
 	const paradas = $derived<ParadaObjetivo[]>(
 		posiciones.map(({ opcion }) => ({
 			id: opcion.id,
-			rotulo: rotuloObjetivo(opcion.meta, opcion.nivel),
-			marca: opcion.marca,
+			corto: opcion.corto,
 			tono: tonoObjetivo(opcion.nivel),
 			disponible: true
 		}))

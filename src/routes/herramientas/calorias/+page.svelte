@@ -15,7 +15,6 @@
 		rotuloObjetivo,
 		tonoObjetivo,
 		type AvisoEnergia,
-		type Condicion,
 		type Densidad,
 		type Duracion,
 		type Ecuacion,
@@ -84,10 +83,9 @@
 	/**
 	 * `?paso=4` abre el asistente directo en la elección de objetivo.
 	 *
-	 * Existe para una sola cosa: el riel de la sección no puede ofrecer un objetivo de otra
-	 * dirección sin volver a hacer la pregunta de "¿Algo de esto aplica?", que es lo único
-	 * que retira el déficit y que no se guarda en ninguna parte. En vez de esconder la
-	 * opción, la sección manda acá, que es donde la pregunta vive.
+	 * Lo usa el botón "Cambiar mis datos" de la sección. Cae en el paso 4 y no en el 1 porque
+	 * desde ahí los tres pasos de datos están contraídos y se abren de un toque, mientras que
+	 * desde el 1 los que siguen todavía no existen.
 	 *
 	 * Se lee una vez y no de forma reactiva: es de dónde arranca el asistente, no un estado
 	 * que la URL sigue mandando. Después el usuario navega los pasos y la URL no lo persigue.
@@ -117,29 +115,16 @@
 	let objetivoElegido = $state<string>('bajar-moderado');
 
 	/**
-	 * Lo declarado no se guarda en ninguna parte: vive en esta variable mientras la
-	 * pantalla está abierta y se olvida al salir. Alcanza para decidir qué se ofrece.
+	 * La única razón por la que la app recorta lo que ofrece.
+	 *
+	 * Antes había tres más, atrás de un desplegable que preguntaba por embarazo, lactancia
+	 * y antecedente de trastorno alimentario. Se sacó por decisión de producto: ver el
+	 * comentario de `restricciones` en el motor. Lo que quedó no depende de que nadie
+	 * declare nada — sale del peso que ya está cargado.
 	 */
-	let condiciones = $state<Condicion[]>([]);
-
-	const CONDICIONES: Array<{ id: Condicion; rotulo: string }> = [
-		{ id: 'embarazo', rotulo: 'Estoy embarazada o amamantando' },
-		{ id: 'trastorno-alimentario', rotulo: 'Tuve un trastorno alimentario' },
-		{ id: 'medica', rotulo: 'Tengo una condición médica o tomo medicación que afecta el peso' }
-	];
-
-	const MOTIVO_RECORTE: Record<'embarazo' | 'trastorno-alimentario' | 'imc-bajo', string> = {
-		embarazo:
-			'Durante el embarazo y la lactancia las necesidades se calculan distinto. La app no propone déficit ni volumen.',
-		'trastorno-alimentario': 'Con ese antecedente la app no propone objetivos de déficit.',
+	const MOTIVO_RECORTE: Record<'imc-bajo', string> = {
 		'imc-bajo': 'Con tu peso actual la app no propone déficit.'
 	};
-
-	function alternarCondicion(id: Condicion) {
-		condiciones = condiciones.includes(id)
-			? condiciones.filter((c) => c !== id)
-			: [...condiciones, id];
-	}
 
 	/** De dónde salió el prellenado, para poder decirlo en pantalla. */
 	let pesoDeLaApp = $state(false);
@@ -216,7 +201,7 @@
 	interface Boton {
 		id: string;
 		rotulo: string;
-		marca: string;
+		corto: string;
 		tono: TonoObjetivo;
 		meta: Meta;
 		objetivo: Objetivo | null;
@@ -230,17 +215,17 @@
 		ritmoPedido: number;
 	}
 
-	const limites = $derived(listo ? restricciones(listo.imc, condiciones) : null);
+	const limites = $derived(listo ? restricciones(listo.imc) : null);
 
 	const botones = $derived<Boton[]>(
 		listo && limites
 			? OPCIONES_OBJETIVO.filter(({ meta }) => limites.metas.includes(meta)).map(
-					({ id, marca, meta, nivel }) => {
+					({ id, corto, meta, nivel }) => {
 						// Lo que la posición es antes de saber cuánto da: identidad, no resultado.
 						const base = {
 							id,
 							rotulo: rotuloObjetivo(meta, nivel),
-							marca,
+							corto,
 							tono: tonoObjetivo(nivel),
 							meta
 						};
@@ -293,10 +278,9 @@
 	 * retira del riel en el mismo momento y por la misma razón.
 	 */
 	const paradas = $derived<ParadaObjetivo[]>(
-		botones.map(({ id, rotulo, marca, tono, bloqueado }) => ({
+		botones.map(({ id, corto, tono, bloqueado }) => ({
 			id,
-			rotulo,
-			marca,
+			corto,
 			tono,
 			disponible: !bloqueado
 		}))
@@ -561,19 +545,6 @@
 				</p>
 			{/if}
 		{/each}
-
-		{#if limites?.consultar}
-			<p
-				class="mt-3 flex gap-2 rounded-xl border p-3 text-xs leading-relaxed"
-				style="border-color: rgb(var(--max) / .35); background: rgb(var(--max) / .08); color: rgb(var(--max))"
-			>
-				<Icono nombre="aviso" tamano={16} clase="mt-px shrink-0" />
-				<span
-					>Por lo que marcaste, este número no debería aplicarse sin hablarlo antes con un
-					profesional que conozca tu caso.</span
-				>
-			</p>
-		{/if}
 
 		<p class="mt-3 text-[0.7rem] leading-relaxed" style="color: var(--muted)">
 			Es una estimación estadística, no una indicación médica ni un plan nutricional. Si tenés una
@@ -899,29 +870,6 @@
 											</p>
 										{/if}
 									{/if}
-
-									<details class="mt-1 rounded-xl" style="background: var(--surface-2)">
-										<summary
-											class="flex min-h-14 cursor-pointer items-center px-4 text-sm font-semibold"
-											>¿Algo de esto aplica?</summary
-										>
-										<div class="flex flex-col gap-2 px-3 pb-3">
-											{#each CONDICIONES as condicion (condicion.id)}
-												<button
-													onclick={() => alternarCondicion(condicion.id)}
-													aria-pressed={condiciones.includes(condicion.id)}
-													class="min-h-14 rounded-xl px-4 text-left text-sm font-semibold {condiciones.includes(
-														condicion.id
-													)
-														? 'gb-opcion-elegida'
-														: 'gb-opcion'}">{condicion.rotulo}</button
-												>
-											{/each}
-											<p class="text-[0.7rem] leading-relaxed" style="color: var(--muted)">
-												No se guarda: la app lo usa para decidir qué ofrecerte y lo olvida al salir.
-											</p>
-										</div>
-									</details>
 								</div>
 							{/if}
 

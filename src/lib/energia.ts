@@ -497,22 +497,11 @@ export function topeRitmoBajar(imc: number): number {
 /** Bajo 18,5 la app no propone déficit. No es una advertencia: es una ausencia. */
 export const IMC_SIN_DEFICIT = 18.5;
 
-/**
- * Situaciones que el usuario puede declarar y que cambian qué se le ofrece.
- *
- * No se guardan en ninguna parte: la app usa la respuesta para decidir qué botones
- * mostrar y la olvida. Un historial de trastornos alimentarios persistido en una base
- * local es un dato que nadie pidió conservar y que no hace falta para nada.
- */
-export type Condicion = 'embarazo' | 'trastorno-alimentario' | 'medica';
-
 export interface Restricciones {
 	/** Las metas que se ofrecen. Las que no están, no aparecen: no se deshabilitan. */
 	metas: Meta[];
-	/** Mostrar la recomendación de consultar antes de aplicar el número. */
-	consultar: boolean;
 	/** Qué recortó las metas, para poder decirlo en una línea. */
-	motivo: 'embarazo' | 'trastorno-alimentario' | 'imc-bajo' | null;
+	motivo: 'imc-bajo' | null;
 }
 
 /**
@@ -522,28 +511,25 @@ export interface Restricciones {
  * olvido tiene consecuencias sobre alguien, y una pantalla nueva que no la consulte
  * sería un error silencioso. El criterio es asimétrico por diseño — equivocarse
  * ofreciendo de menos cuesta una molestia; de más, bastante más que eso.
+ *
+ * **Acá hubo una segunda regla y ya no está.** El asistente preguntaba por embarazo,
+ * lactancia y antecedente de trastorno alimentario, y con eso retiraba el déficit o
+ * todo. Se sacó por decisión de producto: era la única pregunta que el usuario tenía que
+ * contestar sobre sí mismo para que la app no le ofreciera algo, no se guardaba en
+ * ninguna parte —así que había que volver a contestarla cada vez— y en una app personal
+ * el que la contesta y el que decide son la misma persona.
+ *
+ * Lo que sigue en pie es lo que no depende de que nadie declare nada: bajo IMC 18,5 no
+ * se propone déficit, y el descargo de que esto es una estimación y no una indicación
+ * médica está siempre a la vista. Si la app alguna vez sale de un uso personal, esta es
+ * la primera decisión para revisar.
  */
-export function restricciones(imc: number, condiciones: Condicion[] = []): Restricciones {
-	const consultar = condiciones.length > 0;
-
-	if (condiciones.includes('embarazo')) {
-		// Durante el embarazo y la lactancia las necesidades son otras y NASEM las trata
-		// con ecuaciones propias. Acá no se propone ni déficit ni volumen.
-		return { metas: ['mantener'], consultar, motivo: 'embarazo' };
-	}
-
-	if (condiciones.includes('trastorno-alimentario')) {
-		// Se retira el déficit y se conserva el resto. El uso de apps de conteo está
-		// asociado a sintomatología alimentaria en quienes ya tienen riesgo, y el costo
-		// de equivocarse en cada dirección no es el mismo.
-		return { metas: ['mantener', 'subir'], consultar, motivo: 'trastorno-alimentario' };
-	}
-
+export function restricciones(imc: number): Restricciones {
 	if (imc < IMC_SIN_DEFICIT) {
-		return { metas: ['mantener', 'subir'], consultar, motivo: 'imc-bajo' };
+		return { metas: ['mantener', 'subir'], motivo: 'imc-bajo' };
 	}
 
-	return { metas: ['bajar', 'mantener', 'subir'], consultar, motivo: null };
+	return { metas: ['bajar', 'mantener', 'subir'], motivo: null };
 }
 
 export type NivelRitmo = 'moderado' | 'agresivo';
@@ -576,8 +562,15 @@ export type TonoObjetivo = 'calmo' | 'normal' | 'fuerte';
 
 export interface OpcionObjetivo {
 	id: string;
-	/** Lo que entra en una muesca de riel: dos caracteres que se leen como escala. */
-	marca: string;
+	/**
+	 * El nombre corto, para cuando el largo no entra. Una muesca de riel son ~64 px: ahí
+	 * "Déficit agresivo" entra partido en dos renglones, pero "Mantenimiento" no entra ni
+	 * partido, y por eso el suyo es otra palabra y no un recorte del mismo.
+	 *
+	 * Antes acá había una marca de dos caracteres (`−−`, `=`, `++`). Se leía como escala y
+	 * ocupaba nada, pero no decía qué era cada posición: había que tocarla para saberlo.
+	 */
+	corto: string;
 	meta: Meta;
 	nivel: NivelRitmo | null;
 }
@@ -591,15 +584,14 @@ export interface OpcionObjetivo {
  * un objetivo que la otra no. El rótulo **no** está en la tabla justamente por eso:
  * `rotuloObjetivo(meta, nivel)` ya lo arma, y escribirlo acá sería la tercera copia.
  *
- * La marca sí, porque es arbitraria: el signo es el menos tipográfico (−), el mismo que
- * usa el ritmo, y no el guion del teclado.
+ * El corto sí, porque no se deduce: "Mantenimiento" no se abrevia solo.
  */
 export const OPCIONES_OBJETIVO: readonly OpcionObjetivo[] = [
-	{ id: 'bajar-agresivo', marca: '−−', meta: 'bajar', nivel: 'agresivo' },
-	{ id: 'bajar-moderado', marca: '−', meta: 'bajar', nivel: 'moderado' },
-	{ id: 'mantener', marca: '=', meta: 'mantener', nivel: null },
-	{ id: 'subir-moderado', marca: '+', meta: 'subir', nivel: 'moderado' },
-	{ id: 'subir-agresivo', marca: '++', meta: 'subir', nivel: 'agresivo' }
+	{ id: 'bajar-agresivo', corto: 'Déficit agresivo', meta: 'bajar', nivel: 'agresivo' },
+	{ id: 'bajar-moderado', corto: 'Déficit moderado', meta: 'bajar', nivel: 'moderado' },
+	{ id: 'mantener', corto: 'Mantener', meta: 'mantener', nivel: null },
+	{ id: 'subir-moderado', corto: 'Volumen moderado', meta: 'subir', nivel: 'moderado' },
+	{ id: 'subir-agresivo', corto: 'Volumen agresivo', meta: 'subir', nivel: 'agresivo' }
 ];
 
 /** El tono es el nivel: son la misma información y dos copias se despegan. */
