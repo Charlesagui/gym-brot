@@ -88,9 +88,12 @@ test('el resultado manda una sola cifra y dice de dónde sale', async ({ page })
 	await expect(page.getByText('2.890kcal')).toBeVisible();
 	await expect(page.getByText('−0,41kg/sem')).toBeVisible();
 
-	// El riel nombra sus tres marcas: sin leyenda son tres rayas sin significado.
-	await expect(page.getByText('Objetivo', { exact: true })).toBeVisible();
-	await expect(page.getByText('Mantenimiento', { exact: true }).first()).toBeVisible();
+	// La diferencia contra el mantenimiento va como cifra. Reemplazó a un riel de banda de
+	// 5 px con leyenda de tres ítems: lo único que ese gráfico decía y nadie más decía era
+	// cuánto te corrés, y eso se lee mejor en números. De paso desmiente lo único que el
+	// riel de arriba no puede mostrar: los cinco pasos no son iguales.
+	await expect(page.getByText('−450kcal')).toBeVisible();
+	await expect(page.getByText(/2 de cada\s+3\s+personas/)).toBeVisible();
 
 	// El descargo está siempre a la vista, no detrás de un desplegable.
 	await expect(page.getByText(/no una indicación\s+médica/)).toBeVisible();
@@ -123,8 +126,11 @@ test('el riel del resultado cambia el objetivo entero con un toque', async ({ pa
 	// salir en agresivo sin pasar por esa pantalla.
 	await expect(page.getByText(/no te va a hacer ganar más músculo/)).toBeVisible();
 
-	// El mantenimiento no se mueve: es el mismo cuerpo mirando otro objetivo.
+	// El mantenimiento no se mueve: es el mismo cuerpo mirando otro objetivo. Lo que sí se
+	// mueve es la diferencia, y ahí se ve la asimetría: bajar moderado saca 450 y subir
+	// agresivo agrega 450, pero son muescas distintas del riel.
 	await expect(page.getByText('2.890kcal')).toBeVisible();
+	await expect(page.getByText('+450kcal')).toBeVisible();
 });
 
 test('el riel se recorre arrastrando, y cada muesca es una parada', async ({ page }) => {
@@ -465,4 +471,26 @@ test('cambiar mis datos entra directo donde se elige el objetivo', async ({ page
 	// Y los pasos de datos se abren de un toque desde ahí.
 	await page.getByRole('button', { name: /32 a · 178 cm/ }).click();
 	await expect(page.getByText('1 de 4')).toBeVisible();
+});
+
+test('las tres cifras de la fila entran sin desbordar, ni a 320 px', async ({ page }) => {
+	await guardarYAbrirMacros(page);
+
+	// Mantenimiento, diferencia y ritmo pasaron de dos celdas a tres, así que cada una tiene
+	// ~98 px en un teléfono chico y "−0,41kg/sem" es la más ancha. Si no entra, la página
+	// scrollea de costado — que es el defecto que ninguna cifra justifica.
+	for (const ancho of [320, 375, 393]) {
+		await page.setViewportSize({ width: ancho, height: 800 });
+		await expect(page.getByText('−450kcal')).toBeVisible();
+		expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+			ancho
+		);
+	}
+
+	// Y en el resultado del asistente, que muestra la misma fila.
+	await page.setViewportSize({ width: 320, height: 800 });
+	await page.goto('/herramientas/calorias?paso=4');
+	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
+	await expect(page.getByText('−450kcal')).toBeVisible();
+	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
 });

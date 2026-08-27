@@ -2,7 +2,6 @@
 	import { browser } from '$app/environment';
 	import { page } from '$app/stores';
 	import Icono from '$lib/components/Icono.svelte';
-	import RielBanda from '$lib/components/RielBanda.svelte';
 	import RielObjetivo, { type ParadaObjetivo } from '$lib/components/RielObjetivo.svelte';
 	import Stepper from '$lib/components/Stepper.svelte';
 	import {
@@ -352,6 +351,19 @@
 		}
 	}
 
+	/**
+	 * Cuánto te corrés del mantenimiento, en kcal y con signo.
+	 *
+	 * Sale de la resta y no de `ajuste`: el porcentaje ya está contado en el ritmo, y lo
+	 * que acá hace falta es la cifra que la persona va a sumar o restar en el plato.
+	 */
+	const diferenciaTexto = $derived.by(() => {
+		if (!objetivo || !listo) return '';
+		const delta = objetivo.objetivoKcal - listo.tdee;
+		const signo = delta > 0 ? '+' : delta < 0 ? '−' : '';
+		return `${signo}${formatoVolumen(Math.abs(delta))}`;
+	});
+
 	/** El ritmo en la unidad visible, con dos decimales: 0,4 kg/sem redondea de más. */
 	const ritmoVisible = $derived(
 		objetivo ? (unidad === 'kg' ? objetivo.kgPorSemana : objetivo.kgPorSemana * KG_TO_LB) : 0
@@ -458,13 +470,6 @@
 				>
 			</p>
 
-			<!-- La banda va como riel, no como gráfico: no puede competir con la cifra.
-			     El componente es el mismo que usa la sección: dos copias del riel eran dos
-			     leyendas que mantener, y la de acá no tenía ninguna. -->
-			<div class="mt-3">
-				<RielBanda tdee={listo.tdee} sepv={listo.sepv} objetivoKcal={objetivo.objetivoKcal} />
-			</div>
-
 			<!-- Los tres macros, en el orden en que los resuelve el motor. -->
 			<div class="mt-4 grid grid-cols-3 gap-2">
 				{#each macrosVisibles as macro (macro.rotulo)}
@@ -480,8 +485,28 @@
 				{/each}
 			</div>
 
+			<!--
+				Mantenimiento, diferencia y ritmo: contra qué se compara, cuánto te corrés y a qué
+				velocidad. En mantenimiento la fila entera se va, porque las tres son degeneradas:
+				el objetivo *es* el mantenimiento, la diferencia es cero y el ritmo también.
+
+				**La diferencia es la celda que reemplazó al riel de banda.** Ese riel dibujaba
+				dónde caía el objetivo contra la banda del mantenimiento, en 5 px y con una leyenda
+				de tres ítems que pesaba más que el gráfico. Lo único que decía y que no dice nada
+				más es cuánto te corrés — y eso no necesita un dibujo, necesita una cifra. Además
+				el riel tenía un punto muerto: en mantenimiento las marcas de objetivo y de
+				mantenimiento caían en el mismo píxel y una tapaba a la otra.
+
+				Y es la cifra que desmiente la única mentira del riel de arriba: cinco muescas del
+				mismo ancho parecen cinco escalones iguales, y no lo son. Para 82 kg son
+				−680 / −450 / 0 / +230 / +450 kcal: bajar moderado saca casi el doble de lo que
+				agrega subir moderado.
+
+				`text-xl` y no `text-2xl` porque ahora son tres celdas y no dos: a 375 px cada una
+				tiene ~98 px y "−0,41kg/sem" no entra a 24 px.
+			-->
 			{#if botonElegido?.meta !== 'mantener'}
-				<div class="mt-3 grid grid-cols-2 gap-2">
+				<div class="mt-3 grid grid-cols-3 gap-2">
 					<div class="min-w-0">
 						<p
 							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
@@ -489,7 +514,7 @@
 						>
 							Mantenimiento
 						</p>
-						<p class="cifra text-2xl">
+						<p class="cifra text-xl">
 							{formatoVolumen(listo.tdee)}<span class="cifra-u">kcal</span>
 						</p>
 					</div>
@@ -498,9 +523,18 @@
 							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
 							style="color: var(--muted)"
 						>
+							Diferencia
+						</p>
+						<p class="cifra text-xl">{diferenciaTexto}<span class="cifra-u">kcal</span></p>
+					</div>
+					<div class="min-w-0">
+						<p
+							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+							style="color: var(--muted)"
+						>
 							Ritmo
 						</p>
-						<p class="cifra text-2xl">{ritmoTexto}<span class="cifra-u">{unidad}/sem</span></p>
+						<p class="cifra text-xl">{ritmoTexto}<span class="cifra-u">{unidad}/sem</span></p>
 					</div>
 				</div>
 			{/if}

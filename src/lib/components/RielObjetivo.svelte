@@ -157,7 +157,7 @@
 			aria-pressed={parada.id === valor}
 			disabled={!parada.disponible}
 			onclick={(evento) => alClickear(evento, parada)}
-			class="flex min-h-14 flex-1 items-center justify-center rounded-xl px-1 py-1.5 disabled:opacity-30 {parada.id ===
+			class="flex min-h-14 min-w-0 flex-1 items-center justify-center rounded-xl px-0.5 py-1.5 disabled:opacity-30 {parada.id ===
 			valor
 				? 'gb-opcion-elegida'
 				: ''}"
@@ -175,11 +175,17 @@
 				color deja de ser un adorno pegado al lado para ser una propiedad de lo que
 				nombra. La elegida pasa a tinta plena porque su tono ya lo lleva el anillo de
 				`.gb-opcion-elegida`, y sobre ese fondo lo que hace falta es que se lea.
+
+				El cuerpo es fluido y no fijo porque una palabra no se achica: cinco muescas con
+				"agresivo" adentro tienen un ancho mínimo que no baja, y a 320 px ese mínimo
+				empujaba la página entera 12 px para la derecha —con la barra de abajo incluida,
+				que es de ancho completo—. El `clamp` la deja encoger hasta 0,55 rem y ahí entra.
 			-->
 			<span
-				class="text-center text-[0.62rem] font-bold leading-[1.15]"
-				style="color: {parada.id === valor ? 'var(--text)' : TINTA_TONO[parada.tono]}"
-				>{parada.corto}</span
+				class="text-center font-bold leading-[1.15]"
+				style="font-size: clamp(0.55rem, 2.6vw, 0.62rem); color: {parada.id === valor
+					? 'var(--text)'
+					: TINTA_TONO[parada.tono]}">{parada.corto}</span
 			>
 		</button>
 	{/each}

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import Icono from '$lib/components/Icono.svelte';
-	import RielBanda from '$lib/components/RielBanda.svelte';
 	import RielObjetivo, { type ParadaObjetivo } from '$lib/components/RielObjetivo.svelte';
 	import { calibrar, DIAS_VENTANA_MAX, estadoCalibracion, type Adherencia } from '$lib/calibracion';
 	import {
@@ -150,6 +149,17 @@
 			disponible: true
 		}))
 	);
+
+	/**
+	 * Cuánto te corrés del mantenimiento, en kcal y con signo. Sale de `vista`, así que
+	 * mientras el dedo recorre el riel también dice lo de la posición que se está mirando.
+	 */
+	const diferenciaTexto = $derived.by(() => {
+		if (!$objetivo || !vista) return '';
+		const delta = vista.objetivoKcal - $objetivo.tdeeKcal;
+		const signo = delta > 0 ? '+' : delta < 0 ? '−' : '';
+		return `${signo}${formatoVolumen(Math.abs(delta))}`;
+	});
 
 	const ritmoTexto = $derived.by(() => {
 		if (!$objetivo || !vista) return '';
@@ -483,14 +493,6 @@
 				>
 			</p>
 
-			<div class="mt-3">
-				<RielBanda
-					tdee={$objetivo.tdeeKcal}
-					sepv={$objetivo.sepvKcal}
-					objetivoKcal={vista?.objetivoKcal ?? $objetivo.objetivoKcal}
-				/>
-			</div>
-
 			<!--
 				Los tres macros, y los tres siempre.
 
@@ -514,11 +516,21 @@
 				{/each}
 			</div>
 
-			<!-- El mantenimiento es una cifra, no un dato de la prosa: es contra lo que se
-			     compara el objetivo y merece leerse de un vistazo. En mantenimiento la fila
-			     entera se va: el objetivo *es* el mantenimiento y el ritmo es cero. -->
+			<!--
+				Contra qué se compara, cuánto te corrés y a qué velocidad. En mantenimiento la fila
+				entera se va, porque las tres son degeneradas: el objetivo *es* el mantenimiento,
+				la diferencia es cero y el ritmo también.
+
+				**La diferencia es la celda que reemplazó al riel de banda**, que dibujaba dónde
+				caía el objetivo contra la banda del mantenimiento en 5 px, con una leyenda de tres
+				ítems que pesaba más que el dibujo — y que acá vivía todavía peor, porque la frase
+				que lo explicaba está plegada adentro de "¿De dónde sale este número?".
+
+				La banda no se perdió: esa misma frase la da con números ("2 de cada 3 personas
+				están entre X e Y"), que es más de lo que se podía leer del gráfico.
+			-->
 			{#if vista?.meta !== 'mantener'}
-				<div class="mt-3 grid grid-cols-2 gap-2">
+				<div class="mt-3 grid grid-cols-3 gap-2">
 					<div class="min-w-0">
 						<p
 							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
@@ -526,7 +538,7 @@
 						>
 							Mantenimiento
 						</p>
-						<p class="cifra text-2xl">
+						<p class="cifra text-xl">
 							{formatoVolumen($objetivo.tdeeKcal)}<span class="cifra-u">kcal</span>
 						</p>
 					</div>
@@ -535,9 +547,18 @@
 							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
 							style="color: var(--muted)"
 						>
+							Diferencia
+						</p>
+						<p class="cifra text-xl">{diferenciaTexto}<span class="cifra-u">kcal</span></p>
+					</div>
+					<div class="min-w-0">
+						<p
+							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+							style="color: var(--muted)"
+						>
 							Ritmo
 						</p>
-						<p class="cifra text-2xl">{ritmoTexto}<span class="cifra-u">{unidad}/sem</span></p>
+						<p class="cifra text-xl">{ritmoTexto}<span class="cifra-u">{unidad}/sem</span></p>
 					</div>
 				</div>
 			{/if}
