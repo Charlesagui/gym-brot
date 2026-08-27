@@ -12,6 +12,7 @@
 	import { gramosAPeso, pesoAGramos, type UnidadPeso } from '$lib/unidades';
 	import { formatoNumero, fechaCorta } from '$lib/formato';
 	import ChartPesoCorporal from '$lib/components/ChartPesoCorporal.svelte';
+	import Icono from '$lib/components/Icono.svelte';
 	import CintaPeso from '$lib/components/CintaPeso.svelte';
 	import { reportarErrorDatos } from '$lib/errores-datos';
 	import { fromLiveQuery } from '$lib/live';
@@ -29,6 +30,15 @@
 	let confirmarBorrado = $state<string | null>(null);
 	let guardando = $state(false);
 	let mensaje = $state('');
+	/**
+	 * Se acaba de guardar una medición, y por eso el acuse es tocable.
+	 *
+	 * Es aparte de `mensaje` porque no todos los mensajes de esta pantalla merecen el
+	 * ofrecimiento: "ingresá un peso válido" y "meta guardada" no llevan a ningún lado.
+	 * Sólo el peso recién anotado tiene a dónde ir — es el único dato de esta pantalla que
+	 * cambia algo en otra.
+	 */
+	let recienGuardado = $state(false);
 
 	const ajustes = $derived($ajustesStore);
 	const pesos = $derived($pesosStore);
@@ -46,6 +56,7 @@
 	function tocarSelector() {
 		selectorTocado = true;
 		mensaje = '';
+		recienGuardado = false;
 	}
 
 	$effect(() => {
@@ -82,21 +93,26 @@
 		const gramos = pesoAGramos(pesoSeleccionado, ajustes.unidad);
 		if (gramos == null) {
 			mensaje = 'Ingresá un peso válido.';
+			recienGuardado = false;
 			return;
 		}
 		if (fecha > hoyStr()) {
 			mensaje = 'No podés registrar una medición futura.';
+			recienGuardado = false;
 			return;
 		}
 		guardando = true;
 		mensaje = '';
+		recienGuardado = false;
 		try {
 			await guardarPesoCorporal(fecha, gramos);
 			editandoFecha = null;
 			fecha = hoyStr();
 			selectorTocado = false;
 			ultimoPesoSincronizado = null;
-			mensaje = 'Medición guardada.';
+			// El acuse lo da el bloque tocable, con su propio texto.
+			mensaje = '';
+			recienGuardado = true;
 		} catch (error) {
 			reportarErrorDatos('No se pudo guardar la medición.', error);
 		} finally {
@@ -110,6 +126,7 @@
 		fijarSelector(gramosAPeso(gramos, ajustes.unidad) ?? 70);
 		selectorTocado = true;
 		mensaje = '';
+		recienGuardado = false;
 	}
 
 	function cancelarEdicion() {
@@ -117,6 +134,7 @@
 		fecha = hoyStr();
 		selectorTocado = false;
 		ultimoPesoSincronizado = null;
+		recienGuardado = false;
 	}
 
 	async function borrar(fechaBorrar: string) {
@@ -143,12 +161,14 @@
 					: pesoAGramos(visible, ajustes.unidad);
 		if (texto(metaTexto) !== '' && gramos == null) {
 			mensaje = 'Ingresá una meta válida o dejala vacía.';
+			recienGuardado = false;
 			return;
 		}
 		try {
 			await setMetaPesoGramos(gramos);
 			metaTexto = '';
 			mensaje = gramos == null ? 'Meta eliminada.' : 'Meta guardada.';
+			recienGuardado = false;
 		} catch (error) {
 			reportarErrorDatos('No se pudo guardar la meta.', error);
 		}
@@ -157,10 +177,16 @@
 
 <main class="gb-page glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-28 pt-6">
 	<header class="mb-5 flex items-center gap-3">
+		<!--
+			Vuelve a Macros y no a la portada. El único enlace a esta pantalla en toda la app
+			sale de la tarjeta de Macros, y la barra de abajo marca Macros como la sección
+			activa mientras estás acá: mandar a Rutinas era mandar a un lugar del que no
+			viniste, contradiciendo a la propia barra.
+		-->
 		<a
-			href="/"
+			href="/cuerpo"
 			class="grid size-11 place-items-center rounded-full border border-white/10 text-lg"
-			aria-label="Volver">←</a
+			aria-label="Volver a Macros">←</a
 		>
 		<div>
 			<h1 class="text-xl font-extrabold">Peso corporal</h1>
@@ -256,9 +282,42 @@
 				>{guardando ? 'Guardando…' : 'Guardar'}</button
 			>
 		</div>
-		{#if mensaje}<p class="mt-2 text-xs" role="status" style="color: var(--muted)">
-				{mensaje}
-			</p>{/if}
+		<!--
+			Guardar no navega, y por eso el acuse es tocable.
+
+			Esta pantalla no es un formulario: abajo están el gráfico de evolución, la meta y
+			el historial editable. El momento después de guardar es mirar la curva con el punto
+			nuevo, y navegar solo se lo lleva puesto — además de expulsarte en cada medición
+			cuando cargás varios días salteados de a uno.
+
+			Pero el peso es el único dato de acá que cambia algo en otra pantalla: es lo que
+			corrige el objetivo. Sin esto no se enteraba nadie — Macros pasa de "todavía no
+			registraste ningún peso" a una predicción de verdad y no había nada que lo dijera.
+			Así el ofrecimiento está y la decisión sigue siendo del usuario.
+		-->
+		{#if recienGuardado}
+			<div
+				class="mt-2 flex min-h-11 items-center justify-between gap-2 rounded-xl pl-3 text-xs font-bold"
+				style="background: rgb(var(--exito) / .14); color: rgb(var(--exito))"
+			>
+				<!--
+					La barra no es el enlace, y el `role="status"` no va adentro de él.
+
+					Las dos cosas se probaron y las dos estaban mal. Con la barra entera como enlace
+					y el estado adentro, Chrome dejaba al enlace **sin nombre accesible**: `status`
+					no aporta al nombre por contenido, y el árbol lo reportaba como un link mudo.
+					Separados, cada uno dice lo suyo — el estado anuncia que se guardó, el enlace se
+					llama "Ver tu objetivo".
+				-->
+				<span class="flex items-center gap-2">
+					<Icono nombre="hecha" tamano={16} />
+					<span role="status">Medición guardada.</span>
+				</span>
+				<a href="/cuerpo" class="flex min-h-11 items-center rounded-xl px-3">Ver tu objetivo →</a>
+			</div>
+		{:else if mensaje}
+			<p class="mt-2 text-xs" role="status" style="color: var(--muted)">{mensaje}</p>
+		{/if}
 	</section>
 
 	<section class="mt-3 rounded-2xl border border-white/10 p-4" style="background: var(--surface)">

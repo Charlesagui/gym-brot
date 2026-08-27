@@ -354,7 +354,12 @@ test('la sección Macros tiene su lugar en la barra y arranca vacía', async ({ 
 
 test('/peso queda adentro de Macros y deja de estar huérfano en la barra', async ({ page }) => {
 	await page.goto('/peso');
-	await expect(page.getByRole('link', { name: 'Macros' })).toHaveAttribute('aria-current', 'page');
+	// `exact` porque la flecha de volver dice "Volver a Macros" y también matchearía: lo que
+	// se afirma acá es el ítem de la barra, cuyo nombre accesible es "Macros" y nada más.
+	await expect(page.getByRole('link', { name: 'Macros', exact: true })).toHaveAttribute(
+		'aria-current',
+		'page'
+	);
 });
 
 test('el objetivo guardado manda en la sección', async ({ page }) => {
@@ -493,4 +498,38 @@ test('las tres cifras de la fila entran sin desbordar, ni a 320 px', async ({ pa
 	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
 	await expect(page.getByText('−450kcal')).toBeVisible();
 	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+});
+
+test('guardar un peso ofrece volver al objetivo, y no navega solo', async ({ page }) => {
+	await guardarYAbrirMacros(page);
+
+	// La única puerta a /peso en toda la app sale de acá.
+	await page.getByRole('link', { name: /Registrar mi primer peso/ }).click();
+	await expect(page).toHaveURL(/\/peso$/);
+
+	// Y la flecha devuelve a donde entraste, no a la portada: la barra de abajo marca
+	// Macros como sección activa mientras estás en /peso.
+	await expect(page.getByRole('link', { name: 'Volver a Macros' })).toHaveAttribute(
+		'href',
+		'/cuerpo'
+	);
+
+	await page.getByRole('button', { name: 'Guardar', exact: true }).first().click();
+
+	// Guardar no navega: esta pantalla tiene el gráfico, la meta y el historial editable, y
+	// el momento después de guardar es mirar la curva con el punto nuevo. Cargar tres días
+	// salteados no puede costar tres entradas.
+	await expect(page).toHaveURL(/\/peso$/);
+
+	// Pero el ofrecimiento está, porque el peso es el único dato de acá que cambia otra
+	// pantalla: es lo que corrige el objetivo.
+	// El acuse y el enlace son dos elementos: anidar el `role="status"` adentro del enlace
+	// lo dejaba sin nombre accesible, o sea un link mudo para un lector de pantalla.
+	await expect(page.getByRole('status')).toHaveText('Medición guardada.');
+	await page.getByRole('link', { name: 'Ver tu objetivo →' }).click();
+
+	// Y del otro lado se ve qué hizo: la sección pasa de no tener peso a tenerlo.
+	await expect(page).toHaveURL(/\/cuerpo$/);
+	await expect(page.getByText('Peso hoy')).toBeVisible();
+	await expect(page.getByText(/Todavía no registraste ningún peso/)).toHaveCount(0);
 });
