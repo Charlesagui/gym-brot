@@ -48,17 +48,13 @@
 		AJUSTES_DEFAULT
 	} from '$lib/extras';
 	import {
-		PRESETS_DESCANSO,
-		RUEDA_DESCANSO,
 		descansoEfectivo,
-		descansoEnSegundos,
 		descansoPersonalizado,
-		etiquetaCortaDescanso,
 		etiquetaDescanso,
-		segundosAMinutos
+		relojDescanso
 	} from '$lib/descanso-preset';
 	import Icono from '$lib/components/Icono.svelte';
-	import RuedaTiempo from '$lib/components/RuedaTiempo.svelte';
+	import HojaDescanso from '$lib/components/HojaDescanso.svelte';
 	import { sonarSetHecho, sonarExito } from '$lib/audio';
 	import { vibrar } from '$lib/vibracion';
 	import { descanso } from '$lib/descanso.svelte';
@@ -66,7 +62,7 @@
 	import { WakeLockSeguro } from '$lib/wake-lock';
 	import { dur, menosMovimiento, DUR_BASE, DUR_SLOW } from '$lib/motion';
 	import { fromLiveQuery } from '$lib/live';
-	import { formatoNumero, formatoSet, fechaCorta, cargaCorta } from '$lib/formato';
+	import { formatoNumero, formatoSet, fechaCorta, resumenSeries } from '$lib/formato';
 	import { fechaSesionDesdeUrl } from '$lib/fechas';
 	import { youtubeEmbedUrl } from '$lib/youtube';
 	import {
@@ -199,7 +195,8 @@
 		filaAbierta = null;
 		hechasDesplegadas = false;
 		avisoSerie = null;
-		mostrarRuedaDescanso = false;
+		hojaDescanso = false;
+		propioAntesDeApagar = null;
 		mostrarQueMide = false;
 		toast = null;
 		// El pop del contador es para un toque en ESTE ejercicio, no para el salto de
@@ -455,7 +452,15 @@
 	// Descanso: el del ejercicio manda sobre el general (ver $lib/descanso-preset).
 	const descansoEj = $derived(descansoEfectivo(ej?.id, ajustes));
 	const descansoPropio = $derived(descansoPersonalizado(ej?.id, ajustes));
-	let mostrarRuedaDescanso = $state(false);
+	let hojaDescanso = $state(false);
+	/**
+	 * El último descanso propio que tuvo este ejercicio antes de apagarlo.
+	 *
+	 * Apagar se guarda como un `0`, que pisa el valor que había: sin esto, apagar y volver
+	 * a encender se llevaba puesto el descanso de 3:30 que habías elegido y te devolvía al
+	 * general. Vive en la pantalla porque es memoria de un gesto, no una preferencia.
+	 */
+	let propioAntesDeApagar = $state<number | null>(null);
 	/** La explicación de la métrica y la equivalencia: útiles una vez, no en cada serie. */
 	let mostrarQueMide = $state(false);
 	/**
@@ -464,13 +469,6 @@
 	 * quedar tres desplegadas a la vez y ninguna forma de saberlo desde afuera.
 	 */
 	let filaAbierta = $state<number | null>(null);
-	let segundosRueda = $state(90);
-	/** Un descanso propio que no es ninguno de los cuatro atajos: lo eligió la rueda. */
-	const descansoDeRueda = $derived(
-		descansoPropio != null &&
-			descansoPropio > 0 &&
-			!PRESETS_DESCANSO.includes(descansoPropio as (typeof PRESETS_DESCANSO)[number])
-	);
 	const pasoPeso = $derived(
 		ej ? pasoPesoEfectivo(ej, ajustes) : (ajustes.pasoPeso ?? AJUSTES_DEFAULT.pasoPeso)
 	);
@@ -504,19 +502,20 @@
 	const hechasAgrupadas = $derived(indiceActiva === -1 ? sets.length : indiceActiva);
 	const hechasOcultas = $derived(hechasDesplegadas ? 0 : hechasAgrupadas);
 	/**
-	 * Vista previa de las cargas. Se muestran las ÚLTIMAS y no las primeras, con un "+N"
-	 * adelante por las que no entran: la pregunta que se hace mirando el renglón es si la
-	 * carga se sostuvo hasta la serie que estás por hacer.
+	 * Vista previa de las cargas (ver `resumenSeries`). Lo que se repite se nombra una vez
+	 * y lo que varía queda en lista, con la unidad pegada a la carga: el renglón decía
+	 * "60×10 · 62.5×10 · 65×8" sin decir en ningún lado cuál de los dos números era el
+	 * peso. Del resto, se muestran las ÚLTIMAS con un "+N" adelante, porque la pregunta
+	 * que se hace uno mirando el renglón es si la carga se sostuvo hasta acá.
 	 */
-	const RESUMEN_MAX = 4;
-	const resumenHechas = $derived.by(() => {
-		const hechasDelGrupo = sets.slice(0, hechasAgrupadas);
-		const visibles = hechasDelGrupo.slice(-RESUMEN_MAX);
-		return {
-			ocultas: hechasDelGrupo.length - visibles.length,
-			cargas: visibles.map((serie) => cargaCorta(serie)).join(' · ')
-		};
-	});
+	/*
+	 * Tres, no cuatro. Cuatro pares —"60×10 · 62,5×10 · 65×8 · 65×6"— son ocho cifras y
+	 * tres separadores en un renglón de 18 px que además trunca: se leen como un número
+	 * largo. Con la factorización, el caso común imprime uno solo y esto sólo actúa en
+	 * la escalera, que es justo donde amontonaba.
+	 */
+	const RESUMEN_MAX = 3;
+	const resumenHechas = $derived(resumenSeries(sets.slice(0, hechasAgrupadas), RESUMEN_MAX));
 	const conteoHechas = $derived(
 		`${hechasAgrupadas} ${hechasAgrupadas === 1 ? 'serie hecha' : 'series hechas'}`
 	);
@@ -928,7 +927,8 @@
 	}
 
 	function activarDescansoDesdeHint() {
-		cambiarDescansoEjercicio(ajustes.timer.minutos || 2);
+		// Mismo camino que el interruptor: "activar" tiene que significar una sola cosa.
+		encenderDescanso();
 		descartarHintTimer();
 	}
 
@@ -1046,6 +1046,9 @@
 	/** Sin descanso en ESTE ejercicio (0), sin tocar el de los demás. */
 	function apagarDescansoEjercicio() {
 		if (!ej) return;
+		// Se recuerda antes de pisarlo con el 0, para que volver a encender no cueste
+		// reelegir el valor (ver `propioAntesDeApagar`).
+		propioAntesDeApagar = descansoPropio != null && descansoPropio > 0 ? descansoPropio : null;
 		descanso.saltar();
 		guardarDatoSecundario(
 			setDescansoEjercicio(ej.id, 0),
@@ -1056,6 +1059,7 @@
 	/** Sin valor propio: este ejercicio vuelve a seguir el descanso general. */
 	function descansoAutomatico() {
 		if (!ej) return;
+		propioAntesDeApagar = null;
 		guardarDatoSecundario(
 			setDescansoEjercicio(ej.id),
 			'No se pudo guardar el descanso del ejercicio.'
@@ -1075,28 +1079,28 @@
 	}
 
 	/**
-	 * "Otro": la rueda para cualquier descanso de 15 s a 10 min. Arranca en el valor
-	 * que hoy está en uso, así girar es corregir y no empezar de cero.
+	 * Encender vuelve al último valor propio si lo había; si no, deja que el ejercicio
+	 * siga al general —que es su estado natural— y sólo escribe un valor propio cuando el
+	 * general está apagado y no habría nada que seguir.
 	 */
-	function alternarRuedaDescanso() {
-		if (!mostrarRuedaDescanso) segundosRueda = descansoEnSegundos(descansoEj.minutos);
-		mostrarRuedaDescanso = !mostrarRuedaDescanso;
+	function encenderDescanso() {
+		if (!ej) return;
+		if (propioAntesDeApagar != null) cambiarDescansoEjercicio(propioAntesDeApagar);
+		else if (ajustes.timer.activo) descansoAutomatico();
+		else cambiarDescansoEjercicio(ajustes.timer.minutos || 2);
+		propioAntesDeApagar = null;
 	}
 
-	/** Mientras el dedo gira sólo se mueve el número de la rueda: nada toca la base. */
-	function girarDescanso(segundos: number) {
-		segundosRueda = segundos;
+	/** El interruptor de la fila. */
+	function alternarDescanso() {
+		if (descansoEj.activo) apagarDescansoEjercicio();
+		else encenderDescanso();
 	}
 
-	/**
-	 * Soltó: recién ahora el valor es una decisión y se guarda, una sola vez.
-	 *
-	 * Antes esto vivía adentro de `girarDescanso`, así que cada detent (18°) escribía en
-	 * IndexedDB: una vuelta eran 20 escrituras, cada una re-corría media pantalla y la
-	 * rueda se movía debajo del dedo mientras giraba.
-	 */
-	function soltarRuedaDescanso(segundos: number) {
-		cambiarDescansoEjercicio(segundosAMinutos(segundos));
+	/** Soltó la rueda de la hoja: recién ahora el valor es una decisión y se guarda. */
+	function elegirDescanso(minutos: number) {
+		propioAntesDeApagar = null;
+		cambiarDescansoEjercicio(minutos);
 	}
 </script>
 
@@ -1426,7 +1430,8 @@
 									{avisoSerie}
 								</p>
 							{/if}
-							<div class="mt-3 space-y-2">
+							<!-- 10 px entre renglones: con 8 y ocho series hechas la lista se apelmaza. -->
+							<div class="mt-3 space-y-2.5">
 								{#if hechasAgrupadas > 0}
 									<!--
 										Lo hecho, en un renglón: la primera de las tres zonas fijas de la lista. Manda la
@@ -1438,36 +1443,53 @@
 										type="button"
 										onclick={() => (hechasDesplegadas = !hechasDesplegadas)}
 										aria-expanded={hechasDesplegadas}
-										class="flex min-h-14 w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-left"
+										class="gb-relieve-suave flex min-h-14 w-full flex-col justify-center gap-1 rounded-xl px-3 py-2.5 text-left"
 										style="background: rgb(var(--exito) / .07); border: 1px solid rgb(var(--exito) / .2)"
 										aria-label={etiquetaGrupoHechas}
 									>
-										<span style="color: rgb(var(--exito))" aria-hidden="true">
-											<Icono nombre="hecha" tamano={18} />
-										</span>
-										<span class="flex min-w-0 flex-1 flex-col gap-0.5">
-											{#if !hechasDesplegadas}
-												<span class="cifra truncate text-lg" style="color: #c2c6d6">
-													{#if resumenHechas.ocultas}<span style="color: var(--muted)"
-															>+{resumenHechas.ocultas} ·
-														</span>{/if}{resumenHechas.cargas}
-												</span>
-											{/if}
+										<!--
+											El conteo y el verbo comparten el primer renglón para que la cifra se
+											quede con el segundo entero. Compartiendo línea con "Ver todas" le
+											quedaban 150 px y cuatro series se cortaban en "+1 · 62,5×10 · 6…":
+											el resumen truncado no resume nada.
+										-->
+										<span class="flex w-full items-center gap-2">
+											<span class="shrink-0" style="color: rgb(var(--exito))" aria-hidden="true">
+												<Icono nombre="hecha" tamano={18} />
+											</span>
 											<span
-												class="text-[10px] font-bold uppercase tracking-wider"
+												class="min-w-0 flex-1 text-[10px] font-bold uppercase tracking-wider"
 												style="color: rgb(var(--exito))">{conteoHechas}</span
 											>
-										</span>
-										<span
-											class="flex shrink-0 items-center gap-1 text-[10px] font-bold uppercase tracking-wider"
-											style="color: var(--muted)"
-										>
-											{hechasDesplegadas ? 'Ocultar' : 'Ver todas'}
 											<span
-												class="gb-caret {hechasDesplegadas ? 'gb-caret--abierto' : ''}"
-												aria-hidden="true"><Icono nombre="desplegar" tamano={14} /></span
+												class="flex shrink-0 items-center gap-1 text-[10px] font-bold uppercase tracking-wider"
+												style="color: var(--muted)"
 											>
+												{hechasDesplegadas ? 'Ocultar' : 'Ver todas'}
+												<span
+													class="gb-caret {hechasDesplegadas ? 'gb-caret--abierto' : ''}"
+													aria-hidden="true"><Icono nombre="desplegar" tamano={14} /></span
+												>
+											</span>
 										</span>
+										{#if !hechasDesplegadas}
+											<!--
+												Sin marca de que el resumen viene cortado. Hubo un "+1 ·" y después un
+												"…", y ninguno de los dos se entendía: el "+" choca de frente con el
+												delta de las filas de abajo, donde "+2,5" son los kilos que subiste. Con
+												el conteo arriba ("5 series hechas") y tres pares a la vista, que hay más
+												se deduce solo, y el renglón se queda con las cifras y nada más.
+											-->
+											<span
+												class="cifra gb-resumen-series w-full truncate text-lg"
+												style="color: #c2c6d6"
+												aria-hidden="true"
+												>{resumenHechas.inicio}{#if resumenHechas.unidad}<span
+														class="cifra-u cifra-u--fila"
+														>{resumenHechas.unidad === 'peso' ? unidad : 'reps'}</span
+													>{/if}{resumenHechas.resto}</span
+											>
+										{/if}
 									</button>
 								{/if}
 								{#each sets as s, i (i)}
@@ -1555,98 +1577,56 @@
 						{/if}
 
 						<!--
-							El descanso en dos renglones parejos en vez de ocho píldoras que se
-							envolvían donde caía cada una: primero el modo (Auto / Off), después los
-							valores, todos del mismo ancho. El párrafo que explicaba qué hacía Auto se
-							convierte en el estado de la derecha, que dice lo mismo en cuatro palabras.
+							El descanso, en un renglón: un interruptor y el valor.
+
+							Eran ocho botones en dos filas (Auto, Off y cuatro atajos, más "Otro" y la
+							rueda que se desplegaba abajo): 145 px fijos de la tarjeta de entrenar —450
+							con la rueda abierta— para un valor que se elige una vez y no se vuelve a
+							tocar. Los atajos se fueron porque la rueda los cubre a todos, y "Auto" dejó
+							de ser un botón porque es el estado en el que ya está un ejercicio al que
+							nunca le elegiste nada; volver a él vive en la hoja.
+
+							El lugar natural para decidir cuánto descansar es mientras descansás, así
+							que la misma rueda está en el descanso a pantalla completa y lo que elijas
+							ahí queda guardado acá.
 						-->
-						<div class="gb-rest-presets mt-3 border-t border-white/10 pt-3">
-							<div class="flex items-center justify-between gap-2">
-								<span
-									class="flex items-center gap-1.5 text-xs font-semibold"
-									style="color: var(--muted)"
-								>
-									<Icono nombre="descanso" tamano={15} /> Descanso
-								</span>
-								<span class="text-[11px] font-semibold" style="color: var(--muted)">
-									{#if descansoPropio == null}
-										Auto · {ajustes.timer.activo
-											? etiquetaDescanso(ajustes.timer.minutos)
-											: 'apagado'}
-									{:else if descansoPropio === 0}
-										Sin descanso acá
-									{:else}
-										Propio · {etiquetaDescanso(descansoPropio)}
-									{/if}
-								</span>
-							</div>
-							<div class="mt-2 grid grid-cols-4 gap-1.5">
+						<div class="gb-rest-presets mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
+							<span
+								class="flex shrink-0 items-center gap-1.5 text-xs font-semibold"
+								style="color: var(--muted)"
+							>
+								<Icono nombre="descanso" tamano={15} /> Descanso
+							</span>
+							<span class="flex-1"></span>
+							{#if descansoEj.activo}
+								<!-- El estado va en el rótulo, no sólo en la posición de la perilla. -->
 								<button
-									onclick={descansoAutomatico}
-									class="min-h-11 rounded-xl px-2 text-xs font-semibold"
-									aria-pressed={descansoPropio == null}
-									aria-label="Usar el descanso general en este ejercicio"
-									style={descansoPropio == null
-										? 'background: var(--accent); color: var(--on-accent)'
-										: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Auto</button
+									onclick={() => (hojaDescanso = true)}
+									class="flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-sm font-bold tabular-nums"
+									style="background: rgba(255,255,255,.06)"
+									aria-label={`Cambiar el descanso de este ejercicio, hoy de ${etiquetaDescanso(
+										descansoEj.minutos
+									)}`}
 								>
-								<button
-									onclick={apagarDescansoEjercicio}
-									class="min-h-11 rounded-xl px-2 text-xs font-semibold"
-									aria-pressed={descansoPropio === 0}
-									aria-label="Sin descanso en este ejercicio"
-									style={descansoPropio === 0
-										? 'background: var(--accent); color: var(--on-accent)'
-										: 'background: rgba(255,255,255,.06); color: var(--muted)'}>Off</button
-								>
-								{#each PRESETS_DESCANSO as minutos (minutos)}
-									<button
-										onclick={() => cambiarDescansoEjercicio(minutos)}
-										class="min-h-11 rounded-xl px-2 text-xs font-semibold tabular-nums"
-										aria-pressed={descansoPropio === minutos}
-										aria-label={`Descanso de ${etiquetaDescanso(minutos)} en este ejercicio`}
-										style={descansoPropio === minutos
-											? 'background: var(--accent); color: var(--on-accent)'
-											: 'background: rgba(255,255,255,.06); color: var(--muted)'}
-										>{etiquetaCortaDescanso(minutos)}</button
-									>
-								{/each}
-								<button
-									onclick={alternarRuedaDescanso}
-									class="col-span-2 flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-semibold tabular-nums"
-									aria-pressed={descansoDeRueda}
-									aria-expanded={mostrarRuedaDescanso}
-									aria-label="Elegir otro descanso con la rueda"
-									style={descansoDeRueda
-										? 'background: var(--accent); color: var(--on-accent)'
-										: 'background: rgba(255,255,255,.06); color: var(--muted)'}
-								>
+									{relojDescanso(descansoEj.minutos)}
 									<Icono nombre="rueda" tamano={14} />
-									{descansoDeRueda && descansoPropio
-										? etiquetaCortaDescanso(descansoPropio)
-										: 'Otro'}
 								</button>
-							</div>
-							{#if mostrarRuedaDescanso}
-								<div class="mt-3 flex flex-col items-center gap-2">
-									<RuedaTiempo
-										segundos={segundosRueda}
-										min={RUEDA_DESCANSO.min}
-										max={RUEDA_DESCANSO.max}
-										paso={RUEDA_DESCANSO.paso}
-										glow={g.glow}
-										vibracion={vibracionActiva}
-										etiqueta="Descanso de este ejercicio"
-										onCambio={girarDescanso}
-										onFin={soltarRuedaDescanso}
-									/>
-									<button
-										onclick={() => (mostrarRuedaDescanso = false)}
-										class="min-h-11 rounded-full px-4 text-xs font-bold"
-										style="background: rgba(255,255,255,.06); color: var(--muted)">Listo</button
-									>
-								</div>
+							{:else}
+								<span class="text-xs font-semibold" style="color: var(--muted)">Sin descanso</span>
 							{/if}
+							<button
+								role="switch"
+								aria-checked={descansoEj.activo}
+								onclick={alternarDescanso}
+								class="gb-switch shrink-0"
+								class:gb-switch--on={descansoEj.activo}
+								style="--switch-glow: {g.glow}"
+								aria-label="Descanso en este ejercicio"
+							>
+								<span class="gb-switch-via" aria-hidden="true"
+									><span class="gb-switch-perilla"></span></span
+								>
+							</button>
 						</div>
 						{#if mostrarHintTimer}
 							<div
@@ -1867,6 +1847,23 @@
 			{/if}
 		</div>
 	</main>
+
+	{#if hojaDescanso}
+		<HojaDescanso
+			minutos={descansoEj.minutos}
+			glow={g.glow}
+			vibracion={vibracionActiva}
+			tieneValorPropio={descansoPropio != null}
+			generalMinutos={ajustes.timer.minutos}
+			generalActivo={ajustes.timer.activo}
+			onElegir={elegirDescanso}
+			onSeguirGeneral={() => {
+				descansoAutomatico();
+				hojaDescanso = false;
+			}}
+			onCerrar={() => (hojaDescanso = false)}
+		/>
+	{/if}
 
 	{#if tecnicaAbierta && tecnicaEmbedUrl}
 		<TecnicaModal
