@@ -554,11 +554,20 @@ export function rotuloObjetivo(meta: Meta, nivel: NivelRitmo | null): string {
 }
 
 /**
- * Cuánto empuja una opción, que es lo único que el color tiene permitido decir. Tres
- * tonos y no cinco a propósito: déficit agresivo y volumen agresivo comparten el naranja
- * porque comparten la advertencia, no porque sean lo mismo.
+ * El lugar de una opción en la escala, que es lo que el color dice.
+ *
+ * Uno por posición y no tres compartidos. La versión anterior agrupaba por *cuánto
+ * empuja* —calmo, normal, fuerte—, así que déficit agresivo y volumen agresivo salían
+ * del mismo naranja por compartir la advertencia. Leído en pantalla eso no alcanzaba:
+ * dos muescas del mismo color en las dos puntas de una escala se leen como la misma
+ * cosa, y son opuestas.
+ *
+ * Ahora la escala es divergente y tiene dos ejes a la vez, que es lo que hay que ver:
+ * el **tono** dice la dirección (cálido = comer menos, frío = comer más) y la
+ * **intensidad** dice cuánto (las puntas saturadas, el medio en calma).
  */
-export type TonoObjetivo = 'calmo' | 'normal' | 'fuerte';
+export type TonoObjetivo =
+	'deficit-fuerte' | 'deficit-suave' | 'neutro' | 'volumen-suave' | 'volumen-fuerte';
 
 export interface OpcionObjetivo {
 	id: string;
@@ -594,10 +603,14 @@ export const OPCIONES_OBJETIVO: readonly OpcionObjetivo[] = [
 	{ id: 'subir-agresivo', corto: 'Volumen agresivo', meta: 'subir', nivel: 'agresivo' }
 ];
 
-/** El tono es el nivel: son la misma información y dos copias se despegan. */
-export function tonoObjetivo(nivel: NivelRitmo | null): TonoObjetivo {
-	if (nivel === null) return 'calmo';
-	return nivel === 'moderado' ? 'normal' : 'fuerte';
+/**
+ * El tono sale de la meta y el nivel, que es toda la identidad de una posición. Se deriva
+ * en vez de escribirse en la tabla porque es la misma información: dos copias se despegan.
+ */
+export function tonoObjetivo(meta: Meta, nivel: NivelRitmo | null): TonoObjetivo {
+	if (meta === 'mantener' || nivel === null) return 'neutro';
+	if (meta === 'bajar') return nivel === 'agresivo' ? 'deficit-fuerte' : 'deficit-suave';
+	return nivel === 'agresivo' ? 'volumen-fuerte' : 'volumen-suave';
 }
 
 /**

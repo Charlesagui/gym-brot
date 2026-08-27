@@ -225,7 +225,7 @@
 							id,
 							rotulo: rotuloObjetivo(meta, nivel),
 							corto,
-							tono: tonoObjetivo(nivel),
+							tono: tonoObjetivo(meta, nivel),
 							meta
 						};
 
