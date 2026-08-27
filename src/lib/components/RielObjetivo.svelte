@@ -71,8 +71,8 @@
 	 * mismo color en las dos puntas de una escala se leen como la misma cosa, siendo
 	 * opuestas.
 	 *
-	 *     rojo   naranja   verde   cian   violeta
-	 *     ◄── comer menos    ·    comer más ──►
+	 *     rojo   dorado   verde   cian   violeta
+	 *     ◄── comer menos   ·   comer más ──►
 	 *
 	 * Es un recorrido por el espectro, no un divergente: el color no dice cuánto empuja
 	 * cada opción, dice **cuál es** y en qué orden va. Dos muescas nunca se confunden, que
@@ -88,11 +88,19 @@
 	 * 10 px, que es donde el contraste se cobra primero.
 	 *
 	 * El verde es más claro que `--exito` a propósito: ese token significa "terminado" en
-	 * toda la app —día cerrado, revisión lista— y acá sólo marca el centro de una escala.
+	 * toda la app —día cerrado, revisión lista— y acá sólo marca una posición de la escala.
+	 *
+	 * Y el déficit moderado **no** lleva el naranja de `--max`, que es lo que llevaba antes.
+	 * En esta app el naranja significa advertencia: lo usan el aviso de tope por IMC, el
+	 * canto del paso con reparos y la primera frase cuando pide una acción. Ponérselo al
+	 * moderado contradecía al motor, que es el que decide — `ritmosDisponibles` le da
+	 * `aviso: null` al moderado y sí se lo pone al agresivo. El dorado queda en la misma
+	 * franja cálida, así que el orden del espectro no se rompe, pero desaturado: es lo que
+	 * le saca la alarma sin sacarle el lugar.
 	 */
 	const COLOR_TONO: Record<TonoObjetivo, string> = {
 		'deficit-fuerte': '255 107 92',
-		'deficit-suave': '255 157 60',
+		'deficit-suave': '224 203 150',
 		neutro: '134 230 172',
 		'volumen-suave': '56 199 236',
 		'volumen-fuerte': '130 104 255'
