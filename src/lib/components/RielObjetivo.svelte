@@ -66,25 +66,36 @@
 	/**
 	 * La escala, en triples rgb.
 	 *
-	 * Un solo mapa y no dos: antes había uno de relleno y otro de tinta porque el violeta de
-	 * fondo (`--accent`) no llega al contraste como letra y hay un `--accent-text` aparte
-	 * para eso. Estos cinco están elegidos para servir a las dos cosas, así que el mismo
-	 * valor pinta la letra y —al 18 %, vía `--opcion-color`— el relleno de la elegida.
+	 * Un color por posición y no tres compartidos. Agrupar por "cuánto empuja" hacía que
+	 * déficit agresivo y volumen agresivo salieran del mismo naranja, y dos muescas del
+	 * mismo color en las dos puntas de una escala se leen como la misma cosa, siendo
+	 * opuestas.
+	 *
+	 *     rojo   naranja   verde   cian   violeta
+	 *     ◄── comer menos    ·    comer más ──►
+	 *
+	 * Es un recorrido por el espectro, no un divergente: el color no dice cuánto empuja
+	 * cada opción, dice **cuál es** y en qué orden va. Dos muescas nunca se confunden, que
+	 * es lo que se le pide acá — la magnitud ya la dicen las kcal y la fila de diferencia.
+	 *
+	 * Un solo mapa y no dos: antes había uno de relleno y otro de tinta, porque el violeta
+	 * de fondo de la app no llega al contraste como letra y existe un `--accent-text`
+	 * aparte para eso. Estos cinco están elegidos para servir a las dos cosas, así que el
+	 * mismo valor pinta la letra y —al 18 %, vía `--opcion-color`— el relleno de la elegida.
 	 *
 	 * Los cinco pasan AA sobre `--surface` como texto: el más justo es el violeta con 4,7:1
-	 * y el resto va de 6,5 a 14. Si alguno se toca, se comprueba de nuevo — son letras de
+	 * y el resto va de 6,6 a 12. Si alguno se toca, se comprueba de nuevo — son letras de
 	 * 10 px, que es donde el contraste se cobra primero.
 	 *
-	 * Cálidos a la izquierda, fríos a la derecha, blanco en el medio: la dirección se lee
-	 * sin saber los nombres. Y la saturación sube hacia las puntas, que es lo que hace que
-	 * los agresivos se vean agresivos y mantenimiento se vea en calma.
+	 * El verde es más claro que `--exito` a propósito: ese token significa "terminado" en
+	 * toda la app —día cerrado, revisión lista— y acá sólo marca el centro de una escala.
 	 */
 	const COLOR_TONO: Record<TonoObjetivo, string> = {
 		'deficit-fuerte': '255 107 92',
 		'deficit-suave': '255 157 60',
-		neutro: '232 232 240',
-		'volumen-suave': '130 104 255',
-		'volumen-fuerte': '56 199 236'
+		neutro: '134 230 172',
+		'volumen-suave': '56 199 236',
+		'volumen-fuerte': '130 104 255'
 	};
 
 	let nodo = $state<HTMLDivElement | undefined>(undefined);
