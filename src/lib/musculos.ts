@@ -107,8 +107,52 @@ export interface DistribucionMuscular {
 	coberturaRir: number;
 	puedeFiltrarDuras: boolean;
 	seriesSinRepresentacion: number;
-	maximo: number;
 	cargas: CargaMuscular[];
+}
+
+/**
+ * Series estimadas por semana con las que un músculo se pinta lleno.
+ *
+ * El color era relativo al músculo más cargado del período, y eso tenía tres
+ * consecuencias que ninguna cifra de la pantalla desmentía:
+ *
+ * - El cuerpo no se llenaba nunca. El músculo top se pintaba al 100 % con un día suelto
+ *   de entrenamiento y con doce semanas: el dibujo se ve igual el primer lunes que en
+ *   marzo, porque el denominador crece junto con el numerador.
+ * - El denominador se movía solo. Con sólo el día de piernas hecho, el cuádriceps (8
+ *   series) se pintaba al máximo; al hacer el día de empuje, el mismo cuádriceps con las
+ *   mismas 8 series bajaba de alfa 0,96 a 0,71. Hacer pecho apagaba las piernas.
+ * - El máximo casi siempre era un brazo. En una rutina empuje/tracción el bíceps termina
+ *   primero con 10 series directas y 11 asistencias de 0,4, por encima de los dorsales
+ *   que tienen 14 directas. Todo lo demás se medía contra ese número inflado.
+ *
+ * Ahora la escala es fija: el verde lleno son 20 series estimadas por semana, y el
+ * período sólo decide sobre cuánto tiempo se promedia. Eso hace que 1, 4 y 12 semanas
+ * sean comparables entre sí —es la misma unidad— y que el dibujo se llene de verdad a
+ * medida que se entrena.
+ *
+ * El 20 no es una recomendación de dosis: es dónde termina la rampa. Se eligió porque es
+ * el techo del rango que la literatura de hipertrofia maneja como semanal productivo
+ * (~10 a 20 series por músculo), así que la mayoría de las semanas cae adentro de la
+ * rampa en vez de saturarla. La app describe la escala al pie del mapa y no prescribe
+ * nada: no mide fatiga ni recuperación.
+ */
+export const SERIES_SEMANA_LLENO = 20;
+
+/** Series estimadas por semana: la unidad en la que el mapa habla. */
+export function porSemana(seriesDelPeriodo: number, semanas: number): number {
+	if (semanas <= 0) return 0;
+	// Un decimal, igual que `seriesEstimadas`: la cifra que se muestra y la que pinta
+	// tienen que ser la misma, si no el color contradice al número que lo explica.
+	return Math.round((seriesDelPeriodo / semanas) * 10) / 10;
+}
+
+/**
+ * Intensidad del relleno, de 0 a 1. Absoluta: no depende de los otros músculos ni del
+ * largo del período, sólo de cuántas series por semana recibió éste.
+ */
+export function intensidadMuscular(seriesDelPeriodo: number, semanas: number): number {
+	return Math.min(1, Math.max(0, porSemana(seriesDelPeriodo, semanas) / SERIES_SEMANA_LLENO));
 }
 
 function sumarDias(fecha: string, delta: number): string {
@@ -199,7 +243,6 @@ export function crearDistribucionMuscular(
 		coberturaRir,
 		puedeFiltrarDuras: seriesConRir >= 3 && coberturaRir >= 0.5,
 		seriesSinRepresentacion,
-		maximo: Math.max(0, ...lista.map((item) => item.seriesEstimadas)),
 		cargas: lista
 	};
 }

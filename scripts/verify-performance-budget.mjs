@@ -28,10 +28,15 @@ const MAX_SHELL_GZIP_BYTES = 120 * 1024;
  * tipografía de las cifras. Es decir: el número sigue el tamaño de la app, y la forma
  * de bajarlo sería partir rutas, no borrar assets.
  *
- * 1425 KiB deja ~52 KiB de aire, alcanza para las rutas en curso (energía, discos) y
- * sigue siendo chico para que un mp4 o una imagen grande lo rompan enseguida.
+ * Remedido el 27/8/2026: 1422,8 KiB en 133 entradas, o sea que el techo de 1425 KiB ya
+ * estaba consumido —quedaban 1,8 KiB— antes de tocar nada. La reforma del mapa corporal
+ * (tacto con radio de perdón, escala absoluta) suma 3,5 KiB de código sobre esa base:
+ * no entró ningún asset nuevo ni ninguna dependencia, las entradas siguen siendo 133.
+ *
+ * 1440 KiB devuelve ~13 KiB de aire y sigue siendo chico para que un mp4 o una imagen
+ * grande lo rompan enseguida.
  */
-const MAX_PRECACHE_BYTES = 1425 * 1024;
+const MAX_PRECACHE_BYTES = 1440 * 1024;
 
 async function tamanio(url) {
 	return stat(url).then((archivo) => archivo.size);

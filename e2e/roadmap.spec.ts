@@ -109,12 +109,36 @@ test('el mapa corporal comparte datos con la lista y responde a borrar historial
 		page.getByRole('heading', { name: 'Distribución estimada de series' })
 	).toBeVisible();
 	await expect(page.getByText('Cuádriceps', { exact: true })).toBeVisible();
-	const zona = page
-		.locator('g[role="button"][aria-label^="Cuádriceps: 1 series estimadas"]')
-		.first();
-	await zona.focus();
-	await page.keyboard.press('Enter');
-	await expect(zona).toHaveAttribute('aria-pressed', 'true');
+	// El toque se prueba errándole a propósito. Las zonas miden entre 8 y 25 px en un
+	// teléfono, así que apuntarle al cuádriceps con el dedo es imposible: lo que tiene
+	// que funcionar es tocar CERCA. Este click cae 5 px afuera del muslo.
+	const zona = page.locator('g[data-musculo="quadriceps"]').first();
+	const caja = await zona.boundingBox();
+	if (!caja) throw new Error('el cuádriceps no está dibujado');
+	await page.mouse.click(caja.x - 5, caja.y + caja.height / 2);
+	await expect(zona).toHaveClass(/seleccionada/);
+	const cerrar = page.getByRole('button', { name: 'Cerrar detalle de Cuádriceps' });
+	await expect(cerrar).toBeVisible();
+	// La escala es absoluta y la unidad es series por semana: la misma serie leída en tres
+	// ventanas da tres cifras distintas. Con la escala relativa de antes daba la misma
+	// siempre, porque esta serie era el máximo del período en los tres casos.
+	// El separador decimal va flexible (`[.,]`): qué se usa lo decide `formatoNumero` y
+	// no este test, que es sobre la escala. Sin esto, cambiar de punto a coma rompe una
+	// prueba que no tiene nada que ver con el formato.
+	await expect(page.getByText(/^0[.,]3 series por semana$/)).toBeVisible();
+	await page.getByRole('button', { name: '1 semana' }).click();
+	await expect(page.getByText('1 serie por semana', { exact: true })).toBeVisible();
+	await page.getByRole('button', { name: '12 semanas' }).click();
+	await expect(page.getByText(/^0[.,]1 series por semana$/)).toBeVisible();
+
+	// El hueco del detalle está siempre: al cerrarlo, los controles de período no se
+	// mueven de lugar.
+	const periodo = page.getByRole('button', { name: '12 semanas' });
+	const antes = await periodo.boundingBox();
+	await cerrar.click();
+	await expect(cerrar).toBeHidden();
+	await expect(page.getByText('Tocá un músculo del dibujo')).toBeVisible();
+	expect((await periodo.boundingBox())?.y).toBe(antes?.y);
 	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
 	// `\s+` y no un espacio: el descargo es un párrafo largo y dónde le cae el salto de
 	// línea lo decide Prettier, no el contenido. Sin esto, reacomodar una palabra del

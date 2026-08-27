@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 import type { Sesion } from './db';
 import { catalogo } from './catalog';
 import { MUSCULOS_COMPACTOS } from './data/exercise-muscles';
-import { crearDistribucionMuscular, METADATA_MUSCULAR, type MetadataMuscular } from './musculos';
+import {
+	crearDistribucionMuscular,
+	intensidadMuscular,
+	METADATA_MUSCULAR,
+	porSemana,
+	SERIES_SEMANA_LLENO,
+	type MetadataMuscular
+} from './musculos';
 
 const metadata: Record<string, MetadataMuscular> = {
 	press: { principal: 'chest', secundarios: ['triceps', 'deltoids'], aliasesNoRepresentados: [] },
@@ -135,5 +142,102 @@ describe('metadata muscular generada', () => {
 			meta.secundarios.some((musculo) => musculo == null)
 		);
 		expect(desconocidos.map(([id]) => id)).toEqual([]);
+	});
+});
+
+describe('escala absoluta del mapa', () => {
+	it('la unidad es series por semana, con un decimal', () => {
+		expect(porSemana(14.4, 1)).toBe(14.4);
+		expect(porSemana(57.6, 4)).toBe(14.4);
+		expect(porSemana(172.8, 12)).toBe(14.4);
+		// Un decimal y no más: la cifra que se muestra y la que pinta son la misma.
+		expect(porSemana(11, 12)).toBe(0.9);
+	});
+
+	it('no divide por cero', () => {
+		expect(porSemana(10, 0)).toBe(0);
+	});
+
+	it('la intensidad no depende del período, sólo del ritmo semanal', () => {
+		const semanal = 10;
+		expect(intensidadMuscular(semanal, 1)).toBe(0.5);
+		expect(intensidadMuscular(semanal * 4, 4)).toBe(0.5);
+		expect(intensidadMuscular(semanal * 12, 12)).toBe(0.5);
+	});
+
+	it('cero pinta cero y el tope satura sin pasarse', () => {
+		expect(intensidadMuscular(0, 4)).toBe(0);
+		expect(intensidadMuscular(SERIES_SEMANA_LLENO, 1)).toBe(1);
+		expect(intensidadMuscular(SERIES_SEMANA_LLENO * 5, 1)).toBe(1);
+	});
+
+	/**
+	 * La prueba que define el cambio. Antes la intensidad era `series / máximo del
+	 * período`: entrenar OTRO músculo movía el denominador y apagaba éste sin quitarle
+	 * una sola serie. Con escala fija, lo que no se tocó no cambia.
+	 */
+	it('entrenar otro músculo no apaga al que no se tocó', () => {
+		const piernas: Sesion = {
+			id: '2026-08-24__p',
+			fecha: '2026-08-24',
+			diaId: 'p',
+			ejercicios: [
+				{
+					exerciseId: 'sentadilla',
+					sets: Array.from({ length: 8 }, () => ({ reps: 10, hecha: true }))
+				}
+			]
+		};
+		const empuje: Sesion = {
+			id: '2026-08-25__e',
+			fecha: '2026-08-25',
+			diaId: 'e',
+			ejercicios: [
+				{ exerciseId: 'press', sets: Array.from({ length: 12 }, () => ({ reps: 10, hecha: true })) }
+			]
+		};
+		const meta: Record<string, MetadataMuscular> = {
+			sentadilla: { principal: 'quadriceps', secundarios: [], aliasesNoRepresentados: [] },
+			press: { principal: 'chest', secundarios: ['triceps'], aliasesNoRepresentados: [] }
+		};
+		const solo = crearDistribucionMuscular([piernas], '2026-08-25', 1, false, meta);
+		const despues = crearDistribucionMuscular([piernas, empuje], '2026-08-25', 1, false, meta);
+		const cuadSolo = solo.cargas.find((c) => c.musculo === 'quadriceps')!;
+		const cuadDespues = despues.cargas.find((c) => c.musculo === 'quadriceps')!;
+		expect(cuadSolo.seriesEstimadas).toBe(8);
+		expect(cuadDespues.seriesEstimadas).toBe(8);
+		expect(intensidadMuscular(cuadDespues.seriesEstimadas, 1)).toBe(
+			intensidadMuscular(cuadSolo.seriesEstimadas, 1)
+		);
+		// Y el pecho, que sí se entrenó, pinta más que el cuádriceps.
+		const pecho = despues.cargas.find((c) => c.musculo === 'chest')!;
+		expect(intensidadMuscular(pecho.seriesEstimadas, 1)).toBeGreaterThan(
+			intensidadMuscular(cuadDespues.seriesEstimadas, 1)
+		);
+	});
+
+	it('el dibujo se llena a medida que se entrena, en vez de normalizarse', () => {
+		const dia = (fecha: string): Sesion => ({
+			id: `${fecha}__p`,
+			fecha,
+			diaId: 'p',
+			ejercicios: [
+				{
+					exerciseId: 'sentadilla',
+					sets: Array.from({ length: 5 }, () => ({ reps: 10, hecha: true }))
+				}
+			]
+		});
+		const meta: Record<string, MetadataMuscular> = {
+			sentadilla: { principal: 'quadriceps', secundarios: [], aliasesNoRepresentados: [] }
+		};
+		const intensidades = ['2026-08-22', '2026-08-23', '2026-08-24', '2026-08-25'].map(
+			(_, i, fechas) => {
+				const hasta = '2026-08-25';
+				const d = crearDistribucionMuscular(fechas.slice(0, i + 1).map(dia), hasta, 1, false, meta);
+				return intensidadMuscular(d.cargas[0]!.seriesEstimadas, 1);
+			}
+		);
+		expect(intensidades).toEqual([0.25, 0.5, 0.75, 1]);
 	});
 });

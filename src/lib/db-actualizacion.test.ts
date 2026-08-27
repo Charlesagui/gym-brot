@@ -199,7 +199,7 @@ describe('actualización de una base ya en uso', () => {
 		expect(distribucion.seriesConsideradas).toBe(6);
 		expect(distribucion.cargas.length).toBeGreaterThan(0);
 		expect(distribucion.cargas.map((carga) => carga.musculo)).toContain('quadriceps');
-		expect(distribucion.maximo).toBeGreaterThan(0);
+		expect(distribucion.cargas[0]!.seriesEstimadas).toBeGreaterThan(0);
 		// Sin RIR en el historial viejo, el filtro de series duras no se ofrece: no puede
 		// inventar un dato que nadie registró.
 		expect(distribucion.coberturaRir).toBe(0);
