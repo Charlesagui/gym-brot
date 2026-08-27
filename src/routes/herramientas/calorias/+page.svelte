@@ -429,13 +429,20 @@
 	</header>
 
 	{#if mostrandoResultado && objetivo && listo}
-		<!-- ===== Resultado: una sola cifra manda ===== -->
-		<section
-			class="gb-relieve rounded-2xl border border-white/10 p-4"
-			style="background: var(--surface)"
-			aria-live="polite"
-		>
-			<!--
+		<!--
+			El resultado entero se centra en el aire que sobra, igual que la tarjeta de la
+			sección: con contenido corto quedaban ~230 px muertos abajo de los botones. Es
+			margen automático y no `justify-center` porque cuando el contenido pasa de largo
+			—avisos, perfiles con más recortes— el margen vale cero y no recorta nada por arriba.
+		-->
+		<div class="my-auto flex flex-col">
+			<!-- ===== Resultado: una sola cifra manda ===== -->
+			<section
+				class="gb-relieve rounded-2xl border border-white/10 p-4"
+				style="background: var(--surface)"
+				aria-live="polite"
+			>
+				<!--
 				El riel manda sobre toda la tarjeta, así que va a la cabeza.
 
 				Va acá y no en el paso 4: allá los cinco botones muestran sus cinco kcal juntas
@@ -447,45 +454,45 @@
 				Con una sola posición no hay nada que recorrer: pasa con embarazo, donde sólo
 				queda mantenimiento, y ahí un selector de una tecla es un adorno.
 			-->
-			{#if paradas.length > 1}
-				<div class="mb-3">
-					<RielObjetivo
-						{paradas}
-						valor={objetivoElegido}
-						vibracion={$ajustes.vibracion}
-						etiqueta="Cambiar de objetivo"
-						onElegir={elegirEnResultado}
-					/>
-				</div>
-			{/if}
-
-			<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
-				{botonElegido?.rotulo}
-			</p>
-			<!-- Sin salto de línea entre la cifra y su unidad: el espacio del código llega al
-			     DOM y la app las pega en todas las demás pantallas. -->
-			<p class="mt-1 flex items-baseline">
-				<span class="cifra text-[4.2rem]"
-					>{formatoVolumen(objetivo.objetivoKcal)}<span class="cifra-u">kcal</span></span
-				>
-			</p>
-
-			<!-- Los tres macros, en el orden en que los resuelve el motor. -->
-			<div class="mt-4 grid grid-cols-3 gap-2">
-				{#each macrosVisibles as macro (macro.rotulo)}
-					<div class="min-w-0">
-						<p
-							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
-							style="color: var(--muted)"
-						>
-							{macro.rotulo}
-						</p>
-						<p class="cifra text-2xl">{macro.gramos}<span class="cifra-u">g</span></p>
+				{#if paradas.length > 1}
+					<div class="mb-3">
+						<RielObjetivo
+							{paradas}
+							valor={objetivoElegido}
+							vibracion={$ajustes.vibracion}
+							etiqueta="Cambiar de objetivo"
+							onElegir={elegirEnResultado}
+						/>
 					</div>
-				{/each}
-			</div>
+				{/if}
 
-			<!--
+				<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
+					{botonElegido?.rotulo}
+				</p>
+				<!-- Sin salto de línea entre la cifra y su unidad: el espacio del código llega al
+			     DOM y la app las pega en todas las demás pantallas. -->
+				<p class="mt-1 flex items-baseline">
+					<span class="cifra text-[4.2rem]"
+						>{formatoVolumen(objetivo.objetivoKcal)}<span class="cifra-u">kcal</span></span
+					>
+				</p>
+
+				<!-- Los tres macros, en el orden en que los resuelve el motor. -->
+				<div class="mt-4 grid grid-cols-3 gap-2">
+					{#each macrosVisibles as macro (macro.rotulo)}
+						<div class="min-w-0">
+							<p
+								class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
+								style="color: var(--muted)"
+							>
+								{macro.rotulo}
+							</p>
+							<p class="cifra text-2xl">{macro.gramos}<span class="cifra-u">g</span></p>
+						</div>
+					{/each}
+				</div>
+
+				<!--
 				Mantenimiento, diferencia y ritmo: contra qué se compara, cuánto te corrés y a qué
 				velocidad. En mantenimiento la fila entera se va, porque las tres son degeneradas:
 				el objetivo *es* el mantenimiento, la diferencia es cero y el ritmo también.
@@ -505,49 +512,49 @@
 				`text-xl` y no `text-2xl` porque ahora son tres celdas y no dos: a 375 px cada una
 				tiene ~98 px y "−0,41kg/sem" no entra a 24 px.
 			-->
-			{#if botonElegido?.meta !== 'mantener'}
-				<div class="mt-3 grid grid-cols-3 gap-2">
-					<div class="min-w-0">
-						<p
-							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
-							style="color: var(--muted)"
-						>
-							Mantenimiento
-						</p>
-						<p class="cifra text-xl">
-							{formatoVolumen(listo.tdee)}<span class="cifra-u">kcal</span>
-						</p>
+				{#if botonElegido?.meta !== 'mantener'}
+					<div class="mt-3 grid grid-cols-3 gap-2">
+						<div class="min-w-0">
+							<p
+								class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
+								style="color: var(--muted)"
+							>
+								Mantenimiento
+							</p>
+							<p class="cifra text-xl">
+								{formatoVolumen(listo.tdee)}<span class="cifra-u">kcal</span>
+							</p>
+						</div>
+						<div class="min-w-0">
+							<p
+								class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
+								style="color: var(--muted)"
+							>
+								Diferencia
+							</p>
+							<p class="cifra text-xl">{diferenciaTexto}<span class="cifra-u">kcal</span></p>
+						</div>
+						<div class="min-w-0">
+							<p
+								class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
+								style="color: var(--muted)"
+							>
+								Ritmo
+							</p>
+							<p class="cifra text-xl">{ritmoTexto}<span class="cifra-u">{unidad}/sem</span></p>
+						</div>
 					</div>
-					<div class="min-w-0">
-						<p
-							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
-							style="color: var(--muted)"
-						>
-							Diferencia
-						</p>
-						<p class="cifra text-xl">{diferenciaTexto}<span class="cifra-u">kcal</span></p>
-					</div>
-					<div class="min-w-0">
-						<p
-							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
-							style="color: var(--muted)"
-						>
-							Ritmo
-						</p>
-						<p class="cifra text-xl">{ritmoTexto}<span class="cifra-u">{unidad}/sem</span></p>
-					</div>
-				</div>
-			{/if}
+				{/if}
 
-			<p class="mt-3 text-xs leading-relaxed" style="color: var(--muted)">
-				Tu mantenimiento estimado es {formatoVolumen(listo.tdee)} kcal. Con esta ecuación, 2 de cada 3
-				personas con tu perfil están entre {formatoVolumen(listo.banda68.desde)} y {formatoVolumen(
-					listo.banda68.hasta
-				)}. Es una cuenta, no una medición: tu balanza la va a cerrar mejor que cualquier fórmula.
-			</p>
-		</section>
+				<p class="mt-3 text-xs leading-relaxed" style="color: var(--muted)">
+					Tu mantenimiento estimado es {formatoVolumen(listo.tdee)} kcal. Con esta ecuación, 2 de cada
+					3 personas con tu perfil están entre {formatoVolumen(listo.banda68.desde)} y {formatoVolumen(
+						listo.banda68.hasta
+					)}. Es una cuenta, no una medición: tu balanza la va a cerrar mejor que cualquier fórmula.
+				</p>
+			</section>
 
-		<!--
+			<!--
 			La advertencia del nivel, que hasta acá vivía sólo en el paso 4.
 
 			Ahí alcanzaba: al agresivo se llegaba tocando su botón, con el texto naranja
@@ -560,58 +567,60 @@
 			`AvisoEnergia` que el motor emite sobre el número (pisos, recortes, umbrales), y
 			éste es una propiedad del ritmo que se eligió. Comparten la forma, no el origen.
 		-->
-		{#if botonElegido?.aviso}
-			<p
-				class="mt-3 flex gap-2 rounded-xl border p-3 text-xs leading-relaxed"
-				style="border-color: rgb(var(--max) / .35); background: rgb(var(--max) / .08); color: rgb(var(--max))"
-			>
-				<Icono nombre="aviso" tamano={16} clase="mt-px shrink-0" />
-				<span>{TEXTO_AVISO[botonElegido.aviso]}</span>
-			</p>
-		{/if}
-
-		{#each avisosVisibles as aviso (aviso.tipo)}
-			{#if textoAvisoObjetivo(aviso)}
+			{#if botonElegido?.aviso}
 				<p
 					class="mt-3 flex gap-2 rounded-xl border p-3 text-xs leading-relaxed"
 					style="border-color: rgb(var(--max) / .35); background: rgb(var(--max) / .08); color: rgb(var(--max))"
 				>
 					<Icono nombre="aviso" tamano={16} clase="mt-px shrink-0" />
-					<span>{textoAvisoObjetivo(aviso)}</span>
+					<span>{TEXTO_AVISO[botonElegido.aviso]}</span>
 				</p>
 			{/if}
-		{/each}
 
-		<p class="mt-3 text-[0.7rem] leading-relaxed" style="color: var(--muted)">
-			Es una estimación estadística, no una indicación médica ni un plan nutricional. Si tenés una
-			condición de salud, tomás medicación o estás en tratamiento, consultá antes de aplicarlo.
-		</p>
+			{#each avisosVisibles as aviso (aviso.tipo)}
+				{#if textoAvisoObjetivo(aviso)}
+					<p
+						class="mt-3 flex gap-2 rounded-xl border p-3 text-xs leading-relaxed"
+						style="border-color: rgb(var(--max) / .35); background: rgb(var(--max) / .08); color: rgb(var(--max))"
+					>
+						<Icono nombre="aviso" tamano={16} clase="mt-px shrink-0" />
+						<span>{textoAvisoObjetivo(aviso)}</span>
+					</p>
+				{/if}
+			{/each}
 
-		{#if errorGuardado}
-			<p class="mt-3 text-xs font-bold" style="color: rgb(var(--max))">{errorGuardado}</p>
-		{/if}
+			<p class="mt-3 text-[0.7rem] leading-relaxed" style="color: var(--muted)">
+				Es una estimación estadística, no una indicación médica ni un plan nutricional. Si tenés una
+				condición de salud, tomás medicación o estás en tratamiento, consultá antes de aplicarlo.
+			</p>
 
-		<!-- Las acciones se van al fondo: `main` tiene alto mínimo de viewport, así que con
-		     contenido corto quedaba un pozo muerto abajo. Ahora el sobrante queda arriba de
-		     los botones y el primario cae bajo el pulgar. Con contenido largo vale cero. -->
-		<div class="mt-auto flex flex-col gap-2 pt-4">
-			{#if guardado}
-				<p
-					class="flex min-h-14 items-center justify-center gap-2 rounded-2xl text-sm font-bold"
-					style="background: rgb(var(--exito) / .14); color: rgb(var(--exito))"
-					aria-live="polite"
-				>
-					<Icono nombre="hecha" tamano={18} />
-					Guardado como tu objetivo
-				</p>
-			{:else}
-				<button
-					onclick={guardar}
-					class="gb-relieve min-h-14 rounded-2xl text-base font-bold"
-					style="background: var(--accent); color: var(--on-accent)">Guardar como objetivo</button
-				>
+			{#if errorGuardado}
+				<p class="mt-3 text-xs font-bold" style="color: rgb(var(--max))">{errorGuardado}</p>
 			{/if}
+
 			<!--
+			Anclar estos botones al fondo con `mt-auto` fue un intento y está descartado: el
+			sobrante se convertía en un hueco entre el descargo y los botones, que quedaban
+			flotando en el medio de la nada. El aire va afuera del contenido, no adentro.
+		-->
+			<div class="mt-4 flex flex-col gap-2">
+				{#if guardado}
+					<p
+						class="flex min-h-14 items-center justify-center gap-2 rounded-2xl text-sm font-bold"
+						style="background: rgb(var(--exito) / .14); color: rgb(var(--exito))"
+						aria-live="polite"
+					>
+						<Icono nombre="hecha" tamano={18} />
+						Guardado como tu objetivo
+					</p>
+				{:else}
+					<button
+						onclick={guardar}
+						class="gb-relieve min-h-14 rounded-2xl text-base font-bold"
+						style="background: var(--accent); color: var(--on-accent)">Guardar como objetivo</button
+					>
+				{/if}
+				<!--
 				Antes decía "Cambiar objetivo" y llevaba al paso 4, porque el paso 4 era el único
 				lugar donde se cambiaba el objetivo. Ahora el objetivo se cambia acá arriba con
 				el riel, y lo que quedó atrás del botón es otra cosa: los datos con los que se
@@ -622,11 +631,12 @@
 				no existen. Es el punto del asistente desde donde se llega a todo lo demás — y
 				también donde vive "¿Algo de esto aplica?".
 			-->
-			<button
-				onclick={() => abrir(4)}
-				class="min-h-12 rounded-2xl text-sm font-bold"
-				style="background: var(--surface-3); color: var(--text)">Cambiar mis datos</button
-			>
+				<button
+					onclick={() => abrir(4)}
+					class="min-h-12 rounded-2xl text-sm font-bold"
+					style="background: var(--surface-3); color: var(--text)">Cambiar mis datos</button
+				>
+			</div>
 		</div>
 	{:else}
 		<!-- ===== Asistente: uno abierto, los contestados contraídos ===== -->
@@ -648,7 +658,7 @@
 					{:else if n === paso}
 						<section class="gb-foco rounded-2xl py-4 pl-5 pr-4" style="--foco-color: {focoColor}">
 							<h2
-								class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+								class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
 								style="color: var(--muted)"
 							>
 								{TITULOS[n - 1]}

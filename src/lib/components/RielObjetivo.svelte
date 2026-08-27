@@ -80,7 +80,11 @@
 	 * en su contexto» dice el token— así que acá se usa la que corresponde.
 	 */
 	const TINTA_TONO: Record<TonoObjetivo, string> = {
-		calmo: 'var(--muted)',
+		// Tinta plena y no `--muted`: en pantalla, el gris de los rótulos apagados al lado de
+		// un naranja y un violeta saturados no se leía como "calmo", se leía como
+		// "deshabilitado" — y mantenimiento es una opción tan elegible como las otras cuatro.
+		// Así los tres tonos suben en energía: blanco, violeta, naranja.
+		calmo: 'var(--text)',
 		normal: 'var(--accent-text)',
 		fuerte: 'rgb(var(--max))'
 	};

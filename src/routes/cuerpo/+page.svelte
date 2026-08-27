@@ -386,7 +386,7 @@
 			class="gb-foco mb-3 rounded-2xl py-4 pl-5 pr-4"
 			style="--foco-color: {revision.estado === 'listo' ? 'var(--exito)' : 'var(--glow)'}"
 		>
-			<p class="text-[0.6rem] font-bold uppercase tracking-[0.14em]" style="color: var(--muted)">
+			<p class="text-[0.6rem] font-bold uppercase tracking-[0.06em]" style="color: var(--muted)">
 				{revision.estado === 'listo' ? 'Hora de revisar' : 'Todavía no'}
 			</p>
 
@@ -469,9 +469,16 @@
 		en un teléfono de 393 px: el contenido son 461 px y el espacio disponible 692, así que
 		estirarla metía 173 px de hueco adentro de la tarjeta (463 px cuando todavía no hay
 		objetivo). Eso no elimina el vacío, lo muda de afuera a adentro y encima lo enmarca.
-		Con alto natural, lo que queda abajo es fondo de página, que es lo que es.
+		Con alto natural, lo que queda abajo es fondo de página. Y ese fondo se reparte: `my-auto`
+		centra la tarjeta en el aire que sobra, así que en vez de 165 px muertos abajo quedan
+		~82 arriba y ~82 abajo. Es margen y no `justify-center` a propósito — cuando el
+		contenido pasa de largo, `justify-center` recorta por arriba y el margen automático
+		simplemente vale cero.
 	-->
-	<div class="gb-relieve rounded-2xl border border-white/10" style="background: var(--surface)">
+	<div
+		class="gb-relieve my-auto rounded-2xl border border-white/10"
+		style="background: var(--surface)"
+	>
 		{#if $objetivo}
 			<section class="p-4">
 				<!--
@@ -520,7 +527,7 @@
 					{#each macrosVisibles as macro (macro.rotulo)}
 						<div class="min-w-0">
 							<p
-								class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+								class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
 								style="color: var(--muted)"
 							>
 								{macro.rotulo}
@@ -547,7 +554,7 @@
 					<div class="mt-3 grid grid-cols-3 gap-2">
 						<div class="min-w-0">
 							<p
-								class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+								class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
 								style="color: var(--muted)"
 							>
 								Mantenimiento
@@ -558,7 +565,7 @@
 						</div>
 						<div class="min-w-0">
 							<p
-								class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+								class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
 								style="color: var(--muted)"
 							>
 								Diferencia
@@ -567,7 +574,7 @@
 						</div>
 						<div class="min-w-0">
 							<p
-								class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+								class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
 								style="color: var(--muted)"
 							>
 								Ritmo
@@ -737,7 +744,7 @@
 		>
 			{#if resumen.actual}
 				<span
-					class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+					class="text-[0.6rem] font-bold uppercase tracking-[0.06em]"
 					style="color: var(--muted)">Peso hoy</span
 				>
 				<span class="cifra shrink-0 text-xl"
