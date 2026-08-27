@@ -200,7 +200,7 @@
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && cerrarPreview()} />
 
-<main class="gb-page glow-bg min-h-dvh px-5 pb-28 pt-6">
+<main class="gb-page glow-bg min-h-dvh px-5 pb-28">
 	<header class="mb-4 flex items-center gap-3">
 		<a
 			href={volver}
@@ -365,7 +365,7 @@
 	<div
 		use:modal={{ onClose: cerrarPreview, focoInicial: '[data-modal-inicial]' }}
 		class="fixed inset-0 z-[60] flex items-center justify-center px-4"
-		style="padding-top: calc(1.5rem + env(safe-area-inset-top)); padding-bottom: calc(1.5rem + env(safe-area-inset-bottom))"
+		style="padding-top: calc(1.5rem + var(--safe-top)); padding-bottom: calc(1.5rem + var(--safe-bottom))"
 		role="dialog"
 		aria-modal="true"
 		aria-label={`Vista previa de ${p.nombre}`}
@@ -380,7 +380,7 @@
 		<div in:fly={{ y: 40, duration: dur(240) }} class="relative mx-auto w-full max-w-sm">
 			<div
 				class="relative w-full overflow-y-auto overscroll-contain rounded-3xl border border-white/10 px-5 pt-3 shadow-2xl"
-				style="background: radial-gradient(140% 100% at 50% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface); max-height: calc(100dvh - 3rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); transform: translate3d(0, {arrastreY}px, 0); transition: {arrastrando
+				style="background: radial-gradient(140% 100% at 50% 0%, rgb({g.glow} / 0.14), transparent 60%), var(--surface); max-height: calc(100dvh - 3rem - var(--safe-top) - var(--safe-bottom)); padding-bottom: calc(1.25rem + var(--safe-bottom)); transform: translate3d(0, {arrastreY}px, 0); transition: {arrastrando
 					? 'none'
 					: 'transform 160ms ease-out'}"
 			>

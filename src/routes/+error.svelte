@@ -8,7 +8,7 @@
 	}
 </script>
 
-<main class="gb-page glow-bg grid min-h-dvh place-items-center px-5 py-10">
+<main class="gb-page glow-bg grid min-h-dvh place-items-center px-5 pb-10" style="--gb-pt: 2.5rem">
 	<section
 		class="w-full max-w-md rounded-2xl border border-white/10 p-5"
 		style="background: var(--surface)"

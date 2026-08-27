@@ -416,7 +416,7 @@
 	}
 </script>
 
-<main class="gb-page glow-bg min-h-dvh px-5 pb-28 pt-6">
+<main class="gb-page glow-bg min-h-dvh px-5 pb-28">
 	<header class="mb-5 flex flex-wrap items-center gap-3">
 		<a
 			href="/"

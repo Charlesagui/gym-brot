@@ -42,9 +42,9 @@
 
 <div
 	class="fixed inset-x-0 z-[70] mx-auto max-w-md px-5"
-	style="bottom: {offsetNav
-		? 'calc(64px + env(safe-area-inset-bottom))'
-		: '0'}; padding-bottom: {offsetNav ? '0.75rem' : 'calc(1rem + env(safe-area-inset-bottom))'}"
+	style="bottom: {offsetNav ? 'calc(64px + var(--safe-bottom))' : '0'}; padding-bottom: {offsetNav
+		? '0.75rem'
+		: 'calc(1rem + var(--safe-bottom))'}"
 >
 	<div
 		transition:fly={{ y: 24, duration: dur(200) }}
