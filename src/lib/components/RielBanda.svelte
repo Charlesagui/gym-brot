@@ -66,9 +66,7 @@
 			Mantenimiento
 		</span>
 		<span class="flex items-center gap-1.5">
-			<span
-				class="h-[5px] w-4 shrink-0 rounded-full"
-				style="background: rgb(var(--glow) / .5)"
+			<span class="h-[5px] w-4 shrink-0 rounded-full" style="background: rgb(var(--glow) / .5)"
 			></span>
 			2 de cada 3
 		</span>

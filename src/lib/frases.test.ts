@@ -73,7 +73,12 @@ describe('el objetivo se quedó viejo', () => {
 		const frases = frasesPara(
 			datos({
 				pesoActualGramos: 78_900,
-				calibracion: { estado: 'sin-senal', ventana: { pesajes: 10, dias: 28 }, kgPorSemana: -0.1, errorKgPorSemana: 0.2 }
+				calibracion: {
+					estado: 'sin-senal',
+					ventana: { pesajes: 10, dias: 28 },
+					kgPorSemana: -0.1,
+					errorKgPorSemana: 0.2
+				}
 			})
 		);
 		expect(frases[0]!.id).toBe('viejo-bajaste');
@@ -142,7 +147,14 @@ describe('calibración', () => {
 
 	it('el estado sin señal se explica en vez de esconderse', () => {
 		const salida = ids(
-			datos({ calibracion: { estado: 'sin-senal', ventana: { pesajes: 10, dias: 28 }, kgPorSemana: -0.08, errorKgPorSemana: 0.2 } })
+			datos({
+				calibracion: {
+					estado: 'sin-senal',
+					ventana: { pesajes: 10, dias: 28 },
+					kgPorSemana: -0.08,
+					errorKgPorSemana: 0.2
+				}
+			})
 		);
 		expect(salida).toContain('sin-senal');
 	});
@@ -245,7 +257,12 @@ describe('lo que ve el usuario son las dos primeras', () => {
 				pesoActualGramos: 78_900,
 				hoy: '2026-06-10',
 				fechaUltimoPeso: '2026-06-09',
-				calibracion: { estado: 'sin-senal', ventana: { pesajes: 10, dias: 28 }, kgPorSemana: -0.05, errorKgPorSemana: 0.2 }
+				calibracion: {
+					estado: 'sin-senal',
+					ventana: { pesajes: 10, dias: 28 },
+					kgPorSemana: -0.05,
+					errorKgPorSemana: 0.2
+				}
 			})
 		);
 		expect(frases.slice(0, 2).map((f) => f.id)).toEqual(['viejo-bajaste', 'viejo-tiempo']);

@@ -130,7 +130,12 @@ export interface VentanaCalibracion {
 export type EstadoCalibracion =
 	| { estado: 'esperando'; diasRestantes: number }
 	| { estado: 'pocos-pesajes'; ventana: VentanaCalibracion; minimo: number }
-	| { estado: 'sin-senal'; ventana: VentanaCalibracion; kgPorSemana: number; errorKgPorSemana: number }
+	| {
+			estado: 'sin-senal';
+			ventana: VentanaCalibracion;
+			kgPorSemana: number;
+			errorKgPorSemana: number;
+	  }
 	| {
 			estado: 'listo';
 			ventana: VentanaCalibracion;

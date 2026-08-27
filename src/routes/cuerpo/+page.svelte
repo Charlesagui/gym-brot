@@ -362,22 +362,24 @@
 				entero. Quien quiere el número lo tiene arriba; quien quiere la razón, la abre.
 			-->
 			<details class="mt-2 rounded-2xl" style="background: var(--surface-2)">
-				<summary class="flex min-h-12 cursor-pointer items-center justify-between px-4 text-sm font-bold"
+				<summary
+					class="flex min-h-12 cursor-pointer items-center justify-between px-4 text-sm font-bold"
 					>¿De dónde sale este número?<Icono nombre="info" tamano={18} clase="shrink-0" /></summary
 				>
 				<div class="px-4 pb-4">
 					{#if banda}
 						<p class="text-xs leading-relaxed" style="color: var(--muted)">
 							Tu mantenimiento estimado es {formatoVolumen($objetivo.tdeeKcal)} kcal. 2 de cada 3 personas
-							con tu perfil están entre {formatoVolumen(banda.desde)} y {formatoVolumen(banda.hasta)}.
-							Es una cuenta, no una medición.
+							con tu perfil están entre {formatoVolumen(banda.desde)} y {formatoVolumen(
+								banda.hasta
+							)}. Es una cuenta, no una medición.
 						</p>
 					{/if}
 
 					<p class="mt-3 text-xs leading-relaxed" style="color: var(--muted)">
 						La proteína es un piso y sale de tu peso: {fraseProteina($objetivo)} La grasa es el 25 % de
-						las calorías, con un piso por kilo, y los carbos son lo que queda — son la palanca que
-						sostiene el entrenamiento.
+						las calorías, con un piso por kilo, y los carbos son lo que queda — son la palanca que sostiene
+						el entrenamiento.
 					</p>
 
 					{#each frases.slice(1) as frase (frase.id)}

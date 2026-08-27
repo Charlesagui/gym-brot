@@ -617,9 +617,10 @@
 												<button
 													onclick={() => (ecuacion = opcion.id)}
 													aria-pressed={ecuacion === opcion.id}
-													class="min-h-14 rounded-xl px-4 text-left text-sm font-semibold {ecuacion === opcion.id
-										? 'gb-opcion-elegida'
-										: 'gb-opcion'}">{opcion.rotulo}</button
+													class="min-h-14 rounded-xl px-4 text-left text-sm font-semibold {ecuacion ===
+													opcion.id
+														? 'gb-opcion-elegida'
+														: 'gb-opcion'}">{opcion.rotulo}</button
 												>
 											{/each}
 										</div>
@@ -641,9 +642,10 @@
 												<button
 													onclick={() => (ocupacion = opcion.id)}
 													aria-pressed={ocupacion === opcion.id}
-													class="min-h-14 rounded-xl px-4 text-left text-sm font-semibold {ocupacion === opcion.id
-										? 'gb-opcion-elegida'
-										: 'gb-opcion'}">{opcion.rotulo}</button
+													class="min-h-14 rounded-xl px-4 text-left text-sm font-semibold {ocupacion ===
+													opcion.id
+														? 'gb-opcion-elegida'
+														: 'gb-opcion'}">{opcion.rotulo}</button
 												>
 											{/each}
 										</div>
@@ -657,9 +659,10 @@
 												<button
 													onclick={() => (bandaPasos = opcion.id)}
 													aria-pressed={bandaPasos === opcion.id}
-													class="min-h-14 flex-1 basis-[46%] rounded-xl px-3 text-sm font-semibold {bandaPasos === opcion.id
-										? 'gb-opcion-elegida'
-										: 'gb-opcion'}">{opcion.rotulo}</button
+													class="min-h-14 flex-1 basis-[46%] rounded-xl px-3 text-sm font-semibold {bandaPasos ===
+													opcion.id
+														? 'gb-opcion-elegida'
+														: 'gb-opcion'}">{opcion.rotulo}</button
 												>
 											{/each}
 										</div>
@@ -710,9 +713,10 @@
 												<button
 													onclick={() => (duracion = opcion.id)}
 													aria-pressed={duracion === opcion.id}
-													class="min-h-14 flex-1 rounded-xl px-2 text-sm font-semibold {duracion === opcion.id
-										? 'gb-opcion-elegida'
-										: 'gb-opcion'}">{opcion.corto}</button
+													class="min-h-14 flex-1 rounded-xl px-2 text-sm font-semibold {duracion ===
+													opcion.id
+														? 'gb-opcion-elegida'
+														: 'gb-opcion'}">{opcion.corto}</button
 												>
 											{/each}
 										</div>
@@ -726,9 +730,10 @@
 												<button
 													onclick={() => (densidad = opcion.id)}
 													aria-pressed={densidad === opcion.id}
-													class="min-h-14 rounded-xl px-4 text-left text-sm font-semibold {densidad === opcion.id
-										? 'gb-opcion-elegida'
-										: 'gb-opcion'}">{opcion.rotulo}</button
+													class="min-h-14 rounded-xl px-4 text-left text-sm font-semibold {densidad ===
+													opcion.id
+														? 'gb-opcion-elegida'
+														: 'gb-opcion'}">{opcion.rotulo}</button
 												>
 											{/each}
 										</div>
