@@ -71,6 +71,20 @@
 		fuerte: 'var(--max)'
 	};
 
+	/**
+	 * El mismo tono, pero para tinta.
+	 *
+	 * No es el de arriba con otro nombre, y por eso son dos mapas: un relleno al 18 % y una
+	 * letra de 10 px no tienen el mismo requisito de contraste. La app ya venía separando
+	 * las dos cosas —`--accent` para fondo, `--accent-text` para texto, «ambas cumplen AA
+	 * en su contexto» dice el token— así que acá se usa la que corresponde.
+	 */
+	const TINTA_TONO: Record<TonoObjetivo, string> = {
+		calmo: 'var(--muted)',
+		normal: 'var(--accent-text)',
+		fuerte: 'rgb(var(--max))'
+	};
+
 	let nodo = $state<HTMLDivElement | undefined>(undefined);
 	/** Hay un dedo apoyado sobre el riel. Sólo entonces el movimiento cambia algo. */
 	let arrastrando = false;
@@ -143,31 +157,29 @@
 			aria-pressed={parada.id === valor}
 			disabled={!parada.disponible}
 			onclick={(evento) => alClickear(evento, parada)}
-			class="flex min-h-14 flex-1 flex-col items-center gap-1 rounded-xl px-0.5 pb-1.5 pt-1 disabled:opacity-30 {parada.id ===
+			class="flex min-h-14 flex-1 items-center justify-center rounded-xl px-1 py-1.5 disabled:opacity-30 {parada.id ===
 			valor
 				? 'gb-opcion-elegida'
 				: ''}"
 			style="--opcion-color: {COLOR_TONO[parada.tono]}"
 		>
 			<!--
-				El canto de color, y en las cinco muescas siempre.
+				El color va en el nombre, y en los cinco siempre.
 
-				Antes el tono sólo se pintaba en la elegida, que es lo mismo que no tener
-				gramática de color: como hay una sola elegida por vez, nunca se veían dos
-				tonos juntos y no había con qué comparar. Ahora el riel entero se lee de un
-				vistazo —dónde está lo calmo, dónde lo que empuja— y lo que dice la elegida
-				es *cuál*, no *cuánto*.
+				Hubo una versión con un canto de 3 px arriba de cada muesca. Cumplía —el tono se
+				veía en las cinco— pero convertía el riel en cinco cuadrados con una raya
+				encima: dos elementos por muesca para decir una sola cosa, y el conjunto se leía
+				como una fila de cajas en vez de como un control.
 
-				Es un canto y no un relleno por la misma razón que la fila activa de una serie:
-				el color estructura, no decora.
+				Teñir la palabra dice lo mismo sin agregar nada: el nombre ya está ahí, y el
+				color deja de ser un adorno pegado al lado para ser una propiedad de lo que
+				nombra. La elegida pasa a tinta plena porque su tono ya lo lleva el anillo de
+				`.gb-opcion-elegida`, y sobre ese fondo lo que hace falta es que se lea.
 			-->
 			<span
-				class="h-[3px] w-full shrink-0 rounded-full"
-				style="background: rgb({COLOR_TONO[parada.tono]} / {parada.id === valor ? 1 : 0.55})"
-			></span>
-			<span
-				class="flex flex-1 items-center text-center text-[0.62rem] font-bold leading-[1.15]"
-				style="color: {parada.id === valor ? 'var(--text)' : 'var(--muted)'}">{parada.corto}</span
+				class="text-center text-[0.62rem] font-bold leading-[1.15]"
+				style="color: {parada.id === valor ? 'var(--text)' : TINTA_TONO[parada.tono]}"
+				>{parada.corto}</span
 			>
 		</button>
 	{/each}

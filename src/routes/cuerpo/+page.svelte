@@ -363,7 +363,9 @@
 	}
 </script>
 
-<main class="gb-page glow-bg min-h-[calc(100dvh-4rem)] px-4 pb-8 pt-3">
+<main
+	class="gb-page glow-bg flex min-h-[calc(100dvh-4rem-env(safe-area-inset-bottom,0px))] flex-col px-4 pb-8 pt-3"
+>
 	<header class="mb-3 flex min-h-10 items-center justify-between gap-3">
 		<h1 class="text-xl font-extrabold">Macros</h1>
 	</header>
@@ -686,31 +688,43 @@
 		es donde vive de verdad. Como tarjeta se llevaba ~190 px —rótulo, cifra de 2,6 rem,
 		deltas y un botón a ancho completo— para decir tres números y abrir un link.
 	-->
-	<a
-		href="/peso"
-		class="mt-3 flex min-h-14 items-center gap-3 rounded-2xl border border-white/10 px-4"
-		style="background: var(--surface)"
-	>
-		{#if resumen.actual}
-			<span class="text-[0.6rem] font-bold uppercase tracking-[0.14em]" style="color: var(--muted)"
-				>Peso hoy</span
-			>
-			<span class="cifra shrink-0 text-xl"
-				>{formatoNumero(gramosAPeso(resumen.actual.pesoGramos, unidad)!)}<span class="cifra-u"
-					>{unidad}</span
-				></span
-			>
-			<span class="ml-auto flex shrink-0 gap-3 text-xs" style="color: var(--muted)">
-				{#if cambio(resumen.cambio7DiasGramos)}
-					<span>7 d <b style="color: var(--text)">{cambio(resumen.cambio7DiasGramos)}</b></span>
-				{/if}
-				{#if cambio(resumen.cambio30DiasGramos)}
-					<span>30 d <b style="color: var(--text)">{cambio(resumen.cambio30DiasGramos)}</b></span>
-				{/if}
-			</span>
-		{:else}
-			<span class="text-sm font-bold">Registrar mi primer peso</span>
-			<span class="ml-auto text-xs" style="color: var(--muted)">corrige tu objetivo</span>
-		{/if}
-	</a>
+	<!--
+		`mt-auto` y no `mt-3`: la franja se va al fondo de la pantalla.
+
+		`main` tiene alto mínimo de viewport para que el glow cubra, así que cuando el
+		contenido no llega quedaba un pozo muerto entre la tarjeta y la barra de abajo. El
+		espacio sobrante ahora se lo come el hueco de arriba de la franja, que queda apoyada
+		sobre la barra — y de paso el peso, que es la puerta a /peso, cae bajo el pulgar. Con
+		contenido largo `mt-auto` vale cero y el `pt-3` deja la separación de siempre.
+	-->
+	<div class="mt-auto pt-3">
+		<a
+			href="/peso"
+			class="flex min-h-14 items-center gap-3 rounded-2xl border border-white/10 px-4"
+			style="background: var(--surface)"
+		>
+			{#if resumen.actual}
+				<span
+					class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+					style="color: var(--muted)">Peso hoy</span
+				>
+				<span class="cifra shrink-0 text-xl"
+					>{formatoNumero(gramosAPeso(resumen.actual.pesoGramos, unidad)!)}<span class="cifra-u"
+						>{unidad}</span
+					></span
+				>
+				<span class="ml-auto flex shrink-0 gap-3 text-xs" style="color: var(--muted)">
+					{#if cambio(resumen.cambio7DiasGramos)}
+						<span>7 d <b style="color: var(--text)">{cambio(resumen.cambio7DiasGramos)}</b></span>
+					{/if}
+					{#if cambio(resumen.cambio30DiasGramos)}
+						<span>30 d <b style="color: var(--text)">{cambio(resumen.cambio30DiasGramos)}</b></span>
+					{/if}
+				</span>
+			{:else}
+				<span class="text-sm font-bold">Registrar mi primer peso</span>
+				<span class="ml-auto text-xs" style="color: var(--muted)">corrige tu objetivo</span>
+			{/if}
+		</a>
+	</div>
 </main>
