@@ -562,9 +562,11 @@ export function rotuloObjetivo(meta: Meta, nivel: NivelRitmo | null): string {
  * dos muescas del mismo color en las dos puntas de una escala se leen como la misma
  * cosa, y son opuestas.
  *
- * Ahora la escala es divergente y tiene dos ejes a la vez, que es lo que hay que ver:
- * el **tono** dice la dirección (cálido = comer menos, frío = comer más) y la
- * **intensidad** dice cuánto (las puntas saturadas, el medio en calma).
+ * Ahora es un recorrido por el espectro —rojo, naranja, verde, cian, violeta— y lo que
+ * el color dice es **cuál es cada posición y en qué orden va**, no cuánto empuja. La
+ * magnitud ya la dicen las kcal y la fila de diferencia; lo que faltaba era que dos
+ * muescas no se confundieran nunca. Los valores viven en `RielObjetivo`, que es donde
+ * se pintan.
  */
 export type TonoObjetivo =
 	'deficit-fuerte' | 'deficit-suave' | 'neutro' | 'volumen-suave' | 'volumen-fuerte';
