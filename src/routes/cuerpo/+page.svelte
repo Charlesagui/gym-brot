@@ -584,73 +584,100 @@
 					</div>
 				{/if}
 
-				{#if vista?.enPrevisualizacion}
-					<!--
-					Previsualizar no escribe nada, y por eso hay un botón: mientras el dedo recorre
-					el riel, esta tarjeta muestra un objetivo que la base no tiene. Guardar es un
-					acto aparte y con nombre propio.
+				<!--
+					Las dos caras del área de acción, apiladas en la misma celda de una grilla.
 
-					Y dice lo que cuesta. Cada objetivo guardado es una fila nueva, y la ventana de
-					revisión arranca en su fecha: cambiar de objetivo pone el reloj en cero. Esa es
-					la razón de fondo por la que el riel no guarda solo — si lo hiciera, recorrerlo
-					reiniciaría la calibración en cada muesca y la sección nunca llegaría a decir
-					"hora de revisar".
+					No es un `{#if}` que cambia una por otra porque eso hacía saltar la tarjeta:
+					medido, previsualizar la estiraba de 519 a 577 px y, como está centrada, la subía
+					29 px — o sea el riel se movía abajo del dedo justo mientras lo estabas usando.
+
+					Apiladas, la celda mide lo del más alto y la altura no cambia nunca. La cara que
+					no corresponde va con `invisible`, que además la saca del árbol de accesibilidad
+					y del orden de tabulación: no es una que está ahí y no se ve, es una que no está.
+
+					El costo, declarado: en el estado normal quedan ~57 px de aire abajo de "Cambiar
+					mis datos". Es el precio de que el control no se mueva mientras lo usás.
 				-->
-					<button
-						onclick={aplicarCambio}
-						disabled={cambiando}
-						class="gb-relieve mt-4 min-h-14 w-full rounded-2xl text-base font-bold disabled:opacity-50"
-						style="background: var(--accent); color: var(--on-accent)"
-						>Cambiar a {vista.rotulo}</button
+				<div class="grid">
+					<div
+						class="col-start-1 row-start-1 {vista?.enPrevisualizacion ? '' : 'invisible'}"
+						aria-hidden={vista?.enPrevisualizacion ? undefined : 'true'}
 					>
-					<button
-						onclick={() => (previsualizado = null)}
-						class="mt-2 min-h-12 w-full rounded-2xl text-sm font-bold"
-						style="background: var(--surface-3); color: var(--text)">Dejar el que tenía</button
-					>
-					<p class="mt-2 text-[0.7rem] leading-relaxed" style="color: var(--muted)">
-						{#if revision?.estado === 'listo'}
-							Ojo: tenés una revisión lista con tu peso de estos días. Si cambiás de objetivo ahora,
-							esa medición se pierde y la cuenta vuelve a empezar.
-						{:else}
-							Cambiar de objetivo reinicia la cuenta para revisarlo con tu peso.
-						{/if}
-					</p>
-				{:else}
-					{#if cambioGuardado}
-						<p
-							class="mt-4 flex min-h-14 items-center justify-center gap-2 rounded-2xl text-sm font-bold"
-							style="background: rgb(var(--exito) / .14); color: rgb(var(--exito))"
-							aria-live="polite"
+						<!--
+							Previsualizar no escribe nada, y por eso hay un botón: mientras el dedo recorre
+							el riel, esta tarjeta muestra un objetivo que la base no tiene. Guardar es un
+							acto aparte y con nombre propio.
+
+							Y dice lo que cuesta. Cada objetivo guardado es una fila nueva, y la ventana de
+							revisión arranca en su fecha: cambiar de objetivo pone el reloj en cero. Esa es
+							la razón de fondo por la que el riel no guarda solo — si lo hiciera, recorrerlo
+							reiniciaría la calibración en cada muesca y la sección nunca llegaría a decir
+							"hora de revisar".
+						-->
+						<button
+							onclick={aplicarCambio}
+							disabled={cambiando}
+							class="gb-relieve mt-4 min-h-14 w-full rounded-2xl text-base font-bold disabled:opacity-50"
+							style="background: var(--accent); color: var(--on-accent)"
+							>Cambiar a {vista?.rotulo}</button
 						>
-							<Icono nombre="hecha" tamano={18} />
-							Guardado como tu objetivo
+						<button
+							onclick={() => (previsualizado = null)}
+							class="mt-2 min-h-12 w-full rounded-2xl text-sm font-bold"
+							style="background: var(--surface-3); color: var(--text)">Dejar el que tenía</button
+						>
+						<p class="mt-2 text-[0.7rem] leading-relaxed" style="color: var(--muted)">
+							{#if revision?.estado === 'listo'}
+								Ojo: tenés una revisión lista con tu peso de estos días. Si cambiás de objetivo
+								ahora, esa medición se pierde y la cuenta vuelve a empezar.
+							{:else}
+								Cambiar de objetivo reinicia la cuenta para revisarlo con tu peso.
+							{/if}
 						</p>
-					{/if}
+					</div>
 
-					<!-- La primera frase queda a la vista: es la única de la lista que puede pedir una
-				     acción. Las que siguen explican y viven abajo, plegadas. -->
-					{#if frases[0]}
-						<p class="mt-3 text-xs leading-relaxed" style="color: {COLOR_TONO[frases[0].tono]}">
-							{frases[0].texto}
-						</p>
-					{/if}
-
-					<!--
-					Antes decía "Cambiar objetivo". El objetivo ahora se cambia con el riel de
-					arriba, así que lo que queda atrás de este botón es lo otro: los datos con los
-					que se calculó todo — y la pregunta de "¿Algo de esto aplica?", que es lo único
-					que puede devolver una dirección que el riel no ofrece.
-
-					Por eso entra en el paso 4 y no en el 1: desde ahí los tres pasos de datos están
-					contraídos y se abren de un toque, y además es donde vive esa pregunta.
-				-->
-					<a
-						href="/herramientas/calorias?paso=4"
-						class="mt-4 flex min-h-12 items-center justify-center rounded-2xl text-sm font-bold"
-						style="background: var(--surface-3); color: var(--text)">Cambiar mis datos</a
+					<div
+						class="col-start-1 row-start-1 {vista?.enPrevisualizacion ? 'invisible' : ''}"
+						aria-hidden={vista?.enPrevisualizacion ? 'true' : undefined}
 					>
-				{/if}
+						<!--
+							El acuse **reemplaza** a la frase, no se apila encima: sumados hacían crecer la
+							tarjeta otros ~70 px justo después de guardar, que es el mismo salto que este
+							bloque está para evitar. Y es lo correcto de leer igual — recién guardado, lo
+							que hay que decir es que se guardó; la predicción vuelve sola en la próxima.
+						-->
+						{#if cambioGuardado}
+							<p
+								class="mt-4 flex min-h-14 items-center justify-center gap-2 rounded-2xl text-sm font-bold"
+								style="background: rgb(var(--exito) / .14); color: rgb(var(--exito))"
+								aria-live="polite"
+							>
+								<Icono nombre="hecha" tamano={18} />
+								Guardado como tu objetivo
+							</p>
+						{:else if frases[0]}
+							<!-- La primera frase queda a la vista: es la única de la lista que puede pedir
+							     una acción. Las que siguen explican y viven abajo, plegadas. -->
+							<p class="mt-3 text-xs leading-relaxed" style="color: {COLOR_TONO[frases[0].tono]}">
+								{frases[0].texto}
+							</p>
+						{/if}
+
+						<!--
+							Antes decía "Cambiar objetivo". El objetivo ahora se cambia con el riel de
+							arriba, así que lo que queda atrás de este botón es lo otro: los datos con los
+							que se calculó todo.
+
+							Por eso entra en el paso 4 y no en el 1: desde ahí los tres pasos de datos están
+							contraídos y se abren de un toque.
+						-->
+						<a
+							href="/herramientas/calorias?paso=4"
+							class="mt-4 flex min-h-12 items-center justify-center rounded-2xl text-sm font-bold"
+							style="background: var(--surface-3); color: var(--text)">Cambiar mis datos</a
+						>
+					</div>
+				</div>
 
 				{#if errorCambio}
 					<p
