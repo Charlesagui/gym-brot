@@ -2,6 +2,10 @@
 	import { browser } from '$app/environment';
 	import Icono from '$lib/components/Icono.svelte';
 	import RielBanda from '$lib/components/RielBanda.svelte';
+	import RielObjetivo, {
+		type ParadaObjetivo,
+		type TonoObjetivo
+	} from '$lib/components/RielObjetivo.svelte';
 	import Stepper from '$lib/components/Stepper.svelte';
 	import {
 		calcularMantenimiento,
@@ -67,19 +71,61 @@
 		{ id: 'circuito', rotulo: 'Casi sin descanso, circuitos', corto: 'Circuitos' }
 	];
 
-	/** Los cinco de siempre. El orden es el de la conversación: bajar, quedarse, subir. */
+	/**
+	 * Los cinco de siempre. El orden es el de la conversación: bajar, quedarse, subir —
+	 * y también el del riel, que por eso puede recorrerlos con el dedo sin reordenar nada.
+	 *
+	 * `marca` es lo que entra en una muesca de ~60 px. El nombre entero no entra y tampoco
+	 * hace falta: arriba de la cifra ya está, y al lector de pantalla le llega por
+	 * `aria-label`. El signo es el menos tipográfico (−), el mismo que usa el ritmo.
+	 */
 	const OBJETIVOS: Array<{
 		id: string;
 		rotulo: string;
+		marca: string;
 		meta: Meta;
 		nivel: 'moderado' | 'agresivo' | null;
 	}> = [
-		{ id: 'bajar-agresivo', rotulo: 'Déficit agresivo', meta: 'bajar', nivel: 'agresivo' },
-		{ id: 'bajar-moderado', rotulo: 'Déficit moderado', meta: 'bajar', nivel: 'moderado' },
-		{ id: 'mantener', rotulo: 'Mantenimiento', meta: 'mantener', nivel: null },
-		{ id: 'subir-moderado', rotulo: 'Volumen moderado', meta: 'subir', nivel: 'moderado' },
-		{ id: 'subir-agresivo', rotulo: 'Volumen agresivo', meta: 'subir', nivel: 'agresivo' }
+		{
+			id: 'bajar-agresivo',
+			rotulo: 'Déficit agresivo',
+			marca: '−−',
+			meta: 'bajar',
+			nivel: 'agresivo'
+		},
+		{
+			id: 'bajar-moderado',
+			rotulo: 'Déficit moderado',
+			marca: '−',
+			meta: 'bajar',
+			nivel: 'moderado'
+		},
+		{ id: 'mantener', rotulo: 'Mantenimiento', marca: '=', meta: 'mantener', nivel: null },
+		{
+			id: 'subir-moderado',
+			rotulo: 'Volumen moderado',
+			marca: '+',
+			meta: 'subir',
+			nivel: 'moderado'
+		},
+		{
+			id: 'subir-agresivo',
+			rotulo: 'Volumen agresivo',
+			marca: '++',
+			meta: 'subir',
+			nivel: 'agresivo'
+		}
 	];
+
+	/**
+	 * El tono es el nivel, y por eso se deriva en vez de escribirse en la tabla: son la
+	 * misma información y dos copias se despegan. Tres tonos y no cinco a propósito —
+	 * el color dice cuánto empuja el objetivo, no cuál de los cinco es.
+	 */
+	function tonoDe(nivel: 'moderado' | 'agresivo' | null): TonoObjetivo {
+		if (nivel === null) return 'calmo';
+		return nivel === 'moderado' ? 'normal' : 'fuerte';
+	}
 
 	const TEXTO_AVISO: Record<MotivoAviso, string> = {
 		'sobre-tope-imc':
@@ -211,6 +257,8 @@
 	interface Boton {
 		id: string;
 		rotulo: string;
+		marca: string;
+		tono: TonoObjetivo;
 		meta: Meta;
 		objetivo: Objetivo | null;
 		aviso: MotivoAviso | null;
@@ -228,13 +276,14 @@
 	const botones = $derived<Boton[]>(
 		listo && limites
 			? OBJETIVOS.filter(({ meta }) => limites.metas.includes(meta)).map(
-					({ id, rotulo, meta, nivel }) => {
+					({ id, rotulo, marca, meta, nivel }) => {
+						// Lo que la posición es antes de saber cuánto da: identidad, no resultado.
+						const base = { id, rotulo, marca, tono: tonoDe(nivel), meta };
+
 						if (meta === 'mantener') {
 							const r = calcularObjetivo(listo, 'mantener', 0);
 							return {
-								id,
-								rotulo,
-								meta,
+								...base,
 								objetivo: r.estado === 'calculado' ? r : null,
 								aviso: null,
 								bloqueado: false,
@@ -243,20 +292,10 @@
 						}
 						const opcion = ritmosDisponibles(meta, listo.imc).find((o) => o.id === nivel);
 						if (!opcion)
-							return {
-								id,
-								rotulo,
-								meta,
-								objetivo: null,
-								aviso: null,
-								bloqueado: true,
-								ritmoPedido: 0
-							};
+							return { ...base, objetivo: null, aviso: null, bloqueado: true, ritmoPedido: 0 };
 						const r = calcularObjetivo(listo, meta, opcion.pctSemana);
 						return {
-							id,
-							rotulo,
-							meta,
+							...base,
 							objetivo: r.estado === 'calculado' ? r : null,
 							aviso: opcion.aviso,
 							bloqueado: r.estado !== 'calculado',
@@ -282,6 +321,35 @@
 
 	/** El canto del paso abierto: naranja cuando lo elegido merece advertencia. */
 	const focoColor = $derived(paso === 4 && botonElegido?.aviso ? 'var(--max)' : 'var(--glow)');
+
+	/**
+	 * Las mismas cinco posiciones, en la forma que come el riel. Es una vista de `botones`
+	 * y no una lista propia: si una posición se retira porque lo declarado la retira, se
+	 * retira del riel en el mismo momento y por la misma razón.
+	 */
+	const paradas = $derived<ParadaObjetivo[]>(
+		botones.map(({ id, rotulo, marca, tono, bloqueado }) => ({
+			id,
+			rotulo,
+			marca,
+			tono,
+			disponible: !bloqueado
+		}))
+	);
+
+	/**
+	 * Moverse por el riel del resultado.
+	 *
+	 * Lo único que agrega sobre asignar la elección es apagar el acuse de guardado: sin
+	 * esto, quien guarda y después desliza se queda mirando "Guardado como tu objetivo"
+	 * arriba de un objetivo que no guardó. El cartel diría la verdad sobre el estado de la
+	 * base y una mentira sobre lo que está en pantalla, que es lo que la persona lee.
+	 */
+	function elegirEnResultado(id: string) {
+		objetivoElegido = id;
+		guardado = false;
+		errorGuardado = null;
+	}
 
 	// --- resúmenes de los pasos ya contestados ---
 	const resumen = $derived([
@@ -363,6 +431,14 @@
 		(objetivo?.avisos ?? [])
 			.concat(listo?.avisos ?? [])
 			.filter((a) => a.tipo !== 'contraste-divergente' && a.tipo !== 'ajuste-recortado')
+			// `ritmo-sobre-tope` y el nivel `sobre-tope-imc` son la misma observación contada
+			// dos veces: el motor la emite cuando el ritmo pasa el tope por IMC, y
+			// `ritmosDisponibles` marca esa misma opción. Con los ritmos de hoy sólo puede
+			// pasarle al agresivo —el tope mínimo es 0,5 y el moderado pide exactamente
+			// 0,5—, pero el filtro no se apoya en esa aritmética: pregunta si la advertencia
+			// del nivel ya la está diciendo. Si mañana el moderado se pasa del tope, el
+			// aviso del motor aparece solo, que es lo que corresponde.
+			.filter((a) => !(a.tipo === 'ritmo-sobre-tope' && botonElegido?.aviso === 'sobre-tope-imc'))
 	);
 
 	function textoAvisoObjetivo(aviso: AvisoEnergia): string {
@@ -396,6 +472,30 @@
 			style="background: var(--surface)"
 			aria-live="polite"
 		>
+			<!--
+				El riel manda sobre toda la tarjeta, así que va a la cabeza.
+
+				Va acá y no en el paso 4: allá los cinco botones muestran sus cinco kcal juntas
+				y eso es comparar, que es lo que hace falta para decidir. Acá hay un objetivo
+				solo y abajo cuelga todo lo que cuesta —macros, ritmo, dónde cae contra tu
+				mantenimiento, qué advertencia trae—, y eso los cinco botones no lo pueden
+				mostrar. El riel no repite la comparación: deja recorrer las consecuencias.
+
+				Con una sola posición no hay nada que recorrer: pasa con embarazo, donde sólo
+				queda mantenimiento, y ahí un selector de una tecla es un adorno.
+			-->
+			{#if paradas.length > 1}
+				<div class="mb-3">
+					<RielObjetivo
+						{paradas}
+						valor={objetivoElegido}
+						vibracion={$ajustes.vibracion}
+						etiqueta="Cambiar de objetivo"
+						onElegir={elegirEnResultado}
+					/>
+				</div>
+			{/if}
+
 			<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
 				{botonElegido?.rotulo}
 			</p>
@@ -461,6 +561,29 @@
 				)}. Es una cuenta, no una medición: tu balanza la va a cerrar mejor que cualquier fórmula.
 			</p>
 		</section>
+
+		<!--
+			La advertencia del nivel, que hasta acá vivía sólo en el paso 4.
+
+			Ahí alcanzaba: al agresivo se llegaba tocando su botón, con el texto naranja
+			abajo, y recién después se tocaba "Ver mi objetivo". El riel abrió un camino que
+			no pasa por esa pantalla — se entra en moderado y se sale en agresivo sin haber
+			visto nunca por qué el agresivo cuesta algo. Un objetivo que trae advertencia
+			tiene que traerla en las dos pantallas donde se lo puede elegir.
+
+			No entra en `avisosVisibles` porque no es de la misma familia: aquéllos son
+			`AvisoEnergia` que el motor emite sobre el número (pisos, recortes, umbrales), y
+			éste es una propiedad del ritmo que se eligió. Comparten la forma, no el origen.
+		-->
+		{#if botonElegido?.aviso}
+			<p
+				class="mt-3 flex gap-2 rounded-xl border p-3 text-xs leading-relaxed"
+				style="border-color: rgb(var(--max) / .35); background: rgb(var(--max) / .08); color: rgb(var(--max))"
+			>
+				<Icono nombre="aviso" tamano={16} clase="mt-px shrink-0" />
+				<span>{TEXTO_AVISO[botonElegido.aviso]}</span>
+			</p>
+		{/if}
 
 		{#each avisosVisibles as aviso (aviso.tipo)}
 			{#if textoAvisoObjetivo(aviso)}
