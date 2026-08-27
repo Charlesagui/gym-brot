@@ -9,6 +9,11 @@ export default defineConfig({
 	reporter: process.env.CI ? 'github' : 'list',
 	use: {
 		baseURL: 'http://127.0.0.1:4173',
+		// La app fecha las sesiones por día LOCAL, así que cualquier test que cruce
+		// medianoche depende del huso del navegador. Sin fijarlo, esos tests pasan en
+		// una máquina en -03 y fallan en una en UTC — el mismo commit, distinto
+		// veredicto. Se fija el huso del usuario, que es el que define la regla.
+		timezoneId: 'America/Argentina/Buenos_Aires',
 		trace: 'retain-on-failure',
 		screenshot: 'only-on-failure',
 		video: 'retain-on-failure'
