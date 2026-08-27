@@ -199,7 +199,8 @@ export function frasesPara(datos: DatosFrases): Frase[] {
 	// Solo cuando hay una ventana de verdad. Mientras el objetivo es joven —estado
 	// `esperando`— no hay período que contar, y decir "con eso alcanza para corregir el
 	// número" sería falso: todavía no alcanza, falten los pesajes que falten.
-	const ventana = datos.calibracion && 'ventana' in datos.calibracion ? datos.calibracion.ventana : null;
+	const ventana =
+		datos.calibracion && 'ventana' in datos.calibracion ? datos.calibracion.ventana : null;
 	if (ventana && ventana.pesajes >= PESAJES_BUENA_RACHA) {
 		salida.push({
 			id: 'buena-racha',
