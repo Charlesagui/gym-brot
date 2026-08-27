@@ -101,15 +101,19 @@ test('el riel del resultado cambia el objetivo entero con un toque', async ({ pa
 	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
 	await expect(page.getByText('2.440kcal')).toBeVisible();
 
-	// Las muescas llevan el nombre entero en su etiqueta accesible: adentro no entra, y
-	// "++" solo no le sirve a nadie que no vea la pantalla.
+	// Cada muesca dice su nombre. Antes decían "−− − = + ++": ocupaban nada y se leían como
+	// escala, pero había que tocarlas para saber qué eran.
 	await page.getByRole('button', { name: 'Volumen agresivo' }).click();
 
 	// No cambia la cifra sola: cambian los macros, el ritmo y el rótulo de arriba. Eso es
 	// lo que el riel vino a mostrar y lo que los cinco botones del paso 4 no pueden.
 	await expect(page.getByText('3.340kcal')).toBeVisible();
-	// El nombre entero vive arriba de la cifra: en la muesca sólo entra la marca.
-	await expect(page.getByText('Volumen agresivo', { exact: true })).toBeVisible();
+	// La muesca queda marcada, y el nombre entero se repite arriba de la cifra.
+	await expect(page.getByRole('button', { name: 'Volumen agresivo' })).toHaveAttribute(
+		'aria-pressed',
+		'true'
+	);
+	await expect(page.getByText('Volumen agresivo', { exact: true }).first()).toBeVisible();
 	await expect(page.getByText('+0,41kg/sem')).toBeVisible();
 	await expect(page.getByText('131g')).toBeVisible(); // proteína, ya sin el 1,8 del déficit
 	await expect(page.getByText('495g')).toBeVisible(); // carbos
@@ -165,17 +169,23 @@ test('moverse por el riel apaga el acuse de guardado', async ({ page }) => {
 	await expect(page.getByText('2.440kcal')).toBeVisible();
 });
 
-test('con una sola posición no hay riel que recorrer', async ({ page }) => {
-	await completarPerfilA(page);
-	await page.getByText('¿Algo de esto aplica?').click();
-	await page.getByRole('button', { name: 'Estoy embarazada o amamantando' }).click();
+test('bajo IMC 18,5 el riel no ofrece déficit, ni apagado', async ({ page }) => {
+	await page.goto('/herramientas/calorias');
+	await page.getByRole('textbox', { name: 'Edad en años' }).fill('24');
+	await page.getByRole('textbox', { name: 'Edad en años' }).press('Enter');
+	await page.getByRole('textbox', { name: 'Altura en centímetros' }).fill('178');
+	await page.getByRole('textbox', { name: 'Altura en centímetros' }).press('Enter');
+	await page.getByRole('textbox', { name: 'Peso corporal en kg' }).fill('55');
+	await page.getByRole('textbox', { name: 'Peso corporal en kg' }).press('Enter');
+	await page.getByRole('button', { name: 'Continuar' }).click();
+	await page.getByRole('button', { name: 'Continuar' }).click();
+	await page.getByRole('button', { name: 'Continuar' }).click();
 	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
 
-	// Queda mantenimiento solo: un selector de una tecla es un adorno que promete opciones
-	// que no existen. Y el riel tampoco puede devolver lo que lo declarado retiró.
-	await expect(page.getByRole('group', { name: 'Cambiar de objetivo' })).toHaveCount(0);
-	await expect(page.getByRole('button', { name: 'Déficit agresivo' })).toHaveCount(0);
-	await expect(page.getByText('2.890kcal')).toBeVisible();
+	// El riel hereda el recorte del motor: la muesca no queda gris, no está.
+	await expect(page.getByRole('group', { name: 'Cambiar de objetivo' })).toBeVisible();
+	await expect(page.getByRole('button', { name: /^Déficit/ })).toHaveCount(0);
+	await expect(page.getByRole('button', { name: 'Volumen agresivo' })).toBeVisible();
 });
 
 test('guarda el objetivo y lo recuerda al volver a entrar', async ({ page }) => {
@@ -224,39 +234,24 @@ test('no ofrece déficit a quien está por debajo de IMC 18,5', async ({ page })
 	);
 });
 
-test('lo declarado cambia qué se ofrece, y no se guarda', async ({ page }) => {
+test('la app no pregunta por condiciones: el único recorte sale del peso', async ({ page }) => {
 	await completarPerfilA(page);
-	await expect(page.getByRole('button', { name: /Déficit moderado/ })).toBeVisible();
 
-	await page.getByText('¿Algo de esto aplica?').click();
-	await page.getByRole('button', { name: 'Tuve un trastorno alimentario' }).click();
+	// Hubo un desplegable que preguntaba por embarazo, lactancia y antecedente de trastorno
+	// alimentario, y con eso retiraba metas. Se sacó por decisión de producto. Lo que quedó
+	// no depende de que nadie declare nada: sale del peso que ya está cargado.
+	await expect(page.getByText('¿Algo de esto aplica?')).toHaveCount(0);
+	await expect(page.getByRole('button', { name: 'Estoy embarazada o amamantando' })).toHaveCount(0);
+	await expect(page.getByRole('button', { name: 'Tuve un trastorno alimentario' })).toHaveCount(0);
 
-	// El déficit no queda gris: no está.
-	await expect(page.getByRole('button', { name: /Déficit moderado/ })).toHaveCount(0);
-	await expect(page.getByRole('button', { name: /Déficit agresivo/ })).toHaveCount(0);
-	await expect(page.getByRole('button', { name: /Mantenimiento/ })).toBeVisible();
-	await expect(page.getByRole('button', { name: /Volumen moderado/ })).toBeVisible();
-	await expect(page.getByText(/no propone objetivos de déficit/)).toBeVisible();
+	// Y las cinco están, porque este perfil no dispara el único recorte que queda.
+	await expect(page.getByRole('button', { name: /Déficit agresivo/ })).toBeVisible();
+	await expect(page.getByRole('button', { name: /Volumen agresivo/ })).toBeVisible();
 
-	// Y en el resultado aparece la derivación.
+	// El descargo médico no se fue con la pregunta: sigue a la vista en el resultado.
 	await page.getByRole('button', { name: 'Ver mi objetivo' }).click();
-	await expect(page.getByText(/hablarlo antes con un\s+profesional/)).toBeVisible();
-
-	// Al volver a entrar no queda rastro: la respuesta no se persiste en ningún lado.
-	await completarPerfilA(page);
-	await expect(page.getByRole('button', { name: /Déficit moderado/ })).toBeVisible();
-	await expect(page.getByText(/no propone objetivos de déficit/)).toHaveCount(0);
-});
-
-test('en embarazo o lactancia solo queda mantenimiento', async ({ page }) => {
-	await completarPerfilA(page);
-	await page.getByText('¿Algo de esto aplica?').click();
-	await page.getByRole('button', { name: 'Estoy embarazada o amamantando' }).click();
-
-	await expect(page.getByRole('button', { name: /Mantenimiento/ })).toBeVisible();
-	await expect(page.getByRole('button', { name: /Déficit/ })).toHaveCount(0);
-	await expect(page.getByRole('button', { name: /Volumen/ })).toHaveCount(0);
-	await expect(page.getByText(/las necesidades se calculan distinto/)).toBeVisible();
+	await expect(page.getByText(/no una indicación\s+médica/)).toBeVisible();
+	await expect(page.getByText(/hablarlo antes con un\s+profesional/)).toHaveCount(0);
 });
 
 test('bloquea la herramienta a menores de edad', async ({ page }) => {
@@ -363,7 +358,7 @@ test('el objetivo guardado manda en la sección', async ({ page }) => {
 	await expect(page.getByText('Guardado como tu objetivo')).toBeVisible();
 
 	await page.getByRole('link', { name: 'Macros' }).click();
-	await expect(page.getByText('Déficit moderado')).toBeVisible();
+	await expect(page.getByText('Déficit moderado').first()).toBeVisible();
 	await expect(page.getByText('2.440kcal')).toBeVisible();
 	// Los tres macros mandan la fila: es el nombre de la sección.
 	await expect(page.getByText('148g')).toBeVisible();
@@ -427,7 +422,7 @@ test('confirmar el cambio guarda el objetivo nuevo y avisa qué cuesta', async (
 	// siente igual que no tocarlo — y esperar acá es esperar a la escritura de verdad,
 	// no a un texto que ya estaba en pantalla antes de guardar.
 	await expect(page.getByText('Guardado como tu objetivo')).toBeVisible();
-	await expect(page.getByText('Déficit agresivo', { exact: true })).toBeVisible();
+	await expect(page.getByText('Déficit agresivo', { exact: true }).first()).toBeVisible();
 	await expect(page.getByText('2.210kcal')).toBeVisible();
 
 	// Y ahora sí quedó escrito.
@@ -436,15 +431,26 @@ test('confirmar el cambio guarda el objetivo nuevo y avisa qué cuesta', async (
 	await expect(page.getByText('2.440kcal')).toHaveCount(0);
 });
 
-test('la sección no ofrece una dirección que la persona no atravesó', async ({ page }) => {
+test('la sección ofrece las cinco, igual que el asistente', async ({ page }) => {
 	await guardarYAbrirMacros(page);
 
-	// Con déficit guardado, el riel ofrece los dos déficits y mantenimiento. El volumen no
-	// aparece —ni apagado—: la pregunta que retira objetivos vive en el asistente y no se
-	// guarda, así que la sección no tiene con qué saber si acá corresponde ofrecerlo.
-	await expect(page.getByRole('button', { name: 'Déficit agresivo' })).toBeVisible();
-	await expect(page.getByRole('button', { name: 'Mantenimiento' })).toBeVisible();
-	await expect(page.getByRole('button', { name: /^Volumen/ })).toHaveCount(0);
+	// Hubo una versión que ofrecía sólo la dirección guardada más mantenimiento, porque la
+	// pregunta que retiraba metas no se persistía y la sección no podía saber si acá
+	// correspondía ofrecer déficit. Esa pregunta ya no existe, y la asimetría se fue con ella.
+	for (const nombre of [
+		'Déficit agresivo',
+		'Déficit moderado',
+		'Mantener',
+		'Volumen moderado',
+		'Volumen agresivo'
+	]) {
+		await expect(page.getByRole('button', { name: nombre })).toBeVisible();
+	}
+
+	// Y cruzar de dirección funciona igual que cualquier otro cambio: se previsualiza acá.
+	await page.getByRole('button', { name: 'Volumen agresivo' }).click();
+	await expect(page.getByText('3.340kcal')).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Cambiar a Volumen agresivo' })).toBeVisible();
 });
 
 test('cambiar mis datos entra directo donde se elige el objetivo', async ({ page }) => {
@@ -454,7 +460,6 @@ test('cambiar mis datos entra directo donde se elige el objetivo', async ({ page
 	// donde vive la pregunta que puede devolver una dirección que el riel no ofrece.
 	await page.getByRole('link', { name: 'Cambiar mis datos' }).click();
 	await expect(page.getByText('4 de 4')).toBeVisible();
-	await expect(page.getByText('¿Algo de esto aplica?')).toBeVisible();
 	await expect(page.getByRole('button', { name: /Volumen agresivo/ })).toBeVisible();
 
 	// Y los pasos de datos se abren de un toque desde ahí.

@@ -3,10 +3,15 @@
 
 	export interface ParadaObjetivo {
 		id: string;
-		/** El nombre entero. No entra en la muesca: va al lector de pantalla. */
-		rotulo: string;
-		/** Lo que sí entra: dos caracteres que se leen como escala. */
-		marca: string;
+		/**
+		 * El nombre que se ve en la muesca, partido en dos renglones si hace falta. Es
+		 * también el nombre accesible: no hay `aria-label` encima justamente para que no
+		 * puedan divergir. Cuando las muescas decían "−−" hacía falta uno —un símbolo no le
+		 * sirve a nadie que no vea la pantalla— y con él llegó el problema de siempre: la
+		 * etiqueta decía "Mantenimiento" y la muesca "Mantener", así que quien maneja la app
+		 * por voz decía lo que leía y no pasaba nada.
+		 */
+		corto: string;
 		tono: TonoObjetivo;
 		/** Una posición que el motor no pudo calcular queda muerta, no desaparece. */
 		disponible: boolean;
@@ -135,18 +140,35 @@
 	{#each paradas as parada (parada.id)}
 		<button
 			type="button"
-			aria-label={parada.rotulo}
 			aria-pressed={parada.id === valor}
 			disabled={!parada.disponible}
 			onclick={(evento) => alClickear(evento, parada)}
-			class="min-h-14 flex-1 rounded-xl text-sm font-bold disabled:opacity-30 {parada.id === valor
+			class="flex min-h-14 flex-1 flex-col items-center gap-1 rounded-xl px-0.5 pb-1.5 pt-1 disabled:opacity-30 {parada.id ===
+			valor
 				? 'gb-opcion-elegida'
 				: ''}"
-			style="--opcion-color: {COLOR_TONO[parada.tono]}; color: {parada.id === valor
-				? 'var(--text)'
-				: 'var(--muted)'}"
+			style="--opcion-color: {COLOR_TONO[parada.tono]}"
 		>
-			<span class="cifra text-base">{parada.marca}</span>
+			<!--
+				El canto de color, y en las cinco muescas siempre.
+
+				Antes el tono sólo se pintaba en la elegida, que es lo mismo que no tener
+				gramática de color: como hay una sola elegida por vez, nunca se veían dos
+				tonos juntos y no había con qué comparar. Ahora el riel entero se lee de un
+				vistazo —dónde está lo calmo, dónde lo que empuja— y lo que dice la elegida
+				es *cuál*, no *cuánto*.
+
+				Es un canto y no un relleno por la misma razón que la fila activa de una serie:
+				el color estructura, no decora.
+			-->
+			<span
+				class="h-[3px] w-full shrink-0 rounded-full"
+				style="background: rgb({COLOR_TONO[parada.tono]} / {parada.id === valor ? 1 : 0.55})"
+			></span>
+			<span
+				class="flex flex-1 items-center text-center text-[0.62rem] font-bold leading-[1.15]"
+				style="color: {parada.id === valor ? 'var(--text)' : 'var(--muted)'}">{parada.corto}</span
+			>
 		</button>
 	{/each}
 </div>
