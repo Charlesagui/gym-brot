@@ -29,7 +29,14 @@
 	 * que esto es una canaleta hundida con cinco teclas, de las cuales una está levantada
 	 * y encendida — el selector de un tablero, no el control de un sistema operativo. El
 	 * relieve sale de `.gb-opcion-elegida`, las mismas dos caras que usan las opciones del
-	 * cuestionario.
+	 * cuestionario — y las **dos**: la muesca sin elegir lleva `.gb-opcion`, no nada.
+	 *
+	 * Que las cuatro sin elegir fueran texto suelto sobre la canaleta parecía más limpio y
+	 * no lo era: medidas, las cinco teclas miden lo mismo (56 px, mismo borde de arriba y
+	 * de abajo), pero sólo una tenía caja, así que la elegida se leía como un bulto que
+	 * sobresale de una fila de palabras en vez de como la tecla apretada de cinco iguales.
+	 * Con las dos caras puestas, lo que distingue a la elegida es el relieve y el tinte, que
+	 * es de lo que se trata.
 	 *
 	 * **Se toca y se desliza, y el toque manda.** La regla de la app es que un solo toque
 	 * le gana a cualquier gesto, y acá se cumple literal: tocar una muesca salta a ella.
@@ -164,7 +171,7 @@
 			class="flex min-h-14 min-w-0 flex-1 items-center justify-center rounded-xl px-0.5 py-1.5 disabled:opacity-30 {parada.id ===
 			valor
 				? 'gb-opcion-elegida'
-				: ''}"
+				: 'gb-opcion'}"
 			style="--opcion-color: {COLOR_TONO[parada.tono]}"
 		>
 			<!--
