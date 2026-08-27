@@ -56,6 +56,31 @@
 	--ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
 	--fuente-cifra: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+
+	/*
+	 * Área segura del dispositivo, en un solo lugar.
+	 *
+	 * `src/app.html` declara `viewport-fit=cover` y la barra de estado translúcida, así
+	 * que en la PWA instalada de iPhone el layout arranca en el borde FÍSICO: debajo del
+	 * reloj, de la Dynamic Island y de la barra del home indicator. En Android
+	 * `display: standalone` no hace eso, y en escritorio los dos valen 0 — por eso el
+	 * agujero es invisible salvo que se pruebe en un iPhone instalado.
+	 *
+	 * Van como token y no como `env()` suelto en cada archivo por dos motivos: que se
+	 * vea de una que la app tiene un margen que respetar, y que se pueda simular
+	 * (redefinir `--safe-top` en `:root`) para medirlo sin un iPhone en la mano.
+	 */
+	--safe-top: env(safe-area-inset-top, 0px);
+	--safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/*
+ * El padding superior de una pantalla es el que ella declara en `--gb-pt` MÁS el área
+ * segura. Va como regla propia (sin `@layer`) a propósito: así le gana al `pt-*` de
+ * Tailwind, que vive en `@layer utilities`, sin necesidad de `!important`.
+ */
+.gb-page {
+	padding-top: calc(var(--gb-pt, 1.5rem) + var(--safe-top));
 }
 
 /*
@@ -681,7 +706,7 @@ body {
 
 	.gb-shell > main,
 	.gb-page {
-		padding: 0.75rem 1rem 4.25rem !important;
+		padding: calc(0.75rem + var(--safe-top)) 1rem 4.25rem !important;
 	}
 
 	.gb-shell header {
@@ -783,7 +808,7 @@ body {
 @media (orientation: landscape) and (max-height: 380px) {
 	.gb-shell > main,
 	.gb-page {
-		padding-top: 0.5rem !important;
+		padding-top: calc(0.5rem + var(--safe-top)) !important;
 		padding-bottom: 3.75rem !important;
 	}
 

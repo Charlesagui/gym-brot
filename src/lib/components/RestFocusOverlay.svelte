@@ -146,8 +146,8 @@
 			onpointermove={moverArrastre}
 			onpointerup={terminarArrastre}
 			onpointercancel={terminarArrastre}
-			class="rest-focus-panel mx-auto flex min-h-dvh max-w-md touch-none flex-col px-5 pb-6 pt-4"
-			style="--rest-glow: {descanso.glow}; transform: translate3d(0, {dragY}px, 0) scale({1 -
+			class="rest-focus-panel mx-auto flex min-h-dvh max-w-md touch-none flex-col px-5 pb-6"
+			style="padding-top: calc(1rem + var(--safe-top)); --rest-glow: {descanso.glow}; transform: translate3d(0, {dragY}px, 0) scale({1 -
 				Math.min(dragY / 2200, 0.035)}); opacity: {1 -
 				Math.min(dragY / 420, 0.42)}; transition: {arrastrando
 				? 'none'
@@ -298,10 +298,7 @@
 				{/if}
 			</div>
 
-			<div
-				class="rest-focus-actions grid gap-3"
-				style="padding-bottom: env(safe-area-inset-bottom)"
-			>
+			<div class="rest-focus-actions grid gap-3" style="padding-bottom: var(--safe-bottom)">
 				{#if descanso.vencido}
 					<button
 						data-modal-inicial
