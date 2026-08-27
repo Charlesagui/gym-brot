@@ -145,7 +145,7 @@
 		posiciones.map(({ opcion }) => ({
 			id: opcion.id,
 			corto: opcion.corto,
-			tono: tonoObjetivo(opcion.nivel),
+			tono: tonoObjetivo(opcion.meta, opcion.nivel),
 			disponible: true
 		}))
 	);

@@ -64,36 +64,27 @@
 	} = $props();
 
 	/**
-	 * El tono viaja por `--opcion-color`, el mismo gancho que ya usa la pantalla para
-	 * teñir de naranja lo que trae advertencia.
+	 * La escala, en triples rgb.
 	 *
-	 * `calmo` va con el triple rgb de `--muted` escrito a mano porque el token es un hex
-	 * (`#9aa0b4`) y acá hace falta con opacidad variable. Es la única cifra suelta del
-	 * archivo y vive acá, y no como token nuevo en app.css, porque el gris apagado no
-	 * significa nada fuera de este riel: es la ausencia de empuje, no un color de marca.
+	 * Un solo mapa y no dos: antes había uno de relleno y otro de tinta porque el violeta de
+	 * fondo (`--accent`) no llega al contraste como letra y hay un `--accent-text` aparte
+	 * para eso. Estos cinco están elegidos para servir a las dos cosas, así que el mismo
+	 * valor pinta la letra y —al 18 %, vía `--opcion-color`— el relleno de la elegida.
+	 *
+	 * Los cinco pasan AA sobre `--surface` como texto: el más justo es el violeta con 4,7:1
+	 * y el resto va de 6,5 a 14. Si alguno se toca, se comprueba de nuevo — son letras de
+	 * 10 px, que es donde el contraste se cobra primero.
+	 *
+	 * Cálidos a la izquierda, fríos a la derecha, blanco en el medio: la dirección se lee
+	 * sin saber los nombres. Y la saturación sube hacia las puntas, que es lo que hace que
+	 * los agresivos se vean agresivos y mantenimiento se vea en calma.
 	 */
 	const COLOR_TONO: Record<TonoObjetivo, string> = {
-		calmo: '154 160 180',
-		normal: 'var(--accent-rgb)',
-		fuerte: 'var(--max)'
-	};
-
-	/**
-	 * El mismo tono, pero para tinta.
-	 *
-	 * No es el de arriba con otro nombre, y por eso son dos mapas: un relleno al 18 % y una
-	 * letra de 10 px no tienen el mismo requisito de contraste. La app ya venía separando
-	 * las dos cosas —`--accent` para fondo, `--accent-text` para texto, «ambas cumplen AA
-	 * en su contexto» dice el token— así que acá se usa la que corresponde.
-	 */
-	const TINTA_TONO: Record<TonoObjetivo, string> = {
-		// Tinta plena y no `--muted`: en pantalla, el gris de los rótulos apagados al lado de
-		// un naranja y un violeta saturados no se leía como "calmo", se leía como
-		// "deshabilitado" — y mantenimiento es una opción tan elegible como las otras cuatro.
-		// Así los tres tonos suben en energía: blanco, violeta, naranja.
-		calmo: 'var(--text)',
-		normal: 'var(--accent-text)',
-		fuerte: 'rgb(var(--max))'
+		'deficit-fuerte': '255 107 92',
+		'deficit-suave': '255 157 60',
+		neutro: '232 232 240',
+		'volumen-suave': '130 104 255',
+		'volumen-fuerte': '56 199 236'
 	};
 
 	let nodo = $state<HTMLDivElement | undefined>(undefined);
@@ -196,7 +187,7 @@
 				class="text-center font-bold leading-[1.15]"
 				style="font-size: clamp(0.55rem, 2.6vw, 0.62rem); color: {parada.id === valor
 					? 'var(--text)'
-					: TINTA_TONO[parada.tono]}">{parada.corto}</span
+					: `rgb(${COLOR_TONO[parada.tono]})`}">{parada.corto}</span
 			>
 		</button>
 	{/each}
