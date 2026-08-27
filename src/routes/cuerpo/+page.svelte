@@ -454,46 +454,60 @@
 		</section>
 	{/if}
 
-	<!-- ===== Objetivo ===== -->
-	{#if $objetivo}
-		<section
-			class="gb-relieve rounded-2xl border border-white/10 p-4"
-			style="background: var(--surface)"
-		>
-			<!--
+	<!--
+		===== Objetivo y peso, en una sola tarjeta =====
+
+		Eran dos bloques sueltos: la tarjeta del objetivo arriba y la franja de peso abajo,
+		anclada al fondo de la pantalla. El anclaje resolvía el pozo muerto pero dejaba la
+		franja flotando sola, con un vacío arriba que la desconectaba de todo.
+
+		Ahora son una sola superficie: el peso es el pie de la tarjeta del objetivo, separado
+		por una línea. Que vayan juntos además es cierto — el peso no es otro tema, es el dato
+		que corrige este objetivo. Estaban separados por accidente de layout, no por sentido.
+
+		Y la tarjeta **no** se estira a llenar la pantalla, que fue el intento anterior. Medido
+		en un teléfono de 393 px: el contenido son 461 px y el espacio disponible 692, así que
+		estirarla metía 173 px de hueco adentro de la tarjeta (463 px cuando todavía no hay
+		objetivo). Eso no elimina el vacío, lo muda de afuera a adentro y encima lo enmarca.
+		Con alto natural, lo que queda abajo es fondo de página, que es lo que es.
+	-->
+	<div class="gb-relieve rounded-2xl border border-white/10" style="background: var(--surface)">
+		{#if $objetivo}
+			<section class="p-4">
+				<!--
 				El riel manda sobre toda la tarjeta, así que va a la cabeza, igual que en el
 				resultado del asistente. Con una sola posición no hay nada que recorrer.
 			-->
-			{#if paradas.length > 1}
-				<div class="mb-3">
-					<RielObjetivo
-						{paradas}
-						valor={previsualizado ?? idVigente ?? ''}
-						vibracion={$ajustes.vibracion}
-						etiqueta="Cambiar de objetivo"
-						onElegir={(id) => {
-							previsualizado = id;
-							// Volver a recorrer deja atrás el acuse: ya no describe lo que se ve.
-							cambioGuardado = false;
-						}}
-					/>
-				</div>
-			{/if}
+				{#if paradas.length > 1}
+					<div class="mb-3">
+						<RielObjetivo
+							{paradas}
+							valor={previsualizado ?? idVigente ?? ''}
+							vibracion={$ajustes.vibracion}
+							etiqueta="Cambiar de objetivo"
+							onElegir={(id) => {
+								previsualizado = id;
+								// Volver a recorrer deja atrás el acuse: ya no describe lo que se ve.
+								cambioGuardado = false;
+							}}
+						/>
+					</div>
+				{/if}
 
-			<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
-				<!-- En previsualización el rótulo dice lo que se está mirando, no lo guardado; y
+				<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
+					<!-- En previsualización el rótulo dice lo que se está mirando, no lo guardado; y
 				     "revisado con tu peso" habla del mantenimiento, que no cambia al recorrer. -->
-				{vista?.rotulo}{$objetivo.calibradoDe ? ' · revisado con tu peso' : ''}
-			</p>
-			<p class="mt-1 flex items-baseline">
-				<span class="cifra text-[4.2rem]"
-					>{formatoVolumen(vista?.objetivoKcal ?? $objetivo.objetivoKcal)}<span class="cifra-u"
-						>kcal</span
-					></span
-				>
-			</p>
+					{vista?.rotulo}{$objetivo.calibradoDe ? ' · revisado con tu peso' : ''}
+				</p>
+				<p class="mt-1 flex items-baseline">
+					<span class="cifra text-[4.2rem]"
+						>{formatoVolumen(vista?.objetivoKcal ?? $objetivo.objetivoKcal)}<span class="cifra-u"
+							>kcal</span
+						></span
+					>
+				</p>
 
-			<!--
+				<!--
 				Los tres macros, y los tres siempre.
 
 				Antes esta fila entera vivía dentro de un `{#if meta !== 'mantener'}`, así que
@@ -502,21 +516,21 @@
 				pantalla la tapaba. Lo único que de verdad no aplica en mantenimiento es el ritmo,
 				y ese se esconde solo, más abajo.
 			-->
-			<div class="mt-4 grid grid-cols-3 gap-2">
-				{#each macrosVisibles as macro (macro.rotulo)}
-					<div class="min-w-0">
-						<p
-							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
-							style="color: var(--muted)"
-						>
-							{macro.rotulo}
-						</p>
-						<p class="cifra text-2xl">{macro.gramos}<span class="cifra-u">g</span></p>
-					</div>
-				{/each}
-			</div>
+				<div class="mt-4 grid grid-cols-3 gap-2">
+					{#each macrosVisibles as macro (macro.rotulo)}
+						<div class="min-w-0">
+							<p
+								class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+								style="color: var(--muted)"
+							>
+								{macro.rotulo}
+							</p>
+							<p class="cifra text-2xl">{macro.gramos}<span class="cifra-u">g</span></p>
+						</div>
+					{/each}
+				</div>
 
-			<!--
+				<!--
 				Contra qué se compara, cuánto te corrés y a qué velocidad. En mantenimiento la fila
 				entera se va, porque las tres son degeneradas: el objetivo *es* el mantenimiento,
 				la diferencia es cero y el ritmo también.
@@ -529,42 +543,42 @@
 				La banda no se perdió: esa misma frase la da con números ("2 de cada 3 personas
 				están entre X e Y"), que es más de lo que se podía leer del gráfico.
 			-->
-			{#if vista?.meta !== 'mantener'}
-				<div class="mt-3 grid grid-cols-3 gap-2">
-					<div class="min-w-0">
-						<p
-							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
-							style="color: var(--muted)"
-						>
-							Mantenimiento
-						</p>
-						<p class="cifra text-xl">
-							{formatoVolumen($objetivo.tdeeKcal)}<span class="cifra-u">kcal</span>
-						</p>
+				{#if vista?.meta !== 'mantener'}
+					<div class="mt-3 grid grid-cols-3 gap-2">
+						<div class="min-w-0">
+							<p
+								class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+								style="color: var(--muted)"
+							>
+								Mantenimiento
+							</p>
+							<p class="cifra text-xl">
+								{formatoVolumen($objetivo.tdeeKcal)}<span class="cifra-u">kcal</span>
+							</p>
+						</div>
+						<div class="min-w-0">
+							<p
+								class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+								style="color: var(--muted)"
+							>
+								Diferencia
+							</p>
+							<p class="cifra text-xl">{diferenciaTexto}<span class="cifra-u">kcal</span></p>
+						</div>
+						<div class="min-w-0">
+							<p
+								class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
+								style="color: var(--muted)"
+							>
+								Ritmo
+							</p>
+							<p class="cifra text-xl">{ritmoTexto}<span class="cifra-u">{unidad}/sem</span></p>
+						</div>
 					</div>
-					<div class="min-w-0">
-						<p
-							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
-							style="color: var(--muted)"
-						>
-							Diferencia
-						</p>
-						<p class="cifra text-xl">{diferenciaTexto}<span class="cifra-u">kcal</span></p>
-					</div>
-					<div class="min-w-0">
-						<p
-							class="text-[0.6rem] font-bold uppercase tracking-[0.14em]"
-							style="color: var(--muted)"
-						>
-							Ritmo
-						</p>
-						<p class="cifra text-xl">{ritmoTexto}<span class="cifra-u">{unidad}/sem</span></p>
-					</div>
-				</div>
-			{/if}
+				{/if}
 
-			{#if vista?.enPrevisualizacion}
-				<!--
+				{#if vista?.enPrevisualizacion}
+					<!--
 					Previsualizar no escribe nada, y por eso hay un botón: mientras el dedo recorre
 					el riel, esta tarjeta muestra un objetivo que la base no tiene. Guardar es un
 					acto aparte y con nombre propio.
@@ -575,47 +589,47 @@
 					reiniciaría la calibración en cada muesca y la sección nunca llegaría a decir
 					"hora de revisar".
 				-->
-				<button
-					onclick={aplicarCambio}
-					disabled={cambiando}
-					class="gb-relieve mt-4 min-h-14 w-full rounded-2xl text-base font-bold disabled:opacity-50"
-					style="background: var(--accent); color: var(--on-accent)"
-					>Cambiar a {vista.rotulo}</button
-				>
-				<button
-					onclick={() => (previsualizado = null)}
-					class="mt-2 min-h-12 w-full rounded-2xl text-sm font-bold"
-					style="background: var(--surface-3); color: var(--text)">Dejar el que tenía</button
-				>
-				<p class="mt-2 text-[0.7rem] leading-relaxed" style="color: var(--muted)">
-					{#if revision?.estado === 'listo'}
-						Ojo: tenés una revisión lista con tu peso de estos días. Si cambiás de objetivo ahora,
-						esa medición se pierde y la cuenta vuelve a empezar.
-					{:else}
-						Cambiar de objetivo reinicia la cuenta para revisarlo con tu peso.
-					{/if}
-				</p>
-			{:else}
-				{#if cambioGuardado}
-					<p
-						class="mt-4 flex min-h-14 items-center justify-center gap-2 rounded-2xl text-sm font-bold"
-						style="background: rgb(var(--exito) / .14); color: rgb(var(--exito))"
-						aria-live="polite"
+					<button
+						onclick={aplicarCambio}
+						disabled={cambiando}
+						class="gb-relieve mt-4 min-h-14 w-full rounded-2xl text-base font-bold disabled:opacity-50"
+						style="background: var(--accent); color: var(--on-accent)"
+						>Cambiar a {vista.rotulo}</button
 					>
-						<Icono nombre="hecha" tamano={18} />
-						Guardado como tu objetivo
+					<button
+						onclick={() => (previsualizado = null)}
+						class="mt-2 min-h-12 w-full rounded-2xl text-sm font-bold"
+						style="background: var(--surface-3); color: var(--text)">Dejar el que tenía</button
+					>
+					<p class="mt-2 text-[0.7rem] leading-relaxed" style="color: var(--muted)">
+						{#if revision?.estado === 'listo'}
+							Ojo: tenés una revisión lista con tu peso de estos días. Si cambiás de objetivo ahora,
+							esa medición se pierde y la cuenta vuelve a empezar.
+						{:else}
+							Cambiar de objetivo reinicia la cuenta para revisarlo con tu peso.
+						{/if}
 					</p>
-				{/if}
+				{:else}
+					{#if cambioGuardado}
+						<p
+							class="mt-4 flex min-h-14 items-center justify-center gap-2 rounded-2xl text-sm font-bold"
+							style="background: rgb(var(--exito) / .14); color: rgb(var(--exito))"
+							aria-live="polite"
+						>
+							<Icono nombre="hecha" tamano={18} />
+							Guardado como tu objetivo
+						</p>
+					{/if}
 
-				<!-- La primera frase queda a la vista: es la única de la lista que puede pedir una
+					<!-- La primera frase queda a la vista: es la única de la lista que puede pedir una
 				     acción. Las que siguen explican y viven abajo, plegadas. -->
-				{#if frases[0]}
-					<p class="mt-3 text-xs leading-relaxed" style="color: {COLOR_TONO[frases[0].tono]}">
-						{frases[0].texto}
-					</p>
-				{/if}
+					{#if frases[0]}
+						<p class="mt-3 text-xs leading-relaxed" style="color: {COLOR_TONO[frases[0].tono]}">
+							{frases[0].texto}
+						</p>
+					{/if}
 
-				<!--
+					<!--
 					Antes decía "Cambiar objetivo". El objetivo ahora se cambia con el riel de
 					arriba, así que lo que queda atrás de este botón es lo otro: los datos con los
 					que se calculó todo — y la pregunta de "¿Algo de esto aplica?", que es lo único
@@ -624,24 +638,24 @@
 					Por eso entra en el paso 4 y no en el 1: desde ahí los tres pasos de datos están
 					contraídos y se abren de un toque, y además es donde vive esa pregunta.
 				-->
-				<a
-					href="/herramientas/calorias?paso=4"
-					class="mt-4 flex min-h-12 items-center justify-center rounded-2xl text-sm font-bold"
-					style="background: var(--surface-3); color: var(--text)">Cambiar mis datos</a
-				>
-			{/if}
+					<a
+						href="/herramientas/calorias?paso=4"
+						class="mt-4 flex min-h-12 items-center justify-center rounded-2xl text-sm font-bold"
+						style="background: var(--surface-3); color: var(--text)">Cambiar mis datos</a
+					>
+				{/if}
 
-			{#if errorCambio}
-				<p
-					class="mt-3 flex gap-2 rounded-xl border p-3 text-xs leading-relaxed"
-					style="border-color: rgb(var(--max) / .35); background: rgb(var(--max) / .08); color: rgb(var(--max))"
-				>
-					<Icono nombre="aviso" tamano={16} clase="mt-px shrink-0" />
-					<span>{errorCambio}</span>
-				</p>
-			{/if}
+				{#if errorCambio}
+					<p
+						class="mt-3 flex gap-2 rounded-xl border p-3 text-xs leading-relaxed"
+						style="border-color: rgb(var(--max) / .35); background: rgb(var(--max) / .08); color: rgb(var(--max))"
+					>
+						<Icono nombre="aviso" tamano={16} clase="mt-px shrink-0" />
+						<span>{errorCambio}</span>
+					</p>
+				{/if}
 
-			<!--
+				<!--
 				Todo lo que explica el número, plegado.
 
 				No es prosa de relleno y por eso no se borra: la banda, el porqué de la proteína y
@@ -649,80 +663,77 @@
 				de texto de 12 px abajo de la cifra, y abiertos empujaban la pantalla a un scroll
 				entero. Quien quiere el número lo tiene arriba; quien quiere la razón, la abre.
 			-->
-			<details class="mt-2 rounded-2xl" style="background: var(--surface-2)">
-				<summary
-					class="flex min-h-12 cursor-pointer items-center justify-between px-4 text-sm font-bold"
-					>¿De dónde sale este número?<Icono nombre="info" tamano={18} clase="shrink-0" /></summary
-				>
-				<div class="px-4 pb-4">
-					{#if banda}
-						<p class="text-xs leading-relaxed" style="color: var(--muted)">
-							Tu mantenimiento estimado es {formatoVolumen($objetivo.tdeeKcal)} kcal. 2 de cada 3 personas
-							con tu perfil están entre {formatoVolumen(banda.desde)} y {formatoVolumen(
-								banda.hasta
-							)}. Es una cuenta, no una medición.
-						</p>
-					{/if}
-
-					<p class="mt-3 text-xs leading-relaxed" style="color: var(--muted)">
-						La proteína es un piso y sale de tu peso: {fraseProteina($objetivo)} La grasa es el 25 % de
-						las calorías, con un piso por kilo, y los carbos son lo que queda — son la palanca que sostiene
-						el entrenamiento.
-					</p>
-
-					{#each frases.slice(1) as frase (frase.id)}
-						<p class="mt-3 text-xs leading-relaxed" style="color: {COLOR_TONO[frase.tono]}">
-							{frase.texto}
-						</p>
-					{/each}
-
-					<!-- Acción secundaria, discreta: no compite con nada y se confirma en dos toques. -->
-					<button
-						onclick={borrar}
-						class="mt-4 min-h-11 text-xs font-bold"
-						style="color: {confirmandoBorrado ? 'rgb(var(--max))' : 'var(--muted)'}"
-						>{confirmandoBorrado ? 'Tocá otra vez para borrarlo' : 'Borrar objetivo'}</button
+				<details class="mt-2 rounded-2xl" style="background: var(--surface-2)">
+					<summary
+						class="flex min-h-12 cursor-pointer items-center justify-between px-4 text-sm font-bold"
+						>¿De dónde sale este número?<Icono
+							nombre="info"
+							tamano={18}
+							clase="shrink-0"
+						/></summary
 					>
-				</div>
-			</details>
-		</section>
-	{:else}
-		<section class="rounded-2xl border border-white/10 p-4" style="background: var(--surface)">
-			<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
-				Objetivo de calorías
-			</p>
-			<p class="mt-1.5 text-sm leading-relaxed">
-				Todavía no calculaste el tuyo. Son cuatro pantallas y usa el peso que ya registrás.
-			</p>
-			<a
-				href="/herramientas/calorias"
-				class="gb-relieve mt-4 flex min-h-14 items-center justify-center rounded-2xl text-base font-bold"
-				style="background: var(--accent); color: var(--on-accent)">Calcular mi objetivo</a
-			>
-		</section>
-	{/if}
+					<div class="px-4 pb-4">
+						{#if banda}
+							<p class="text-xs leading-relaxed" style="color: var(--muted)">
+								Tu mantenimiento estimado es {formatoVolumen($objetivo.tdeeKcal)} kcal. 2 de cada 3 personas
+								con tu perfil están entre {formatoVolumen(banda.desde)} y {formatoVolumen(
+									banda.hasta
+								)}. Es una cuenta, no una medición.
+							</p>
+						{/if}
 
-	<!--
-		Peso corporal, en una franja y no en una tarjeta.
+						<p class="mt-3 text-xs leading-relaxed" style="color: var(--muted)">
+							La proteína es un piso y sale de tu peso: {fraseProteina($objetivo)} La grasa es el 25 %
+							de las calorías, con un piso por kilo, y los carbos son lo que queda — son la palanca que
+							sostiene el entrenamiento.
+						</p>
 
-		Acá el peso no es el tema: es el dato que corrige el objetivo y la puerta a /peso, que
-		es donde vive de verdad. Como tarjeta se llevaba ~190 px —rótulo, cifra de 2,6 rem,
-		deltas y un botón a ancho completo— para decir tres números y abrir un link.
-	-->
-	<!--
-		`mt-auto` y no `mt-3`: la franja se va al fondo de la pantalla.
+						{#each frases.slice(1) as frase (frase.id)}
+							<p class="mt-3 text-xs leading-relaxed" style="color: {COLOR_TONO[frase.tono]}">
+								{frase.texto}
+							</p>
+						{/each}
 
-		`main` tiene alto mínimo de viewport para que el glow cubra, así que cuando el
-		contenido no llega quedaba un pozo muerto entre la tarjeta y la barra de abajo. El
-		espacio sobrante ahora se lo come el hueco de arriba de la franja, que queda apoyada
-		sobre la barra — y de paso el peso, que es la puerta a /peso, cae bajo el pulgar. Con
-		contenido largo `mt-auto` vale cero y el `pt-3` deja la separación de siempre.
-	-->
-	<div class="mt-auto pt-3">
+						<!-- Acción secundaria, discreta: no compite con nada y se confirma en dos toques. -->
+						<button
+							onclick={borrar}
+							class="mt-4 min-h-11 text-xs font-bold"
+							style="color: {confirmandoBorrado ? 'rgb(var(--max))' : 'var(--muted)'}"
+							>{confirmandoBorrado ? 'Tocá otra vez para borrarlo' : 'Borrar objetivo'}</button
+						>
+					</div>
+				</details>
+			</section>
+		{:else}
+			<section class="p-4">
+				<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">
+					Objetivo de calorías
+				</p>
+				<p class="mt-1.5 text-sm leading-relaxed">
+					Todavía no calculaste el tuyo. Son cuatro pantallas y usa el peso que ya registrás.
+				</p>
+				<a
+					href="/herramientas/calorias"
+					class="gb-relieve mt-4 flex min-h-14 items-center justify-center rounded-2xl text-base font-bold"
+					style="background: var(--accent); color: var(--on-accent)">Calcular mi objetivo</a
+				>
+			</section>
+		{/if}
+
+		<!--
+			El peso, como pie de la tarjeta y no como tarjeta propia.
+
+			Acá el peso no es el tema: es el dato que corrige el objetivo y la puerta a /peso,
+			que es donde vive de verdad. Como tarjeta se llevaba ~190 px —rótulo, cifra de
+			2,6 rem, deltas y un botón a ancho completo— para decir tres números y abrir un link.
+
+			Va pegado al final de la tarjeta, con una línea arriba y la superficie un tono más
+			clara: se lee como el pie de lo que está arriba y no como una tarjeta huérfana.
+		-->
 		<a
 			href="/peso"
-			class="flex min-h-14 items-center gap-3 rounded-2xl border border-white/10 px-4"
-			style="background: var(--surface)"
+			class="flex min-h-14 items-center gap-3 rounded-b-2xl border-t border-white/10 px-4"
+			style="background: var(--surface-2)"
 		>
 			{#if resumen.actual}
 				<span
