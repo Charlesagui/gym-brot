@@ -164,7 +164,7 @@
 		-->
 		<div class="mb-4">
 			{#if MapaCorporal}
-				<MapaCorporal {hoy} />
+				<MapaCorporal {hoy} vibracion={ajustes.vibracion ?? true} />
 			{:else}
 				<!-- El esqueleto reserva lo que el mapa mide de verdad (~48 rem). Con las 9 rem
 				     de antes, al llegar el componente todo lo de abajo saltaba 610 px: si estabas

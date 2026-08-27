@@ -1,7 +1,21 @@
-/** Geometría derivada de MuscleMap (MIT), cargada sólo al abrir el mapa. Ver THIRD_PARTY_NOTICES.md. */
+/**
+ * Geometría derivada de MuscleMap (MIT), cargada sólo al abrir el mapa.
+ * Ver THIRD_PARTY_NOTICES.md.
+ *
+ * El `viewBox` va recortado al dibujo y no al lienzo original (650×1450): un tercio
+ * de ese lienzo era aire —272 unidades arriba y 77 a cada costado—, así que el cuerpo
+ * se dibujaba chico al pedo. Con el recorte entra 23 % más grande en la misma columna,
+ * que en un teléfono son zonas de 8 px pasando a 10. Los dos lados comparten alto y
+ * ancho para que hombros y rodillas queden a la misma altura en el frente y la espalda.
+ *
+ * Las rutas se validan en body-geometry.test.ts: cuatro de las seis del serrato
+ * llegaron con comandos de cinco números (un separador comido antes de un `0`) y un
+ * error de sintaxis no rompe el SVG — el navegador dibuja hasta ahí y sigue como si
+ * nada, que es la peor forma de fallar.
+ */
 export const GEOMETRIA_CUERPO = {
 	front: {
-		viewBox: '0 0 650 1450',
+		viewBox: '57 203 528 1177',
 		zones: [
 			{
 				slug: 'trapezius',
@@ -124,12 +138,12 @@ export const GEOMETRIA_CUERPO = {
 			{
 				slug: 'serratus',
 				paths: [
-					'M227 432c-2-1-3-4-3-6q1-5 4-8c2-2 5-2 80q4 2 6 6c1 30 6-3 8q-5 3-120z',
+					'M227 432c-2-1-3-4-3-6q1-5 4-8c2-2 5-2 8 0q4 2 6 6c1 3 0 6-3 8q-5 3-12 0z',
 					'M221 450c-2-1-3-4-2-6q1-4 5-6c2-1 5-1 7 1q3 3 4 8c0 3-1 6-4 7q-5 2-10-1z',
-					'M218 468c-1-2-2-4-1-6q2-4 6-5c3-1 50 7 2q3 3 3 8c0 3-2 5-5 6q-5 1-9-4z',
-					'M423 432c2-1 3-4 3-6q-1-5-4-8c-2-2-5-2-70q-4 2-5 6c-1 30 6 3 8q5 3 120z',
+					'M218 468c-1-2-2-4-1-6q2-4 6-5c3-1 5 0 7 2q3 3 3 8c0 3-2 5-5 6q-5 1-9-4z',
+					'M423 432c2-1 3-4 3-6q-1-5-4-8c-2-2-5-2-7 0q-4 2-5 6c-1 3 0 6 3 8q5 3 12 0z',
 					'M428 450c2-1 3-4 2-6q-1-4-5-6c-2-1-5-1-7 1q-3 3-4 8c0 3 1 6 4 7q5 2 10-1z',
-					'M432 468c1-2 2-4 1-6q-2-4-5-5c-2-1-50-7 2q-3 3-2 8c0 3 2 5 5 6q5 1 9-4z'
+					'M432 468c1-2 2-4 1-6q-2-4-5-5c-2-1-5 0-7 2q-3 3-2 8c0 3 2 5 5 6q5 1 9-4z'
 				]
 			},
 			{
@@ -142,7 +156,7 @@ export const GEOMETRIA_CUERPO = {
 		]
 	},
 	back: {
-		viewBox: '823 0 650 1450',
+		viewBox: '878 203 528 1177',
 		zones: [
 			{
 				slug: 'neck',
