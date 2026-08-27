@@ -103,7 +103,11 @@ test('el día terminado dice por qué se reabre en vez de descelebrarse en silen
 	}
 	await page.getByRole('button', { name: 'Terminar día' }).click();
 	await page.getByRole('button', { name: 'Cerrar resumen del día' }).click();
-	await expect(page.getByText('Terminado', { exact: true })).toBeVisible();
+	// "Cerrado parcial" y no "Terminado": el camino corto de arriba saltea los seis
+	// ejercicios, así que el día queda cerrado sin una sola serie hecha. Que eso no se vea
+	// igual que un día entero es justamente lo que mide la calidad de sesión — la regla
+	// vive en calidad-sesion.test.ts, acá sólo se usa como checkpoint de "día cerrado".
+	await expect(page.getByText('Cerrado parcial', { exact: true })).toBeVisible();
 
 	// Retomar un ejercicio reabre el día: ahora la pantalla lo explica.
 	await page.getByRole('button', { name: 'Reanudar Curl femoral sentado hoy' }).click();
