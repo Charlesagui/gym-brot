@@ -147,6 +147,11 @@
 	// pasa por un único estado recuperable y ninguna pantalla puede quedar colgada
 	// con su propio spinner si la apertura se traba.
 	let dbLista = $state(false);
+	// El hueco de abajo se reserva sólo cuando el nav se dibuja de verdad (mismo
+	// predicado que su `{#if}`). Antes la reserva miraba únicamente `sinNav`, así que
+	// las pantallas de error y de carga —que no muestran nav— arrastraban 5rem de vacío
+	// al final, y con el área segura pasaban a arrastrar 5rem + el inset.
+	const conNav = $derived(!sinNav && dbLista && !dbError);
 	// Apertura demorada (suele ser pasajero): aviso suave dentro de la carga.
 	let dbLenta = $state(false);
 	// Apertura BLOQUEADA: otra pestaña/ventana o la app instalada tiene tomada la
@@ -283,9 +288,21 @@
 	});
 </script>
 
-<div class="gb-shell mx-auto min-h-dvh max-w-md {sinNav ? '' : 'pb-20'}">
+<!--
+	El hueco que se le reserva al nav es su alto REAL: 64 px de contenido más el área
+	segura. Con `pb-20` fijo, en iPhone el nav (64 px + 34) se comía los últimos 18 px de
+	la página — en `/herramientas/discos`, que casi no tiene padding propio, eso es una
+	fila de botones debajo de la barra.
+-->
+<div
+	class="gb-shell mx-auto min-h-dvh max-w-md"
+	style={conNav ? 'padding-bottom: var(--gb-nav)' : ''}
+>
 	{#if dbError}
-		<main class="gb-page glow-bg grid min-h-dvh place-items-center px-5 py-10">
+		<main
+			class="gb-page glow-bg grid min-h-dvh place-items-center px-5 pb-10"
+			style="--gb-pt: 2.5rem"
+		>
 			<section
 				class="w-full rounded-2xl border border-white/10 p-5"
 				style="background: var(--surface)"
@@ -331,7 +348,10 @@
 			</section>
 		</main>
 	{:else if dbDesactualizada}
-		<main class="gb-page glow-bg grid min-h-dvh place-items-center px-5 py-10">
+		<main
+			class="gb-page glow-bg grid min-h-dvh place-items-center px-5 pb-10"
+			style="--gb-pt: 2.5rem"
+		>
 			<section
 				class="w-full rounded-2xl border border-white/10 p-5"
 				style="background: var(--surface)"
@@ -355,7 +375,10 @@
 			</section>
 		</main>
 	{:else if dbBloqueada}
-		<main class="gb-page glow-bg grid min-h-dvh place-items-center px-5 py-10">
+		<main
+			class="gb-page glow-bg grid min-h-dvh place-items-center px-5 pb-10"
+			style="--gb-pt: 2.5rem"
+		>
 			<section
 				class="w-full rounded-2xl border border-white/10 p-5"
 				style="background: var(--surface)"
@@ -377,7 +400,7 @@
 			</section>
 		</main>
 	{:else if !dbLista}
-		<main class="gb-page glow-bg min-h-dvh px-5 py-10 text-center">
+		<main class="gb-page glow-bg min-h-dvh px-5 pb-10 text-center" style="--gb-pt: 2.5rem">
 			<div class="mx-auto w-full max-w-md">
 				<!-- Esqueleto con la silueta de la portada: la espera se lee como carga
 				     en curso y no como una pantalla que se quedó trabada. -->
@@ -404,7 +427,7 @@
 	{:else}
 		{@render children()}
 	{/if}
-	{#if !sinNav && dbLista && !dbError}
+	{#if conNav}
 		<BottomNav />
 	{/if}
 </div>
@@ -414,7 +437,7 @@
 {#if avisoArranque && dbLista}
 	<div
 		class="fixed inset-x-0 top-0 z-[88] mx-auto max-w-md px-5"
-		style="padding-top: calc(1rem + env(safe-area-inset-top))"
+		style="padding-top: calc(1rem + var(--safe-top))"
 		role="status"
 	>
 		<div
@@ -463,7 +486,7 @@
 {#if $errorDatos}
 	<div
 		class="fixed inset-x-0 top-0 z-[90] mx-auto max-w-md px-5"
-		style="padding-top: calc(1rem + env(safe-area-inset-top))"
+		style="padding-top: calc(1rem + var(--safe-top))"
 		role="alert"
 	>
 		<div
@@ -490,7 +513,7 @@
 {#if $needRefresh && !entrenando && dbLista}
 	<div
 		class="fixed inset-x-0 z-[85] mx-auto max-w-md px-5"
-		style="bottom: calc(72px + env(safe-area-inset-bottom))"
+		style="bottom: calc(72px + var(--safe-bottom))"
 		role="status"
 	>
 		<div
