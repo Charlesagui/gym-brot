@@ -147,6 +147,11 @@
 	// pasa por un único estado recuperable y ninguna pantalla puede quedar colgada
 	// con su propio spinner si la apertura se traba.
 	let dbLista = $state(false);
+	// El hueco de abajo se reserva sólo cuando el nav se dibuja de verdad (mismo
+	// predicado que su `{#if}`). Antes la reserva miraba únicamente `sinNav`, así que
+	// las pantallas de error y de carga —que no muestran nav— arrastraban 5rem de vacío
+	// al final, y con el área segura pasaban a arrastrar 5rem + el inset.
+	const conNav = $derived(!sinNav && dbLista && !dbError);
 	// Apertura demorada (suele ser pasajero): aviso suave dentro de la carga.
 	let dbLenta = $state(false);
 	// Apertura BLOQUEADA: otra pestaña/ventana o la app instalada tiene tomada la
@@ -291,7 +296,7 @@
 -->
 <div
 	class="gb-shell mx-auto min-h-dvh max-w-md"
-	style={sinNav ? '' : 'padding-bottom: calc(5rem + var(--safe-bottom))'}
+	style={conNav ? 'padding-bottom: var(--gb-nav)' : ''}
 >
 	{#if dbError}
 		<main
@@ -422,7 +427,7 @@
 	{:else}
 		{@render children()}
 	{/if}
-	{#if !sinNav && dbLista && !dbError}
+	{#if conNav}
 		<BottomNav />
 	{/if}
 </div>

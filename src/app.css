@@ -72,6 +72,16 @@
 	 */
 	--safe-top: env(safe-area-inset-top, 0px);
 	--safe-bottom: env(safe-area-inset-bottom, 0px);
+
+	/*
+	 * Lo que ocupa el nav de abajo: 5rem de hueco visual (sus 64 px de alto más aire)
+	 * MÁS el área segura. Una sola definición porque son dos cuentas que tienen que dar
+	 * igual: el shell reserva esto como `padding-bottom` y cada pantalla lo descuenta de
+	 * su alto mínimo. Cuando estaban separadas se desincronizaron — `/cuerpo` y
+	 * `/herramientas/calorias` descontaban `4rem` contra los `5rem` que reservaba el
+	 * shell y desbordaban 16 px de más.
+	 */
+	--gb-nav: calc(5rem + var(--safe-bottom));
 }
 
 /*

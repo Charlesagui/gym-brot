@@ -374,7 +374,7 @@
 	}
 </script>
 
-<main class="gb-page glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-28">
+<main class="gb-page glow-bg min-h-[calc(100dvh-var(--gb-nav))] px-5 pb-28">
 	<header class="mb-6 flex items-center gap-3">
 		<a
 			href="/"

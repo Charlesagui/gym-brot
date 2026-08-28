@@ -200,7 +200,7 @@
 
 <svelte:window onkeydown={(e) => e.key === 'Escape' && cerrarPreview()} />
 
-<main class="gb-page glow-bg min-h-dvh px-5 pb-28">
+<main class="gb-page glow-bg min-h-[calc(100dvh-var(--gb-nav))] px-5 pb-28">
 	<header class="mb-4 flex items-center gap-3">
 		<a
 			href={volver}

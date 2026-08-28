@@ -1139,7 +1139,9 @@
 	</main>
 {:else}
 	<main
-		class="gb-page gb-page--exercise min-h-dvh px-5 pb-28 {diaId ? 'gb-page--training' : ''}"
+		class="gb-page gb-page--exercise px-5 pb-28 {diaId
+			? 'min-h-dvh gb-page--training'
+			: 'min-h-[calc(100dvh-var(--gb-nav))]'}"
 		style="background: radial-gradient(85% 42% at 50% 0%, rgb({g.glow} / 0.20), transparent 72%), var(--bg)"
 	>
 		<div class={diaId ? 'gb-exercise-layout' : ''}>
