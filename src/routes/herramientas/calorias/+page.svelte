@@ -419,7 +419,7 @@
 </script>
 
 <main
-	class="gb-page glow-bg flex min-h-[calc(100dvh-4rem-env(safe-area-inset-bottom,0px))] flex-col px-4 pb-8"
+	class="gb-page glow-bg flex min-h-[calc(100dvh-var(--gb-nav))] flex-col px-4 pb-8"
 	style="--gb-pt: 0.75rem"
 >
 	<header class="mb-3 flex min-h-10 items-center justify-between gap-3">

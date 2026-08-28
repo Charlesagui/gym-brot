@@ -128,7 +128,7 @@
 	);
 </script>
 
-<main class="gb-page glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-28" style="--gb-pt: 2rem">
+<main class="gb-page glow-bg min-h-[calc(100dvh-var(--gb-nav))] px-5 pb-28" style="--gb-pt: 2rem">
 	<header class="mb-6">
 		<p class="text-xs font-bold uppercase tracking-[0.22em]" style="color: var(--muted)">
 			Progreso
