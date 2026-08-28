@@ -175,7 +175,7 @@
 	}
 </script>
 
-<main class="gb-page glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-28 pt-6">
+<main class="gb-page glow-bg min-h-[calc(100dvh-var(--gb-nav))] px-5 pb-28">
 	<header class="mb-5 flex items-center gap-3">
 		<!--
 			Vuelve a Macros y no a la portada. El único enlace a esta pantalla en toda la app

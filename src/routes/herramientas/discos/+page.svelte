@@ -198,7 +198,7 @@
 	}
 </script>
 
-<main class="gb-page glow-bg min-h-[calc(100dvh-5rem)] px-4 pb-1 pt-2">
+<main class="gb-page glow-bg min-h-[calc(100dvh-var(--gb-nav))] px-4 pb-1" style="--gb-pt: 0.5rem">
 	<header class="mb-1.5 flex min-h-8 items-center justify-between gap-3">
 		<h1 class="text-lg font-extrabold">Calculadora de discos</h1>
 		<!-- La unidad no se cambia aca: el chip lleva al unico lugar donde se cambia. -->
