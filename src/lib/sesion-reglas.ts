@@ -459,3 +459,79 @@ export function planDeDia(ejercicios: { seriesObjetivo: number }[]): PlanSesion 
 export function mismoPlan(a: PlanSesion | undefined, b: PlanSesion): boolean {
 	return a?.ejercicios === b.ejercicios && a?.series === b.series;
 }
+
+/**
+ * Cuánto rato después de haber escrito en una sesión seguimos creyendo que la persona
+ * está en ESE entrenamiento.
+ *
+ * Ocho horas cubren de sobra los dos casos reales —cruzar la medianoche en el gimnasio,
+ * y volver a una PWA suspendida cuya URL quedó clavada en otro día— y dejan afuera el
+ * caso que sería puro ruido: quien nunca toca "Terminar día" y arrastra sesiones
+ * abiertas de toda la semana.
+ */
+export const VENTANA_SESION_RECIENTE_MS = 8 * 60 * 60 * 1000;
+
+/** Trabajo de otra fecha que la pantalla puede ofrecer retomar. */
+export interface SesionReciente {
+	fecha: string;
+	seriesHechas: number;
+	/** Qué ejercicio de esa sesión conviene abrir, si el que se está mirando estuvo ahí. */
+	tieneEjercicio: boolean;
+}
+
+/**
+ * Si esta sesión es trabajo que la persona estaba haciendo recién, en otra fecha.
+ *
+ * Es la mitad "explicá dónde fue a parar" del arreglo de la deriva de fecha: la otra
+ * mitad es el cartel de "no es hoy" en la pantalla que escribe. Pide tres cosas, y las
+ * tres importan: que sea de otra fecha (si es la de hoy no hay nada que explicar), que
+ * tenga series REALMENTE marcadas (una sesión que solo se abrió no es trabajo que
+ * alguien pueda extrañar) y que se haya escrito hace poco (ver la ventana de arriba).
+ *
+ * `diaTerminado` no descalifica a propósito: cerrar el día pasada la medianoche y
+ * después abrir la rutina de hoy vacía produce exactamente el mismo susto.
+ */
+export function sesionRecienteDeOtraFecha(
+	sesion: Sesion,
+	hoy: string,
+	ahora: number,
+	ventanaMs = VENTANA_SESION_RECIENTE_MS
+): boolean {
+	if (sesion.fecha === hoy) return false;
+	if (!sesion.tocadaAt) return false;
+	const tocada = Date.parse(sesion.tocadaAt);
+	if (!Number.isFinite(tocada)) return false;
+	// Un `tocadaAt` en el futuro (reloj movido a mano) no habilita nada.
+	if (tocada > ahora || ahora - tocada > ventanaMs) return false;
+	return totalesSesion(sesion).seriesHechas > 0;
+}
+
+/**
+ * La sesión reciente más útil de un conjunto ya filtrado por rutina.
+ *
+ * Se queda con la de fecha más alta: si hubo deriva dos veces (medianoche y después
+ * otra vez), lo que se quiere retomar es lo último que se estuvo escribiendo.
+ */
+export function sesionRecienteAOfrecer(
+	sesiones: Sesion[],
+	exerciseId: string | null,
+	hoy: string,
+	ahora: number,
+	ventanaMs = VENTANA_SESION_RECIENTE_MS
+): SesionReciente | null {
+	let mejor: Sesion | null = null;
+	for (const sesion of sesiones) {
+		if (!sesionRecienteDeOtraFecha(sesion, hoy, ahora, ventanaMs)) continue;
+		if (!mejor || compararFechaTocada(sesion, mejor) > 0) mejor = sesion;
+	}
+	if (!mejor) return null;
+	return {
+		fecha: mejor.fecha,
+		seriesHechas: totalesSesion(mejor).seriesHechas,
+		tieneEjercicio: exerciseId != null && mejor.ejercicios.some((e) => e.exerciseId === exerciseId)
+	};
+}
+
+function compararFechaTocada(a: Sesion, b: Sesion): number {
+	return a.fecha.localeCompare(b.fecha) || (a.tocadaAt ?? '').localeCompare(b.tocadaAt ?? '');
+}

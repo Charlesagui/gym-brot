@@ -50,6 +50,8 @@
 		RESERVA_VIDEOTECA_COMPLETA
 	} from '$lib/video';
 	import { estadoLiveQuery } from '$lib/live';
+	import { persistencia, refrescarPersistencia } from '$lib/persistencia';
+	import { descargarJSON, nombreBackup } from '$lib/descarga';
 	import { descanso } from '$lib/descanso.svelte';
 	import { onMount } from 'svelte';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
@@ -62,7 +64,6 @@
 	let guardandoUnidad = $state(false);
 	let backupPendienteConfirmacion = $state(false);
 	let avisosImport = $state<string[]>([]);
-	let persistido = $state<boolean | null>(null);
 	// Se lee en el cliente: en el prerender de `adapter-static` no hay `navigator`.
 	let hayVibracion = $state(true);
 	let confirmacion = $state<{
@@ -80,7 +81,10 @@
 		hayVibracion = vibracionSoportada();
 		permisoNotif = estadoNotificaciones();
 		hayWakeLock = soportaWakeLock();
-		void navigator.storage?.persisted?.().then((v) => (persistido = v));
+		// Sin volver a PEDIR persistencia: eso ya lo hizo el arranque. Acá solo se refresca
+		// el veredicto, porque instalar la app suele convertir el origen en persistente y
+		// esa buena noticia tiene que verse sin recargar (ver $lib/persistencia).
+		void refrescarPersistencia();
 		void refrescarVideosGuardados();
 		return () => {
 			if (msgId) clearTimeout(msgId);
@@ -141,19 +145,9 @@
 
 	async function exportar() {
 		try {
-			const json = await exportarJSON();
-			const blob = new Blob([json], { type: 'application/json' });
-			const url = URL.createObjectURL(blob);
-			const a = document.createElement('a');
-			a.href = url;
-			a.download = `gym-brot-backup-${new Date().toLocaleDateString('sv')}.json`;
-			a.rel = 'noopener';
-			// El anchor tiene que estar en el documento y la URL no puede revocarse en el
-			// mismo tick: así fallaba la descarga, en silencio, en varios navegadores móviles.
-			document.body.appendChild(a);
-			a.click();
-			a.remove();
-			setTimeout(() => URL.revokeObjectURL(url), 60_000);
+			// La mecánica de la descarga vive en $lib/descarga: la comparte con la copia de
+			// rescate del arranque fallido, que corre cuando la base ni siquiera abrió.
+			descargarJSON(await exportarJSON(), nombreBackup());
 			// Un click sobre un anchor no confirma que el navegador haya guardado el
 			// archivo (puede cancelarse o bloquearse). El usuario lo confirma después
 			// de verlo en Descargas; recién ahí se apaga el recordatorio.
@@ -789,11 +783,14 @@
 				Guardá una copia de tus rutinas y progreso (importante en iPhone, que puede borrar datos
 				locales).
 			</p>
-			{#if persistido === false}
+			{#if $persistencia === 'efimero'}
 				<p class="mt-2 flex gap-2 text-xs leading-relaxed" style="color: rgb(var(--max))">
 					<Icono nombre="aviso" tamano={16} clase="mt-0.5 shrink-0" />
-					El navegador no marcó tus datos como persistentes: puede borrarlos si necesita espacio. Exportá
-					seguido.
+					<span>
+						El navegador <b>no</b> se comprometió a conservar tus datos: puede borrarlos si necesita espacio,
+						y en iPhone los borra solo después de unos días sin abrir la app. Instalá Gym-brot en la pantalla
+						de inicio —suele alcanzar para que deje de pasar— y guardá una copia acá abajo.
+					</span>
 				</p>
 			{/if}
 			<button

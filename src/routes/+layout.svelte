@@ -4,7 +4,10 @@
 	import { page } from '$app/stores';
 	import { beforeNavigate, onNavigate } from '$app/navigation';
 	import { useRegisterSW } from 'virtual:pwa-register/svelte';
-	import { completarNombresSnapshotFaltantes, db, onDbBloqueada } from '$lib/db';
+	import { abrirBase, completarNombresSnapshotFaltantes, db, onDbBloqueada } from '$lib/db';
+	import { asegurarPersistencia } from '$lib/persistencia';
+	import { descargarJSON, nombreBackup } from '$lib/descarga';
+	import { rescatarDatosCrudos, RescateVacioError, resumenRescate } from '$lib/rescate';
 	import { seedSiVacio } from '$lib/seed';
 	import BottomNav from '$lib/components/BottomNav.svelte';
 	import Icono from '$lib/components/Icono.svelte';
@@ -13,6 +16,7 @@
 	import { deshacer } from '$lib/deshacer.svelte';
 	import RestFocusOverlay from '$lib/components/RestFocusOverlay.svelte';
 	import { descanso } from '$lib/descanso.svelte';
+	import { hoy } from '$lib/hoy.svelte';
 	import { errorDatos } from '$lib/errores-datos';
 	import { menosMovimiento } from '$lib/motion';
 	import { iniciarPresion } from '$lib/presion';
@@ -161,9 +165,51 @@
 	let dbBloqueada = $state(false);
 	let confirmarReinicioDatos = $state(false);
 	let reiniciandoDatos = $state(false);
+	/**
+	 * Antes de poder borrar hay que haber INTENTADO rescatar.
+	 *
+	 * La pantalla de arranque fallido ofrecía borrar todo y ella misma avisaba que desde
+	 * ahí no se podía exportar un backup: la única salida era también la única sin
+	 * retorno. Ahora la salida destructiva no existe hasta que la persona probó la
+	 * lectura de rescate, que en la mayoría de estos fallos —esquema, migración a
+	 * medias, base más nueva— devuelve el historial entero.
+	 */
+	let rescateIntentado = $state(false);
+	let rescatando = $state(false);
+	let rescateMensaje = $state<string | null>(null);
+	let rescateVacio = $state(false);
 
 	function recargar() {
 		location.reload();
+	}
+
+	async function rescatarDatos() {
+		rescatando = true;
+		rescateMensaje = null;
+		try {
+			const rescate = await rescatarDatosCrudos();
+			rescateIntentado = true;
+			rescateVacio = rescate.total === 0;
+			if (rescate.total === 0) {
+				rescateMensaje = 'La base abrió, pero está vacía: no hay nada que rescatar.';
+				return;
+			}
+			descargarJSON(rescate.json, nombreBackup('gym-brot-rescate'));
+			rescateMensaje = `⬇️ Descarga iniciada con ${resumenRescate(rescate.filas)}. Comprobá que el archivo esté en Descargas antes de seguir: se restaura desde Ajustes → Restaurar backup.`;
+		} catch (error) {
+			// Que el rescate falle NO puede dejar a la persona encerrada: se marca como
+			// intentado igual, con el motivo a la vista, y recién ahí aparece el borrado.
+			rescateIntentado = true;
+			rescateVacio = error instanceof RescateVacioError;
+			rescateMensaje =
+				error instanceof RescateVacioError
+					? 'No hay ninguna base de Gym-brot en este navegador: no hay nada que rescatar ni que borrar.'
+					: `No se pudo leer nada para rescatar: ${
+							error instanceof Error ? error.message : 'error desconocido'
+						}`;
+		} finally {
+			rescatando = false;
+		}
 	}
 
 	async function reiniciarDatosLocales() {
@@ -185,6 +231,10 @@
 	}
 
 	onMount(() => {
+		// "Hoy" pasa a ser un dato vivo para toda la app. No depende de la base: las
+		// pantallas que escriben tienen que enterarse del cambio de día aunque el arranque
+		// haya quedado degradado.
+		hoy.init();
 		// Acuse de presión para toda la app, con un solo listener delegado.
 		const dejarDePresionar = iniciarPresion();
 		const dejarDeEscucharReemplazos = escucharReemplazosDatos(() => location.reload());
@@ -223,10 +273,12 @@
 		});
 
 		(async () => {
-			// PASO 1 — abrir. Es el ÚNICO fallo que puede justificar una pantalla con
-			// opción destructiva, porque es el único donde no sabemos si hay datos legibles.
+			// PASO 1 — abrir, insistiendo: en iOS la primera apertura después del background
+			// puede fallar y andar perfecto un instante después (ver `abrirBase`). Es el
+			// ÚNICO fallo que puede justificar una pantalla con opción destructiva, así que
+			// no se llega ahí por un hipo.
 			try {
-				await db.open();
+				await abrirBase();
 			} catch (error) {
 				clearTimeout(lentaId);
 				clearTimeout(bloqueoId);
@@ -267,13 +319,11 @@
 				avisoArranque =
 					'Algunos ejercicios viejos pueden verse como "archivados" hasta la próxima vez que abras la app. Tu historial está completo.';
 			}
-			// Pide almacenamiento persistente: reduce el riesgo de que el navegador
-			// (sobre todo iOS) borre los datos locales por presión de espacio.
-			try {
-				void navigator.storage?.persist?.();
-			} catch (error) {
-				console.error('storage.persist', error);
-			}
+			// Pide almacenamiento persistente y GUARDA el veredicto: si el navegador no lo
+			// concede (iOS sin instalar es el caso normal) puede borrar los datos solo, y
+			// las pantallas de backup tienen que poder decirlo. Descartar la respuesta era
+			// dejar a la app parada sobre almacenamiento efímero sin que nadie se entere.
+			void asegurarPersistencia();
 			// Restaura un descanso en curso y engancha listeners globales.
 			try {
 				descanso.init();
@@ -316,23 +366,55 @@
 					class="mt-4 block w-full rounded-2xl py-3 text-center text-sm font-bold"
 					style="background: var(--accent); color: var(--on-accent)">Recargar</button
 				>
+				<!--
+					Rescatar va ANTES que borrar, y borrar no existe hasta haber rescatado.
+					La mayoría de los fallos de apertura no son corrupción sino la máquina de
+					esquema de Dexie, y ahí los datos se leen enteros abriendo IndexedDB crudo.
+				-->
 				<button
-					onclick={() => void reiniciarDatosLocales()}
-					disabled={reiniciandoDatos}
-					class="mt-2 block w-full rounded-2xl border border-white/10 py-3 text-center text-sm font-bold disabled:opacity-50"
-					style="color: #ff6b6b"
-					>{confirmarReinicioDatos
-						? reiniciandoDatos
-							? 'Reiniciando…'
-							: 'Confirmar: borrar datos locales'
-						: 'Reiniciar almacenamiento local'}</button
+					onclick={() => void rescatarDatos()}
+					disabled={rescatando}
+					class="mt-2 block w-full rounded-2xl border py-3 text-center text-sm font-bold disabled:opacity-50"
+					style="border-color: rgb(var(--max) / .4); color: rgb(var(--max))"
+					>{rescatando
+						? 'Leyendo tus datos…'
+						: rescateIntentado
+							? 'Volver a intentar el rescate'
+							: 'Descargar copia de rescate'}</button
 				>
-				{#if confirmarReinicioDatos}
-					<p class="mt-2 text-center text-xs leading-relaxed" style="color: #ff9b9b">
-						Esto borra <b>todo</b> tu historial de este navegador y no se puede deshacer. Desde acá no
-						se puede exportar un backup: si tenés uno viejo en el teléfono, vas a poder restaurarlo después
-						desde Ajustes. Si no, probá primero “Recargar” o cerrar las otras pestañas.
+				{#if rescateMensaje}
+					<p
+						class="mt-2 rounded-xl bg-white/[0.04] p-3 text-xs leading-relaxed"
+						style="color: var(--muted)"
+						role="status"
+					>
+						{rescateMensaje}
 					</p>
+				{:else}
+					<p class="mt-2 text-center text-xs leading-relaxed" style="color: var(--muted)">
+						Lee el almacenamiento sin pasar por la app y te lo baja como backup. Probá esto antes
+						que cualquier otra cosa.
+					</p>
+				{/if}
+				{#if rescateIntentado && !rescateVacio}
+					<button
+						onclick={() => void reiniciarDatosLocales()}
+						disabled={reiniciandoDatos}
+						class="mt-4 block w-full rounded-2xl border border-white/10 py-3 text-center text-sm font-bold disabled:opacity-50"
+						style="color: #ff6b6b"
+						>{confirmarReinicioDatos
+							? reiniciandoDatos
+								? 'Reiniciando…'
+								: 'Confirmar: borrar datos locales'
+							: 'Reiniciar almacenamiento local'}</button
+					>
+					{#if confirmarReinicioDatos}
+						<p class="mt-2 text-center text-xs leading-relaxed" style="color: #ff9b9b">
+							Esto borra <b>todo</b> tu historial de este navegador y no se puede deshacer. Hacelo solo
+							si ya bajaste la copia de rescate y la viste en Descargas: después vas a poder restaurarla
+							desde Ajustes.
+						</p>
+					{/if}
 				{/if}
 			</section>
 		</main>

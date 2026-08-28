@@ -109,6 +109,16 @@ export interface Sesion {
 	reaperturaMotivo?: string;
 	reaperturaAt?: string;
 	/**
+	 * Última escritura sobre esta sesión, en ISO. Lo pone `guardarSesion` y nadie más.
+	 *
+	 * Existe para poder distinguir "trabajo de otro día que quedó abierto" —normal en
+	 * quien nunca toca Terminar día— de "estabas escribiendo acá hace un rato": es lo
+	 * único que permite ofrecer retomar la sesión correcta sin molestar todos los días
+	 * con la del martes pasado. Ausente en sesiones anteriores a este campo, y esas no
+	 * califican: preferimos no ofrecer nada antes que ofrecer cualquier cosa.
+	 */
+	tocadaAt?: string;
+	/**
 	 * Índice multiEntry derivado de `ejercicios`: permite traer solo las sesiones de un
 	 * ejercicio en vez de deserializar toda la tabla. NUNCA se escribe a mano — lo
 	 * recalcula `conIndice()` justo antes de cada persistencia (ver más abajo).
@@ -539,8 +549,16 @@ export function conIndice(sesion: Sesion): Sesion {
 	return sesion;
 }
 
-/** Único camino para persistir una sesión: deja el índice por ejercicio al día. */
+/**
+ * Único camino para persistir una sesión: deja el índice por ejercicio al día y sella
+ * cuándo se la tocó por última vez (ver `Sesion.tocadaAt`).
+ *
+ * La restauración de un backup no pasa por acá a propósito: importar no es entrenar, y
+ * sellar las sesiones importadas con la hora del import haría que la app ofreciera
+ * retomar un entrenamiento de hace un año.
+ */
 export function guardarSesion(sesion: Sesion): Promise<string> {
+	sesion.tocadaAt = new Date().toISOString();
 	return db.sesiones.put(conIndice(sesion));
 }
 
@@ -565,6 +583,46 @@ db.on('blocked', () => avisarBloqueo?.());
  */
 export function onDbBloqueada(fn: () => void): void {
 	avisarBloqueo = fn;
+}
+
+/**
+ * Errores de apertura que NO tiene sentido reintentar: son deterministas y cada uno tiene
+ * su propia explicación en pantalla. `VersionError` es una base más nueva que este código
+ * y `MissingAPI` es un navegador sin IndexedDB (modo privado viejo); insistir no cambia
+ * nada y solo demora el mensaje correcto.
+ */
+const APERTURAS_SIN_VUELTA = new Set(['VersionError', 'MissingAPI']);
+
+/** Esperas entre intentos. Dos reintentos alcanzan y cuestan poco más de un segundo. */
+const ESPERAS_REINTENTO_MS = [250, 900];
+
+/**
+ * Abre la base reintentando los fallos que pueden ser pasajeros.
+ *
+ * En iOS, IndexedDB puede rechazar la primera apertura después de que la app vuelve del
+ * background y funcionar perfecto un instante después. Sin reintentos, ese hipo mandaba a
+ * la persona a la pantalla de "no pude abrir tus datos locales" —la única del producto que
+ * ofrecía borrar todo— por un problema que se arreglaba solo.
+ *
+ * Devuelve cuántos intentos hicieron falta: la pantalla de error lo usa para no ofrecer
+ * nada destructivo antes de haber insistido de verdad.
+ */
+export async function abrirBase(): Promise<number> {
+	for (let intento = 0; ; intento++) {
+		try {
+			await db.open();
+			return intento + 1;
+		} catch (error) {
+			const nombre = error instanceof Error ? error.name : '';
+			const espera = ESPERAS_REINTENTO_MS[intento];
+			if (espera == null || APERTURAS_SIN_VUELTA.has(nombre)) throw error;
+			console.warn(`apertura fallida (${nombre || 'error'}), reintentando`, error);
+			// `close()` a secas deja la conexión marcada como cerrada a mano y envenena el
+			// próximo intento; con `disableAutoOpen: false` Dexie limpia el estado de error.
+			db.close({ disableAutoOpen: false });
+			await new Promise((listo) => setTimeout(listo, espera));
+		}
+	}
 }
 
 // Atajo solo-desarrollo para inspeccionar/sembrar datos desde la consola.

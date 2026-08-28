@@ -8,6 +8,7 @@
 		type HistorialPantalla
 	} from '$lib/historial';
 	import { estadoLiveQuery } from '$lib/live';
+	import { persistencia } from '$lib/persistencia';
 	import { hoyStr } from '$lib/sesion';
 	import { onMount } from 'svelte';
 	import { scale } from 'svelte/transition';
@@ -119,6 +120,11 @@
 	// Atrás solo hasta el mes del primer entrenamiento; adelante solo hasta hoy.
 	const sinMesAnterior = $derived(!primeraFecha || mes.ym <= primeraFecha.slice(0, 7));
 
+	/**
+	 * El navegador dijo explícitamente que NO se compromete a conservar los datos.
+	 * Solo cuenta con historial cargado: sin nada que perder no hay nada que avisar.
+	 */
+	const almacenamientoEfimero = $derived($persistencia === 'efimero' && historial.dias.length > 0);
 	// Recordatorio de backup: el historial vive solo en este teléfono.
 	const recordarBackup = $derived(
 		necesitaBackup(
@@ -181,19 +187,33 @@
 			{/if}
 		</div>
 
-		{#if recordarBackup}
-			<!-- Discreto y accionable: el dato local se puede perder sin backup (iOS purga IndexedDB). -->
+		{#if recordarBackup || almacenamientoEfimero}
+			<!--
+				Discreto y accionable: el dato local se puede perder sin backup (iOS purga
+				IndexedDB). Sube de tono cuando el navegador AVISÓ que no se compromete a
+				conservar los datos: ahí no es una buena práctica, es una cuenta regresiva.
+			-->
 			<a
 				href="/ajustes"
-				class="mb-4 flex items-center gap-3 rounded-2xl border border-white/10 p-3.5"
-				style="background: var(--surface)"
+				class="mb-4 flex items-center gap-3 rounded-2xl border p-3.5"
+				style={almacenamientoEfimero
+					? 'border-color: rgb(var(--max) / .35); background: rgb(var(--max) / .08)'
+					: 'border-color: rgb(255 255 255 / .1); background: var(--surface)'}
 			>
-				<span style="color: var(--muted)"><Icono nombre="backup" tamano={20} /></span>
+				<span style="color: {almacenamientoEfimero ? 'rgb(var(--max))' : 'var(--muted)'}"
+					><Icono nombre="backup" tamano={20} /></span
+				>
 				<span class="min-w-0 flex-1 text-xs leading-relaxed" style="color: var(--muted)">
-					Tu historial vive solo en este teléfono ·
-					{ajustes.ultimoBackup
-						? `último backup hace ${diasDesde(ajustes.ultimoBackup)} días`
-						: 'todavía sin backup'}
+					{#if almacenamientoEfimero}
+						<b style="color: rgb(var(--max))">Este navegador puede borrar tu historial solo.</b>
+						No marcó tus datos como permanentes. Instalá la app en la pantalla de inicio y guardá una
+						copia.
+					{:else}
+						Tu historial vive solo en este teléfono ·
+						{ajustes.ultimoBackup
+							? `último backup hace ${diasDesde(ajustes.ultimoBackup)} días`
+							: 'todavía sin backup'}
+					{/if}
 				</span>
 				<span class="shrink-0 text-xs font-bold" style="color: var(--accent-text)">Exportar</span>
 			</a>

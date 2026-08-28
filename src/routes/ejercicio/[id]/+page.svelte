@@ -29,8 +29,11 @@
 		DESCRIPCION_METRICA,
 		hoyStr,
 		sesionId,
+		sesionRecienteDe,
 		type InstantaneaSesion,
-		type MejorSet
+		type MejorSet,
+		type ResultadoMutacion,
+		type SesionReciente
 	} from '$lib/sesion';
 	import {
 		mejorSetDeSeries,
@@ -62,6 +65,7 @@
 	import { WakeLockSeguro } from '$lib/wake-lock';
 	import { dur, menosMovimiento, DUR_BASE, DUR_SLOW } from '$lib/motion';
 	import { fromLiveQuery } from '$lib/live';
+	import { hoy } from '$lib/hoy.svelte';
 	import { formatoNumero, formatoSet, fechaCorta, resumenSeries } from '$lib/formato';
 	import { fechaSesionDesdeUrl } from '$lib/fechas';
 	import { youtubeEmbedUrl } from '$lib/youtube';
@@ -90,14 +94,24 @@
 	import CelebracionParticulas from '$lib/components/CelebracionParticulas.svelte';
 	import TecnicaModal from '$lib/components/TecnicaModal.svelte';
 	import ToastAccion from '$lib/components/ToastAccion.svelte';
+	import AvisoSesionAnterior from '$lib/components/AvisoSesionAnterior.svelte';
 	import { gramosAPeso, pesoAGramos } from '$lib/unidades';
 
 	const ej = $derived(ejercicioPorId($page.params.id!));
 	const g = $derived(ej ? grupos[ej.grupo] : undefined);
 	const diaId = $derived($page.url.searchParams.get('dia'));
+	/**
+	 * A qué sesión escribe esta pantalla cuando la URL no lo dice. Se congela al abrir a
+	 * propósito: la sesión que empezaste es la que seguís editando, y que la medianoche te
+	 * mueva de sesión a mitad de una serie sería peor que el problema que resuelve.
+	 *
+	 * Ojo: esto NO es "qué día es hoy". Para eso está `hoy`, que sí es vivo. Confundir las
+	 * dos cosas en una sola constante es lo que hacía que, cruzando la medianoche, la app
+	 * siguiera escribiendo en la sesión de ayer sin decirlo.
+	 */
 	const fechaApertura = hoyStr();
 	const fechaSolicitada = $derived(
-		fechaSesionDesdeUrl($page.url.searchParams.get('fecha'), fechaApertura)
+		fechaSesionDesdeUrl($page.url.searchParams.get('fecha'), fechaApertura, hoy.valor)
 	);
 	const fechaUrlInvalida = $derived(fechaSolicitada == null);
 	// `desde`: día desde el que se abrió la vista de progreso (para volver a entrenar).
@@ -147,7 +161,7 @@
 	let notaGuardandoExerciseId = $state<string | null>(null);
 	let notaId: ReturnType<typeof setTimeout> | null = null;
 	let cargandoSeries = $state(false);
-	let ejercicioNoDisponible = $state(false);
+	let ejercicioNoDisponible = $state<'rutina-no-disponible' | 'fecha-futura' | null>(null);
 	let exito = $state<'normal' | 'pr' | 'parcial' | null>(null);
 	let prExito = $state<MejorSet | null>(null);
 	// Flash de PR no bloqueante: celebra el récord en el instante en que se gana,
@@ -291,6 +305,46 @@
 	const hrefProximo = $derived(
 		proximo ? `/ejercicio/${proximo.exerciseId}?dia=${diaId}&fecha=${fechaSesion}` : null
 	);
+
+	/**
+	 * Si la sesión que estás editando es la de hoy DE VERDAD, contra el reloj vivo y no
+	 * contra el que había cuando se montó la pantalla. Cruzando la medianoche entrenando,
+	 * esto pasa a false solo y aparece el cartel: seguís escribiendo donde empezaste, pero
+	 * sabiendo que ya es otro día.
+	 */
+	const esDeHoy = $derived(fechaSesion === hoy.valor);
+	/**
+	 * Hoy no se marcó ni se saltó nada: la pantalla se ve igual a una recién empezada.
+	 *
+	 * Exige que la rutina ya haya llegado. Sin eso, "todavía no cargó" y "hoy está vacío"
+	 * son el mismo valor, y el aviso naranja parpadeaba un cuadro sobre un día con trabajo.
+	 */
+	const sinTrabajoHoy = $derived(
+		!!$contextoDia.dia &&
+			(!$contextoDia.sesion ||
+				$contextoDia.sesion.ejercicios.every((e) => !e.saltado && !e.sets.some(serieCompleta)))
+	);
+	const recienteStore = $derived(
+		fromLiveQuery(
+			liveQuery(async (): Promise<SesionReciente | null> => {
+				if (!diaId) return null;
+				return sesionRecienteDe(diaId, $page.params.id!, hoy.valor);
+			}),
+			null as SesionReciente | null
+		)
+	);
+	/**
+	 * El otro lado de la deriva de fecha: llegaste a una pantalla vacía y hay trabajo tuyo
+	 * de hace un rato en otra fecha. Se apaga solo en cuanto marcás una serie de hoy.
+	 */
+	const sesionAnterior = $derived(esDeHoy && sinTrabajoHoy ? $recienteStore : null);
+	const hrefSesionAnterior = $derived(
+		sesionAnterior
+			? sesionAnterior.tieneEjercicio
+				? `/ejercicio/${$page.params.id}?dia=${diaId}&fecha=${sesionAnterior.fecha}`
+				: `/dia/${diaId}?fecha=${sesionAnterior.fecha}`
+			: ''
+	);
 	$effect(() => {
 		const exerciseId = $page.params.id!;
 		// Una escritura demorada de esta misma nota no puede volver el textarea a la
@@ -311,12 +365,12 @@
 			anterioresFecha = null;
 			prCelebrado = null;
 			cargandoSeries = false;
-			ejercicioNoDisponible = false;
+			ejercicioNoDisponible = null;
 			return;
 		}
 		const fecha = fechaSolicitada;
 		cargandoSeries = true;
-		ejercicioNoDisponible = false;
+		ejercicioNoDisponible = null;
 		anteriores = [];
 		anterioresFecha = null;
 		(async () => {
@@ -326,11 +380,12 @@
 				sets = [];
 				prCelebrado = null;
 				cargandoSeries = false;
-				ejercicioNoDisponible = true;
+				ejercicioNoDisponible = preparacion.motivo;
 				return;
 			}
 			anteriores = preparacion.anteriores;
 			anterioresFecha = preparacion.anterioresFecha;
+			const clave = claveEscritura(exId, fecha);
 			sub = ejercicioSesionObs(dId, exId, fecha, unidad).subscribe((estado) => {
 				if (cancelado) return;
 				prCelebrado = estado.prCelebrado;
@@ -339,7 +394,9 @@
 				// último toque: pisar `sets` acá hacía saltar el número hacia atrás y el
 				// toque siguiente componía desde el valor viejo. Mientras haya toques sin
 				// confirmar manda lo local; al drenar, la base vuelve a ser la verdad.
-				if (escriturasEnVuelo > 0) return;
+				// Solo cuentan los toques de ESTE ejercicio: los del anterior no tienen por
+				// qué callar la primera lectura del que se acaba de abrir.
+				if (enVuelo(clave) > 0) return;
 				sets = estado.sets;
 			});
 		})().catch((error: unknown) => {
@@ -563,10 +620,30 @@
 	}
 
 	/**
-	 * Toques pendientes de confirmar en la base. Mientras haya alguno, la suscripción
-	 * no pisa `sets` (ver el comentario en el subscribe).
+	 * Toques pendientes de confirmar en la base, contados POR ejercicio y fecha. Mientras
+	 * haya alguno, la suscripción de ESE ejercicio no pisa `sets` (ver el subscribe).
+	 *
+	 * La cuenta va por clave y no en un contador único porque "Siguiente" navega a esta
+	 * misma ruta con otro id **sin destruir el componente**: un toque todavía en vuelo del
+	 * ejercicio anterior hacía descartar la primera emisión del ejercicio nuevo, y como esa
+	 * emisión no se repite, la lista quedaba mostrando las series del ejercicio que
+	 * acabábamos de dejar.
 	 */
-	let escriturasEnVuelo = 0;
+	const escriturasPorClave = new Map<string, number>();
+
+	function claveEscritura(exerciseId: string, fecha: string): string {
+		return `${exerciseId}|${fecha}`;
+	}
+
+	function enVuelo(clave: string): number {
+		return escriturasPorClave.get(clave) ?? 0;
+	}
+
+	function sumarEnVuelo(clave: string, delta: number): void {
+		const total = enVuelo(clave) + delta;
+		if (total > 0) escriturasPorClave.set(clave, total);
+		else escriturasPorClave.delete(clave);
+	}
 
 	/**
 	 * Vuelve a poner en pantalla lo que realmente hay en la base. Si una escritura falla,
@@ -576,31 +653,51 @@
 	async function resincronizar() {
 		const dId = diaId;
 		const exId = $page.params.id!;
+		const fecha = fechaSesion;
 		if (!dId) return;
 		try {
-			const setsPersistidos = await setsEjercicioSesion(dId, exId, fechaSesion, unidad);
+			const setsPersistidos = await setsEjercicioSesion(dId, exId, fecha, unidad);
 			// Mientras leíamos pudo entrar otro toque o haberse cambiado de pantalla: en
 			// cualquiera de los dos casos esta lectura ya quedó vieja y pisar sería peor.
-			if (escriturasEnVuelo > 0 || diaId !== dId || $page.params.id !== exId) return;
+			if (enVuelo(claveEscritura(exId, fecha)) > 0 || diaId !== dId || $page.params.id !== exId)
+				return;
 			sets = setsPersistidos;
 		} catch {
 			// Si tampoco se puede leer, el banner de error ya está en pantalla.
 		}
 	}
 
-	function escribir(operacion: Promise<unknown>) {
-		escriturasEnVuelo++;
-		let fallo = false;
+	/**
+	 * Toda escritura de serie pasa por acá, y ninguna puede quedar sin acuse.
+	 *
+	 * Un rechazo es el caso fácil. El difícil es `encontrada: false`: la transacción
+	 * corrió bien pero no había dónde escribir (la sesión apunta a otra fecha, el
+	 * ejercicio ya no está en ella, la serie se quitó desde otro lado). Eso antes era un
+	 * `return` mudo con la promesa resolviendo OK, así que la pantalla se quedaba
+	 * mostrando un peso que no existía en ningún lado hasta salir y volver a entrar.
+	 */
+	function escribir(operacion: Promise<ResultadoMutacion>) {
+		// La clave se toma acá, sincrónicamente: toda escritura pertenece al ejercicio que
+		// estaba en pantalla cuando se tocó, aunque confirme después de haber navegado.
+		const clave = claveEscritura($page.params.id!, fechaSesion);
+		sumarEnVuelo(clave, 1);
+		let desincronizada = false;
 		void operacion
+			.then((resultado) => {
+				if (resultado.encontrada) return;
+				errorGuardado =
+					'Esa serie ya no está en la sesión. Volvimos a mostrar lo que hay guardado.';
+				desincronizada = true;
+			})
 			.catch((e: unknown) => {
 				errorGuardado = e instanceof Error ? e.message : 'No se pudo guardar la serie.';
-				fallo = true;
+				desincronizada = true;
 			})
 			.finally(() => {
-				escriturasEnVuelo--;
+				sumarEnVuelo(clave, -1);
 				// Con toques todavía en vuelo, resincronizar pisaría un cambio que sí se va a
 				// guardar: el último en drenar se hace cargo.
-				if (fallo && escriturasEnVuelo === 0) void resincronizar();
+				if (desincronizada && enVuelo(clave) === 0) void resincronizar();
 			});
 	}
 
@@ -1232,9 +1329,17 @@
 					style="background: var(--surface)"
 					role="alert"
 				>
-					<p class="text-sm font-bold">Este ejercicio ya no está en la rutina</p>
+					<!-- El motivo lo decide el dominio: la pantalla no lo adivina. Decir "ya no
+					     está en la rutina" cuando en realidad la fecha era futura sería inventar. -->
+					<p class="text-sm font-bold">
+						{ejercicioNoDisponible === 'fecha-futura'
+							? 'Todavía no entrenaste ese día'
+							: 'Este ejercicio ya no está en la rutina'}
+					</p>
 					<p class="mt-1 text-xs leading-relaxed" style="color: var(--muted)">
-						No se creó ninguna sesión nueva. Volvé al día para elegir otro ejercicio.
+						{ejercicioNoDisponible === 'fecha-futura'
+							? 'Esa fecha no llegó: no se creó ninguna sesión. Volvé al día para entrenar hoy.'
+							: 'No se creó ninguna sesión nueva. Volvé al día para elegir otro ejercicio.'}
 					</p>
 					<a
 						href={volver}
@@ -1338,14 +1443,21 @@
 				{/if}
 			{:else}
 				<div class="gb-exercise-work {barraFija ? 'pb-36' : ''}">
-					{#if fechaSesion !== fechaApertura}
-						<!-- Desde el historial se puede volver a entrenar un día pasado: hay que decirlo. -->
+					{#if !esDeHoy}
+						<!--
+							Desde el historial se puede volver a entrenar un día pasado: hay que decirlo.
+							Y se compara contra el reloj VIVO, no contra el de cuando se abrió la
+							pantalla: cruzando la medianoche entrenando, este cartel es lo único que
+							avisa que la sesión que seguís llenando ya no es la de hoy.
+						-->
 						<p
 							class="mt-4 rounded-xl px-3 py-2.5 text-xs font-semibold"
 							style="background: rgb(var(--max) / .1); color: rgb(var(--max))"
 						>
 							Estás editando el entrenamiento del {fechaCorta(fechaSesion)}, no el de hoy.
 						</p>
+					{:else if sesionAnterior}
+						<AvisoSesionAnterior aviso={sesionAnterior} href={hrefSesionAnterior} />
 					{/if}
 					<section
 						class="mt-6 rounded-2xl border border-white/10 p-4"

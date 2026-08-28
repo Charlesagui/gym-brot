@@ -27,8 +27,10 @@
 		marcarDiaTerminado,
 		reabrirDia,
 		sesionHoyObs,
+		sesionRecienteObs,
 		saltarEjercicio,
-		reanudarEjercicio
+		reanudarEjercicio,
+		type SesionReciente
 	} from '$lib/sesion';
 	import { estadoEjercicioSesion, estadoSesion, serieCompleta } from '$lib/sesion-reglas';
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
@@ -38,11 +40,13 @@
 	import { reproducirEnVista } from '$lib/video';
 	import { dur } from '$lib/motion';
 	import { estadoLiveQuery, fromLiveQuery } from '$lib/live';
+	import { hoy } from '$lib/hoy.svelte';
 	import { formatoVolumen } from '$lib/formato';
 	import { fechaSesionDesdeUrl } from '$lib/fechas';
 	import { fechaCorta } from '$lib/formato';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
 	import ToastAccion from '$lib/components/ToastAccion.svelte';
+	import AvisoSesionAnterior from '$lib/components/AvisoSesionAnterior.svelte';
 	import { deshacer } from '$lib/deshacer.svelte';
 	import CelebracionParticulas from '$lib/components/CelebracionParticulas.svelte';
 	import { guardarSinBloquear, reportarErrorDatos } from '$lib/errores-datos';
@@ -98,15 +102,23 @@
 
 	// La fecha queda fijada al abrir. Si viene en la URL sobrevive navegación, recarga
 	// y medianoche; las URLs antiguas sin parámetro siguen empezando en hoy.
+	//
+	// Es a qué sesión escribimos, y NO qué día es hoy: para eso está `hoy`, que es vivo.
+	// Mezclar las dos cosas en esta constante era lo que dejaba la pantalla escribiendo en
+	// la sesión de ayer sin decirlo después de la medianoche.
 	const fechaApertura = hoyStr();
 	const fechaSesion = $derived(
-		fechaSesionDesdeUrl($page.url.searchParams.get('fecha'), fechaApertura)
+		fechaSesionDesdeUrl($page.url.searchParams.get('fecha'), fechaApertura, hoy.valor)
 	);
 	const fechaInvalida = $derived(fechaSesion == null);
 	const sesionStore = $derived(
-		fromLiveQuery(sesionHoyObs(diaId, fechaSesion ?? 'fecha-invalida'), undefined)
+		estadoLiveQuery(sesionHoyObs(diaId, fechaSesion ?? 'fecha-invalida'), undefined)
 	);
-	const sesion = $derived<Sesion | undefined>($sesionStore);
+	const consultaSesion = $derived($sesionStore);
+	const sesion = $derived<Sesion | undefined>(consultaSesion.valor);
+	// "Sin sesión" y "todavía no cargó" son el mismo `undefined`: hay que poder
+	// distinguirlos para no anunciar un día vacío que todavía no se leyó.
+	const sesionCargada = $derived(consultaSesion.estado !== 'cargando');
 	const ajustesStore = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
 	const ajustes = $derived<Ajustes>($ajustesStore);
 
@@ -168,7 +180,7 @@
 	// porque la reapertura casi siempre se dispara en la pantalla de ejercicio y se lee
 	// acá, después de navegar: sin persistirlo, la app se llevaba la celebración en silencio.
 	const reapertura = $derived(!diaTerminado ? (sesion?.reaperturaMotivo ?? null) : null);
-	const editandoPasado = $derived(!!fechaSesion && fechaSesion !== fechaApertura);
+	const editandoPasado = $derived(!!fechaSesion && fechaSesion !== hoy.valor);
 
 	function abrirEdicion() {
 		nombreEdit = dia?.nombre ?? '';
@@ -278,7 +290,9 @@
 			avisoDia =
 				resultado.razon === 'ya-completado'
 					? 'Ese ejercicio ya está hecho: no hace falta saltarlo.'
-					: 'Este ejercicio ya no está en la rutina. No se guardó ningún cambio.';
+					: resultado.razon === 'fecha-futura'
+						? 'Esa fecha todavía no llegó: no se guardó ningún cambio.'
+						: 'Este ejercicio ya no está en la rutina. No se guardó ningún cambio.';
 		} catch (error) {
 			reportarErrorDatos('No se pudo guardar que saltaste el ejercicio. Intentá de nuevo.', error);
 		}
@@ -288,6 +302,20 @@
 	const seriesHechasDia = $derived(resumenDia.setsHechos);
 	const hayTrabajo = $derived(seriesHechasDia > 0 || ejerciciosSaltados > 0);
 	const hayQueReiniciar = $derived(hayTrabajo);
+
+	/**
+	 * Trabajo tuyo de hace un rato en otra fecha, cuando esta pantalla está vacía.
+	 *
+	 * Es lo que faltaba del lado del "se me borró todo": la sesión nueva se abre en cero
+	 * porque cambió el día, no porque se haya perdido nada, y desde acá no había ninguna
+	 * forma de enterarse. Se apaga solo al marcar la primera serie de hoy.
+	 */
+	const recienteStore = $derived(
+		fromLiveQuery(sesionRecienteObs(diaId, null, hoy.valor), null as SesionReciente | null)
+	);
+	const sesionAnterior = $derived(
+		sesionCargada && !editandoPasado && !hayTrabajo && !diaTerminado ? $recienteStore : null
+	);
 
 	function pedirReinicioDia() {
 		if (!fechaSesion || !hayQueReiniciar) return;
@@ -470,7 +498,8 @@
 		<section class="rounded-2xl border border-dashed border-white/15 p-5 text-center" role="alert">
 			<p class="text-sm font-bold">La fecha de esta sesión no es válida</p>
 			<p class="mt-1 text-xs" style="color: var(--muted)">
-				No se creó ni modificó ningún entrenamiento.
+				Puede ser una fecha imposible o una que todavía no llegó. No se creó ni modificó ningún
+				entrenamiento.
 			</p>
 			<a
 				href={`/dia/${diaId}`}
@@ -611,6 +640,17 @@
 							: '2px solid transparent'}; outline-offset: 2px"
 					></button>
 				{/each}
+			</div>
+		{/if}
+
+		{#if !editando && sesionAnterior}
+			<!-- Va ARRIBA de la lista: es la respuesta a "¿y lo que hice?", y esa pregunta
+			     se la hace la persona en el primer segundo, mirando los contadores en cero. -->
+			<div class="mb-3">
+				<AvisoSesionAnterior
+					aviso={sesionAnterior}
+					href={`/dia/${diaId}?fecha=${sesionAnterior.fecha}`}
+				/>
 			</div>
 		{/if}
 

@@ -25,6 +25,7 @@ import {
 	setSerieHecha,
 	saltarEjercicio,
 	sesionHoyObs,
+	sesionRecienteDe,
 	sesionesDe,
 	sesionId,
 	setExtra,
@@ -115,7 +116,8 @@ describe('sesion con IndexedDB', () => {
 
 	it('no crea una sesión si la rutina o el ejercicio ya no existen', async () => {
 		expect(await prepararEjercicioSesion('push', 'press', '2026-01-05')).toEqual({
-			disponible: false
+			disponible: false,
+			motivo: 'rutina-no-disponible'
 		});
 		expect(await db.sesiones.count()).toBe(0);
 
@@ -126,7 +128,8 @@ describe('sesion con IndexedDB', () => {
 			ejercicios: [{ exerciseId: 'fondos', seriesObjetivo: 3, orden: 0 }]
 		});
 		expect(await prepararEjercicioSesion('push', 'press', '2026-01-05')).toEqual({
-			disponible: false
+			disponible: false,
+			motivo: 'rutina-no-disponible'
 		});
 		expect(await db.sesiones.count()).toBe(0);
 	});
@@ -1547,5 +1550,191 @@ describe('cerrar el día con trabajo pendiente', () => {
 		const s = await db.sesiones.get('2026-01-07__push');
 		expect(s?.diaTerminado).toBe(false);
 		expect(s?.diaTerminadoConPendientes).toBeUndefined();
+	});
+});
+
+describe('la sesion no puede cambiar de identidad en silencio (R1)', () => {
+	beforeEach(async () => {
+		vi.useRealTimers();
+		await limpiarDb();
+		await db.dias.add({
+			id: 'push',
+			nombre: 'Push',
+			orden: 0,
+			ejercicios: [{ exerciseId: 'press', seriesObjetivo: 3, orden: 0 }]
+		});
+	});
+
+	it('el trabajo de antes de medianoche queda ofrecido desde la pantalla vacia de hoy', async () => {
+		// 23:40 — la persona entrena la sesión del 27.
+		vi.setSystemTime(new Date('2026-08-27T23:40:00'));
+		await prepararEjercicioSesion('push', 'press', '2026-08-27');
+		await setPeso('push', 'press', 0, 80, '2026-08-27');
+		await setReps('push', 'press', 0, 10, '2026-08-27');
+		await setSerieHecha('push', 'press', 0, true, '2026-08-27');
+
+		// 00:05 — vuelve por Inicio, que no lleva ?fecha: la pantalla es la del 28 y está
+		// vacía, con los pesos prellenados y ningún tilde. Eso es lo que se leía como
+		// "se me borró el entrenamiento".
+		vi.setSystemTime(new Date('2026-08-28T00:05:00'));
+		await prepararEjercicioSesion('push', 'press', '2026-08-28');
+		const hoy = await db.sesiones.get('2026-08-28__push');
+		expect(hoy?.ejercicios[0]?.sets.some((set) => set.hecha)).toBe(false);
+
+		// Lo que arregla R1: desde esa pantalla vacía hay cómo enterarse y volver.
+		expect(await sesionRecienteDe('push', 'press', '2026-08-28')).toEqual({
+			fecha: '2026-08-27',
+			seriesHechas: 1,
+			tieneEjercicio: true
+		});
+		vi.useRealTimers();
+	});
+
+	it('no ofrece nada cuando el dia anterior quedo abierto hace mucho', async () => {
+		vi.setSystemTime(new Date('2026-08-21T20:00:00'));
+		await prepararEjercicioSesion('push', 'press', '2026-08-21');
+		await setReps('push', 'press', 0, 10, '2026-08-21');
+		await setSerieHecha('push', 'press', 0, true, '2026-08-21');
+
+		vi.setSystemTime(new Date('2026-08-28T10:00:00'));
+		expect(await sesionRecienteDe('push', 'press', '2026-08-28')).toBeNull();
+		vi.useRealTimers();
+	});
+
+	it('solo mira las fechas vecinas: una sesion de hoy no se ofrece a si misma', async () => {
+		vi.setSystemTime(new Date('2026-08-28T10:00:00'));
+		await prepararEjercicioSesion('push', 'press', '2026-08-28');
+		await setReps('push', 'press', 0, 10, '2026-08-28');
+		await setSerieHecha('push', 'press', 0, true, '2026-08-28');
+		expect(await sesionRecienteDe('push', 'press', '2026-08-28')).toBeNull();
+		vi.useRealTimers();
+	});
+
+	it('guardarSesion sella cuando se toco la sesion por ultima vez', async () => {
+		vi.setSystemTime(new Date('2026-08-27T23:40:00'));
+		await prepararEjercicioSesion('push', 'press', '2026-08-27');
+		await setReps('push', 'press', 0, 10, '2026-08-27');
+		const sellada = await db.sesiones.get('2026-08-27__push');
+		expect(sellada?.tocadaAt).toBe(new Date('2026-08-27T23:40:00').toISOString());
+		vi.useRealTimers();
+	});
+});
+
+describe('ninguna escritura de serie resuelve sin haber escrito (R2)', () => {
+	beforeEach(async () => {
+		vi.useRealTimers();
+		await limpiarDb();
+		await db.dias.add({
+			id: 'push',
+			nombre: 'Push',
+			orden: 0,
+			ejercicios: [{ exerciseId: 'press', seriesObjetivo: 2, orden: 0 }]
+		});
+	});
+
+	it('avisa que no encontro destino cuando no existe la sesion', async () => {
+		const f = '2026-08-27';
+		expect(await setPeso('push', 'press', 0, 80, f)).toEqual({ encontrada: false });
+		expect(await setReps('push', 'press', 0, 10, f)).toEqual({ encontrada: false });
+		expect(await setExtra('push', 'press', 0, 5, f)).toEqual({ encontrada: false });
+		expect(await setRir('push', 'press', 0, 2, f)).toEqual({ encontrada: false });
+		expect(await toggleMax('push', 'press', 0, f)).toEqual({ encontrada: false });
+		expect(await addSet('push', 'press', f)).toEqual({ encontrada: false });
+		expect(await db.sesiones.get(sesionId('push', f))).toBeUndefined();
+	});
+
+	it('avisa cuando el ejercicio ya no esta en la sesion', async () => {
+		const f = '2026-08-27';
+		await prepararEjercicioSesion('push', 'press', f);
+		const sesion = (await db.sesiones.get(sesionId('push', f)))!;
+		sesion.ejercicios = [];
+		await guardarSesion(sesion);
+
+		expect(await setPeso('push', 'press', 0, 100, f)).toEqual({ encontrada: false });
+	});
+
+	it('avisa cuando la serie que se toca ya no existe', async () => {
+		const f = '2026-08-27';
+		await prepararEjercicioSesion('push', 'press', f);
+		// La rutina pide 2 series: el índice 5 no existe.
+		expect(await setPeso('push', 'press', 5, 100, f)).toEqual({ encontrada: false });
+		expect(await setReps('push', 'press', 5, 10, f)).toEqual({ encontrada: false });
+		expect(await toggleMax('push', 'press', 5, f)).toEqual({ encontrada: false });
+		expect(await setRir('push', 'press', 5, 2, f)).toEqual({ encontrada: false });
+		expect(await setExtra('push', 'press', 5, 1, f)).toEqual({ encontrada: false });
+	});
+
+	it('confirma la escritura cuando si hay destino', async () => {
+		const f = '2026-08-27';
+		await prepararEjercicioSesion('push', 'press', f);
+		expect(await setPeso('push', 'press', 0, 80, f)).toEqual({ encontrada: true });
+		expect(await addSet('push', 'press', f)).toEqual({ encontrada: true });
+		const sesion = await db.sesiones.get(sesionId('push', f));
+		expect(sesion?.ejercicios[0]?.sets[0]?.peso).toBe(80);
+		expect(sesion?.ejercicios[0]?.sets).toHaveLength(3);
+	});
+});
+
+describe('una fecha futura no puede crear trabajo', () => {
+	beforeEach(async () => {
+		vi.useRealTimers();
+		await limpiarDb();
+		vi.setSystemTime(new Date('2026-08-28T10:00:00'));
+		await db.dias.add({
+			id: 'push',
+			nombre: 'Push',
+			orden: 0,
+			ejercicios: [{ exerciseId: 'press', seriesObjetivo: 2, orden: 0 }]
+		});
+	});
+
+	it('prepararEjercicioSesion lo dice en vez de inventar una sesión', async () => {
+		expect(await prepararEjercicioSesion('push', 'press', '2030-01-01')).toEqual({
+			disponible: false,
+			motivo: 'fecha-futura'
+		});
+		expect(await db.sesiones.count()).toBe(0);
+		vi.useRealTimers();
+	});
+
+	it('saltar un ejercicio en el futuro tampoco crea la sesión', async () => {
+		expect(await saltarEjercicio('push', 'press', '2030-01-01')).toEqual({
+			saltado: false,
+			razon: 'fecha-futura'
+		});
+		expect(await db.sesiones.count()).toBe(0);
+		vi.useRealTimers();
+	});
+
+	it('el dominio también corta por lo bajo, sin pasar por la pantalla', async () => {
+		await expect(ensureEjercicio('push', 'press', 2, '2030-01-01')).rejects.toThrow('fecha futura');
+		expect(await db.sesiones.count()).toBe(0);
+		vi.useRealTimers();
+	});
+
+	it('hoy y el pasado siguen funcionando igual', async () => {
+		expect(await prepararEjercicioSesion('push', 'press', '2026-08-28')).toMatchObject({
+			disponible: true
+		});
+		expect(await prepararEjercicioSesion('push', 'press', '2026-08-01')).toMatchObject({
+			disponible: true
+		});
+		expect(await db.sesiones.count()).toBe(2);
+		vi.useRealTimers();
+	});
+
+	it('una sesión futura que ya existe se sigue pudiendo abrir y arreglar', async () => {
+		// Datos viejos pueden traerla (o un backup con el reloj corrido): la barrera es
+		// contra CREARLA, no contra poder entrar a corregir lo que ya está guardado.
+		await guardarSesion({
+			id: '2030-01-01__push',
+			fecha: '2030-01-01',
+			diaId: 'push',
+			ejercicios: []
+		});
+		expect(await prepararEjercicioSesion('push', 'press', '2030-01-01')).toMatchObject({
+			disponible: true
+		});
+		vi.useRealTimers();
 	});
 });
