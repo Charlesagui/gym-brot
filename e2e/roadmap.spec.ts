@@ -157,6 +157,40 @@ test('el mapa corporal comparte datos con la lista y responde a borrar historial
 	await expect(page.getByText('No hay series completadas para este período.')).toBeVisible();
 });
 
+test('el hueco del detalle aguanta el nombre más largo sin mover los períodos', async ({
+	page
+}) => {
+	await page.emulateMedia({ reducedMotion: 'reduce' });
+	// 320 px es el peor caso: es donde el nombre del músculo envuelve en dos renglones y
+	// el detalle abierto queda más alto.
+	await page.setViewportSize({ width: 320, height: 740 });
+	await page.goto('/ejercicio/jalon-pecho?dia=dia-espalda-biceps&fecha=2026-08-24');
+	await apagarDescanso(page);
+	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
+	await page.getByRole('button', { name: 'Marcar serie 1' }).click();
+
+	await page.goto('/historial');
+	await expect(
+		page.getByRole('heading', { name: 'Distribución estimada de series' })
+	).toBeVisible();
+	// El hueco reservado tiene que aguantar el detalle más alto que la app puede mostrar, y
+	// ese es el del nombre más largo del catálogo. Con uno corto el desborde es de 13 px y
+	// con éste de 33: el botón de período al que ibas se te mueve de abajo del dedo justo
+	// cuando tocás el músculo.
+	// Se mide contra el documento y no contra la ventana: tocar la fila de la lista la
+	// desplaza a la vista, y ese scroll movería la caja aunque el layout no se hubiera
+	// movido ni un píxel.
+	const periodo = page.getByRole('button', { name: '12 semanas' });
+	const desdeArriba = () =>
+		periodo.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+	const cerrado = await desdeArriba();
+	await page.getByRole('button', { name: /^Espalda alta y dorsales/ }).click();
+	await expect(
+		page.getByRole('button', { name: 'Cerrar detalle de Espalda alta y dorsales' })
+	).toBeVisible();
+	expect(await desdeArriba()).toBe(cerrado);
+});
+
 test('el shell y las rutas nuevas siguen disponibles sin conexión', async ({ page, context }) => {
 	await page.goto('/');
 	const controlada = await page.evaluate(async () => {
