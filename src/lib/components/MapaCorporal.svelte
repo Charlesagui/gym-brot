@@ -322,9 +322,17 @@
 			que están justo abajo: se tocaba un músculo y el botón al que ibas se te movía de
 			abajo del dedo. Ahora el hueco está siempre, y cuando no hay nada elegido lo ocupa
 			la única instrucción que el dibujo necesita: que se toca.
+
+			Y el hueco mide lo que mide el detalle MÁS ALTO, no lo que mide uno cualquiera. La
+			reserva de 84 px alcanzaba para el contenido de entonces: medido a 320 px, el detalle
+			abierto pedía 97 px con un nombre corto y 117 con "Espalda alta y dorsales", así que
+			el empujón que este comentario dice haber sacado seguía ahí, más chico. Dos cambios lo
+			cierran: el botón de cerrar sale del flujo —abajo— y con los renglones sin envolver el
+			peor caso baja a 100,5 px, que es lo que reserva el `min-h`. El e2e "el hueco del
+			detalle aguanta el nombre más largo" lo fija contra el nombre más largo del catálogo.
 		-->
 		<div
-			class="mt-2 flex min-h-[5.25rem] items-center gap-3 rounded-xl border border-white/10 bg-white/[0.045] p-3"
+			class="relative mt-2 flex min-h-[6.5rem] items-center rounded-xl border border-white/10 bg-white/[0.045] p-3"
 			aria-live="polite"
 		>
 			{#if seleccionado}
@@ -333,7 +341,10 @@
 				     tres líneas y el hueco reservado dejaba de alcanzar. La cifra manda, el
 				     desglose va abajo y en menor jerarquía. -->
 				<div class="min-w-0 flex-1">
-					<p class="text-sm font-bold">{MUSCULOS[seleccionado].label}</p>
+					<!-- `pr-12` en el título y no `gap` en la fila: el botón está fuera del flujo,
+					     así que sólo le roba ancho al renglón que tiene al lado. Los otros dos usan
+					     los 224 px completos, que es lo que evita que envuelvan a 320 px. -->
+					<p class="pr-12 text-sm font-bold">{MUSCULOS[seleccionado].label}</p>
 					<p class="mt-0.5 text-xs" style="color: var(--muted)">
 						<span class="cifra">{semanal(carga?.seriesEstimadas)}</span>
 						{plural(carga?.seriesEstimadas)} por semana
@@ -346,7 +357,7 @@
 					type="button"
 					onclick={() => (seleccionado = null)}
 					aria-label={`Cerrar detalle de ${MUSCULOS[seleccionado].label}`}
-					class="grid size-11 shrink-0 place-items-center rounded-xl"
+					class="absolute right-1.5 top-1.5 grid size-11 shrink-0 place-items-center rounded-xl"
 					style="background: rgba(255,255,255,.06); color: var(--muted)"
 				>
 					<Icono nombre="cerrar" tamano={18} />
