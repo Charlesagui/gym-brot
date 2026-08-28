@@ -110,9 +110,55 @@ mantiene `exerciseIds`: dentro de `guardarSesion`, en la misma transacción.
 
 `Dias`, `Sesiones`, `Notas`, `Ajustes` y `PesosCorporales` forman una única transacción durante importación o borrado. El índice derivado `exerciseIds` se recalcula antes de persistir una sesión. El peso corporal usa una fila por fecha local y gramos enteros; no se mezcla con el peso levantado en una sesión.
 
+## Qué día es hoy, y a qué sesión escribo
+
+Son dos cosas distintas y estuvieron mezcladas en una sola constante. Una sesión se identifica por
+`${fecha}__${diaId}`, así que "hoy" no es un dato de presentación: decide dónde se escribe.
+
+- **A qué sesión escribo** viaja en la URL (`?fecha=`) y, si no viene, se congela al montar la
+  pantalla. Se congela a propósito: la sesión que empezaste es la que seguís editando, y cruzar la
+  medianoche a mitad de una serie no puede moverte de sesión.
+- **Qué día es hoy** es `hoy` (`src/lib/hoy.svelte.ts`), vivo para toda la app: se refresca con
+  `visibilitychange`, `focus`, `pageshow` y con un temporizador hasta la próxima medianoche —
+  entrenando, el wake lock mantiene la app en primer plano durante horas y no llega ningún evento.
+
+Contra `hoy` se decide únicamente si hay que **avisar**: la pantalla de ejercicio muestra "estás
+editando el entrenamiento del X, no el de hoy", y una pantalla de hoy que está vacía ofrece retomar
+el trabajo de otra fecha que se estaba escribiendo hace poco (`sesionRecienteDe`, ventana de 8 h
+sobre `Sesion.tocadaAt`, que sella `guardarSesion` y nadie más; restaurar un backup no sella).
+
+`mutar()` devuelve `{ encontrada }` por el mismo motivo: una escritura que no encuentra su sesión,
+su ejercicio o su serie no puede resolver en silencio, o la pantalla queda mostrando un valor que no
+existe en ningún lado.
+
 Los backups se validan antes de escribir: tamaño máximo de 25 MB, límites de colecciones, fechas e
 ids coherentes, enteros donde el dominio es discreto y pesos decimales no negativos. La preparación
 deduplica ids, repara series marcadas sin reps válidas, canoniza pesos legacy y avisa cualquier dato
 descartado o truncado antes de confirmar.
+
+## Cuando la base no abre
+
+Es el único fallo del producto donde no se sabe si hay datos legibles, y por eso el único que puede
+justificar una salida destructiva. El camino tiene tres escalones, en orden:
+
+1. **Insistir.** `abrirBase()` reintenta dos veces con espera. En iOS la primera apertura después
+   del background puede fallar y andar perfecto un instante después; sin reintentos ese hipo
+   mandaba a la persona a la pantalla destructiva por un problema que se arreglaba solo.
+   `VersionError` y `MissingAPI` no se reintentan: son deterministas y tienen su propia pantalla.
+2. **Rescatar.** `rescatarDatosCrudos()` lee IndexedDB **sin Dexie**, abriendo sin declarar
+   versión, y arma un backup restaurable con lo que encuentre. Buena parte de estos fallos no son
+   corrupción sino la máquina de esquema/migración; ahí los datos se leen enteros. Nunca falla por
+   una tabla: perder las preferencias es un mal día, perder el historial es el problema a evitar.
+   Abrir sin versión crearía una base vacía si no existiera ninguna, así que `onupgradeneeded`
+   aborta la transacción en vez de dejar una base nueva de regalo.
+3. **Borrar.** El botón destructivo **no existe hasta haber intentado el rescate**, y sigue
+   pidiendo dos toques. Antes se ofrecía de entrada, y el propio cartel avisaba que desde ahí no se
+   podía exportar un backup: la única salida era también la única sin retorno.
+
+`navigator.storage.persist()` se pide al arrancar y **el veredicto se guarda** (`$lib/persistencia`).
+Un `false` significa que el navegador puede vaciar el almacenamiento por su cuenta — en iOS sin
+instalar es lo normal, y ahí ITP lo borra a los 7 días sin uso. El historial y Ajustes lo dicen y
+empujan a instalar la app y a exportar. Refrescar el veredicto no vuelve a pedirlo: instalar la app
+suele conceder la persistencia, y re-preguntarle a quien ya dijo que no sería castigarlo.
 
 El shell PWA queda precacheado. Los videos no se guardan automáticamente al reproducirse: `Ajustes → Descargar todos los videos` es la única acción que los persiste en `gb-videos`, y esa caché se puede vaciar sin tocar los datos de entrenamiento.

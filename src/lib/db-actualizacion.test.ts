@@ -217,6 +217,36 @@ describe('actualización de una base ya en uso', () => {
 		db.close();
 	}, 60_000);
 
+	it('actualizar la app no toca ni resella el historial que ya estaba', async () => {
+		// `tocadaAt` se agregó sin bump de esquema (campo no indexado). Lo importante es que
+		// una actualización NO lo escriba sobre lo viejo: si el arranque sellara todas las
+		// sesiones con la hora del deploy, la app ofrecería retomar entrenamientos de hace
+		// meses y el historial mentiría sobre cuándo se tocó cada cosa.
+		const legacy = baseComoEnProduccion();
+		await legacy.open();
+		await legacy.table('dias').put({ id: 'd1', nombre: 'Piernas', orden: 0, ejercicios: [] });
+		await legacy.table('sesiones').put({
+			id: '2026-01-05__d1',
+			fecha: '2026-01-05',
+			diaId: 'd1',
+			exerciseIds: ['prensa-pierna-45'],
+			ejercicios: [{ exerciseId: 'prensa-pierna-45', sets: [{ peso: 120, reps: 10, hecha: true }] }]
+		});
+		legacy.close();
+
+		// El arranque real del deploy nuevo: abrir + el backfill de nombres.
+		const { db, completarNombresSnapshotFaltantes } = await import('./db');
+		await db.open();
+		await completarNombresSnapshotFaltantes();
+
+		const sesion = await db.sesiones.get('2026-01-05__d1');
+		// El trabajo sigue entero...
+		expect(sesion?.ejercicios[0]?.sets[0]).toMatchObject({ peso: 120, reps: 10, hecha: true });
+		// ...y sin sello: nadie la tocó, solo se actualizó la app.
+		expect(sesion?.tocadaAt).toBeUndefined();
+		db.close();
+	}, 30_000);
+
 	it('el código viejo no rompe contra una base ya migrada', async () => {
 		// Pasa cuando la app instalada quedó con el shell viejo cacheado y otra pestaña
 		// ya migró. Dexie reintenta sin versión, así que la copia vieja abre y lee: el

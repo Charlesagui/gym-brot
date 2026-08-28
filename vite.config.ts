@@ -65,7 +65,17 @@ export default defineConfig({
 				// duplicada dentro de los componentes, sin forma de testearla.
 				'src/lib/numeros.ts',
 				'src/lib/catalog.ts',
-				'src/lib/catalogo-propios.ts'
+				'src/lib/catalogo-propios.ts',
+				// `hoy.svelte.ts` queda FUERA del informe a propósito: v8 no le atribuye
+				// cobertura acá (nadie que corra en Node lo importa salvo su propio test) y
+				// listarlo mostraría un 0 % que no dice nada. Sus tests igual corren:
+				// `hoy.test.ts` cubre el temporizador de medianoche, el foco y la
+				// idempotencia de `init`.
+				// La lectura de rescate es la última red antes de borrar todo, y la única
+				// señal de que el navegador puede vaciar los datos por su cuenta. Son
+				// justo los dos módulos donde un fallo silencioso se paga con el historial.
+				'src/lib/rescate.ts',
+				'src/lib/persistencia.ts'
 			],
 			thresholds: {
 				lines: 80,

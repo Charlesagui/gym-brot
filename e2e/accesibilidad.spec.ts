@@ -220,6 +220,49 @@ test('la fecha de sesión sobrevive medianoche, regreso, cierre y una sesión nu
 		.toEqual(['2026-08-13__dia-piernas', '2026-08-14__dia-piernas']);
 });
 
+test('cruzar la medianoche avisa en el ejercicio y el día nuevo dice dónde quedó lo hecho', async ({
+	page
+}) => {
+	await page.clock.install({ time: new Date('2026-08-13T23:55:00-03:00') });
+	await page.goto('/dia/dia-piernas');
+	await page.getByRole('link', { name: /Prensa de pierna 45/ }).click();
+	await expect(page).toHaveURL(/fecha=2026-08-13/);
+	await page.getByRole('textbox', { name: 'Peso de la serie 1 en kg' }).fill('100');
+	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
+	await apagarDescanso(page);
+	await page.getByRole('button', { name: 'Marcar serie 1' }).click();
+	await expect(page.getByText('1/4', { exact: true })).toBeVisible();
+	// Antes de medianoche no hay nada que avisar.
+	await expect(page.getByText(/no el de hoy/)).toHaveCount(0);
+
+	// Pasa la medianoche con la pantalla abierta: el teléfono está encendido por el wake
+	// lock, así que lo único que llega es el foco al volver a mirarlo.
+	await page.clock.setFixedTime(new Date('2026-08-14T00:05:00-03:00'));
+	await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+	// Seguís escribiendo donde empezaste —eso está bien—, pero ahora la app lo dice.
+	await expect(
+		page.getByText('Estás editando el entrenamiento del 13 ago, no el de hoy.')
+	).toBeVisible();
+	await expect(page.getByText('1/4', { exact: true })).toBeVisible();
+
+	// Volvés por Inicio, que no lleva ?fecha: esta es la pantalla que se leía como
+	// "se me borró todo". Ahora explica dónde está el entrenamiento y cómo volver.
+	await page.goto('/dia/dia-piernas');
+	await expect(page).not.toHaveURL(/fecha=/);
+	await expect(page.getByText('1/4', { exact: true })).toHaveCount(0);
+	const aviso = page
+		.getByRole('status')
+		.filter({ hasText: 'Tu entrenamiento del 13 ago sigue ahí' });
+	await expect(aviso).toBeVisible();
+	await expect(aviso).toContainText('Marcaste 1 serie');
+
+	await aviso.getByRole('link', { name: 'Seguir ese entrenamiento' }).click();
+	await expect(page).toHaveURL(/\/dia\/dia-piernas\?fecha=2026-08-13/);
+	await expect(page.getByText('1/4', { exact: true })).toBeVisible();
+	// Y en el día recuperado el aviso no se repite: ese día no está vacío.
+	await expect(page.getByText('Tu entrenamiento del 13 ago sigue ahí')).toHaveCount(0);
+});
+
 test('las rutas obsoletas o con fecha imposible ofrecen salida sin crear sesiones', async ({
 	page
 }) => {
@@ -230,6 +273,15 @@ test('las rutas obsoletas o con fecha imposible ofrecen salida sin crear sesione
 	await page.goto('/ejercicio/no-existe?dia=dia-piernas&fecha=2026-08-13');
 	await expect(page.getByText('Ejercicio no encontrado', { exact: true })).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Volver al día' })).toBeVisible();
+	await expect(leerSesiones(page)).resolves.toEqual([]);
+
+	// Una fecha que todavía no llegó tampoco puede crear trabajo, ni en el día ni en el
+	// ejercicio: antes `?fecha=2030-01-01` escribía una sesión real que después ninguna
+	// pantalla mostraba.
+	await page.goto('/dia/dia-piernas?fecha=2030-01-01');
+	await expect(page.getByText('La fecha de esta sesión no es válida')).toBeVisible();
+	await page.goto('/ejercicio/prensa-pierna-45?dia=dia-piernas&fecha=2030-01-01');
+	await expect(page.getByText('La fecha de esta sesión no es válida')).toBeVisible();
 	await expect(leerSesiones(page)).resolves.toEqual([]);
 });
 

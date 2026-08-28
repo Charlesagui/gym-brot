@@ -29,12 +29,14 @@ import {
 	resolverMetricaPr,
 	repeticionesValidas,
 	serieCompleta,
+	sesionRecienteAOfrecer,
 	snapPr,
 	valorSet,
 	type MejorSet,
 	type MetricaEfectiva,
 	type ModoPr,
-	type RecordEjercicio
+	type RecordEjercicio,
+	type SesionReciente
 } from './sesion-reglas';
 import { ejercicioPorId } from './catalog';
 import {
@@ -45,6 +47,7 @@ import {
 	type UnidadPeso
 } from './unidades';
 import { capturarRevisionDatos, exigirRevisionDatos } from './revision-datos';
+import { fechaMasDias } from './fechas';
 import { rirValido } from './esfuerzo';
 
 export {
@@ -63,7 +66,8 @@ export type {
 	MejorSet,
 	MetricaEfectiva,
 	ModoPr,
-	RecordEjercicio
+	RecordEjercicio,
+	SesionReciente
 } from './sesion-reglas';
 
 /** Fecha local en formato YYYY-MM-DD. */
@@ -102,6 +106,35 @@ export function ejercicioSesionObs(
 	});
 }
 
+/**
+ * Trabajo de ESTA rutina que se estaba escribiendo recién, en otra fecha.
+ *
+ * Es la explicación que faltaba del otro lado de la deriva de fecha: la pantalla nueva
+ * está vacía porque es otro día, no porque se haya borrado nada, y hasta acá no había
+ * ninguna forma de enterarse desde la pantalla vacía.
+ *
+ * Sólo mira las 48 h anteriores por el índice `fecha`. La ventana real la pone
+ * `sesionRecienteAOfrecer` (8 h sobre `tocadaAt`); acortar el rango de la consulta evita
+ * deserializar años de historial en una lectura que se invalida con cada toque de peso.
+ */
+export async function sesionRecienteDe(
+	diaId: string,
+	exerciseId: string | null,
+	hoy: string
+): Promise<SesionReciente | null> {
+	const desde = fechaMasDias(hoy, -2);
+	const candidatas = await db.sesiones
+		.where('fecha')
+		.between(desde, hoy, true, false)
+		.filter((sesion) => sesion.diaId === diaId)
+		.toArray();
+	return sesionRecienteAOfrecer(candidatas, exerciseId, hoy, Date.now());
+}
+
+export function sesionRecienteObs(diaId: string, exerciseId: string | null, hoy: string) {
+	return liveQuery(() => sesionRecienteDe(diaId, exerciseId, hoy));
+}
+
 /** Lee los sets persistidos al recuperar la UI tras un fallo de escritura optimista. */
 export async function setsEjercicioSesion(
 	diaId: string,
@@ -115,6 +148,17 @@ export async function setsEjercicioSesion(
 	);
 }
 
+/**
+ * Una sesión en el futuro no existe: nadie entrenó todavía mañana.
+ *
+ * La pantalla ya no deja llegar hasta acá con una fecha así, pero el dominio también lo
+ * protege — igual que con las reps o los pesos inválidos —, porque una URL vieja, una
+ * automatización o un reloj corrido no pueden crear trabajo en un día que no pasó.
+ */
+export function fechaSesionEnFuturo(fecha: string): boolean {
+	return fecha > hoyStr();
+}
+
 async function ensureSesion(
 	diaId: string,
 	fecha = hoyStr(),
@@ -124,6 +168,9 @@ async function ensureSesion(
 	const id = sesionId(diaId, fecha);
 	let s = await db.sesiones.get(id);
 	if (!s) {
+		if (fechaSesionEnFuturo(fecha)) {
+			throw new RangeError('No se puede empezar un entrenamiento en una fecha futura.');
+		}
 		const mismoDia = await db.sesiones.where('fecha').equals(fecha).toArray();
 		const ordenEnDia =
 			mismoDia.reduce((maximo, sesion) => Math.max(maximo, sesion.ordenEnDia ?? -1), -1) + 1;
@@ -366,6 +413,8 @@ export interface PreparacionEjercicioSesion {
 
 export interface EjercicioSesionNoDisponible {
 	disponible: false;
+	/** Por qué esta URL no puede entrenar, para que la pantalla no invente el motivo. */
+	motivo: 'rutina-no-disponible' | 'fecha-futura';
 }
 
 /**
@@ -385,7 +434,12 @@ export async function prepararEjercicioSesion(
 		// dejamos que una ruta vieja cree trabajo para una rutina o ejercicio inexistente.
 		const dia = await db.dias.get(diaId);
 		const configuracion = dia?.ejercicios.find((item) => item.exerciseId === exerciseId);
-		if (!dia || !configuracion) return { disponible: false };
+		if (!dia || !configuracion) return { disponible: false, motivo: 'rutina-no-disponible' };
+		// Antes de tocar nada: una fecha futura no puede crear una sesión (ver `ensureSesion`).
+		// Se corta acá y no en el `ensure` para poder explicarlo en vez de tirar un error.
+		if (fechaSesionEnFuturo(fecha) && !(await db.sesiones.get(sesionId(diaId, fecha)))) {
+			return { disponible: false, motivo: 'fecha-futura' };
+		}
 
 		const id = sesionId(diaId, fecha);
 		let sesion = await db.sesiones.get(id);
@@ -427,26 +481,43 @@ export async function prepararEjercicioSesion(
 }
 
 /**
+ * Resultado de una mutación de serie.
+ *
+ * `encontrada: false` significa que el cambio NO se aplicó porque su destino no existe:
+ * la sesión, el ejercicio o la serie desaparecieron. Antes esto era un `return` mudo y
+ * una promesa que resolvía bien, así que la pantalla se quedaba mostrando un peso que
+ * no estaba en ningún lado y sólo se enteraba al volver a entrar. Es el mismo contrato
+ * que ya tenía `setSerieHecha`.
+ */
+export interface ResultadoMutacion {
+	encontrada: boolean;
+}
+
+/**
  * Mutación atómica de los sets de un ejercicio (serializada por Dexie → sin race).
  * `fecha` fija la sesión destino al entrar al ejercicio, para no perder toques si
  * cruzás la medianoche entrenando (si no, apuntaría a una sesión de otro día inexistente).
+ *
+ * `fn` devuelve `false` cuando no encontró la serie que iba a tocar; devolver nada
+ * significa que se aplicó.
  */
 async function mutar(
 	diaId: string,
 	exerciseId: string,
-	fn: (sets: SetSesion[], sesion: Sesion, ejercicio: EjercicioSesion) => void,
+	fn: (sets: SetSesion[], sesion: Sesion, ejercicio: EjercicioSesion) => boolean | void,
 	fecha = hoyStr(),
 	recalcularPr = false
-): Promise<void> {
+): Promise<ResultadoMutacion> {
 	const revision = capturarRevisionDatos();
-	await db.transaction('rw', db.sesiones, async () => {
+	return db.transaction('rw', db.sesiones, async (): Promise<ResultadoMutacion> => {
 		exigirRevisionDatos(revision);
 		const s = await db.sesiones.get(sesionId(diaId, fecha));
 		const e = s?.ejercicios.find((x) => x.exerciseId === exerciseId);
-		if (!s || !e) return;
-		fn(e.sets, s, e);
+		if (!s || !e) return { encontrada: false };
+		if (fn(e.sets, s, e) === false) return { encontrada: false };
 		if (recalcularPr) await recalcularPrCelebrado(s, exerciseId);
 		await guardarSesion(s);
+		return { encontrada: true };
 	});
 }
 
@@ -675,7 +746,9 @@ export function toggleMax(diaId: string, exerciseId: string, i: number, fecha = 
 		diaId,
 		exerciseId,
 		(sets) => {
-			if (sets[i]) sets[i].esMax = !sets[i].esMax;
+			const set = sets[i];
+			if (!set) return false;
+			set.esMax = !set.esMax;
 		},
 		fecha,
 		true
@@ -695,12 +768,12 @@ export function setPeso(
 		diaId,
 		exerciseId,
 		(sets) => {
-			if (sets[i]) {
-				sets[i].peso = peso;
-				const canonico = pesoAGramos(peso, unidad);
-				if (canonico == null) delete sets[i].pesoGramos;
-				else sets[i].pesoGramos = canonico;
-			}
+			const set = sets[i];
+			if (!set) return false;
+			set.peso = peso;
+			const canonico = pesoAGramos(peso, unidad);
+			if (canonico == null) delete set.pesoGramos;
+			else set.pesoGramos = canonico;
 		},
 		fecha,
 		true
@@ -720,7 +793,7 @@ export function setReps(
 		exerciseId,
 		(sets, sesion, ejercicio) => {
 			const set = sets[i];
-			if (!set) return;
+			if (!set) return false;
 			set.reps = reps;
 			if (set.hecha && !repeticionesValidas(reps)) {
 				set.hecha = false;
@@ -745,7 +818,9 @@ export function setRir(
 		diaId,
 		exerciseId,
 		(sets) => {
-			if (sets[i]) sets[i].rir = rir;
+			const set = sets[i];
+			if (!set) return false;
+			set.rir = rir;
 		},
 		fecha
 	);
@@ -765,12 +840,12 @@ export function setExtra(
 		diaId,
 		exerciseId,
 		(sets) => {
-			if (sets[i]) {
-				sets[i].extraKg = extraKg;
-				const canonico = pesoAGramos(extraKg, unidad);
-				if (canonico == null) delete sets[i].extraGramos;
-				else sets[i].extraGramos = canonico;
-			}
+			const set = sets[i];
+			if (!set) return false;
+			set.extraKg = extraKg;
+			const canonico = pesoAGramos(extraKg, unidad);
+			if (canonico == null) delete set.extraGramos;
+			else set.extraGramos = canonico;
 		},
 		fecha,
 		true
@@ -881,7 +956,8 @@ function setSaltado(diaId: string, exerciseId: string, saltado: boolean, fecha =
  * "Saltar" mientras otra pestaña quitó el ejercicio.
  */
 export type ResultadoSalto =
-	{ saltado: true } | { saltado: false; razon: 'rutina-no-disponible' | 'ya-completado' };
+	| { saltado: true }
+	| { saltado: false; razon: 'rutina-no-disponible' | 'ya-completado' | 'fecha-futura' };
 
 export async function saltarEjercicio(
 	diaId: string,
@@ -895,6 +971,9 @@ export async function saltarEjercicio(
 		const dia = await db.dias.get(diaId);
 		const configuracion = dia?.ejercicios.find((item) => item.exerciseId === exerciseId);
 		if (!dia || !configuracion) return { saltado: false, razon: 'rutina-no-disponible' };
+		if (fechaSesionEnFuturo(fecha) && !(await db.sesiones.get(sesionId(diaId, fecha)))) {
+			return { saltado: false, razon: 'fecha-futura' };
+		}
 		const sesion = await ensureSesion(diaId, fecha, dia.nombre, planDeDia(dia.ejercicios));
 		sincronizarPlan(sesion, dia, fecha);
 		sesion.diaNombre ??= dia.nombre;

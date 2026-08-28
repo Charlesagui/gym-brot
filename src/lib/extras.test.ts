@@ -353,6 +353,20 @@ describe('backup', () => {
 		expect((await db.ajustes.get('app'))?.sonido).toBe(true);
 	});
 
+	it('restaurar un backup no sella las sesiones como recién tocadas', async () => {
+		// `tocadaAt` es lo que decide si la app ofrece retomar un entrenamiento. Importar
+		// no es entrenar: sellarlo con la hora del import haría que, restaurando un backup,
+		// la app ofreciera seguir una sesión de hace un año.
+		await importarBackup({
+			dias: [],
+			sesiones: [{ ...sesion, tocadaAt: '2020-01-01T10:00:00.000Z' }],
+			notas: [],
+			ajustes: []
+		});
+
+		expect((await db.sesiones.get(sesion.id))?.tocadaAt).toBe('2020-01-01T10:00:00.000Z');
+	});
+
 	it('importarBackup migra el diaSemana único de backups viejos a diasSemana[]', async () => {
 		const legacy = { ...dia, diasSemana: undefined, diaSemana: 1 };
 		const backup = parseBackup(

@@ -6,8 +6,11 @@ import {
 	pesoEfectivo,
 	serieCompleta,
 	resolverMetricaPr,
+	sesionRecienteAOfrecer,
+	sesionRecienteDeOtraFecha,
 	valorMetrica,
 	valorSet,
+	VENTANA_SESION_RECIENTE_MS,
 	type MejorSet
 } from './sesion-reglas';
 import type { Sesion } from './db';
@@ -151,5 +154,94 @@ describe('mejorSet', () => {
 
 	it('conserva el anterior si no mejora', () => {
 		expect(mejorSet(base, { ...base, peso: 95, reps: 20, valor: 95 })).toBe(base);
+	});
+});
+
+describe('sesionRecienteDeOtraFecha', () => {
+	const AHORA = Date.parse('2026-08-28T00:05:00Z');
+	const base = (extra: Partial<Sesion> = {}): Sesion => ({
+		id: '2026-08-27__push',
+		fecha: '2026-08-27',
+		diaId: 'push',
+		tocadaAt: '2026-08-27T23:50:00Z',
+		ejercicios: [{ exerciseId: 'press', sets: [{ hecha: true, reps: 10, peso: 80 }] }],
+		...extra
+	});
+
+	it('reconoce el trabajo que se estaba escribiendo del otro lado de la medianoche', () => {
+		expect(sesionRecienteDeOtraFecha(base(), '2026-08-28', AHORA)).toBe(true);
+	});
+
+	it('no ofrece la sesión de hoy: no hay nada que explicar', () => {
+		expect(sesionRecienteDeOtraFecha(base(), '2026-08-27', AHORA)).toBe(false);
+	});
+
+	it('no ofrece una sesión sin series marcadas', () => {
+		const soloCargada = base({
+			ejercicios: [{ exerciseId: 'press', sets: [{ hecha: false, reps: 10, peso: 80 }] }]
+		});
+		expect(sesionRecienteDeOtraFecha(soloCargada, '2026-08-28', AHORA)).toBe(false);
+	});
+
+	it('no molesta con el día abierto de la semana pasada', () => {
+		const vieja = base({ tocadaAt: '2026-08-21T20:00:00Z' });
+		expect(sesionRecienteDeOtraFecha(vieja, '2026-08-28', AHORA)).toBe(false);
+		// Justo en el borde de la ventana entra; un milisegundo más, no.
+		const borde = base({ tocadaAt: new Date(AHORA - VENTANA_SESION_RECIENTE_MS).toISOString() });
+		expect(sesionRecienteDeOtraFecha(borde, '2026-08-28', AHORA)).toBe(true);
+		const pasada = base({
+			tocadaAt: new Date(AHORA - VENTANA_SESION_RECIENTE_MS - 1).toISOString()
+		});
+		expect(sesionRecienteDeOtraFecha(pasada, '2026-08-28', AHORA)).toBe(false);
+	});
+
+	it('ignora sesiones sin sello y sellos imposibles', () => {
+		expect(sesionRecienteDeOtraFecha(base({ tocadaAt: undefined }), '2026-08-28', AHORA)).toBe(
+			false
+		);
+		expect(sesionRecienteDeOtraFecha(base({ tocadaAt: 'ayer' }), '2026-08-28', AHORA)).toBe(false);
+		// Reloj movido a mano hacia adelante: no habilita nada.
+		expect(
+			sesionRecienteDeOtraFecha(base({ tocadaAt: '2026-09-01T10:00:00Z' }), '2026-08-28', AHORA)
+		).toBe(false);
+	});
+
+	it('un día cerrado pasada la medianoche también se ofrece', () => {
+		expect(sesionRecienteDeOtraFecha(base({ diaTerminado: true }), '2026-08-28', AHORA)).toBe(true);
+	});
+});
+
+describe('sesionRecienteAOfrecer', () => {
+	const AHORA = Date.parse('2026-08-28T00:05:00Z');
+	const sesion = (fecha: string, exerciseId: string): Sesion => ({
+		id: `${fecha}__push`,
+		fecha,
+		diaId: 'push',
+		tocadaAt: `${fecha}T23:50:00Z`,
+		ejercicios: [{ exerciseId, sets: [{ hecha: true, reps: 10, peso: 80 }] }]
+	});
+
+	it('se queda con la más reciente y cuenta las series marcadas', () => {
+		const elegida = sesionRecienteAOfrecer(
+			[sesion('2026-08-26', 'press'), sesion('2026-08-27', 'press')],
+			'press',
+			'2026-08-28',
+			AHORA
+		);
+		expect(elegida).toEqual({ fecha: '2026-08-27', seriesHechas: 1, tieneEjercicio: true });
+	});
+
+	it('avisa cuando el ejercicio abierto no estuvo en esa sesión', () => {
+		const elegida = sesionRecienteAOfrecer(
+			[sesion('2026-08-27', 'press')],
+			'sentadilla',
+			'2026-08-28',
+			AHORA
+		);
+		expect(elegida?.tieneEjercicio).toBe(false);
+	});
+
+	it('sin candidatas devuelve null', () => {
+		expect(sesionRecienteAOfrecer([], 'press', '2026-08-28', AHORA)).toBeNull();
 	});
 });
