@@ -61,6 +61,9 @@ export default defineConfig({
 				'src/lib/peso-corporal.ts',
 				'src/lib/progresion.ts',
 				'src/lib/wake-lock.ts',
+				// Buscar versión nueva: si se rompe no se ve nada: la app simplemente se queda
+				// en un build viejo para siempre, que es la falla más silenciosa que hay acá.
+				'src/lib/actualizacion.ts',
 				// Entrada numérica y búsqueda del catálogo: lógica pura que antes vivía
 				// duplicada dentro de los componentes, sin forma de testearla.
 				'src/lib/numeros.ts',

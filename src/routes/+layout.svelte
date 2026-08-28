@@ -18,6 +18,7 @@
 	import { iniciarPresion } from '$lib/presion';
 	import { limpiarArrastreHuerfano } from '$lib/dnd-safety';
 	import { escucharReemplazosDatos } from '$lib/revision-datos';
+	import { buscadorDeVersion } from '$lib/actualizacion';
 
 	let { children } = $props();
 
@@ -65,7 +66,6 @@
 	// Actualización de la app: el service worker nuevo queda esperando y avisamos acá.
 	// Nunca durante el entrenamiento — recargar a mitad de una serie es justo lo que
 	// el manifiesto pide no hacer; el aviso espera a que salgas del ejercicio.
-	let registroSW: ServiceWorkerRegistration | undefined;
 	/**
 	 * El service worker nuevo puede activarse sin que lo pidamos en ESTA pantalla: alcanza
 	 * con que otro cliente —la app instalada y una pestaña del navegador conviven, es la
@@ -77,7 +77,7 @@
 	let recargaPendiente = $state(false);
 	const { needRefresh, updateServiceWorker } = useRegisterSW({
 		onRegisteredSW(_url, registro) {
-			registroSW = registro;
+			buscadorDeVersion.registrar(registro);
 		},
 		// Definirlo es lo que evita el `location.reload()` propio del plugin. Decidimos acá.
 		onNeedReload() {
@@ -112,21 +112,15 @@
 	// deploy podía tardar días en aparecer. Buscar acá NO activa nada — deja el
 	// service worker nuevo esperando y el cambio de versión sigue dependiendo del
 	// botón "Actualizar", así que es seguro aunque estés a mitad de una serie.
-	const ESPERA_MIN_CHEQUEO_MS = 60_000;
 	const INTERVALO_CHEQUEO_MS = 30 * 60_000;
-	let ultimoChequeo = 0;
 
 	function buscarVersionNueva() {
 		// Entrenando no chequeamos: el aviso está tapado igual y la instalación se
 		// baja el shell nuevo justo donde la conexión del gym menos ayuda.
-		if (!registroSW || entrenando || navigator.onLine === false) return;
-		// Volver al frente varias veces seguidas no debe disparar una request cada vez.
-		const ahora = Date.now();
-		if (ahora - ultimoChequeo < ESPERA_MIN_CHEQUEO_MS) return;
-		ultimoChequeo = ahora;
-		// Sin red o con el sw.js caído update() rechaza; no hay nada que hacer salvo
-		// esperar al próximo chequeo.
-		void registroSW.update().catch(() => {});
+		// El piso entre chequeos, la falta de red y los rechazos los maneja el buscador;
+		// acá no hay nada que hacer con el resultado salvo esperar al próximo.
+		if (entrenando) return;
+		void buscadorDeVersion.buscar();
 	}
 
 	async function actualizar() {
