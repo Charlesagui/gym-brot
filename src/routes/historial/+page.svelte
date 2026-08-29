@@ -14,6 +14,7 @@
 	import { scale } from 'svelte/transition';
 	import { dur } from '$lib/motion';
 	import { popOnChange } from '$lib/pop-on-change';
+	import { COLORES_INTENSIDAD, TINTA_INTENSIDAD } from '$lib/escala-intensidad';
 	import { ETIQUETAS_NIVEL, nivelActividad } from '$lib/heatmap';
 	import { UMBRAL_DIA_COMPLETO } from '$lib/sesion-reglas';
 
@@ -55,11 +56,18 @@
 	const semanas = $derived(historial.semanas.slice(0, 8));
 
 	/**
-	 * Fondo por intensidad con el número del día siempre en blanco. El tope es 0,55:
-	 * más alfa de `--exito` sobre `--surface` deja el texto por debajo de 4,5:1, que es
-	 * justo lo que la app ya respeta en el resto de las cifras.
+	 * El relleno del día entrenado sale de la escala compartida de la pantalla: el mapa
+	 * corporal de más abajo usa exactamente estos cinco colores. Antes eran cinco alfas
+	 * de `--exito` que se cortaban en 0,55 —hasta donde el número blanco aguantaba
+	 * 4,5:1—, así que la misma pantalla tenía dos verdes distintos queriendo decir lo
+	 * mismo, y el de acá no podía llegar al verde de logro.
+	 *
+	 * Ahora la tinta viene declarada con el color, y los dos pasos claros se escriben con
+	 * la tinta oscura de la app en vez de blanco: el número queda en 4,5:1 o mejor en los
+	 * cinco pasos y la escala llega entera hasta `--exito`.
 	 */
-	const ALFA_NIVEL = [0, 0.14, 0.26, 0.4, 0.55] as const;
+	const relleno = (nivel: number) => COLORES_INTENSIDAD[nivel]!;
+	const tinta = (nivel: number) => TINTA_INTENSIDAD[nivel]!;
 	// Paginación: los récords viejos siempre son alcanzables.
 	let recordsVisibles = $state(10);
 
@@ -320,12 +328,11 @@
 							href={`/historial/dia/${fecha}`}
 							in:scale={fecha === hoy ? { duration: dur(240), start: 0.7 } : { duration: 0 }}
 							class="grid min-h-11 min-w-11 place-items-center rounded-lg border text-[11px] font-bold"
-							style="background: {parcial
-								? 'transparent'
-								: `rgb(var(--exito) / ${ALFA_NIVEL[nivel]})`}; border-color: rgb(var(--exito) / {fecha ===
-							hoy
-								? '.9'
-								: '.42'}); color: {parcial ? 'rgb(var(--exito))' : 'white'}"
+							style="background: {parcial ? 'transparent' : relleno(nivel)}; border-color: {parcial
+								? `rgb(var(--exito) / ${fecha === hoy ? '.9' : '.5'})`
+								: `rgb(${tinta(nivel)} / ${fecha === hoy ? '.9' : '.28'})`}; color: {parcial
+								? 'rgb(var(--exito))'
+								: `rgb(${tinta(nivel)})`}"
 							aria-label={`${fechaCorta(fecha)}: ${parcial ? 'día parcial, ' : ''}${dia.sets} ${
 								dia.sets === 1 ? 'serie completada' : 'series completadas'
 							}${dia.seriesPlan != null ? ` de ${dia.seriesPlan} planeadas` : ''}${
@@ -391,9 +398,7 @@
 				{#each ETIQUETAS_NIVEL as etiqueta, nivel (nivel)}
 					<span
 						class="size-3 rounded-[3px] border"
-						style={nivel === 0
-							? 'background: rgba(255,255,255,.035); border-color: rgba(255,255,255,.08)'
-							: `background: rgb(var(--exito) / ${ALFA_NIVEL[nivel]}); border-color: rgb(var(--exito) / .5)`}
+						style={`background: ${relleno(nivel)}; border-color: rgb(${tinta(nivel)} / .28)`}
 						title={etiqueta}
 					></span>
 				{/each}

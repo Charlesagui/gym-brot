@@ -2,11 +2,17 @@ import { describe, expect, it } from 'vitest';
 import type { Sesion } from './db';
 import { catalogo } from './catalog';
 import { MUSCULOS_COMPACTOS } from './data/exercise-muscles';
+import { COLORES_INTENSIDAD } from './escala-intensidad';
 import {
+	colorCarga,
+	CORTES_CARGA,
 	crearDistribucionMuscular,
+	ETIQUETAS_CARGA,
 	intensidadMuscular,
 	METADATA_MUSCULAR,
+	nivelCarga,
 	porSemana,
+	ROTULOS_CARGA,
 	SERIES_SEMANA_LLENO,
 	type MetadataMuscular
 } from './musculos';
@@ -239,5 +245,44 @@ describe('escala absoluta del mapa', () => {
 			}
 		);
 		expect(intensidades).toEqual([0.25, 0.5, 0.75, 1]);
+	});
+});
+
+describe('escalones de color del mapa', () => {
+	it('los cortes caen donde dice la leyenda', () => {
+		expect(CORTES_CARGA).toEqual([5, 10, 15]);
+		expect(nivelCarga(0, 1)).toBe(0);
+		expect(nivelCarga(0.4, 1)).toBe(1);
+		expect(nivelCarga(4.9, 1)).toBe(1);
+		expect(nivelCarga(5, 1)).toBe(2);
+		expect(nivelCarga(9.9, 1)).toBe(2);
+		expect(nivelCarga(10, 1)).toBe(3);
+		expect(nivelCarga(15, 1)).toBe(4);
+		expect(nivelCarga(SERIES_SEMANA_LLENO * 3, 1)).toBe(4);
+	});
+
+	it('el escalón no depende del período, sólo del ritmo semanal', () => {
+		expect(nivelCarga(12, 1)).toBe(nivelCarga(48, 4));
+		expect(nivelCarga(12, 1)).toBe(nivelCarga(144, 12));
+	});
+
+	it('la leyenda deriva de los mismos cortes, sin huecos ni sobrantes', () => {
+		expect(ETIQUETAS_CARGA).toHaveLength(COLORES_INTENSIDAD.length);
+		expect(ROTULOS_CARGA).toHaveLength(COLORES_INTENSIDAD.length);
+		expect(ETIQUETAS_CARGA).toEqual([
+			'sin series',
+			'menos de 5',
+			'5 o más',
+			'10 o más',
+			'15 o más'
+		]);
+		expect(ROTULOS_CARGA).toEqual(['0', '<5', '5', '10', '15+']);
+	});
+
+	it('el color que pinta es el del escalón en el que cayó la cifra que se muestra', () => {
+		// 47 series en 4 semanas son 11,8 por semana: lo que dice la lista y lo que pinta el
+		// dibujo tienen que salir del mismo redondeo.
+		expect(porSemana(47, 4)).toBe(11.8);
+		expect(colorCarga(47, 4)).toBe(COLORES_INTENSIDAD[3]);
 	});
 });
