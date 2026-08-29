@@ -28,7 +28,7 @@
 	let videoInteractivo = $state(false);
 
 	const panelStyle = $derived(
-		`background: radial-gradient(140% 100% at 50% 0%, rgb(${glow} / 0.14), transparent 60%), var(--surface); max-height: calc(100dvh - 3rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)); padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); transform: translate3d(0, ${arrastreY}px, 0); transition: ${arrastrando ? 'none' : 'transform 160ms ease-out'}`
+		`background: radial-gradient(140% 100% at 50% 0%, rgb(${glow} / 0.14), transparent 60%), var(--surface); max-height: calc(100dvh - 3rem - var(--safe-top) - var(--safe-bottom)); padding-bottom: calc(1.25rem + var(--safe-bottom)); transform: translate3d(0, ${arrastreY}px, 0); transition: ${arrastrando ? 'none' : 'transform 160ms ease-out'}`
 	);
 
 	function iniciarArrastre(e: PointerEvent) {
@@ -93,7 +93,7 @@
 <div
 	use:modal={{ onClose, focoInicial: '[data-tecnica-cerrar]' }}
 	class="fixed inset-0 z-[70] flex items-center justify-center px-4 sm:px-5"
-	style="padding-top: calc(1.5rem + env(safe-area-inset-top)); padding-bottom: calc(1.5rem + env(safe-area-inset-bottom))"
+	style="padding-top: calc(1.5rem + var(--safe-top)); padding-bottom: calc(1.5rem + var(--safe-bottom))"
 	role="dialog"
 	aria-modal="true"
 	aria-labelledby={tituloId}

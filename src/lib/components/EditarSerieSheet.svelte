@@ -159,7 +159,7 @@
 		aria-modal="true"
 		aria-label="Editar serie histórica"
 		class="absolute inset-x-0 bottom-0 mx-auto max-w-md rounded-t-3xl border-t border-white/10 px-5 pt-3"
-		style="background: var(--surface); padding-bottom: calc(1.25rem + env(safe-area-inset-bottom))"
+		style="background: var(--surface); padding-bottom: calc(1.25rem + var(--safe-bottom))"
 	>
 		<div class="mx-auto h-1 w-10 rounded-full bg-white/15"></div>
 		<div class="mt-3 flex items-center justify-between gap-3">

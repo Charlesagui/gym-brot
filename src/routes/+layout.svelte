@@ -22,6 +22,7 @@
 	import { iniciarPresion } from '$lib/presion';
 	import { limpiarArrastreHuerfano } from '$lib/dnd-safety';
 	import { escucharReemplazosDatos } from '$lib/revision-datos';
+	import { buscadorDeVersion } from '$lib/actualizacion';
 
 	let { children } = $props();
 
@@ -69,7 +70,6 @@
 	// Actualización de la app: el service worker nuevo queda esperando y avisamos acá.
 	// Nunca durante el entrenamiento — recargar a mitad de una serie es justo lo que
 	// el manifiesto pide no hacer; el aviso espera a que salgas del ejercicio.
-	let registroSW: ServiceWorkerRegistration | undefined;
 	/**
 	 * El service worker nuevo puede activarse sin que lo pidamos en ESTA pantalla: alcanza
 	 * con que otro cliente —la app instalada y una pestaña del navegador conviven, es la
@@ -81,7 +81,7 @@
 	let recargaPendiente = $state(false);
 	const { needRefresh, updateServiceWorker } = useRegisterSW({
 		onRegisteredSW(_url, registro) {
-			registroSW = registro;
+			buscadorDeVersion.registrar(registro);
 		},
 		// Definirlo es lo que evita el `location.reload()` propio del plugin. Decidimos acá.
 		onNeedReload() {
@@ -116,21 +116,15 @@
 	// deploy podía tardar días en aparecer. Buscar acá NO activa nada — deja el
 	// service worker nuevo esperando y el cambio de versión sigue dependiendo del
 	// botón "Actualizar", así que es seguro aunque estés a mitad de una serie.
-	const ESPERA_MIN_CHEQUEO_MS = 60_000;
 	const INTERVALO_CHEQUEO_MS = 30 * 60_000;
-	let ultimoChequeo = 0;
 
 	function buscarVersionNueva() {
 		// Entrenando no chequeamos: el aviso está tapado igual y la instalación se
 		// baja el shell nuevo justo donde la conexión del gym menos ayuda.
-		if (!registroSW || entrenando || navigator.onLine === false) return;
-		// Volver al frente varias veces seguidas no debe disparar una request cada vez.
-		const ahora = Date.now();
-		if (ahora - ultimoChequeo < ESPERA_MIN_CHEQUEO_MS) return;
-		ultimoChequeo = ahora;
-		// Sin red o con el sw.js caído update() rechaza; no hay nada que hacer salvo
-		// esperar al próximo chequeo.
-		void registroSW.update().catch(() => {});
+		// El piso entre chequeos, la falta de red y los rechazos los maneja el buscador;
+		// acá no hay nada que hacer con el resultado salvo esperar al próximo.
+		if (entrenando) return;
+		void buscadorDeVersion.buscar();
 	}
 
 	async function actualizar() {
@@ -157,6 +151,11 @@
 	// pasa por un único estado recuperable y ninguna pantalla puede quedar colgada
 	// con su propio spinner si la apertura se traba.
 	let dbLista = $state(false);
+	// El hueco de abajo se reserva sólo cuando el nav se dibuja de verdad (mismo
+	// predicado que su `{#if}`). Antes la reserva miraba únicamente `sinNav`, así que
+	// las pantallas de error y de carga —que no muestran nav— arrastraban 5rem de vacío
+	// al final, y con el área segura pasaban a arrastrar 5rem + el inset.
+	const conNav = $derived(!sinNav && dbLista && !dbError);
 	// Apertura demorada (suele ser pasajero): aviso suave dentro de la carga.
 	let dbLenta = $state(false);
 	// Apertura BLOQUEADA: otra pestaña/ventana o la app instalada tiene tomada la
@@ -339,9 +338,21 @@
 	});
 </script>
 
-<div class="gb-shell mx-auto min-h-dvh max-w-md {sinNav ? '' : 'pb-20'}">
+<!--
+	El hueco que se le reserva al nav es su alto REAL: 64 px de contenido más el área
+	segura. Con `pb-20` fijo, en iPhone el nav (64 px + 34) se comía los últimos 18 px de
+	la página — en `/herramientas/discos`, que casi no tiene padding propio, eso es una
+	fila de botones debajo de la barra.
+-->
+<div
+	class="gb-shell mx-auto min-h-dvh max-w-md"
+	style={conNav ? 'padding-bottom: var(--gb-nav)' : ''}
+>
 	{#if dbError}
-		<main class="gb-page glow-bg grid min-h-dvh place-items-center px-5 py-10">
+		<main
+			class="gb-page glow-bg grid min-h-dvh place-items-center px-5 pb-10"
+			style="--gb-pt: 2.5rem"
+		>
 			<section
 				class="w-full rounded-2xl border border-white/10 p-5"
 				style="background: var(--surface)"
@@ -419,7 +430,10 @@
 			</section>
 		</main>
 	{:else if dbDesactualizada}
-		<main class="gb-page glow-bg grid min-h-dvh place-items-center px-5 py-10">
+		<main
+			class="gb-page glow-bg grid min-h-dvh place-items-center px-5 pb-10"
+			style="--gb-pt: 2.5rem"
+		>
 			<section
 				class="w-full rounded-2xl border border-white/10 p-5"
 				style="background: var(--surface)"
@@ -443,7 +457,10 @@
 			</section>
 		</main>
 	{:else if dbBloqueada}
-		<main class="gb-page glow-bg grid min-h-dvh place-items-center px-5 py-10">
+		<main
+			class="gb-page glow-bg grid min-h-dvh place-items-center px-5 pb-10"
+			style="--gb-pt: 2.5rem"
+		>
 			<section
 				class="w-full rounded-2xl border border-white/10 p-5"
 				style="background: var(--surface)"
@@ -465,7 +482,7 @@
 			</section>
 		</main>
 	{:else if !dbLista}
-		<main class="gb-page glow-bg min-h-dvh px-5 py-10 text-center">
+		<main class="gb-page glow-bg min-h-dvh px-5 pb-10 text-center" style="--gb-pt: 2.5rem">
 			<div class="mx-auto w-full max-w-md">
 				<!-- Esqueleto con la silueta de la portada: la espera se lee como carga
 				     en curso y no como una pantalla que se quedó trabada. -->
@@ -492,7 +509,7 @@
 	{:else}
 		{@render children()}
 	{/if}
-	{#if !sinNav && dbLista && !dbError}
+	{#if conNav}
 		<BottomNav />
 	{/if}
 </div>
@@ -502,7 +519,7 @@
 {#if avisoArranque && dbLista}
 	<div
 		class="fixed inset-x-0 top-0 z-[88] mx-auto max-w-md px-5"
-		style="padding-top: calc(1rem + env(safe-area-inset-top))"
+		style="padding-top: calc(1rem + var(--safe-top))"
 		role="status"
 	>
 		<div
@@ -551,7 +568,7 @@
 {#if $errorDatos}
 	<div
 		class="fixed inset-x-0 top-0 z-[90] mx-auto max-w-md px-5"
-		style="padding-top: calc(1rem + env(safe-area-inset-top))"
+		style="padding-top: calc(1rem + var(--safe-top))"
 		role="alert"
 	>
 		<div
@@ -578,7 +595,7 @@
 {#if $needRefresh && !entrenando && dbLista}
 	<div
 		class="fixed inset-x-0 z-[85] mx-auto max-w-md px-5"
-		style="bottom: calc(72px + env(safe-area-inset-bottom))"
+		style="bottom: calc(72px + var(--safe-bottom))"
 		role="status"
 	>
 		<div

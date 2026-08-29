@@ -1236,7 +1236,9 @@
 	</main>
 {:else}
 	<main
-		class="gb-page gb-page--exercise min-h-dvh px-5 pb-28 pt-6 {diaId ? 'gb-page--training' : ''}"
+		class="gb-page gb-page--exercise px-5 pb-28 {diaId
+			? 'min-h-dvh gb-page--training'
+			: 'min-h-[calc(100dvh-var(--gb-nav))]'}"
 		style="background: radial-gradient(85% 42% at 50% 0%, rgb({g.glow} / 0.20), transparent 72%), var(--bg)"
 	>
 		<div class={diaId ? 'gb-exercise-layout' : ''}>
@@ -1869,7 +1871,7 @@
 						<div
 							transition:fly={{ y: 40, duration: dur(200) }}
 							class="gb-exercise-finish-bar fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md px-5 pt-6"
-							style="padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgb(var(--scrim) / .92) 55%)"
+							style="padding-bottom: calc(1.25rem + var(--safe-bottom)); background: linear-gradient(transparent, rgb(var(--scrim) / .92) 55%)"
 						>
 							{#if proximo && hrefProximo}
 								<button
@@ -2041,7 +2043,7 @@
 	{#if errorGuardado}
 		<div
 			class="fixed inset-x-0 bottom-0 z-[90] mx-auto max-w-md px-5"
-			style="padding-bottom: calc(1rem + env(safe-area-inset-bottom))"
+			style="padding-bottom: calc(1rem + var(--safe-bottom))"
 			role="alert"
 		>
 			<div
