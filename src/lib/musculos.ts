@@ -1,5 +1,6 @@
 import { liveQuery } from 'dexie';
 import { catalogo } from './catalog';
+import { COLORES_INTENSIDAD, type NivelIntensidad } from './escala-intensidad';
 import { MUSCULOS_COMPACTOS } from './data/exercise-muscles';
 import { db, type Sesion } from './db';
 import { serieCompleta } from './sesion-reglas';
@@ -111,7 +112,10 @@ export interface DistribucionMuscular {
 }
 
 /**
- * Series estimadas por semana con las que un músculo se pinta lleno.
+ * Techo de la escala del mapa: series estimadas por semana contra las que se mide todo.
+ *
+ * Los cinco escalones de color son sus cuartos (ver `nivelCarga`), así que ésta es
+ * la única constante que gobierna la escala y moverla mueve los cortes con ella.
  *
  * El color era relativo al músculo más cargado del período, y eso tenía tres
  * consecuencias que ninguna cifra de la pantalla desmentía:
@@ -126,16 +130,16 @@ export interface DistribucionMuscular {
  *   primero con 10 series directas y 11 asistencias de 0,4, por encima de los dorsales
  *   que tienen 14 directas. Todo lo demás se medía contra ese número inflado.
  *
- * Ahora la escala es fija: el verde lleno son 20 series estimadas por semana, y el
- * período sólo decide sobre cuánto tiempo se promedia. Eso hace que 1, 4 y 12 semanas
- * sean comparables entre sí —es la misma unidad— y que el dibujo se llene de verdad a
- * medida que se entrena.
+ * Ahora la escala es fija: 20 series estimadas por semana son el techo, y el período
+ * sólo decide sobre cuánto tiempo se promedia. Eso hace que 1, 4 y 12 semanas sean
+ * comparables entre sí —es la misma unidad— y que el dibujo se llene de verdad a medida
+ * que se entrena.
  *
- * El 20 no es una recomendación de dosis: es dónde termina la rampa. Se eligió porque es
- * el techo del rango que la literatura de hipertrofia maneja como semanal productivo
- * (~10 a 20 series por músculo), así que la mayoría de las semanas cae adentro de la
- * rampa en vez de saturarla. La app describe la escala al pie del mapa y no prescribe
- * nada: no mide fatiga ni recuperación.
+ * El 20 no es una recomendación de dosis: es dónde termina la escala. Se eligió porque
+ * es el techo del rango que la literatura de hipertrofia maneja como semanal productivo
+ * (~10 a 20 series por músculo), así que la mayoría de las semanas cae adentro en vez de
+ * saturarla. La app describe la escala al pie del mapa y no prescribe nada: no mide
+ * fatiga ni recuperación.
  */
 export const SERIES_SEMANA_LLENO = 20;
 
@@ -154,6 +158,69 @@ export function porSemana(seriesDelPeriodo: number, semanas: number): number {
 export function intensidadMuscular(seriesDelPeriodo: number, semanas: number): number {
 	return Math.min(1, Math.max(0, porSemana(seriesDelPeriodo, semanas) / SERIES_SEMANA_LLENO));
 }
+
+/**
+ * En qué escalón de la escala compartida cae un músculo. Los COLORES viven en
+ * `escala-intensidad.ts` porque el calendario de la misma pantalla usa los mismos; acá
+ * vive lo que es propio del mapa: que los cortes son los cuartos de la escala.
+ *
+ * Antes el relleno era un solo verde con la opacidad variando de 0,18 a 0,96, y eso
+ * fallaba por tres lados a la vez:
+ *
+ * - Un historial normal no recorría la escala. Un músculo real recibe entre 3 y 12
+ *   series por semana, así que casi todo el cuerpo caía en el primer tercio: con tres
+ *   sesiones cargadas, los dieciocho músculos quedaban entre alfa 0,20 y 0,32, que son
+ *   1,4:1 de contraste entre el más y el menos entrenado. WCAG pide 3:1 para que dos
+ *   elementos gráficos se distingan. Se veía todo del mismo verde porque era, a efectos
+ *   prácticos, el mismo verde.
+ * - Lo no entrenado también era verde, al 7 %, así que la silueta arrancaba teñida
+ *   entera y entre "nunca lo toqué" y "lo toqué poco" no había cambio de tono.
+ * - Un paso de una serie por semana movía el alfa cuatro centésimas: 1,1:1. Sobre zonas
+ *   que no están una al lado de la otra —y que en un teléfono miden 10 px de alto— eso
+ *   no es una diferencia, es ruido.
+ *
+ * Cinco escalones lo arreglan porque dieciocho manchas chicas y separadas no se leen
+ * como un degradado: se leen como categorías.
+ */
+/** Series por semana donde empieza cada escalón con carga: 5, 10 y 15. */
+export const CORTES_CARGA = [1, 2, 3].map((cuarto) => (SERIES_SEMANA_LLENO / 4) * cuarto);
+
+/**
+ * En qué escalón cae un músculo. Se apoya en `intensidadMuscular` a propósito: la
+ * escala se define una sola vez, y los escalones son cuartos de esa misma escala.
+ */
+export function nivelCarga(seriesDelPeriodo: number, semanas: number): NivelIntensidad {
+	const intensidad = intensidadMuscular(seriesDelPeriodo, semanas);
+	if (intensidad <= 0) return 0;
+	return Math.min(4, Math.floor(intensidad * 4) + 1) as NivelIntensidad;
+}
+
+export function colorCarga(seriesDelPeriodo: number, semanas: number): string {
+	return COLORES_INTENSIDAD[nivelCarga(seriesDelPeriodo, semanas)]!;
+}
+
+/**
+ * Rótulos de la leyenda, derivados de los mismos cortes que `nivelCarga`.
+ *
+ * Van como umbrales acumulativos ("5 o más") y no como rangos ("5 a 9"), porque un
+ * rango con extremos redondos miente: la cifra viene con un decimal, así que 9,6
+ * entraría en el escalón rotulado "5 a 9". El umbral describe exactamente lo que hace
+ * el código.
+ */
+export const ETIQUETAS_CARGA: string[] = [
+	'sin series',
+	`menos de ${CORTES_CARGA[0]}`,
+	...CORTES_CARGA.map((corte) => `${corte} o más`)
+];
+
+/** Lo que se imprime debajo de cada bloque de la leyenda: el piso de ese escalón. */
+export const ROTULOS_CARGA: string[] = [
+	'0',
+	`<${CORTES_CARGA[0]}`,
+	`${CORTES_CARGA[0]}`,
+	`${CORTES_CARGA[1]}`,
+	`${CORTES_CARGA[2]}+`
+];
 
 function sumarDias(fecha: string, delta: number): string {
 	const date = new Date(`${fecha}T12:00:00`);

@@ -4,14 +4,16 @@
 	import { formatoNumero } from '$lib/formato';
 	import { estadoLiveQuery } from '$lib/live';
 	import { musculoMasCercano, type CajaMuscular } from '$lib/mapa-tactil';
+	import { COLORES_INTENSIDAD } from '$lib/escala-intensidad';
 	import {
+		colorCarga,
 		crearDistribucionMuscular,
 		desdeDistribucion,
 		distribucionMuscularObs,
-		intensidadMuscular,
+		ETIQUETAS_CARGA,
 		MUSCULOS,
+		ROTULOS_CARGA,
 		porSemana,
-		SERIES_SEMANA_LLENO,
 		type DistribucionMuscular,
 		type MusculoMapa
 	} from '$lib/musculos';
@@ -68,9 +70,9 @@
 		)
 	);
 
-	function intensidad(musculo: MusculoMapa | undefined): number {
-		if (!musculo) return 0;
-		return intensidadMuscular(porMusculo.get(musculo)?.seriesEstimadas ?? 0, semanas);
+	/** El relleno de una zona: el escalón en el que cayó, no una opacidad. */
+	function relleno(musculo: MusculoMapa): string {
+		return colorCarga(porMusculo.get(musculo)?.seriesEstimadas ?? 0, semanas);
 	}
 
 	/** Toda cifra del mapa va en la misma unidad que pinta el dibujo. */
@@ -286,7 +288,6 @@
 					>
 						{#each cuerpo.zones as zona (zona.slug)}
 							{@const musculo = geometriaAMusculo.get(zona.slug)}
-							{@const carga = musculo ? porMusculo.get(musculo) : undefined}
 							{#if musculo}
 								<g
 									data-musculo={musculo}
@@ -296,10 +297,7 @@
 								>
 									<title>{etiqueta(musculo)}</title>
 									{#each zona.paths as path}
-										<path
-											d={path}
-											style={`fill: rgb(var(--exito) / ${carga ? 0.18 + intensidad(musculo) * 0.78 : 0.07})`}
-										/>
+										<path d={path} style={`fill: ${relleno(musculo)}`} />
 									{/each}
 								</g>
 							{:else}
@@ -313,6 +311,35 @@
 					</svg>
 				</div>
 			{/each}
+		</div>
+
+		<!--
+			La leyenda, fija y pegada al dibujo.
+
+			Antes vivía DENTRO del hueco del detalle, así que desaparecía al seleccionar un
+			músculo: la referencia de qué significa cada color se iba justo en el momento en
+			que alguien estaba mirando un color y preguntándose qué significaba. Y era un
+			gradiente continuo con los dos extremos rotulados, que decía dónde empieza y dónde
+			termina la escala pero no dónde caen los saltos.
+		-->
+		<div
+			class="mt-2 flex items-center gap-2"
+			role="img"
+			aria-label={`Escala del color, en series estimadas por semana: ${ETIQUETAS_CARGA.join('; ')}.`}
+		>
+			<div class="flex flex-1 gap-1">
+				{#each COLORES_INTENSIDAD as color, nivel (nivel)}
+					<div class="flex-1">
+						<div class="h-3 rounded-[3px]" style={`background: ${color}`}></div>
+						<p class="cifra mt-1 text-center text-[10px]" style="color: var(--muted)">
+							{ROTULOS_CARGA[nivel]}
+						</p>
+					</div>
+				{/each}
+			</div>
+			<p class="w-[5.5rem] shrink-0 text-[10px] leading-tight" style="color: var(--muted)">
+				series por semana
+			</p>
 		</div>
 
 		<!--
@@ -352,24 +379,16 @@
 					<Icono nombre="cerrar" tamano={18} />
 				</button>
 			{:else}
-				<!-- Con escala relativa la leyenda sobraba: el más verde era el máximo y listo.
-				     Con escala fija el verde afirma una cantidad, así que hay que decir cuál —y
-				     este hueco ya estaba reservado, mostrando nada más que una pista. -->
-				<div class="min-w-0 flex-1">
-					<p class="text-xs" style="color: var(--muted)">
-						Tocá un músculo del dibujo o de la lista.
-					</p>
-					<div class="mt-2 flex items-center gap-2">
-						<span class="text-[10px]" style="color: var(--muted)">0</span>
-						<span
-							class="h-2 flex-1 rounded-full"
-							style="background: linear-gradient(90deg, rgb(var(--exito) / .18), rgb(var(--exito) / .96))"
-						></span>
-						<span class="text-[10px]" style="color: var(--muted)">
-							{SERIES_SEMANA_LLENO}+ series por semana
-						</span>
-					</div>
-				</div>
+				<!-- La leyenda se mudó acá arriba, a un lugar fijo. Este hueco vuelve a ser sólo
+				     lo que ya era: la única instrucción que el dibujo necesita, ocupando el
+				     espacio que el detalle va a usar para que nada salte al abrirlo.
+
+				     Centrada: sin la leyenda debajo, un renglón solo pegado a la izquierda de una
+				     caja de 84 px de alto se lee como un hueco que quedó sin llenar. Centrado se
+				     lee como lo que es, un cartel esperando que toques algo. -->
+				<p class="min-w-0 flex-1 text-center text-xs" style="color: var(--muted)">
+					Tocá un músculo del dibujo o de la lista.
+				</p>
 			{/if}
 		</div>
 
@@ -460,10 +479,10 @@
 	     abajo. No se sacó ninguna afirmación: se las juntó donde se leen las notas. -->
 	<p class="mt-3 text-[10px] leading-relaxed" style="color: var(--muted)">
 		1 serie al músculo principal y 0,4 a cada secundario, sólo sobre series completadas. El color es
-		una escala fija: el verde lleno son {SERIES_SEMANA_LLENO} series estimadas por semana, y el período
-		sólo cambia sobre cuánto tiempo se promedia. Estima distribución, no mide fatiga, recuperación ni
-		activación médica. Silueta anatómica única, no personalizada por sexo o género. Geometría MuscleMap
-		© 2026 Melih Colpan, MIT.
+		una escala fija de cinco escalones —{ETIQUETAS_CARGA.join(', ')}— y el período sólo cambia sobre
+		cuánto tiempo se promedia, así que el mismo ritmo semanal pinta igual en 1, 4 o 12 semanas.
+		Estima distribución, no mide fatiga, recuperación ni activación médica. Silueta anatómica única,
+		no personalizada por sexo o género. Geometría MuscleMap © 2026 Melih Colpan, MIT.
 	</p>
 </section>
 
