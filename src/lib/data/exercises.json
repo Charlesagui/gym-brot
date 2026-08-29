@@ -5217,6 +5217,7 @@
 	},
 	{
 		"id": "hyght-dumbbell-fly",
+		"equipo": "mancuerna",
 		"nombre": "Apertura alta con mancuernas",
 		"grupo": "pecho",
 		"musculo": "Pectoral superior",
