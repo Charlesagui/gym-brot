@@ -39,8 +39,9 @@
 		estadoNotificaciones,
 		explicacionAlarma,
 		pedirNotificaciones,
-		soportaWakeLock,
-		type EstadoPermiso
+		probarWakeLock,
+		type EstadoPermiso,
+		type EstadoWakeLock
 	} from '$lib/permisos';
 	import {
 		borrarVideosGuardados,
@@ -75,12 +76,17 @@
 	} | null>(null);
 
 	let permisoNotif = $state<EstadoPermiso>('sin-soporte');
-	let hayWakeLock = $state(false);
+	let estadoWake = $state<EstadoWakeLock>('sin-soporte');
+	// El interruptor de la pantalla del ejercicio solo necesita saber si la API existe:
+	// un rechazo (ahorro de batería) es transitorio y no tiene que deshabilitarlo.
+	const hayWakeLock = $derived(estadoWake !== 'sin-soporte');
 
 	onMount(() => {
 		hayVibracion = vibracionSoportada();
 		permisoNotif = estadoNotificaciones();
-		hayWakeLock = soportaWakeLock();
+		// Un pedido de verdad, no solo mirar si la API existe: el sistema puede rechazarlo
+		// en silencio y hasta acá ese rechazo no se veía en ningún lado.
+		void probarWakeLock().then((estado) => (estadoWake = estado));
 		// Sin volver a PEDIR persistencia: eso ya lo hizo el arranque. Acá solo se refresca
 		// el veredicto, porque instalar la app suele convertir el origen en persistente y
 		// esa buena noticia tiene que verse sin recargar (ver $lib/persistencia).
@@ -382,13 +388,19 @@
 			</p>
 			<ul class="mt-3 flex flex-col gap-2 text-sm">
 				<li class="flex min-h-11 items-center gap-3">
-					<span style="color: {hayWakeLock ? 'rgb(var(--exito))' : 'rgb(var(--max))'}">
-						<Icono nombre={hayWakeLock ? 'hecha' : 'aviso'} tamano={18} />
+					<span
+						style="color: {estadoWake === 'concedido' ? 'rgb(var(--exito))' : 'rgb(var(--max))'}"
+					>
+						<Icono nombre={estadoWake === 'concedido' ? 'hecha' : 'aviso'} tamano={18} />
 					</span>
 					<span class="min-w-0 flex-1">
 						Pantalla encendida durante el descanso
 						<span class="block text-xs" style="color: var(--muted)">
-							{hayWakeLock ? 'Disponible en este navegador' : 'Este navegador no lo permite'}
+							{estadoWake === 'concedido'
+								? 'Recién probada: funciona en este teléfono'
+								: estadoWake === 'rechazado'
+									? 'El teléfono la rechazó: revisá el ahorro de batería'
+									: 'Este navegador no lo permite'}
 						</span>
 					</span>
 				</li>
@@ -427,7 +439,7 @@
 				</li>
 			</ul>
 			<p class="mt-2 text-xs leading-relaxed" style="color: var(--muted)">
-				{explicacionAlarma(permisoNotif, hayWakeLock)}
+				{explicacionAlarma(permisoNotif, estadoWake)}
 			</p>
 		</section>
 
