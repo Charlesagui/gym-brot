@@ -3,6 +3,7 @@ import {
 	estadoNotificaciones,
 	explicacionAlarma,
 	pedirNotificaciones,
+	probarWakeLock,
 	soportaWakeLock
 } from './permisos';
 
@@ -79,10 +80,37 @@ describe('permisos de la alarma', () => {
 		expect(soportaWakeLock()).toBe(true);
 	});
 
+	it('probarWakeLock distingue el rechazo de la falta de soporte', async () => {
+		vi.stubGlobal('navigator', {});
+		expect(await probarWakeLock()).toBe('sin-soporte');
+
+		const release = vi.fn(async () => {});
+		vi.stubGlobal('navigator', {
+			wakeLock: { request: vi.fn(async () => ({ released: false, release })) }
+		});
+		expect(await probarWakeLock()).toBe('concedido');
+		// La prueba no puede quedarse la pantalla: se suelta apenas se confirma.
+		expect(release).toHaveBeenCalledTimes(1);
+
+		vi.stubGlobal('navigator', {
+			wakeLock: { request: vi.fn(() => Promise.reject(new Error('ahorro de batería'))) }
+		});
+		expect(await probarWakeLock()).toBe('rechazado');
+	});
+
 	it('explica el peor caso sin prometer lo que no puede cumplir', () => {
-		expect(explicacionAlarma('bloqueado', false)).toContain('sin que te enteres');
-		expect(explicacionAlarma('concedido', true)).toContain('notificación');
-		expect(explicacionAlarma('concedido', false)).toContain('no puede mantener la pantalla');
-		expect(explicacionAlarma('sin-pedir', true)).toContain('pantalla se mantiene encendida');
+		expect(explicacionAlarma('bloqueado', 'sin-soporte')).toContain('sin que te enteres');
+		expect(explicacionAlarma('concedido', 'concedido')).toContain('notificación');
+		expect(explicacionAlarma('concedido', 'sin-soporte')).toContain(
+			'no puede mantener la pantalla'
+		);
+		expect(explicacionAlarma('sin-pedir', 'concedido')).toContain('pantalla se mantiene encendida');
+	});
+
+	it('un wake lock rechazado se dice, con la pista y lo que queda en pie', () => {
+		expect(explicacionAlarma('concedido', 'rechazado')).toContain('rechazó');
+		expect(explicacionAlarma('concedido', 'rechazado')).toContain('ahorro de batería');
+		expect(explicacionAlarma('concedido', 'rechazado')).toContain('notificación');
+		expect(explicacionAlarma('sin-pedir', 'rechazado')).toContain('sin que te enteres');
 	});
 });
