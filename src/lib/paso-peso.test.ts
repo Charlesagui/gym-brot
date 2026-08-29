@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Ejercicio } from './catalog';
+import { ejercicioPorId, type Ejercicio } from './catalog';
 import { AJUSTES_DEFAULT } from './extras';
 import { pasoPesoAutomatico, pasoPesoEfectivo } from './paso-peso';
 
@@ -18,6 +18,14 @@ describe('paso de peso por ejercicio', () => {
 		expect(
 			pasoPesoAutomatico({ ...mancuerna, id: 'press', equipo: 'barra' }, AJUSTES_DEFAULT)
 		).toBe(5);
+	});
+
+	it('la apertura alta con mancuernas sube igual que cualquier mancuerna', () => {
+		const apertura = ejercicioPorId('hyght-dumbbell-fly');
+		expect(apertura, 'el ejercicio deberia estar en el catalogo').toBeDefined();
+		expect(pasoPesoEfectivo(apertura!, AJUSTES_DEFAULT)).toBe(
+			pasoPesoAutomatico(mancuerna, AJUSTES_DEFAULT)
+		);
 	});
 
 	it('usa una preferencia del ejercicio sin tocar la global', () => {

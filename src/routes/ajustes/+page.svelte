@@ -54,6 +54,7 @@
 	import { persistencia, refrescarPersistencia } from '$lib/persistencia';
 	import { descargarJSON, nombreBackup } from '$lib/descarga';
 	import { descanso } from '$lib/descanso.svelte';
+	import { buscadorDeVersion, type ResultadoChequeo } from '$lib/actualizacion';
 	import { onMount } from 'svelte';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
 
@@ -80,6 +81,46 @@
 	// El interruptor de la pantalla del ejercicio solo necesita saber si la API existe:
 	// un rechazo (ahorro de batería) es transitorio y no tiene que deshabilitarlo.
 	const hayWakeLock = $derived(estadoWake !== 'sin-soporte');
+
+	/**
+	 * El cartel de "hay versión nueva" depende del chequeo de fondo, que respeta un piso
+	 * de 60 s entre consultas. Justo después de publicar, ese piso es lo que hace creer
+	 * que la versión no salió: acá se pregunta a mano y sin esperar. Preguntar no aplica
+	 * nada — la versión nueva queda esperando y se aplica desde el cartel, como siempre.
+	 */
+	let buscandoVersion = $state(false);
+	let versionMsg = $state('');
+
+	function respuestaChequeo(resultado: ResultadoChequeo): string {
+		switch (resultado) {
+			case 'hay-version':
+				// El cartel se esconde mientras descansás, así que prometer un botón que no
+				// está en pantalla sería mentir.
+				return descanso.restoSeg > 0 || descanso.vencido
+					? 'Hay una versión nueva. Se ofrece al terminar el descanso.'
+					: 'Hay una versión nueva: tocá «Actualizar» en el cartel de abajo.';
+			case 'al-dia':
+				return 'Ya tenés la última versión.';
+			case 'sin-red':
+				return 'Sin conexión. Probá cuando vuelvas a tener red.';
+			case 'sin-registro':
+				return 'Esta pestaña todavía no registró la app. Recargá y probá de nuevo.';
+			// Forzando no hay piso que esperar, pero el tipo lo contempla igual.
+			case 'demasiado-pronto':
+			case 'error':
+				return 'No se pudo consultar. Probá de nuevo en un rato.';
+		}
+	}
+
+	async function buscarActualizacion() {
+		buscandoVersion = true;
+		versionMsg = '';
+		try {
+			versionMsg = respuestaChequeo(await buscadorDeVersion.buscar({ forzar: true }));
+		} finally {
+			buscandoVersion = false;
+		}
+	}
 
 	onMount(() => {
 		hayVibracion = vibracionSoportada();
@@ -333,7 +374,7 @@
 	}
 </script>
 
-<main class="gb-page glow-bg min-h-[calc(100dvh-5rem)] px-5 pb-28 pt-6">
+<main class="gb-page glow-bg min-h-[calc(100dvh-var(--gb-nav))] px-5 pb-28">
 	<header class="mb-6 flex items-center gap-3">
 		<a
 			href="/"
@@ -876,6 +917,22 @@
 		>
 			Versión {__APP_COMMIT__}
 		</p>
+		<button
+			onclick={buscarActualizacion}
+			disabled={buscandoVersion}
+			class="mx-auto mt-3 flex min-h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-sm font-semibold disabled:opacity-60"
+			style="color: var(--muted)">{buscandoVersion ? 'Buscando…' : 'Buscar actualización'}</button
+		>
+		{#if versionMsg}
+			<p
+				class="mx-auto mt-2 max-w-xs text-xs leading-relaxed"
+				style="color: var(--muted)"
+				role="status"
+				aria-live="polite"
+			>
+				{versionMsg}
+			</p>
+		{/if}
 	</section>
 </main>
 

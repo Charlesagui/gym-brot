@@ -150,8 +150,8 @@
 		/* El área segura se suma a la altura además de ir al padding. Con `box-sizing:
 		   border-box` un `height` fijo la descontaba del contenido: en un iPhone con
 		   indicador de home, los 34 px salían de los ítems y la barra quedaba aplastada. */
-		height: calc(64px + env(safe-area-inset-bottom, 0px));
-		padding-bottom: env(safe-area-inset-bottom, 0px);
+		height: calc(64px + var(--safe-bottom));
+		padding-bottom: var(--safe-bottom);
 		background: color-mix(in oklab, var(--surface) 92%, transparent);
 		backdrop-filter: blur(14px);
 		-webkit-backdrop-filter: blur(14px);
@@ -233,7 +233,7 @@
 	@media (orientation: landscape) and (max-height: 520px) {
 		.bottom-nav {
 			max-width: min(100vw, 64rem);
-			height: calc(52px + env(safe-area-inset-bottom, 0px));
+			height: calc(52px + var(--safe-bottom));
 		}
 
 		.nav-item {
