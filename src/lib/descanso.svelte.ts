@@ -511,10 +511,12 @@ class Descanso {
 				tag: NOTIF_TAG,
 				icon: '/icons/icon-192.png',
 				badge: '/icons/icon-192.png',
-				// La API web no permite separar de forma portable sonido y vibración de
-				// una notificación. Si cualquiera de las dos preferencias está apagada,
-				// se prioriza no sorprender al usuario con una señal del sistema.
-				silent: !this.#sonido || !this.#vibracion
+				// `silent` apaga sonido y vibración juntos: la API web no permite
+				// separarlos de forma portable. Acá manda solo la preferencia de sonido;
+				// atarlo también a la vibración hacía que tenerla apagada dejara muda la
+				// única señal que sobrevive con la pantalla bloqueada, aun con el sonido
+				// prendido.
+				silent: !this.#sonido
 			});
 		} catch {
 			// Sin service worker (dev) o sin permiso: la señal visual/sonora sigue.
