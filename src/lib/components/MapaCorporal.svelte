@@ -488,8 +488,30 @@
 
 <style>
 	g path {
-		stroke: rgba(255, 255, 255, 0.1);
-		stroke-width: 2;
+		/*
+		 * Un píxel y no dos, con un poco más de tinta para compensar.
+		 *
+		 * El borde no escala con el dibujo, así que su costo lo paga cada trazo según lo
+		 * fino que sea, y varios son finísimos: medidos trazo por trazo en un teléfono, el
+		 * tríceps de espalda tiene uno de 4 px de grosor, los oblicuos de 4,3 y el serrato
+		 * de 5,3. Con 2 px de borde —1 px visible de cada lado— el contorno era un tercio
+		 * de la altura de esas formas, y siendo más claro que todo lo demás las lavaba:
+		 * el serrato y los oblicuos se leían como un enrejado blanco en vez de como
+		 * músculos, y el color que los tenía que describir quedaba de relleno.
+		 *
+		 * No se resolvió marcando "zonas finas" porque no existen: el grosor va de 4 a
+		 * 34 px en un continuo, y hay trazos finos DENTRO de zonas gruesas —los aductores
+		 * del frente tienen uno de 6,6 px y otros de 17,7—, así que cualquier corte por
+		 * zona dejaba afuera justo los casos que lo motivaban.
+		 *
+		 * Sacarlo del todo tampoco: sin borde, los músculos sin entrenar se pierden contra
+		 * la tarjeta —su relleno está a 1,16:1 del fondo, el contorno es lo único que los
+		 * dibuja— y dos trazos vecinos del mismo escalón se funden en una mancha sola.
+		 * Con 1 px a 0,14 el borde emite un 30 % menos de luz que antes y las dos cosas
+		 * que hacía se siguen viendo.
+		 */
+		stroke: rgba(255, 255, 255, 0.14);
+		stroke-width: 1;
 		vector-effect: non-scaling-stroke;
 		/*
 		 * El borde se pinta ANTES del relleno, así que sólo se ve su mitad de afuera.
@@ -510,14 +532,27 @@
 	 * cada uno lleva su propio borde, así que los bordes de los trazos vecinos se tocan y
 	 * rellenan de blanco los huecos que los separan: con 7 px, la pierna elegida dejaba de
 	 * leerse como músculo y pasaba a ser un resplandor.
+	 *
+	 * Con 4 pasaba lo mismo, sólo que en los músculos finos y por eso costaba verlo: los
+	 * oblicuos elegidos —trazos de 4,3 px— quedaban blancos enteros, sin nada de relleno
+	 * adentro. Bajados a 3 y 2 el contorno sigue mandando sobre el borde en reposo, que es
+	 * 1, y en la mayoría de los músculos el color vuelve a verse dentro del contorno.
+	 *
+	 * En los más finos —oblicuos y serrato, doce y seis trazos de 4 a 5 px— sigue tapando
+	 * casi todo, y ningún ancho que se note en el resto del cuerpo lo evita: el contorno
+	 * va por trazo y esos músculos son un peine de trazos. Para resolverlo de verdad
+	 * habría que contornear el GRUPO y no cada trazo (un filtro `feMorphology` sobre el
+	 * `<g>`), que es bastante más máquina para un caso de dos músculos. Mientras tanto el
+	 * estado no depende sólo del contorno: al elegir se abre el detalle con el nombre y la
+	 * cifra, y la fila de la lista queda marcada.
 	 */
 	g.zona.presionada path {
 		stroke: rgba(255, 255, 255, 0.5);
-		stroke-width: 3;
+		stroke-width: 2;
 	}
 	g.zona.seleccionada path {
 		stroke: white;
-		stroke-width: 4;
+		stroke-width: 3;
 	}
 	/* Sólo con mouse: en un teléfono el `:hover` se queda pegado después del toque y
 	   dejaba un segundo músculo con pinta de elegido. */

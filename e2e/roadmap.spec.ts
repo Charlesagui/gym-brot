@@ -118,6 +118,15 @@ test('el mapa corporal comparte datos con la lista y responde a borrar historial
 	if (!caja) throw new Error('el cuádriceps no está dibujado');
 	await page.mouse.click(caja.x - 5, caja.y + caja.height / 2);
 	await expect(zona).toHaveClass(/seleccionada/);
+	// El contorno del músculo elegido crece, pero el de los demás no: el borde no escala
+	// con el dibujo, así que sobre los trazos más finos —4 px de grosor en un teléfono—
+	// cada píxel de más lava el color que tienen que mostrar. Ver el comentario en
+	// MapaCorporal.svelte.
+	const bordeEnReposo = await page
+		.locator('g[data-musculo="chest"] path')
+		.first()
+		.evaluate((el) => getComputedStyle(el).strokeWidth);
+	expect(bordeEnReposo).toBe('1px');
 	const cerrar = page.getByRole('button', { name: 'Cerrar detalle de Cuádriceps' });
 	await expect(cerrar).toBeVisible();
 	// La escala es absoluta y la unidad es series por semana: la misma serie leída en tres
