@@ -1631,9 +1631,9 @@ describe('la sesion no puede cambiar de identidad en silencio (R1)', () => {
 		// Hoy a la mañana se corrige el peso desde el historial: eso no es entrenar, y
 		// sellarlo hacía que la rutina vacía de hoy ofreciera "retomar" la sesión de ayer.
 		vi.setSystemTime(new Date('2026-08-28T09:00:00'));
-		expect(await actualizarSetHistorial('2026-08-27__push', 'press', 0, { peso: 82, reps: 10 })).toBe(
-			true
-		);
+		expect(
+			await actualizarSetHistorial('2026-08-27__push', 'press', 0, { peso: 82, reps: 10 })
+		).toBe(true);
 		expect((await db.sesiones.get('2026-08-27__push'))?.tocadaAt).toBe(selloEntrenamiento);
 
 		expect(await borrarSetHistorial('2026-08-27__push', 'press', 0)).toBe(true);
