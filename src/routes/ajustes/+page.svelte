@@ -17,6 +17,7 @@
 		setVolumen,
 		VOLUMENES,
 		exportarJSON,
+		hayDatosQueRespaldar,
 		parseBackup,
 		prepararImport,
 		importarBackup,
@@ -227,14 +228,25 @@
 			const detalleAvisos = preparado.avisos.length
 				? `\n\nAntes de restaurar: ${preparado.avisos.join('. ')}.`
 				: '';
+			// Se decide acá para que el mensaje no prometa una copia que no va a bajar.
+			const conCopiaPrevia = await hayDatosQueRespaldar();
 			confirmacion = {
 				titulo: 'Restaurar backup',
 				mensaje:
 					`Esto reemplaza todos tus datos actuales por los del backup ` +
-					`(${nDias} ${nDias === 1 ? 'día' : 'días'}). No se puede deshacer.` +
+					`(${nDias} ${nDias === 1 ? 'día' : 'días'}).` +
+					(conCopiaPrevia
+						? ' Antes se descarga una copia de lo que tenés ahora, por si este backup no era el que creías.'
+						: ' No se puede deshacer.') +
 					detalleAvisos,
 				confirmarTexto: 'Restaurar',
 				onConfirm: async () => {
+					// Restaurar es la única acción del producto que borra trabajo sin deshacer:
+					// lo actual se baja como backup ANTES de pisarlo. Si esta copia falla, el
+					// error corta acá (lo muestra el sheet) y no se restaura nada.
+					if (await hayDatosQueRespaldar()) {
+						descargarJSON(await exportarJSON(), nombreBackup('gym-brot-antes-de-restaurar'));
+					}
 					avisosImport = await importarBackup(data);
 					// El descanso persiste fuera de IndexedDB: si el backup reemplaza los datos,
 					// una alarma anterior no puede seguir refiriéndose a una serie eliminada.
