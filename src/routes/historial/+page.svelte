@@ -215,7 +215,12 @@
 					{#if almacenamientoEfimero}
 						<b style="color: rgb(var(--max))">Este navegador puede borrar tu historial solo.</b>
 						No marcó tus datos como permanentes. Instalá la app en la pantalla de inicio y guardá una
-						copia.
+						copia ·
+						<!-- Con cuánto contás si el borrado pasa de verdad: la urgencia cambia entera
+						     entre "tengo la de ayer" y "no tengo ninguna". -->
+						{ajustes.ultimoBackup
+							? `último backup hace ${diasDesde(ajustes.ultimoBackup)} días`
+							: 'todavía sin backup'}
 					{:else}
 						Tu historial vive solo en este teléfono ·
 						{ajustes.ultimoBackup

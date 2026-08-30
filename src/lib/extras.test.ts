@@ -6,6 +6,7 @@ import {
 	AJUSTES_DEFAULT,
 	borrarTodo,
 	exportarJSON,
+	hayDatosQueRespaldar,
 	importarBackup,
 	necesitaBackup,
 	normalizarAjustes,
@@ -875,5 +876,31 @@ describe('backup de objetivos de energía', () => {
 				})
 			)
 		).toThrow(/version/);
+	});
+});
+
+describe('hayDatosQueRespaldar', () => {
+	beforeEach(limpiarDb);
+
+	it('sobre una base vacia no hay nada que copiar antes de restaurar', async () => {
+		expect(await hayDatosQueRespaldar()).toBe(false);
+	});
+
+	it('los ajustes solos no cuentan: son preferencias, no trabajo', async () => {
+		await db.ajustes.put(ajustes);
+		expect(await hayDatosQueRespaldar()).toBe(false);
+	});
+
+	it('cualquier tabla con trabajo real pide la copia previa', async () => {
+		await db.dias.add(dia);
+		expect(await hayDatosQueRespaldar()).toBe(true);
+
+		await limpiarDb();
+		await db.pesosCorporales.put({
+			fecha: '2026-01-05',
+			pesoGramos: 80_000,
+			registradoAt: '2026-01-05T08:00:00.000Z'
+		});
+		expect(await hayDatosQueRespaldar()).toBe(true);
 	});
 });

@@ -329,6 +329,26 @@ export interface Backup {
 	objetivosEnergia?: ObjetivoEnergia[];
 }
 
+/**
+ * Si reemplazar la base borraría algo que costó cargar. Decide si restaurar un backup
+ * descarga primero una copia de lo actual: sobre una base vacía esa copia es ruido.
+ *
+ * Los ajustes no cuentan a propósito: son preferencias reconstruibles, no trabajo. Las
+ * rutinas sí, aunque puedan ser las de ejemplo — no hay forma de distinguir una rutina
+ * sembrada de una curada a mano, y el costo de equivocarse para cada lado es asimétrico:
+ * un JSON de más en Descargas contra perder la rutina que alguien armó.
+ */
+export async function hayDatosQueRespaldar(): Promise<boolean> {
+	const filas = await Promise.all([
+		db.dias.count(),
+		db.sesiones.count(),
+		db.notas.count(),
+		db.pesosCorporales.count(),
+		db.objetivosEnergia.count()
+	]);
+	return filas.some((n) => n > 0);
+}
+
 export async function exportarJSON(): Promise<string> {
 	// Las cuatro tablas tienen que representar el mismo instante: sin la
 	// transacción de solo lectura un toque concurrente podía dejar, por ejemplo,
