@@ -582,14 +582,14 @@ async function recalcularPrCelebrado(
 			// Cada celebración se juzga contra el pasado con SU métrica, no con Ajustes actuales.
 			if (!mejor || (previo != null && mejor.valor <= previo)) {
 				e.prCelebrado = undefined;
-				if (s.id !== sesion.id && revalidarPosteriores) await guardarSesion(s);
+				if (s.id !== sesion.id && revalidarPosteriores) await guardarSesion(s, { sellar: false });
 			} else {
 				// No inventamos una etiqueta de métrica en PRs heredados: sólo se usa internamente
 				// para comprobarlos. La interfaz los presenta como “PR registrado”.
 				e.prCelebrado = e.prCelebrado.metrica
 					? snapPr(mejor, metricaPr)
 					: { ...snapPr(mejor, metricaPr), metrica: undefined };
-				if (s.id !== sesion.id && revalidarPosteriores) await guardarSesion(s);
+				if (s.id !== sesion.id && revalidarPosteriores) await guardarSesion(s, { sellar: false });
 			}
 		}
 
@@ -654,7 +654,8 @@ export function actualizarSetHistorial(
 		}
 		// Editar el historial puede invalidar el PR de sesiones POSTERIORES a esta.
 		await recalcularPrCelebrado(s, exerciseId, true);
-		await guardarSesion(s);
+		// Sin sellar: corregir una serie pasada no es entrenar (ver `guardarSesion`).
+		await guardarSesion(s, { sellar: false });
 		return true;
 	});
 }
@@ -674,7 +675,8 @@ export function borrarSetHistorial(
 		set.hecha = false;
 		reabrirSesion(s, `Borraste una serie de ${nombreDe(e!)} desde el historial`);
 		await recalcularPrCelebrado(s, exerciseId, true);
-		await guardarSesion(s);
+		// Sin sellar: borrar una serie pasada no es entrenar (ver `guardarSesion`).
+		await guardarSesion(s, { sellar: false });
 		return true;
 	});
 }
