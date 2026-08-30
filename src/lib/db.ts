@@ -556,9 +556,14 @@ export function conIndice(sesion: Sesion): Sesion {
  * La restauración de un backup no pasa por acá a propósito: importar no es entrenar, y
  * sellar las sesiones importadas con la hora del import haría que la app ofreciera
  * retomar un entrenamiento de hace un año.
+ *
+ * `sellar: false` es la misma distinción para las correcciones del historial (editar o
+ * borrar una serie pasada, y la degradación de PRs posteriores que eso arrastra):
+ * corregir el pasado tampoco es entrenar, y sellarlo hacía que arreglar un peso de ayer
+ * a la mañana disparara "¿retomar la sesión de ayer?" sobre la rutina vacía de hoy.
  */
-export function guardarSesion(sesion: Sesion): Promise<string> {
-	sesion.tocadaAt = new Date().toISOString();
+export function guardarSesion(sesion: Sesion, { sellar = true } = {}): Promise<string> {
+	if (sellar) sesion.tocadaAt = new Date().toISOString();
 	return db.sesiones.put(conIndice(sesion));
 }
 

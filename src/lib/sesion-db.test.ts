@@ -1618,6 +1618,56 @@ describe('la sesion no puede cambiar de identidad en silencio (R1)', () => {
 		expect(sellada?.tocadaAt).toBe(new Date('2026-08-27T23:40:00').toISOString());
 		vi.useRealTimers();
 	});
+
+	it('editar o borrar una serie desde el historial no sella tocadaAt', async () => {
+		// Ayer se entrenó: ese es el único sello legítimo de la sesión.
+		vi.setSystemTime(new Date('2026-08-27T20:00:00'));
+		await prepararEjercicioSesion('push', 'press', '2026-08-27');
+		await setPeso('push', 'press', 0, 80, '2026-08-27');
+		await setReps('push', 'press', 0, 10, '2026-08-27');
+		await setSerieHecha('push', 'press', 0, true, '2026-08-27');
+		const selloEntrenamiento = new Date('2026-08-27T20:00:00').toISOString();
+
+		// Hoy a la mañana se corrige el peso desde el historial: eso no es entrenar, y
+		// sellarlo hacía que la rutina vacía de hoy ofreciera "retomar" la sesión de ayer.
+		vi.setSystemTime(new Date('2026-08-28T09:00:00'));
+		expect(await actualizarSetHistorial('2026-08-27__push', 'press', 0, { peso: 82, reps: 10 })).toBe(
+			true
+		);
+		expect((await db.sesiones.get('2026-08-27__push'))?.tocadaAt).toBe(selloEntrenamiento);
+
+		expect(await borrarSetHistorial('2026-08-27__push', 'press', 0)).toBe(true);
+		expect((await db.sesiones.get('2026-08-27__push'))?.tocadaAt).toBe(selloEntrenamiento);
+		vi.useRealTimers();
+	});
+
+	it('la degradacion de un PR posterior tampoco sella esa sesion', async () => {
+		// Lunes: 100 kg. Martes: 105 kg, que se celebra como PR.
+		vi.setSystemTime(new Date('2026-08-24T20:00:00'));
+		await prepararEjercicioSesion('push', 'press', '2026-08-24');
+		await setPeso('push', 'press', 0, 100, '2026-08-24');
+		await setReps('push', 'press', 0, 10, '2026-08-24');
+		await setSerieHecha('push', 'press', 0, true, '2026-08-24');
+
+		vi.setSystemTime(new Date('2026-08-25T20:00:00'));
+		await prepararEjercicioSesion('push', 'press', '2026-08-25');
+		await setPeso('push', 'press', 0, 105, '2026-08-25');
+		await setReps('push', 'press', 0, 10, '2026-08-25');
+		await setSerieHecha('push', 'press', 0, true, '2026-08-25');
+		expect(await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-08-25')).not.toBeNull();
+		const selloMartes = (await db.sesiones.get('2026-08-25__push'))?.tocadaAt;
+
+		// Días después, corregir el lunes a 120 kg tapa retroactivamente el PR del martes.
+		// El martes pierde su celebración, pero nadie lo estuvo entrenando: sigue con su sello.
+		vi.setSystemTime(new Date('2026-08-28T09:00:00'));
+		expect(
+			await actualizarSetHistorial('2026-08-24__push', 'press', 0, { peso: 120, reps: 10 })
+		).toBe(true);
+		const martes = await db.sesiones.get('2026-08-25__push');
+		expect(martes?.ejercicios[0]?.prCelebrado).toBeUndefined();
+		expect(martes?.tocadaAt).toBe(selloMartes);
+		vi.useRealTimers();
+	});
 });
 
 describe('ninguna escritura de serie resuelve sin haber escrito (R2)', () => {
