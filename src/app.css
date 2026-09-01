@@ -427,6 +427,16 @@ body {
 	box-shadow: 0 0 16px rgb(var(--drag-color, var(--glow)) / 0.38);
 }
 
+/*
+ * La tarjeta que se mantuvo apretada para abrir el modo de orden. Entrar cambia la
+ * forma de todas las filas a la vez, así que sin esto no hay forma de saber cuál era
+ * la que agarraste. Es un borde, no una animación: se ve igual con menos movimiento.
+ */
+.gb-sortable-card.gb-agarrada {
+	border-color: rgb(var(--drag-color, var(--glow)) / 0.85);
+	box-shadow: 0 0 0 3px rgb(var(--drag-color, var(--glow)) / 0.18);
+}
+
 /* El hueco de destino también queda legible mientras la tarjeta flota. */
 [data-is-dnd-shadow-item-internal='true'].gb-sortable-card {
 	border-color: rgb(var(--drag-color, var(--glow)) / 0.42) !important;

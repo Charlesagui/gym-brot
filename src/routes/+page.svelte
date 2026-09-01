@@ -11,6 +11,10 @@
 	import { serieCompleta } from '$lib/sesion-reglas';
 	import { dur } from '$lib/motion';
 	import { mantener } from '$lib/mantener';
+	import Icono from '$lib/components/Icono.svelte';
+	import { vibrar } from '$lib/vibracion';
+	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
+	import { fromLiveQuery } from '$lib/live';
 	import { modoOrden } from '$lib/modo-orden.svelte';
 	import { bienvenidaVisible, cerrarBienvenida } from '$lib/preferencias-ui';
 	import { guardarSinBloquear, reportarErrorDatos } from '$lib/errores-datos';
@@ -38,17 +42,40 @@
 	const flipMs = dur(180);
 	/** La tarjeta que no se anima porque es el ancla del movimiento: ver /dia/[id]. */
 	let ancladaId = $state<string | null>(null);
+	/** La tarjeta que se mantuvo apretada para abrir el modo: ver /dia/[id]. */
+	let agarradaId = $state<string | null>(null);
+	const ajustesStore = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
+	const ajustes = $derived($ajustesStore);
 
-	function entrarReordenar() {
-		const lista = $dias;
-		if (!lista || lista.length < 2) return; // con un solo día no hay nada que ordenar
-		ordenItems = lista.map((d) => ({
+	/** El orden que está EN LA BASE, en la forma que muestra el modo. */
+	function itemsDeDias(lista: Dia[]): ItemDia[] {
+		return lista.map((d) => ({
 			id: d.id,
 			nombre: d.nombre,
 			color: d.color ?? '124 92 255',
 			sub: `${agendaDia(d)} · ${d.ejercicios.length} ejercicios`
 		}));
+	}
+
+	function entrarReordenar(diaId?: string) {
+		const lista = $dias;
+		if (!lista || lista.length < 2) return; // con un solo día no hay nada que ordenar
+		ordenItems = itemsDeDias(lista);
+		// Acusar la pulsación sostenida: ver el comentario largo en /dia/[id].
+		vibrar(18, ajustes.vibracion ?? true);
+		agarradaId = diaId ?? null;
+		const antes = diaId ? topEnPantalla('data-dia-id', diaId) : null;
 		modoOrden.abrir();
+		if (antes == null) return;
+		flushSync();
+		const despues = topEnPantalla('data-orden-id', diaId!);
+		if (despues != null && despues !== antes) window.scrollBy(0, despues - antes);
+	}
+
+	/** Ver el gemelo en /dia/[id]: dos mediciones al mismo scroll, así que basta el rect. */
+	function topEnPantalla(atributo: string, id: string): number | null {
+		const el = document.querySelector<HTMLElement>(`[${atributo}="${CSS.escape(id)}"]`);
+		return el ? el.getBoundingClientRect().top : null;
 	}
 
 	function salirReordenar() {
@@ -64,14 +91,19 @@
 	}
 
 	function alConsiderar(e: CustomEvent<DndEvent<ItemDia>>) {
+		agarradaId = null;
 		ordenItems = e.detail.items;
 	}
 
+	/** Si la base rechaza el orden, la pantalla vuelve al que sí está guardado: ver /dia/[id]. */
 	function guardarOrdenDias() {
-		guardarSinBloquear(
-			reordenarDias(ordenItems.map((it) => it.id)),
-			'No se pudo guardar el nuevo orden de las rutinas. Intentá de nuevo.'
-		);
+		reordenarDias(ordenItems.map((it) => it.id)).catch((error: unknown) => {
+			if ($dias) ordenItems = itemsDeDias($dias);
+			reportarErrorDatos(
+				'No se pudo guardar el nuevo orden de las rutinas. Intentá de nuevo.',
+				error
+			);
+		});
 	}
 
 	function alSoltar(e: CustomEvent<DndEvent<ItemDia>>) {
@@ -89,6 +121,7 @@
 		const origen = ordenItems.findIndex((item) => item.id === id);
 		const destino = origen + delta;
 		if (origen < 0 || destino < 0 || destino >= ordenItems.length) return;
+		agarradaId = null;
 		const antes = topDeTarjeta(id);
 		const nuevos = [...ordenItems];
 		const [movido] = nuevos.splice(origen, 1);
@@ -211,7 +244,7 @@
 				class="mb-3 text-center text-xs font-semibold uppercase tracking-wider"
 				style="color: var(--muted)"
 			>
-				Mantené una tarjeta y movela, o usá las flechas
+				Arrastrá una tarjeta, o movela con las flechas
 			</p>
 			<section
 				aria-label="Orden de rutinas"
@@ -232,10 +265,13 @@
 						animate:flip={{ duration: it.id === ancladaId ? 0 : flipMs }}
 						data-orden-id={it.id}
 						aria-label={`Mover ${it.nombre}`}
-						class="gb-sortable-card flex touch-pan-y items-center gap-3 rounded-2xl border border-white/10 p-4"
+						class="gb-sortable-card flex touch-pan-y items-center gap-3 rounded-2xl border p-4 {it.id ===
+						agarradaId
+							? 'gb-agarrada'
+							: 'border-white/10'}"
 						style="--drag-color: {it.color}; background: linear-gradient(90deg, rgb({it.color} / 0.12), transparent 55%), var(--surface)"
 					>
-						<span class="gb-drag-grip" aria-hidden="true">⠿</span>
+						<span class="gb-drag-grip"><Icono nombre="arrastrar" /></span>
 						<span class="h-11 w-1.5 shrink-0 rounded-full" style="background: rgb({it.color})"
 						></span>
 						<div class="min-w-0 flex-1">
@@ -247,15 +283,15 @@
 								onpointerdown={(evento) => evento.stopPropagation()}
 								onclick={() => moverDia(it.id, -1)}
 								disabled={ordenItems[0]?.id === it.id}
-								class="grid size-11 place-items-center rounded-full bg-white/[0.06] text-sm disabled:opacity-30"
-								aria-label={`Subir ${it.nombre}`}>↑</button
+								class="grid size-11 place-items-center rounded-full bg-white/[0.06] disabled:opacity-30"
+								aria-label={`Subir ${it.nombre}`}><Icono nombre="subir" tamano={18} /></button
 							>
 							<button
 								onpointerdown={(evento) => evento.stopPropagation()}
 								onclick={() => moverDia(it.id, 1)}
 								disabled={ordenItems.at(-1)?.id === it.id}
-								class="grid size-11 place-items-center rounded-full bg-white/[0.06] text-sm disabled:opacity-30"
-								aria-label={`Bajar ${it.nombre}`}>↓</button
+								class="grid size-11 place-items-center rounded-full bg-white/[0.06] disabled:opacity-30"
+								aria-label={`Bajar ${it.nombre}`}><Icono nombre="bajar" tamano={18} /></button
 							>
 						</div>
 					</div>
@@ -331,10 +367,10 @@
 				</p>
 				{#if $dias.length > 1}
 					<button
-						onclick={entrarReordenar}
-						class="min-h-11 rounded-full px-3 text-xs font-bold"
+						onclick={() => entrarReordenar()}
+						class="flex min-h-11 items-center gap-1.5 rounded-full px-3 text-xs font-bold"
 						style="color: var(--accent-text)"
-						aria-label="Reordenar rutinas">↕ Reordenar</button
+						aria-label="Reordenar rutinas"><Icono nombre="ordenar" tamano={16} /> Reordenar</button
 					>
 				{/if}
 			</div>
@@ -343,7 +379,8 @@
 					{@const prog = progresoDia(d, $sesionesHoy)}
 					<a
 						href={`/dia/${d.id}`}
-						use:mantener={entrarReordenar}
+						data-dia-id={d.id}
+						use:mantener={() => entrarReordenar(d.id)}
 						in:fly={{ y: 12, duration: dur(250), delay: dur(Math.min(i, 6) * 45) }}
 						class="flex items-center gap-3 rounded-2xl border border-white/10 p-4"
 						style="background: linear-gradient(90deg, rgb({d.color} / 0.12), transparent 55%), var(--surface)"

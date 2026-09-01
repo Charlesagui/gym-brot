@@ -118,7 +118,7 @@ test('reordenar rutinas ofrece controles táctiles además del arrastre', async 
 	await page.goto('/');
 
 	await page.getByRole('button', { name: 'Reordenar rutinas' }).click();
-	await expect(page.getByText('Mantené una tarjeta y movela, o usá las flechas')).toBeVisible();
+	await expect(page.getByText('Arrastrá una tarjeta, o movela con las flechas')).toBeVisible();
 
 	const subir = page.getByRole('button', { name: /^Subir / }).first();
 	const bajar = page.getByRole('button', { name: /^Bajar / }).first();
@@ -208,6 +208,35 @@ test('la flecha de bajar sigue abajo del dedo: dos toques bajan dos posiciones',
 	await expect.poll(async () => (await ordenVisible(page)).indexOf('prensa-pierna-45')).toBe(2);
 });
 
+test('el modo de orden dibuja íconos y marca la tarjeta que mantuviste apretada', async ({
+	page
+}) => {
+	await page.goto('/dia/dia-piernas');
+	const ejercicio = page.getByRole('link', { name: /Curl femoral sentado/ });
+	const caja = await ejercicio.boundingBox();
+	expect(caja).not.toBeNull();
+	await page.mouse.move(caja!.x + caja!.width / 2, caja!.y + caja!.height / 2);
+	await page.mouse.down();
+	await page.waitForTimeout(450);
+	await page.mouse.up();
+	await expect(page.getByRole('button', { name: 'Terminar orden' })).toBeVisible();
+
+	// La que agarraste queda marcada: entrar cambia la forma de todas las filas de golpe.
+	const agarrada = page.locator('.gb-agarrada');
+	await expect(agarrada).toHaveCount(1);
+	await expect(agarrada).toHaveAttribute('data-orden-id', 'curl-femoral');
+
+	// Flechas y quitar son SVG de trazo, no glifos de texto (CLAUDE.md).
+	const fila = page.locator('[data-orden-id="curl-femoral"]');
+	expect(await fila.locator('svg').count()).toBeGreaterThanOrEqual(3);
+	const conGlifos = await fila.evaluate((el) => /[↑↓✕⠿]/.test(el.textContent ?? ''));
+	expect(conGlifos, 'quedaron glifos de texto en el modo de orden').toBe(false);
+
+	// Y se apaga en cuanto movés algo: ya la ubicaste.
+	await page.getByRole('button', { name: 'Subir Curl femoral sentado' }).click();
+	await expect(page.locator('.gb-agarrada')).toHaveCount(0);
+});
+
 test('el primer toque después de abrir el orden con long-press no se pierde', async ({ page }) => {
 	await page.goto('/dia/dia-piernas');
 	const ejercicio = page.getByRole('link', { name: /Curl femoral sentado/ });
@@ -225,6 +254,29 @@ test('el primer toque después de abrir el orden con long-press no se pierde', a
 	await expect.poll(async () => (await ordenVisible(page)).indexOf('curl-femoral')).toBe(1);
 	// Y lo que el bloqueo protege sigue en pie: mantener no navega al ejercicio.
 	await expect(page).toHaveURL(/\/dia\/dia-piernas/);
+});
+
+test('mantener el único ejercicio de un día no abre el modo de orden', async ({ page }) => {
+	await page.goto('/');
+	await page.getByRole('button', { name: '+ Nuevo día' }).click();
+	await expect(page).toHaveURL(/\/dia\//);
+	await page.getByRole('link', { name: /Agregar ejercicio/ }).click();
+	await page
+		.getByRole('button', { name: /^Agregar / })
+		.first()
+		.click();
+	await page.getByRole('link', { name: 'Volver' }).click();
+
+	const unico = page.locator('[data-ejercicio-id]');
+	await expect(unico).toHaveCount(1);
+	const caja = await unico.boundingBox();
+	await page.mouse.move(caja!.x + caja!.width / 2, caja!.y + caja!.height / 2);
+	await page.mouse.down();
+	await page.waitForTimeout(500);
+	await page.mouse.up();
+
+	// Con una sola tarjeta las dos flechas nacerían deshabilitadas: no hay modo que abrir.
+	await expect(page.getByRole('button', { name: 'Terminar orden' })).toBeHidden();
 });
 
 test('dos toques rápidos crean una sola rutina y navegan una vez', async ({ page }) => {

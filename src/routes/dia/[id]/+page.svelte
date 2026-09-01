@@ -133,6 +133,14 @@
 	 * sobre la de al lado aunque el scroll ya estuviera compensado.
 	 */
 	let ancladaId = $state<string | null>(null);
+	/**
+	 * La tarjeta que se mantuvo apretada para abrir el modo.
+	 *
+	 * Entrar cambia la forma de todas las filas a la vez, así que sin una marca no hay
+	 * forma de saber cuál era la que agarraste — y con la lista scrolleada puede ni
+	 * quedar donde estaba el dedo. Se apaga en cuanto movés algo: ahí ya la ubicaste.
+	 */
+	let agarradaId = $state<string | null>(null);
 
 	const diaId = $derived($page.params.id!);
 
@@ -441,9 +449,9 @@
 		graciaId = null;
 	}
 
-	function entrarReordenar() {
-		if (!dia) return;
-		ordenItems = [...dia.ejercicios]
+	/** El orden que está EN LA BASE, en la forma que muestra el modo. */
+	function itemsDelDia(fuente: Dia): ItemOrden[] {
+		return [...fuente.ejercicios]
 			.sort((a, b) => a.orden - b.orden)
 			.map((it) => {
 				const e = ejercicioPorId(it.exerciseId);
@@ -456,7 +464,42 @@
 					emoji: g.emoji
 				};
 			});
+	}
+
+	/**
+	 * Abre el modo de orden, opcionalmente sabiendo qué tarjeta se mantuvo apretada.
+	 *
+	 * Con un solo ejercicio no se entra: las dos flechas nacerían deshabilitadas y lo
+	 * único apretable sería quitar. El botón de Editar ya tenía esta guarda; el
+	 * long-press no, así que mantener el único ejercicio de un día abría un modo vacío
+	 * de trabajo. (La portada la tenía en los dos lados desde siempre.)
+	 */
+	function entrarReordenar(exerciseId?: string) {
+		if (!dia || dia.ejercicios.length < 2) return;
+		ordenItems = itemsDelDia(dia);
+		// El único aviso de que cambiaste de modo era que la lista se rearmaba sola:
+		// `mantener` apaga su resalte de "vas a activar" justo al disparar, y el tic
+		// global de presión sale al soltar un botón, no al cumplirse una pulsación
+		// sostenida. Un golpe corto dice "te escuché" sin tapar nada.
+		vibrar(18, ajustes.vibracion ?? true);
+		agarradaId = exerciseId ?? null;
+		// Dónde está esa tarjeta AHORA, para dejarla en el mismo lugar de la pantalla.
+		const antes = exerciseId ? topEnPantalla('data-ejercicio-id', exerciseId) : null;
 		modoOrden.abrir();
+		if (antes == null) return;
+		flushSync();
+		const despues = topEnPantalla('data-orden-id', exerciseId!);
+		if (despues != null && despues !== antes) window.scrollBy(0, despues - antes);
+	}
+
+	/**
+	 * Posición en la ventana de la tarjeta de un ejercicio, buscándola por el atributo
+	 * que use la lista que esté montada. Se compara contra otra medición tomada al mismo
+	 * scroll, así que alcanza con coordenadas de ventana.
+	 */
+	function topEnPantalla(atributo: string, id: string): number | null {
+		const el = document.querySelector<HTMLElement>(`[${atributo}="${CSS.escape(id)}"]`);
+		return el ? el.getBoundingClientRect().top : null;
 	}
 
 	function salirReordenar() {
@@ -476,17 +519,26 @@
 	}
 
 	function alConsiderar(e: CustomEvent<DndEvent<ItemOrden>>) {
+		agarradaId = null; // ya la encontraste: el resalte cumplió su trabajo
 		ordenItems = e.detail.items;
 	}
 
+	/**
+	 * Guarda el orden y, si la base lo rechaza, vuelve a mostrar el que sí está guardado.
+	 *
+	 * Antes el fallo sólo levantaba el aviso global: la pantalla se quedaba mostrando un
+	 * orden que no existía en ningún lado, y al salir del modo la lista pegaba el salto
+	 * al orden viejo sin que nada lo explicara. Se relee del día —la verdad persistida—
+	 * y no de una copia previa, que con dos toques seguidos ya estaría vencida.
+	 */
 	function guardarOrdenEjercicios() {
-		guardarSinBloquear(
-			reordenarEjercicios(
-				diaId,
-				ordenItems.map((it) => it.id)
-			),
-			'No se pudo guardar el orden de los ejercicios. Intentá de nuevo.'
-		);
+		reordenarEjercicios(
+			diaId,
+			ordenItems.map((it) => it.id)
+		).catch((error: unknown) => {
+			if (dia) ordenItems = itemsDelDia(dia);
+			reportarErrorDatos('No se pudo guardar el orden de los ejercicios. Intentá de nuevo.', error);
+		});
 	}
 
 	function alSoltar(e: CustomEvent<DndEvent<ItemOrden>>) {
@@ -508,6 +560,7 @@
 		const origen = ordenItems.findIndex((item) => item.id === id);
 		const destino = origen + delta;
 		if (origen < 0 || destino < 0 || destino >= ordenItems.length) return;
+		agarradaId = null;
 		const antes = topDeTarjeta(id);
 		const nuevos = [...ordenItems];
 		const [movido] = nuevos.splice(origen, 1);
@@ -561,14 +614,14 @@
 			-->
 			<button
 				onclick={salirReordenar}
-				class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
-				aria-label="Volver a los ejercicios">←</button
+				class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10"
+				aria-label="Volver a los ejercicios"><Icono nombre="volver" /></button
 			>
 		{:else}
 			<a
 				href="/"
-				class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
-				aria-label="Volver">←</a
+				class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10"
+				aria-label="Volver"><Icono nombre="volver" /></a
 			>
 		{/if}
 		{#if editando}
@@ -646,7 +699,7 @@
 			class="mb-3 text-center text-xs font-semibold uppercase tracking-wider"
 			style="color: var(--muted)"
 		>
-			Mantené una tarjeta y movela, o usá las flechas
+			Arrastrá una tarjeta, o movela con las flechas
 		</p>
 		<section
 			aria-label="Orden de ejercicios"
@@ -675,7 +728,10 @@
 					animate:flip={{ duration: it.id === ancladaId ? 0 : flipMs }}
 					data-orden-id={it.id}
 					aria-label={`Mover ${it.nombre}`}
-					class="gb-sortable-card flex touch-pan-y items-center gap-2 rounded-2xl border border-white/10 p-3"
+					class="gb-sortable-card flex touch-pan-y items-center gap-2 rounded-2xl border p-3 {it.id ===
+					agarradaId
+						? 'gb-agarrada'
+						: 'border-white/10'}"
 					style="--drag-color: {it.glow}; background: linear-gradient(90deg, rgb({it.glow} / 0.12), transparent 55%), var(--surface)"
 				>
 					<span
@@ -695,23 +751,23 @@
 							onpointerdown={(evento) => evento.stopPropagation()}
 							onclick={() => moverEjercicio(it.id, -1)}
 							disabled={ordenItems[0]?.id === it.id}
-							class="grid size-11 place-items-center rounded-full bg-white/[0.06] text-sm disabled:opacity-30"
-							aria-label={`Subir ${it.nombre}`}>↑</button
+							class="grid size-11 place-items-center rounded-full bg-white/[0.06] disabled:opacity-30"
+							aria-label={`Subir ${it.nombre}`}><Icono nombre="subir" tamano={18} /></button
 						>
 						<button
 							onpointerdown={(evento) => evento.stopPropagation()}
 							onclick={() => moverEjercicio(it.id, 1)}
 							disabled={ordenItems.at(-1)?.id === it.id}
-							class="grid size-11 place-items-center rounded-full bg-white/[0.06] text-sm disabled:opacity-30"
-							aria-label={`Bajar ${it.nombre}`}>↓</button
+							class="grid size-11 place-items-center rounded-full bg-white/[0.06] disabled:opacity-30"
+							aria-label={`Bajar ${it.nombre}`}><Icono nombre="bajar" tamano={18} /></button
 						>
 						<!-- Quitar deja de ser el botón más grande de un modo que sirve para ordenar. -->
 						<button
 							onpointerdown={(ev) => ev.stopPropagation()}
 							onclick={() => quitarEnReorden(it)}
-							class="grid size-11 place-items-center rounded-full text-sm"
+							class="grid size-11 place-items-center rounded-full"
 							style="background: rgba(255,80,80,.15); color: #ff6b6b"
-							aria-label={`Quitar ${it.nombre}`}>✕</button
+							aria-label={`Quitar ${it.nombre}`}><Icono nombre="cerrar" tamano={18} /></button
 						>
 					</div>
 				</div>
@@ -736,9 +792,12 @@
 		{#if editando}
 			{#if dia.ejercicios.length > 1}
 				<button
-					onclick={entrarReordenar}
+					onclick={() => entrarReordenar()}
 					class="mb-4 min-h-11 w-full rounded-xl border border-white/10 px-4 text-sm font-bold"
-					style="color: var(--accent-text)">↕ Reordenar ejercicios</button
+					style="color: var(--accent-text)"
+					><span class="inline-flex items-center justify-center gap-1.5"
+						><Icono nombre="ordenar" tamano={18} /> Reordenar ejercicios</span
+					></button
 				>
 			{/if}
 			<p class="mb-2 text-xs font-semibold uppercase tracking-wider" style="color: var(--muted)">
@@ -862,9 +921,9 @@
 						</div>
 						<button
 							onclick={() => confirmarQuitarEjercicio(nombre, item.exerciseId)}
-							class="col-start-3 row-start-1 grid size-11 shrink-0 place-items-center rounded-full text-sm"
+							class="col-start-3 row-start-1 grid size-11 shrink-0 place-items-center rounded-full"
 							style="background: rgba(255,80,80,.15); color: #ff6b6b"
-							aria-label="Quitar">✕</button
+							aria-label="Quitar"><Icono nombre="cerrar" tamano={18} /></button
 						>
 					</div>
 				{:else}
@@ -872,7 +931,8 @@
 					     una rutina larga si no deja la última tarjeta llegando a los 700ms, y a
 					     esta pantalla se vuelve entre serie y serie. -->
 					<div
-						use:mantener={entrarReordenar}
+						data-ejercicio-id={item.exerciseId}
+						use:mantener={() => entrarReordenar(item.exerciseId)}
 						in:fly={{ y: 12, duration: dur(250), delay: dur(Math.min(i, 6) * 45) }}
 						class="flex items-center gap-2 rounded-2xl border border-white/10 p-2.5 {saltado
 							? 'opacity-55'

@@ -31,7 +31,11 @@
 		| 'aviso'
 		| 'error'
 		| 'rueda'
-		| 'desplegar';
+		| 'desplegar'
+		| 'subir'
+		| 'bajar'
+		| 'ordenar'
+		| 'arrastrar';
 
 	/** Cada ícono es su lista de trazos; el `viewBox` es siempre 0 0 24 24. */
 	const TRAZOS: Record<NombreIcono, string[]> = {
@@ -61,7 +65,13 @@
 		aviso: ['M12 4l9 16H3z', 'M12 10v4', 'M12 17h.01'],
 		error: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M9 9l6 6', 'M15 9l-6 6'],
 		rueda: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M12 3v3', 'M12 18v3', 'M3 12h3', 'M18 12h3'],
-		desplegar: ['M6 9l6 6 6-6']
+		desplegar: ['M6 9l6 6 6-6'],
+		subir: ['M12 19V5', 'M6 11l6-6 6 6'],
+		bajar: ['M12 5v14', 'M18 13l-6 6-6-6'],
+		ordenar: ['M12 4v16', 'M8 8l4-4 4 4', 'M8 16l4 4 4-4'],
+		// Asa de arrastre: dos rieles, no los seis puntos de siempre. El set es de
+		// trazo y sin relleno, y seis puntos a stroke-width 2 se empastan en 24 px.
+		arrastrar: ['M7 9.5h10', 'M7 14.5h10']
 	};
 </script>
 
