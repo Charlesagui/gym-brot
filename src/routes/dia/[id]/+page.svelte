@@ -2,7 +2,7 @@
 	import Icono from '$lib/components/Icono.svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { onDestroy } from 'svelte';
+	import { flushSync, onDestroy } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import { flip } from 'svelte/animate';
 	import { dndzone, type DndEvent } from 'svelte-dnd-action';
@@ -19,6 +19,7 @@
 		reordenarEjercicios
 	} from '$lib/dias';
 	import { mantener } from '$lib/mantener';
+	import { modoOrden } from '$lib/modo-orden.svelte';
 	import {
 		descartarReapertura,
 		hoyStr,
@@ -105,16 +106,33 @@
 		onAccion: () => void | Promise<void>;
 	} | null>(null);
 	// Modo reordenar: se entra con long-press; las cards se arrastran (svelte-dnd-action).
+	//
+	// La tarjeta lleva grupo y no video: en una lista para ordenar el video no ayuda a
+	// reconocer nada que el nombre no diga, y costaba 56 px de alto por fila. El color
+	// y el emoji del grupo sí ubican, y eran justo lo que este modo perdía respecto de
+	// la lista normal.
 	interface ItemOrden {
 		id: string;
 		nombre: string;
-		demoVideo: string;
+		grupo: string;
 		glow: string;
 		emoji: string;
 	}
-	let reordenando = $state(false);
+	// El modo vive en un estado global porque el layout también lo necesita: ver
+	// $lib/modo-orden (atrás lo cierra, la barra inferior se esconde mientras dura).
+	const reordenando = $derived(modoOrden.abierto);
 	let ordenItems = $state<ItemOrden[]>([]);
 	const flipMs = dur(180);
+	/**
+	 * La tarjeta que NO se anima en el movimiento actual.
+	 *
+	 * La que acabás de mover se queda quieta y la vecina se desliza: además de leerse
+	 * mejor —lo que se movió es lo otro—, es lo que deja el botón donde estaba. Con el
+	 * `flip` puesto también sobre ella, durante 180 ms la tarjeta se sigue dibujando
+	 * (y se sigue tocando) en su lugar viejo, así que un segundo toque rápido caía
+	 * sobre la de al lado aunque el scroll ya estuviera compensado.
+	 */
+	let ancladaId = $state<string | null>(null);
 
 	const diaId = $derived($page.params.id!);
 
@@ -156,6 +174,9 @@
 	onDestroy(() => {
 		if (premioId) clearTimeout(premioId);
 		if (graciaId) clearTimeout(graciaId);
+		// Si la pantalla se va con el modo abierto (borrar el día, una recarga), el
+		// listener de "atrás" no puede quedar vivo apuntando a una pantalla que no está.
+		modoOrden.descartar();
 	});
 
 	function progreso(exId: string): { hechas: number; total: number } | null {
@@ -426,16 +447,32 @@
 			.sort((a, b) => a.orden - b.orden)
 			.map((it) => {
 				const e = ejercicioPorId(it.exerciseId);
-				const g = e ? grupos[e.grupo] : undefined;
+				const g = e ? grupos[e.grupo] : grupoArchivado;
 				return {
 					id: it.exerciseId,
 					nombre: e?.nombre ?? it.exerciseId,
-					demoVideo: e?.demoVideo ?? '',
-					glow: g?.glow ?? '124 92 255',
-					emoji: g?.emoji ?? ''
+					grupo: g.label,
+					glow: g.glow,
+					emoji: g.emoji
 				};
 			});
-		reordenando = true;
+		modoOrden.abrir();
+	}
+
+	function salirReordenar() {
+		modoOrden.cerrar();
+	}
+
+	/**
+	 * Dónde arranca la tarjeta dentro de la lista, en píxeles de layout.
+	 *
+	 * `offsetTop` y no `getBoundingClientRect()`: mientras corre el `flip` la tarjeta
+	 * lleva un transform que la sigue dibujando en su lugar viejo, así que el rect
+	 * miente justo en el momento en que necesitamos el dato.
+	 */
+	function topDeTarjeta(id: string): number | null {
+		const el = document.querySelector<HTMLElement>(`[data-orden-id="${CSS.escape(id)}"]`);
+		return el ? el.offsetTop : null;
 	}
 
 	function alConsiderar(e: CustomEvent<DndEvent<ItemOrden>>) {
@@ -457,15 +494,35 @@
 		guardarOrdenEjercicios();
 	}
 
+	/**
+	 * Sube o baja un ejercicio, y deja la tarjeta donde estaba EN LA PANTALLA.
+	 *
+	 * Las flechas viven adentro de la tarjeta y el `flip` mueve el nodo de verdad, así
+	 * que sin compensar el scroll el botón se iba de abajo del dedo: el segundo toque en
+	 * el mismo lugar caía sobre el ejercicio que acababa de ocupar esa ranura y lo
+	 * mandaba para el otro lado. Dos toques, dos animaciones y el orden como al
+	 * principio — la lista parecía sacudirse sola. Corriendo la página lo que se movió
+	 * la tarjeta, tocar ↓ cuatro veces baja cuatro posiciones el mismo ejercicio.
+	 */
 	function moverEjercicio(id: string, delta: -1 | 1) {
 		const origen = ordenItems.findIndex((item) => item.id === id);
 		const destino = origen + delta;
 		if (origen < 0 || destino < 0 || destino >= ordenItems.length) return;
+		const antes = topDeTarjeta(id);
 		const nuevos = [...ordenItems];
 		const [movido] = nuevos.splice(origen, 1);
 		nuevos.splice(destino, 0, movido!);
+		ancladaId = id;
 		ordenItems = nuevos;
 		guardarOrdenEjercicios();
+		// `flushSync` y no `await tick()`: la corrección tiene que entrar en el mismo
+		// click. Con un await en el medio, dos toques muy seguidos alcanzaban a caer
+		// sobre la tarjeta vieja antes de que la página se hubiera acomodado.
+		flushSync();
+		const despues = topDeTarjeta(id);
+		if (antes != null && despues != null && despues !== antes) window.scrollBy(0, despues - antes);
+		// Las animaciones de las demás ya arrancaron con su duración: se puede soltar.
+		ancladaId = null;
 	}
 
 	async function quitarEnReorden(it: ItemOrden) {
@@ -496,11 +553,24 @@
 
 <main class="gb-page glow-bg min-h-[calc(100dvh-var(--gb-nav))] px-5 pb-28">
 	<header class="mb-5 flex flex-wrap items-center gap-3">
-		<a
-			href="/"
-			class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
-			aria-label="Volver">←</a
-		>
+		{#if reordenando}
+			<!--
+				Mientras se ordena, la flecha de arriba NO puede irse a Rutinas: es el
+				control que la mano busca primero para salir de un modo, y era la forma
+				más rápida de terminar el orden y aparecer en otra pantalla.
+			-->
+			<button
+				onclick={salirReordenar}
+				class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
+				aria-label="Volver a los ejercicios">←</button
+			>
+		{:else}
+			<a
+				href="/"
+				class="grid size-11 shrink-0 place-items-center rounded-full border border-white/10 text-lg"
+				aria-label="Volver">←</a
+			>
+		{/if}
 		{#if editando}
 			<input
 				bind:value={nombreEdit}
@@ -592,25 +662,35 @@
 			onfinalize={alSoltar}
 			class="space-y-3"
 		>
-			{#each ordenItems as it (it.id)}
+			<!--
+				Una fila por ejercicio, como el reordenado de rutinas. Antes era una grilla
+				de dos filas —video de 56 px arriba, flechas y ✕ abajo— y cada tarjeta
+				pasaba de 86 px a 130: entrar al modo estiraba la lista casi un 50 %, se
+				iban ejercicios abajo del fold y el botón de salir quedaba a dos pantallas
+				de scroll. El número de posición y el grupo vuelven a decir qué ejercicio
+				es y cómo quedó el orden, que era lo que la tarjeta vieja no decía.
+			-->
+			{#each ordenItems as it, i (it.id)}
 				<div
-					animate:flip={{ duration: flipMs }}
+					animate:flip={{ duration: it.id === ancladaId ? 0 : flipMs }}
+					data-orden-id={it.id}
 					aria-label={`Mover ${it.nombre}`}
-					class="gb-sortable-card grid touch-pan-y grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2 rounded-2xl border border-white/10 p-2.5"
-					style="--drag-color: {it.glow}; background: radial-gradient(150% 130% at 0% 0%, rgb({it.glow} / 0.14), transparent 60%), var(--surface)"
+					class="gb-sortable-card flex touch-pan-y items-center gap-2 rounded-2xl border border-white/10 p-3"
+					style="--drag-color: {it.glow}; background: linear-gradient(90deg, rgb({it.glow} / 0.12), transparent 55%), var(--surface)"
 				>
-					<span class="gb-drag-grip" aria-hidden="true">⠿</span>
-					<video
-						use:reproducirEnVista={it.demoVideo}
-						class="gb-thumb-frame size-14 shrink-0 rounded-xl object-contain"
-						aria-label={it.nombre}
-						loop
-						muted
-						playsinline
-						preload="none"
-					></video>
-					<p class="gb-line-clamp-2 min-w-0 text-sm font-semibold leading-tight">{it.nombre}</p>
-					<div class="col-span-2 grid grid-cols-2 gap-2">
+					<span
+						class="h-9 w-1.5 shrink-0 rounded-full"
+						style="background: rgb({it.glow})"
+						aria-hidden="true"
+					></span>
+					<div class="min-w-0 flex-1">
+						<p class="gb-line-clamp-2 text-sm font-semibold leading-tight">{it.nombre}</p>
+						<p class="mt-0.5 truncate text-[11px] font-medium" style="color: rgb({it.glow})">
+							{i + 1}º · {it.emoji}
+							{it.grupo}
+						</p>
+					</div>
+					<div class="flex shrink-0 items-center gap-1">
 						<button
 							onpointerdown={(evento) => evento.stopPropagation()}
 							onclick={() => moverEjercicio(it.id, -1)}
@@ -625,22 +705,33 @@
 							class="grid size-11 place-items-center rounded-full bg-white/[0.06] text-sm disabled:opacity-30"
 							aria-label={`Bajar ${it.nombre}`}>↓</button
 						>
+						<!-- Quitar deja de ser el botón más grande de un modo que sirve para ordenar. -->
+						<button
+							onpointerdown={(ev) => ev.stopPropagation()}
+							onclick={() => quitarEnReorden(it)}
+							class="grid size-11 place-items-center rounded-full text-sm"
+							style="background: rgba(255,80,80,.15); color: #ff6b6b"
+							aria-label={`Quitar ${it.nombre}`}>✕</button
+						>
 					</div>
-					<button
-						onpointerdown={(ev) => ev.stopPropagation()}
-						onclick={() => quitarEnReorden(it)}
-						class="col-start-3 row-start-2 grid min-h-11 w-full place-items-center rounded-xl text-sm"
-						style="background: rgba(255,80,80,.15); color: #ff6b6b"
-						aria-label={`Quitar ${it.nombre}`}>✕</button
-					>
 				</div>
 			{/each}
 		</section>
-		<button
-			onclick={() => (reordenando = false)}
-			class="mt-5 w-full rounded-2xl py-3 text-sm font-bold"
-			style="background: var(--accent); color: var(--on-accent)">Terminar orden</button
+		<!--
+			La salida va fija en el hueco que dejó la barra inferior, no al final de la
+			lista: con seis ejercicios había que scrollear hasta el fondo para encontrarla,
+			y lo que estaba a mano eran las cuatro secciones del nav.
+		-->
+		<div
+			class="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md px-5 pt-3"
+			style="padding-bottom: calc(0.75rem + var(--safe-bottom)); background: linear-gradient(to top, var(--bg) 72%, transparent)"
 		>
+			<button
+				onclick={salirReordenar}
+				class="w-full rounded-2xl py-3 text-sm font-bold"
+				style="background: var(--accent); color: var(--on-accent)">Terminar orden</button
+			>
+		</div>
 	{:else}
 		{#if editando}
 			{#if dia.ejercicios.length > 1}

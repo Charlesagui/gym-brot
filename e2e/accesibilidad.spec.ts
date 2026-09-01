@@ -147,6 +147,67 @@ test('mantener una tarjeta de ejercicio abre el ordenamiento sin navegar al ejer
 	await expect(page).toHaveURL(/\/dia\/dia-piernas/);
 });
 
+/** El orden visible de los ejercicios en el modo de reordenar, de arriba hacia abajo. */
+async function ordenVisible(page: Page): Promise<string[]> {
+	return page
+		.locator('[data-orden-id]')
+		.evaluateAll((nodos) => nodos.map((n) => n.getAttribute('data-orden-id') ?? ''));
+}
+
+test('terminar el orden vuelve a los ejercicios y no a otra pantalla', async ({ page }) => {
+	await page.goto('/dia/dia-piernas');
+	await page.getByRole('button', { name: 'Editar' }).click();
+	await page.getByRole('button', { name: /Reordenar ejercicios/ }).click();
+
+	// Mientras se ordena, la barra inferior no puede seguir ofreciendo otras secciones.
+	await expect(page.getByRole('navigation')).toBeHidden();
+
+	// La salida está a la vista sin scrollear, aunque la lista siga abajo.
+	const terminar = page.getByRole('button', { name: 'Terminar orden' });
+	await expect(terminar).toBeInViewport();
+	await terminar.click();
+
+	await expect(page).toHaveURL(/\/dia\/dia-piernas/);
+	await expect(page.getByRole('button', { name: 'Terminar orden' })).toBeHidden();
+	await expect(page.getByText('Prensa de pierna 45°', { exact: true })).toBeVisible();
+	await expect(page.getByRole('navigation')).toBeVisible();
+});
+
+test('el gesto de volver cierra el orden en vez de salir del día', async ({ page }) => {
+	await page.goto('/dia/dia-piernas');
+	await page.getByRole('button', { name: 'Editar' }).click();
+	await page.getByRole('button', { name: /Reordenar ejercicios/ }).click();
+	await expect(page.getByRole('button', { name: 'Terminar orden' })).toBeVisible();
+
+	await page.goBack();
+
+	await expect(page.getByRole('button', { name: 'Terminar orden' })).toBeHidden();
+	await expect(page).toHaveURL(/\/dia\/dia-piernas/);
+});
+
+test('la flecha de bajar sigue abajo del dedo: dos toques bajan dos posiciones', async ({
+	page
+}) => {
+	await page.goto('/dia/dia-piernas');
+	await page.getByRole('button', { name: 'Editar' }).click();
+	await page.getByRole('button', { name: /Reordenar ejercicios/ }).click();
+	await expect(page.getByRole('button', { name: 'Terminar orden' })).toBeVisible();
+
+	expect((await ordenVisible(page))[0]).toBe('prensa-pierna-45');
+
+	// A propósito por coordenadas y no por locator: el dedo se queda en el mismo lugar
+	// de la pantalla mientras la tarjeta se mueve. Antes, el segundo toque caía sobre el
+	// ejercicio que había ocupado esa ranura y lo devolvía todo al orden inicial.
+	const caja = await page.getByRole('button', { name: /^Bajar Prensa de pierna/ }).boundingBox();
+	expect(caja).not.toBeNull();
+	const x = caja!.x + caja!.width / 2;
+	const y = caja!.y + caja!.height / 2;
+	await page.mouse.click(x, y);
+	await page.mouse.click(x, y);
+
+	await expect.poll(async () => (await ordenVisible(page)).indexOf('prensa-pierna-45')).toBe(2);
+});
+
 test('dos toques rápidos crean una sola rutina y navegan una vez', async ({ page }) => {
 	await page.goto('/');
 	const crear = page.getByRole('button', { name: '+ Nuevo día' });

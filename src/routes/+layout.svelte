@@ -21,6 +21,7 @@
 	import { menosMovimiento } from '$lib/motion';
 	import { iniciarPresion } from '$lib/presion';
 	import { limpiarArrastreHuerfano } from '$lib/dnd-safety';
+	import { modoOrden } from '$lib/modo-orden.svelte';
 	import { escucharReemplazosDatos } from '$lib/revision-datos';
 	import { buscadorDeVersion } from '$lib/actualizacion';
 
@@ -156,6 +157,11 @@
 	// las pantallas de error y de carga —que no muestran nav— arrastraban 5rem de vacío
 	// al final, y con el área segura pasaban a arrastrar 5rem + el inset.
 	const conNav = $derived(!sinNav && dbLista && !dbError);
+	// Reordenando, la barra se esconde pero el espacio sigue reservado (`conNav`): ahí
+	// va la salida del modo. Sus cuatro destinos, siempre a la vista y más cerca del
+	// pulgar que el "Terminar orden" del final de la lista, eran la forma más fácil de
+	// salir del día sin querer justo después de acomodar el orden. Ver $lib/modo-orden.
+	const navVisible = $derived(conNav && !modoOrden.abierto);
 	// Apertura demorada (suele ser pasajero): aviso suave dentro de la carga.
 	let dbLenta = $state(false);
 	// Apertura BLOQUEADA: otra pestaña/ventana o la app instalada tiene tomada la
@@ -509,7 +515,7 @@
 	{:else}
 		{@render children()}
 	{/if}
-	{#if conNav}
+	{#if navVisible}
 		<BottomNav />
 	{/if}
 </div>

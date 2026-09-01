@@ -4,13 +4,14 @@
 	import { flip } from 'svelte/animate';
 	import { dndzone, type DndEvent } from 'svelte-dnd-action';
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { flushSync, onDestroy, onMount } from 'svelte';
 	import { db, type Dia, type Sesion } from '$lib/db';
 	import { crearDia, reordenarDias } from '$lib/dias';
 	import { hoyStr } from '$lib/sesion';
 	import { serieCompleta } from '$lib/sesion-reglas';
 	import { dur } from '$lib/motion';
 	import { mantener } from '$lib/mantener';
+	import { modoOrden } from '$lib/modo-orden.svelte';
 	import { bienvenidaVisible, cerrarBienvenida } from '$lib/preferencias-ui';
 	import { guardarSinBloquear, reportarErrorDatos } from '$lib/errores-datos';
 
@@ -29,10 +30,14 @@
 		color: string;
 		sub: string;
 	}
-	let reordenando = $state(false);
+	// Mismo modo global que el reordenado de ejercicios: atrás lo cierra y la barra
+	// inferior se esconde mientras dura. Ver $lib/modo-orden.
+	const reordenando = $derived(modoOrden.abierto);
 	let creandoDia = $state(false);
 	let ordenItems = $state<ItemDia[]>([]);
 	const flipMs = dur(180);
+	/** La tarjeta que no se anima porque es el ancla del movimiento: ver /dia/[id]. */
+	let ancladaId = $state<string | null>(null);
 
 	function entrarReordenar() {
 		const lista = $dias;
@@ -43,7 +48,19 @@
 			color: d.color ?? '124 92 255',
 			sub: `${agendaDia(d)} · ${d.ejercicios.length} ejercicios`
 		}));
-		reordenando = true;
+		modoOrden.abrir();
+	}
+
+	function salirReordenar() {
+		modoOrden.cerrar();
+	}
+
+	onDestroy(() => modoOrden.descartar());
+
+	/** Ver el comentario gemelo en /dia/[id]: `offsetTop` no miente durante el `flip`. */
+	function topDeTarjeta(id: string): number | null {
+		const el = document.querySelector<HTMLElement>(`[data-orden-id="${CSS.escape(id)}"]`);
+		return el ? el.offsetTop : null;
 	}
 
 	function alConsiderar(e: CustomEvent<DndEvent<ItemDia>>) {
@@ -62,15 +79,30 @@
 		guardarOrdenDias();
 	}
 
+	/**
+	 * Sube o baja una rutina dejando la tarjeta donde estaba en la pantalla: las flechas
+	 * van adentro de la tarjeta y el `flip` mueve el nodo, así que sin compensar el
+	 * scroll el segundo toque en el mismo lugar caía sobre la rutina de al lado y
+	 * deshacía el primero. Mismo arreglo que en /dia/[id].
+	 */
 	function moverDia(id: string, delta: -1 | 1) {
 		const origen = ordenItems.findIndex((item) => item.id === id);
 		const destino = origen + delta;
 		if (origen < 0 || destino < 0 || destino >= ordenItems.length) return;
+		const antes = topDeTarjeta(id);
 		const nuevos = [...ordenItems];
 		const [movido] = nuevos.splice(origen, 1);
 		nuevos.splice(destino, 0, movido!);
+		ancladaId = id;
 		ordenItems = nuevos;
 		guardarOrdenDias();
+		// `flushSync` y no `await tick()`: la corrección tiene que entrar en el mismo
+		// click. Con un await en el medio, dos toques muy seguidos alcanzaban a caer
+		// sobre la tarjeta vieja antes de que la página se hubiera acomodado.
+		flushSync();
+		const despues = topDeTarjeta(id);
+		if (antes != null && despues != null && despues !== antes) window.scrollBy(0, despues - antes);
+		ancladaId = null;
 	}
 
 	interface ProgresoDia {
@@ -197,7 +229,8 @@
 			>
 				{#each ordenItems as it (it.id)}
 					<div
-						animate:flip={{ duration: flipMs }}
+						animate:flip={{ duration: it.id === ancladaId ? 0 : flipMs }}
+						data-orden-id={it.id}
 						aria-label={`Mover ${it.nombre}`}
 						class="gb-sortable-card flex touch-pan-y items-center gap-3 rounded-2xl border border-white/10 p-4"
 						style="--drag-color: {it.color}; background: linear-gradient(90deg, rgb({it.color} / 0.12), transparent 55%), var(--surface)"
@@ -228,11 +261,17 @@
 					</div>
 				{/each}
 			</section>
-			<button
-				onclick={() => (reordenando = false)}
-				class="mt-5 w-full rounded-2xl py-3 text-sm font-bold"
-				style="background: var(--accent); color: var(--on-accent)">✓ Listo</button
+			<!-- Fija en el hueco de la barra inferior, como en /dia/[id]. -->
+			<div
+				class="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md px-5 pt-3"
+				style="padding-bottom: calc(0.75rem + var(--safe-bottom)); background: linear-gradient(to top, var(--bg) 72%, transparent)"
 			>
+				<button
+					onclick={salirReordenar}
+					class="w-full rounded-2xl py-3 text-sm font-bold"
+					style="background: var(--accent); color: var(--on-accent)">Terminar orden</button
+				>
+			</div>
 		{:else}
 			{@const hoyDias = $dias.filter((d) => d.diasSemana?.includes(hoy))}
 			{#if hoyDias.length > 0}
