@@ -6,12 +6,13 @@
 	import { goto } from '$app/navigation';
 	import { flushSync, onDestroy, onMount } from 'svelte';
 	import { db, type Dia, type Sesion } from '$lib/db';
-	import { crearDia, reordenarDias } from '$lib/dias';
+	import { borrarDia, crearDia, reordenarDias } from '$lib/dias';
 	import { hoyStr } from '$lib/sesion';
 	import { serieCompleta } from '$lib/sesion-reglas';
 	import { dur } from '$lib/motion';
 	import { mantener } from '$lib/mantener';
 	import Icono from '$lib/components/Icono.svelte';
+	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
 	import { vibrar } from '$lib/vibracion';
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
 	import { fromLiveQuery } from '$lib/live';
@@ -44,6 +45,12 @@
 	let ancladaId = $state<string | null>(null);
 	/** La tarjeta que se mantuvo apretada para abrir el modo: ver /dia/[id]. */
 	let agarradaId = $state<string | null>(null);
+	let confirmacion = $state<{
+		titulo: string;
+		mensaje: string;
+		confirmarTexto: string;
+		onConfirm: () => void | Promise<void>;
+	} | null>(null);
 	const ajustesStore = fromLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
 	const ajustes = $derived($ajustesStore);
 
@@ -136,6 +143,31 @@
 		const despues = topDeTarjeta(id);
 		if (antes != null && despues != null && despues !== antes) window.scrollBy(0, despues - antes);
 		ancladaId = null;
+	}
+
+	/**
+	 * Borra una rutina sin salir del modo, como el ✕ del reordenar de ejercicios.
+	 *
+	 * Se borra PRIMERO y recién después se saca de la lista: `borrarDia` puede fallar
+	 * —la base cambió abajo nuestro— y el sheet muestra el error, así que la tarjeta
+	 * tiene que seguir ahí si al final no se borró nada.
+	 *
+	 * Y con menos de dos rutinas ya no hay orden que arreglar: el modo se cierra solo en
+	 * vez de dejarte en una lista con las dos flechas apagadas, que es la misma guarda
+	 * que ya tenía `entrarReordenar` para no abrirlo.
+	 */
+	function borrarEnReorden(it: ItemDia) {
+		confirmacion = {
+			titulo: 'Borrar día',
+			mensaje: `Vas a borrar "${it.nombre}" de tus rutinas. El historial ya registrado no se borra.`,
+			confirmarTexto: 'Borrar',
+			onConfirm: async () => {
+				await borrarDia(it.id);
+				ordenItems = ordenItems.filter((x) => x.id !== it.id);
+				confirmacion = null;
+				if (ordenItems.length < 2) salirReordenar();
+			}
+		};
 	}
 
 	interface ProgresoDia {
@@ -265,17 +297,15 @@
 						animate:flip={{ duration: it.id === ancladaId ? 0 : flipMs }}
 						data-orden-id={it.id}
 						aria-label={`Mover ${it.nombre}`}
-						class="gb-sortable-card flex touch-pan-y items-center gap-3 rounded-2xl border p-4 {it.id ===
+						class="gb-sortable-card flex touch-pan-y items-center gap-2 rounded-2xl border p-3 {it.id ===
 						agarradaId
 							? 'gb-agarrada'
 							: 'border-white/10'}"
 						style="--drag-color: {it.color}; background: linear-gradient(90deg, rgb({it.color} / 0.12), transparent 55%), var(--surface)"
 					>
 						<span class="gb-drag-grip"><Icono nombre="arrastrar" /></span>
-						<span class="h-11 w-1.5 shrink-0 rounded-full" style="background: rgb({it.color})"
-						></span>
 						<div class="min-w-0 flex-1">
-							<p class="truncate font-semibold leading-tight">{it.nombre}</p>
+							<p class="gb-line-clamp-2 text-sm font-semibold leading-tight">{it.nombre}</p>
 							<p class="truncate text-xs" style="color: var(--muted)">{it.sub}</p>
 						</div>
 						<div class="flex shrink-0 gap-1">
@@ -292,6 +322,14 @@
 								disabled={ordenItems.at(-1)?.id === it.id}
 								class="grid size-11 place-items-center rounded-full bg-white/[0.06] disabled:opacity-30"
 								aria-label={`Bajar ${it.nombre}`}><Icono nombre="bajar" tamano={18} /></button
+							>
+							<!-- Borrar es el mismo ✕ del reordenar de ejercicios, y también pide confirmación. -->
+							<button
+								onpointerdown={(evento) => evento.stopPropagation()}
+								onclick={() => borrarEnReorden(it)}
+								class="grid size-11 place-items-center rounded-full"
+								style="background: rgba(255,80,80,.15); color: #ff6b6b"
+								aria-label={`Borrar ${it.nombre}`}><Icono nombre="cerrar" tamano={18} /></button
 							>
 						</div>
 					</div>
@@ -422,3 +460,13 @@
 		<p class="text-center text-sm" style="color: var(--muted)">Cargando…</p>
 	{/if}
 </main>
+
+{#if confirmacion}
+	<ConfirmSheet
+		titulo={confirmacion.titulo}
+		mensaje={confirmacion.mensaje}
+		confirmarTexto={confirmacion.confirmarTexto}
+		onConfirm={confirmacion.onConfirm}
+		onCancel={() => (confirmacion = null)}
+	/>
+{/if}

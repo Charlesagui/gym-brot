@@ -207,3 +207,71 @@ test('el deshacer de terminar con menos series sobrevive la navegación', async 
 		'2/4'
 	);
 });
+
+/**
+ * Borrar una rutina desde el modo de orden, que es el camino corto: antes había que
+ * entrar al día y bajar hasta el pie. La cruz queda al lado de las dos flechas que se
+ * tocan en serie, así que el aviso no es un trámite — es lo único que separa un dedo
+ * torcido de perder una rutina entera.
+ *
+ * Se cuenta por la pantalla y se comprueba recargando, y no abriendo IndexedDB desde el
+ * test: esa segunda conexión compite con la de la app y en corrida paralela se queda
+ * esperando. Recargar prueba lo mismo y prueba de más — que lo borrado no vuelve.
+ */
+test('la cruz del orden de rutinas avisa antes de borrar, y se puede cancelar', async ({
+	page
+}) => {
+	await page.goto('/');
+	const rutinas = page.locator('[data-dia-id]');
+	await expect(rutinas).toHaveCount(3);
+	await page.getByRole('button', { name: 'Reordenar rutinas' }).click();
+	const filas = page.locator('[data-orden-id]');
+	await expect(filas).toHaveCount(3);
+
+	await page.getByRole('button', { name: 'Borrar Piernas' }).click();
+	const aviso = page.getByRole('dialog', { name: 'Borrar día' });
+	await expect(aviso).toContainText('Piernas');
+	await aviso.getByRole('button', { name: 'Cancelar' }).click();
+
+	// Arrepentirse deja las tres, y el modo sigue donde estaba.
+	await expect(aviso).toBeHidden();
+	await expect(filas).toHaveCount(3);
+	await expect(page.getByRole('button', { name: 'Terminar orden' })).toBeVisible();
+
+	await page.getByRole('button', { name: 'Borrar Piernas' }).click();
+	await page.getByRole('button', { name: 'Borrar', exact: true }).click();
+	await expect(filas).toHaveCount(2);
+	// Con dos todavía hay orden que arreglar: el modo no te echa.
+	await expect(page.getByRole('button', { name: 'Terminar orden' })).toBeVisible();
+
+	// Y se borró de verdad: no es una fila que se fue de la lista del modo.
+	await page.reload();
+	await expect(rutinas).toHaveCount(2);
+	await expect(page.getByText('Piernas', { exact: true })).toBeHidden();
+});
+
+/**
+ * Y con una sola rutina el modo se cierra solo: `entrarReordenar` ya se niega a abrirlo
+ * con menos de dos, así que quedarse adentro dejaba las dos flechas apagadas y la cruz
+ * como único botón vivo de una pantalla que se llama "orden".
+ */
+test('borrar hasta dejar una sola rutina cierra el modo de orden', async ({ page }) => {
+	await page.goto('/');
+	await expect(page.locator('[data-dia-id]')).toHaveCount(3);
+	await page.getByRole('button', { name: 'Reordenar rutinas' }).click();
+
+	for (const quedan of [2, 1]) {
+		await page
+			.getByRole('button', { name: /^Borrar / })
+			.first()
+			.click();
+		await page.getByRole('button', { name: 'Borrar', exact: true }).click();
+		if (quedan > 1) await expect(page.locator('[data-orden-id]')).toHaveCount(quedan);
+	}
+
+	await expect(page.getByRole('button', { name: 'Terminar orden' })).toBeHidden();
+	// Y la portada vuelve, sin el atajo para reordenar una sola rutina.
+	await expect(page.locator('[data-dia-id]')).toHaveCount(1);
+	await expect(page.getByRole('button', { name: '+ Nuevo día' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Reordenar rutinas' })).toBeHidden();
+});
