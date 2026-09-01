@@ -76,22 +76,42 @@
 	 * con que otro cliente —la app instalada y una pestaña del navegador conviven, es la
 	 * situación que describe "Gym-brot está abierto dos veces"— toque "Actualizar" para que
 	 * tome el control de todos a la vez. Esconder el aviso mientras entrenás no frena esa
-	 * recarga: vite-plugin-pwa engancha su listener de `controlling` apenas hay versión
-	 * esperando, no cuando tocás el botón, y queda armado en todos los clientes.
+	 * recarga, y por eso el `controllerchange` de más abajo se escucha SIEMPRE: apoyarse
+	 * en el listener de vite-plugin-pwa no alcanzaba, porque el plugin lo engancha recién
+	 * cuando le llega su evento `waiting`, que es justo el que puede no llegar nunca.
 	 */
 	let recargaPendiente = $state(false);
-	const { needRefresh, updateServiceWorker } = useRegisterSW({
+	/**
+	 * Que haya versión esperando lo dice `buscadorDeVersion`, no el `needRefresh` del
+	 * plugin: ese se prende desde un evento de workbox-window que deja de llegar a partir
+	 * de la segunda versión detectada en la misma página, y era el motivo de que Ajustes
+	 * prometiera un botón "Actualizar" que nunca aparecía (ver $lib/actualizacion).
+	 */
+	let hayVersion = $state(false);
+	let dejarDeMirarVersion: (() => void) | undefined;
+	useRegisterSW({
 		onRegisteredSW(_url, registro) {
 			buscadorDeVersion.registrar(registro);
+			hayVersion = buscadorDeVersion.hayVersionLista;
+			dejarDeMirarVersion = buscadorDeVersion.alQuedarLista(() => (hayVersion = true));
 		},
 		// Definirlo es lo que evita el `location.reload()` propio del plugin. Decidimos acá.
-		onNeedReload() {
-			if (entrenando) recargaPendiente = true;
-			else location.reload();
-		}
+		onNeedReload: () => tomarElControl()
 	});
 	const entrenando = $derived(sinNav || descanso.restoSeg > 0 || descanso.vencido);
 	let actualizando = $state(false);
+
+	/**
+	 * El service worker nuevo tomó el control. Puede venir de nuestro botón, de otra
+	 * pestaña o de la app instalada conviviendo con el navegador: en todos los casos esta
+	 * pantalla quedó con código viejo bajo un precache que ya no lo tiene, así que la
+	 * recarga no es opcional. Escucharlo siempre —y no sólo cuando el plugin nos avisa—
+	 * es lo que evita quedar en ese estado en silencio.
+	 */
+	function tomarElControl() {
+		if (entrenando) recargaPendiente = true;
+		else location.reload();
+	}
 
 	// Soltaste el ejercicio y acusaste recibo del descanso: recién ahí la recarga no
 	// interrumpe nada. Si estabas navegando, `beforeNavigate` ya se ocupó antes que esto.
@@ -115,8 +135,8 @@
 	// Sin esto el navegador solo busca versión nueva al registrar el service worker,
 	// o sea al cargar la página: en la app instalada, que no se cierra nunca, un
 	// deploy podía tardar días en aparecer. Buscar acá NO activa nada — deja el
-	// service worker nuevo esperando y el cambio de versión sigue dependiendo del
-	// botón "Actualizar", así que es seguro aunque estés a mitad de una serie.
+	// service worker nuevo esperando, y aplicarlo sigue siendo un acto explícito
+	// (el cartel, o el botón de Ajustes), así que es seguro aunque estés entrenando.
 	const INTERVALO_CHEQUEO_MS = 30 * 60_000;
 
 	function buscarVersionNueva() {
@@ -128,14 +148,40 @@
 		void buscadorDeVersion.buscar();
 	}
 
-	async function actualizar() {
+	/**
+	 * Tope para que el botón no quede girando si el service worker nunca contesta el
+	 * SKIP_WAITING. Recargar entonces no arregla nada por sí solo, pero es la única
+	 * salida que le queda al usuario y es preferible a un botón muerto.
+	 */
+	const TOPE_APLICAR_MS = 6000;
+
+	function actualizar() {
+		if (actualizando) return;
 		actualizando = true;
-		try {
-			await updateServiceWorker();
-		} finally {
+		if (!buscadorDeVersion.aplicar()) {
 			actualizando = false;
+			return;
 		}
+		// La recarga la dispara `controllerchange`; acá sólo queda el piso de seguridad.
+		// Si en esos segundos arrancaste a entrenar, el piso no pisa: `tomarElControl`
+		// ya dejó la recarga esperando y el manifiesto manda sobre el tope.
+		setTimeout(() => {
+			if (!entrenando && !recargaPendiente) location.reload();
+		}, TOPE_APLICAR_MS);
 	}
+
+	/**
+	 * Ajustes pide actualizar sin saber si es momento: es el layout el que sabe. Si estás
+	 * entrenando el pedido no se pierde ni manda a buscar ningún botón — queda anotado y
+	 * se cumple solo apenas la pantalla se libera.
+	 */
+	let aplicarAlSalir = $state(false);
+	$effect(() => {
+		if (aplicarAlSalir && hayVersion && !entrenando) {
+			aplicarAlSalir = false;
+			actualizar();
+		}
+	});
 	let dbError = $state<string | null>(null);
 	/**
 	 * La base existe pero es MÁS NUEVA que este código (VersionError): pasa cuando la
@@ -255,7 +301,25 @@
 		};
 		document.addEventListener('visibilitychange', alVolverAlFrente);
 		const chequeoId = setInterval(buscarVersionNueva, INTERVALO_CHEQUEO_MS);
+		// El listener de `controllerchange` del plugin sólo se engancha si antes llegó su
+		// evento `waiting`, que es justo lo que puede no llegar: sin este, un service
+		// worker que toma el control desde otra pestaña dejaba esta pantalla con código
+		// viejo y chunks borrados del precache, sin recargar nunca. `habiaControlador`
+		// descarta el primer registro, donde el cambio de controlador no es novedad.
+		const sw = navigator.serviceWorker;
+		const habiaControlador = Boolean(sw?.controller);
+		const alCambiarControlador = () => {
+			if (habiaControlador) tomarElControl();
+		};
+		sw?.addEventListener('controllerchange', alCambiarControlador);
+		const dejarDeAtenderPedidos = buscadorDeVersion.alPedirAplicar(() => {
+			if (entrenando) aplicarAlSalir = true;
+			else actualizar();
+		});
 		return () => {
+			dejarDeAtenderPedidos();
+			sw?.removeEventListener('controllerchange', alCambiarControlador);
+			dejarDeMirarVersion?.();
 			dejarDePresionar();
 			dejarDeEscucharReemplazos();
 			window.removeEventListener('touchcancel', limpiarArrastreHuerfano, true);
@@ -598,7 +662,7 @@
 	</div>
 {/if}
 
-{#if $needRefresh && !entrenando && dbLista}
+{#if hayVersion && !entrenando && dbLista}
 	<div
 		class="fixed inset-x-0 z-[85] mx-auto max-w-md px-5"
 		style="bottom: calc(72px + var(--safe-bottom))"

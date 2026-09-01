@@ -84,22 +84,25 @@
 	const hayWakeLock = $derived(estadoWake !== 'sin-soporte');
 
 	/**
-	 * El cartel de "hay versión nueva" depende del chequeo de fondo, que respeta un piso
-	 * de 60 s entre consultas. Justo después de publicar, ese piso es lo que hace creer
-	 * que la versión no salió: acá se pregunta a mano y sin esperar. Preguntar no aplica
-	 * nada — la versión nueva queda esperando y se aplica desde el cartel, como siempre.
+	 * El chequeo de fondo respeta un piso de 60 s entre consultas, y justo después de
+	 * publicar ese piso es lo que hace creer que la versión no salió: acá se pregunta a
+	 * mano y sin esperar. Y además se APLICA acá mismo. Antes este botón buscaba y
+	 * mandaba a tocar "Actualizar" en el cartel del layout; el cartel podía no aparecer
+	 * nunca (ver $lib/actualizacion) y, aun apareciendo, era un paso de más para alguien
+	 * que ya vino hasta Ajustes a pedir la versión nueva.
 	 */
 	let buscandoVersion = $state(false);
 	let versionMsg = $state('');
 
-	function respuestaChequeo(resultado: ResultadoChequeo): string {
+	/**
+	 * Tope para esperar la descarga del shell nuevo. Son ~2 MB: en la conexión del gym
+	 * tarda, y sin tope el botón se quedaría girando para siempre si se corta.
+	 */
+	const TOPE_DESCARGA_MS = 45_000;
+
+	/** Los dos casos con versión nueva no llegan acá: los resuelve `buscarActualizacion`. */
+	function respuestaChequeo(resultado: Exclude<ResultadoChequeo, 'bajando' | 'hay-version'>) {
 		switch (resultado) {
-			case 'hay-version':
-				// El cartel se esconde mientras descansás, así que prometer un botón que no
-				// está en pantalla sería mentir.
-				return descanso.restoSeg > 0 || descanso.vencido
-					? 'Hay una versión nueva. Se ofrece al terminar el descanso.'
-					: 'Hay una versión nueva: tocá «Actualizar» en el cartel de abajo.';
 			case 'al-dia':
 				return 'Ya tenés la última versión.';
 			case 'sin-red':
@@ -116,11 +119,28 @@
 	async function buscarActualizacion() {
 		buscandoVersion = true;
 		versionMsg = '';
-		try {
-			versionMsg = respuestaChequeo(await buscadorDeVersion.buscar({ forzar: true }));
-		} finally {
+		const terminar = (mensaje: string) => {
+			versionMsg = mensaje;
 			buscandoVersion = false;
+		};
+
+		let resultado = await buscadorDeVersion.buscar({ forzar: true });
+		if (resultado === 'bajando') {
+			versionMsg = 'Bajando la versión nueva…';
+			if (!(await buscadorDeVersion.esperarLista(TOPE_DESCARGA_MS)))
+				return terminar('La descarga no terminó. Probá de nuevo con mejor señal.');
+			resultado = 'hay-version';
 		}
+		if (resultado !== 'hay-version') return terminar(respuestaChequeo(resultado));
+
+		// El layout decide el momento: recargar a mitad de un descanso va contra el
+		// manifiesto, y el descanso es lo único que puede estar corriendo desde acá. El
+		// pedido no se pierde en ningún caso — se cumple solo cuando la pantalla se libera.
+		buscadorDeVersion.pedirAplicar();
+		if (descanso.restoSeg > 0 || descanso.vencido)
+			return terminar('Versión nueva lista. Se aplica sola al terminar el descanso.');
+		// Sin apagar `buscandoVersion`: de acá la pantalla se va sola con la recarga.
+		versionMsg = 'Actualizando…';
 	}
 
 	onMount(() => {
@@ -933,7 +953,7 @@
 			onclick={buscarActualizacion}
 			disabled={buscandoVersion}
 			class="mx-auto mt-3 flex min-h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-sm font-semibold disabled:opacity-60"
-			style="color: var(--muted)">{buscandoVersion ? 'Buscando…' : 'Buscar actualización'}</button
+			style="color: var(--muted)">{buscandoVersion ? 'Buscando…' : 'Actualizar la app'}</button
 		>
 		{#if versionMsg}
 			<p
