@@ -32,7 +32,14 @@
 		reanudarEjercicio,
 		type SesionReciente
 	} from '$lib/sesion';
-	import { estadoEjercicioSesion, estadoSesion, serieCompleta } from '$lib/sesion-reglas';
+	import {
+		calidadDesde,
+		estadoEjercicioSesion,
+		estadoSesion,
+		serieCompleta,
+		totalesSesion,
+		type CalidadSesion
+	} from '$lib/sesion-reglas';
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
 	import { resumenDiaSesion, rachaSemanalActual } from '$lib/historial';
 	import { sonarDiaTerminado, sonarExito } from '$lib/audio';
@@ -56,6 +63,30 @@
 	let avisoDia = $state<string | null>(null);
 	let premioDia = $state(false);
 	let premioId: ReturnType<typeof setTimeout> | null = null;
+	/**
+	 * El veredicto con el que se abrió el resumen, congelado.
+	 *
+	 * No se lee `calidadDia` acá: ese derivado sale del liveQuery, que todavía no
+	 * re-emitió cuando volvemos del await de la escritura. En el único caso que el cierre
+	 * a mano promueve —bastantes ejercicios trabajados con pocas series— el valor viejo
+	 * dice "parcial", así que la celebración salía corta y sobria mientras la pantalla
+	 * terminaba diciendo "Día terminado".
+	 */
+	let premioCalidad = $state<CalidadSesion>('nula');
+	/**
+	 * El toque que abre el resumen no puede cerrarlo.
+	 *
+	 * El fondo del resumen es un botón y se monta justo debajo del dedo que acaba de
+	 * apretar "Terminar día" (o "Cerrar día" en la confirmación). Sin esta gracia, quien
+	 * toca dos veces porque la escritura tardó se lleva puesto el resumen sin verlo.
+	 *
+	 * Va como `disabled` y no como un chequeo de reloj adentro del handler: así el toque
+	 * no se traga en silencio, lo ignora el navegador, y el estado queda dicho donde ya
+	 * lo leen el lector de pantalla y los tests.
+	 */
+	const GRACIA_PREMIO_MS = 400;
+	let premioTocable = $state(false);
+	let graciaId: ReturnType<typeof setTimeout> | null = null;
 	// Solo se muestra si es una racha real (2+ semanas seguidas): no infla la primera.
 	let rachaSemanal = $state(0);
 	let confirmacion = $state<{
@@ -124,6 +155,7 @@
 
 	onDestroy(() => {
 		if (premioId) clearTimeout(premioId);
+		if (graciaId) clearTimeout(graciaId);
 	});
 
 	function progreso(exId: string): { hechas: number; total: number } | null {
@@ -259,12 +291,21 @@
 			return;
 		}
 		avisoDia = null;
+		// El veredicto se calcula acá, sobre la sesión que ya tenemos y con el cierre a
+		// mano puesto: ver `premioCalidad`. Las series ya estaban escritas antes de este
+		// await, así que lo único que le falta al derivado es el `diaTerminado`.
+		premioCalidad = sesion
+			? calidadDesde({ ...totalesSesion(sesion), cerradaAMano: true })
+			: 'nula';
 		premioDia = true;
+		premioTocable = false;
+		if (graciaId) clearTimeout(graciaId);
+		graciaId = setTimeout(() => (premioTocable = true), GRACIA_PREMIO_MS);
 		rachaSemanal = 0;
 		// La recompensa sigue al veredicto, no al toque: la fiesta entera es para el día
 		// completo, y el parcial recibe el acuse corto. Celebrar los dos igual es lo que
 		// hacía que "día terminado" no significara nada.
-		const completo = calidadDia === 'completa';
+		const completo = premioCalidad === 'completa';
 		const conActividadReal = resumenDia.setsHechos > 0;
 		if (conActividadReal && sonidoActivo)
 			void (completo ? sonarDiaTerminado() : sonarExito(false)).catch(() => {});
@@ -279,7 +320,13 @@
 				.catch(() => {});
 		}
 		if (premioId) clearTimeout(premioId);
-		premioId = setTimeout(() => (premioDia = false), completo ? 2400 : 1600);
+		premioId = null;
+		// El día completo NO se cierra solo. Es la recompensa mayor de la app y además la
+		// única pantalla que junta volumen, PRs y racha: irse sola a los 2,4 s dejaba un
+		// resumen que no se llegaba a leer y que después no se puede volver a abrir desde
+		// acá. Se va cuando la persona lo cierra. El parcial sí caduca, pero con tiempo
+		// para leerse: 1,6 s no alcanzaban ni para la primera línea.
+		if (!completo) premioId = setTimeout(() => (premioDia = false), 3600);
 	}
 
 	async function saltarEjercicioActual(exerciseId: string) {
@@ -366,8 +413,11 @@
 
 	function cerrarPremio() {
 		premioDia = false;
+		premioTocable = false;
 		if (premioId) clearTimeout(premioId);
 		premioId = null;
+		if (graciaId) clearTimeout(graciaId);
+		graciaId = null;
 	}
 
 	function entrarReordenar() {
@@ -989,35 +1039,47 @@
 </main>
 
 {#if premioDia}
-	<!-- Celebratorio pero no carcelero: un toque en cualquier lado lo cierra. -->
-	<button
-		onclick={cerrarPremio}
-		aria-label="Cerrar resumen del día"
-		class="fixed inset-0 z-[60] grid w-full cursor-default place-items-center px-8"
-		style={calidadDia === 'completa'
+	<!-- Celebratorio pero no carcelero: un toque en cualquier lado lo cierra. El fondo es
+	     un botón propio y no el contenedor entero: así el resumen puede llevar adentro su
+	     botón de salida, que es la única forma de cerrar un día completo. -->
+	<div
+		role="dialog"
+		aria-label="Resumen del día"
+		class="fixed inset-0 z-[60] grid w-full place-items-center px-8"
+		style={premioCalidad === 'completa'
 			? 'background: radial-gradient(72% 50% at 50% 42%, rgb(var(--exito) / .22), transparent 72%), rgb(var(--scrim) / .84); backdrop-filter: blur(8px)'
 			: 'background: rgb(var(--scrim) / .9); backdrop-filter: blur(8px)'}
 	>
-		<div transition:fly={{ y: 18, duration: dur(260) }} class="text-center" aria-live="polite">
+		<button
+			onclick={cerrarPremio}
+			disabled={!premioTocable}
+			aria-label="Cerrar resumen del día"
+			class="absolute inset-0 cursor-default"
+		></button>
+		<div
+			transition:fly={{ y: 18, duration: dur(260) }}
+			class="pointer-events-none relative text-center"
+			aria-live="polite"
+		>
 			<div class="relative mx-auto grid size-24 place-items-center">
 				<!-- Las partículas y el halo son del día completo. Un día parcial recibe el
 				     acuse corto: celebrar los dos igual es lo que hacía que "día terminado"
 				     no significara nada. -->
-				{#if calidadDia === 'completa'}
+				{#if premioCalidad === 'completa'}
 					<CelebracionParticulas color="var(--exito)" cantidad={16} />
 				{/if}
 				<div
 					class="relative grid size-24 place-items-center rounded-full border border-white/15 text-5xl font-extrabold"
-					style="background: rgb(var(--exito) / {calidadDia === 'completa'
+					style="background: rgb(var(--exito) / {premioCalidad === 'completa'
 						? '.18'
-						: '.1'}); color: rgb(var(--exito)); box-shadow: {calidadDia === 'completa'
+						: '.1'}); color: rgb(var(--exito)); box-shadow: {premioCalidad === 'completa'
 						? '0 0 55px rgb(var(--exito) / .24)'
 						: 'none'}"
 				>
-					<Icono nombre={calidadDia === 'completa' ? 'terminar' : 'hecha'} tamano={42} />
+					<Icono nombre={premioCalidad === 'completa' ? 'terminar' : 'hecha'} tamano={42} />
 				</div>
 			</div>
-			{#if calidadDia === 'completa'}
+			{#if premioCalidad === 'completa'}
 				<p class="mt-5 text-2xl font-extrabold">Día terminado</p>
 				<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
 					{ejerciciosCompletos} completos · {ejerciciosParciales} parciales · {ejerciciosSaltados}
@@ -1079,9 +1141,14 @@
 					🔥 {rachaSemanal} semanas seguidas
 				</p>
 			{/if}
-			<p class="mt-5 text-[11px] font-semibold" style="color: var(--muted)">Tocá para cerrar</p>
+			<button
+				onclick={cerrarPremio}
+				disabled={!premioTocable}
+				class="gb-relieve pointer-events-auto mt-5 inline-flex min-h-14 items-center justify-center rounded-2xl border border-white/10 px-8 text-sm font-bold"
+				>Volver al día</button
+			>
 		</div>
-	</button>
+	</div>
 {/if}
 
 {#if toast}

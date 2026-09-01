@@ -411,7 +411,7 @@ test('cerrar un día sin series usa un mensaje sobrio y no declara progreso', as
 		).toBeVisible();
 	}
 	await page.getByRole('button', { name: 'Terminar día' }).click();
-	const resumen = page.getByRole('button', { name: 'Cerrar resumen del día' });
+	const resumen = page.getByRole('dialog', { name: 'Resumen del día' });
 	await expect(resumen.getByText('Día cerrado · 6 saltados')).toBeVisible();
 	await expect(resumen.getByText('Sin series registradas')).toBeVisible();
 	await expect(resumen.getByText('Día terminado')).toHaveCount(0);
