@@ -24,26 +24,23 @@
 		discos: number[];
 	}
 
-	/**
-	 * La barra que no pesa. En una máquina de discos, un landmine o un pin de carga las
-	 * placas cuelgan de algo que no suma kilos, y ahí el total es sólo lo que colgás.
-	 * Es un peso de barra más, así que entra en los presets y no en un modo aparte.
+	/*
+	 * El 0 es un peso de barra válido y va como preset: en una máquina de discos, un
+	 * landmine o un pin de carga lo único que pesa son las placas.
 	 */
-	const SIN_BARRA = 0;
-
 	const CONFIG: Record<UnidadPeso, ConfigUnidad> = {
 		kg: {
 			objetivo: 60,
 			barra: 20,
 			paso: 2.5,
-			barras: [20, 15, 10, SIN_BARRA],
+			barras: [20, 15, 10, 0],
 			discos: [25, 20, 15, 10, 5, 2.5, 1.25]
 		},
 		lb: {
 			objetivo: 135,
 			barra: 45,
 			paso: 5,
-			barras: [45, 35, 15, SIN_BARRA],
+			barras: [45, 35, 15, 0],
 			discos: [45, 35, 25, 10, 5, 2.5]
 		}
 	};
@@ -209,16 +206,19 @@
 	Debajo del dibujo va la barra y nada mas. La lista de discos que estaba aca repetia
 	lo que el grafico ya dice mejor: cada placa lleva su color y su numero encima. La
 	barra era lo unico sin nombre —el peso que elegis abajo no volvia a aparecer en la
-	respuesta—, asi que se queda con el renglon. Con barra 0 no hay nada que nombrar:
-	decir "solo la barra de 0" seria nombrar algo que no existe.
+	respuesta—, asi que se queda con el renglon. Con la barra en 0 y sin discos no queda
+	carga que anunciar: "solo la barra de 0" seria anunciar una que no existe.
 -->
 {#snippet pieCarga(carga: CargaBarra, pesoBarra: number)}
 	<p class="mt-1 text-sm font-bold" style="color: var(--muted)">
-		{#if pesoBarra === SIN_BARRA}
-			{carga.discos.length === 0 ? 'Sin barra ni discos' : 'Sin barra'}
-		{:else if carga.discos.length === 0}
-			Solo la barra de <span class="cifra" style="color: var(--text)">{formatoPeso(pesoBarra)}</span
-			>
+		{#if carga.discos.length === 0}
+			{#if pesoBarra === 0}
+				Sin discos
+			{:else}
+				Solo la barra de <span class="cifra" style="color: var(--text)"
+					>{formatoPeso(pesoBarra)}</span
+				>
+			{/if}
 		{:else}
 			Barra <span class="cifra" style="color: var(--text)">{formatoPeso(pesoBarra)}</span>
 		{/if}
@@ -313,13 +313,7 @@
 				<p class="cifra mt-1 text-[2.9rem]">
 					{formatoPeso(resultado.exacta.porLado)}<span class="cifra-u">{unidad}</span>
 				</p>
-				<BarraCargada
-					carga={resultado.exacta}
-					{pesoMaxDisco}
-					formato={formatoPeso}
-					{unidad}
-					conBarra={resultado.barra > SIN_BARRA}
-				/>
+				<BarraCargada carga={resultado.exacta} {pesoMaxDisco} formato={formatoPeso} {unidad} />
 				{@render pieCarga(resultado.exacta, resultado.barra)}
 				<!--
 					La combinacion sigue existiendo para quien no ve el dibujo: el SVG es
@@ -346,7 +340,6 @@
 					{pesoMaxDisco}
 					formato={formatoPeso}
 					{unidad}
-					conBarra={resultado.barra > SIN_BARRA}
 				/>
 				{@render pieCarga(cercanas.principal.carga, resultado.barra)}
 				{#if cercanas.principal.carga.discos.length > 0}
@@ -369,7 +362,7 @@
 						<span class="cifra text-sm" style="color: var(--muted)"
 							>{cercanas.alternativa.carga.discos.length > 0
 								? combinacion(cercanas.alternativa.carga)
-								: resultado.barra === SIN_BARRA
+								: resultado.barra === 0
 									? 'sin discos'
 									: 'solo la barra'}</span
 						>
@@ -383,23 +376,15 @@
 		<h2 class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">Barra</h2>
 		<div class="mt-1.5 grid grid-cols-5 gap-1.5" role="group" aria-label="Peso de la barra">
 			{#each config.barras as peso}
-				<!--
-					El 0 va con palabras y no con cifra: bajo el título "Barra", un "0" entre
-					pesos se lee como una barra que pesa nada, que es justo lo confuso. Lo que
-					elegís ahí no es un peso más chico, es que no hay barra.
-				-->
-				{@const sinBarra = peso === SIN_BARRA}
 				<button
 					type="button"
 					onclick={() => usarBarra(peso)}
 					aria-pressed={barra === peso}
-					class="gb-relieve min-h-11 rounded-xl border px-0.5 {sinBarra
-						? 'text-xs font-bold leading-tight'
-						: 'cifra text-xl'}"
+					class="gb-relieve cifra min-h-11 rounded-xl border px-0.5 text-xl"
 					style={barra === peso
 						? 'border-color: rgb(var(--accent-rgb) / .75); background: rgb(var(--accent-rgb) / .18); color: var(--accent-text)'
 						: 'border-color: rgba(255,255,255,.10); background: rgba(255,255,255,.035); color: var(--muted)'}
-					>{sinBarra ? 'Sin barra' : formatoPeso(peso)}</button
+					>{formatoPeso(peso)}</button
 				>
 			{/each}
 			<input
