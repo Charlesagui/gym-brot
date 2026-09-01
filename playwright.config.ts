@@ -28,6 +28,21 @@ export default defineConfig({
 		{
 			name: 'mobile-chromium',
 			use: { ...devices['Pixel 5'] }
+		},
+		/*
+		 * El Pixel 5 mide 393x851: de los teléfonos que se usan es de los más altos, y
+		 * durante mucho tiempo fue el único que se probaba. Ahí el descanso a pantalla
+		 * completa entraba justo, y en un iPhone SE (375x553) sus dos salidas caían fuera
+		 * de la pantalla sin que nada se pusiera rojo.
+		 *
+		 * Este proyecto corre sólo `encaje-vertical`: es un chequeo de layout, no de
+		 * lógica, y duplicar el suite entero por un eje de medición no se paga. Si mañana
+		 * aparece otro overlay que tiene que entrar en una pantalla baja, su test va acá.
+		 */
+		{
+			name: 'pantalla-chica',
+			testMatch: /encaje-vertical\.spec\.ts/,
+			use: { ...devices['Pixel 5'], viewport: { width: 375, height: 553 } }
 		}
 	]
 });

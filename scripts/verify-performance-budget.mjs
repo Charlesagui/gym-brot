@@ -15,8 +15,21 @@ const BUILD = new URL('../build/', import.meta.url);
  *
  * Si algún día esto sube de golpe, la pregunta antes de tocar el número es cuál de esos
  * tres creció y si lo que se sumó hace falta en la primera pantalla.
+ *
+ * 31/8/2026: el techo crudo de 340 KiB se había quedado sin aire —en el commit anterior
+ * quedaban 185 B— y lo rompió el arreglo del descanso a pantalla completa: sus salidas
+ * caían fuera de la pantalla en cualquier teléfono de menos de 664 px de alto, y el
+ * arreglo son dos media queries verticales (+992 B crudo, +201 B gzip).
+ *
+ * Las dos preguntas de arriba, respondidas: creció el CSS del shell, no un chunk nuevo;
+ * y sí hace falta en la primera pantalla, porque `+layout.svelte` monta el descanso en
+ * todas las rutas y un cronómetro no puede esperar a que baje un chunk aparte. El gzip
+ * —el que viaja— ni se movió del 95 % de su propio techo.
+ *
+ * 352 KiB devuelve ~11 KiB de aire, en la misma proporción con la que se subió el
+ * precache en agosto.
  */
-const MAX_SHELL_BYTES = 340 * 1024;
+const MAX_SHELL_BYTES = 352 * 1024;
 const MAX_SHELL_GZIP_BYTES = 120 * 1024;
 /*
  * Techo del precache: lo que la app se baja en la primera visita y revalida en cada

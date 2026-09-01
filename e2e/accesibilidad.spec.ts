@@ -674,3 +674,107 @@ test('las salidas del descanso a pantalla completa responden al toque', async ({
 	await expect(dialogo).toBeHidden();
 	await expect(barra).toBeHidden();
 });
+
+/**
+ * Un cronómetro no es un anuncio.
+ *
+ * La cifra del descanso vivía adentro de un `aria-live="polite"`, y cambia sesenta veces
+ * por minuto: con lector de pantalla el descanso se volvía una locutora que dice «un
+ * minuto cincuenta y nueve… un minuto cincuenta y ocho…» hasta el final. La región viva
+ * tiene que ser el rótulo, que cambia UNA vez en todo el descanso, y la cifra tiene que
+ * poder leerse cuando la buscás, no sola: para eso está `role="timer"`, que trae
+ * `aria-live: off` por definición.
+ */
+test('el cronómetro del descanso no se anuncia cada segundo', async ({ page }) => {
+	await page.clock.install({ time: new Date('2026-08-15T10:00:00-03:00') });
+	await page.goto('/ejercicio/prensa-pierna-45?dia=dia-piernas&fecha=2026-08-15');
+	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
+	await page.getByRole('button', { name: 'Marcar serie 1' }).click();
+	await expect(page.getByRole('dialog', { name: 'Descanso' })).toBeVisible();
+
+	const lectura = await page.evaluate(() => {
+		const dialogo = document.querySelector('[role="dialog"][aria-label="Descanso"]')!;
+		const reloj = dialogo.querySelector('.rest-focus-time')!;
+		/** El ancestro vivo más cercano, si es que hay alguno. */
+		const regionViva = (desde: Element | null) => {
+			for (let el = desde; el; el = el.parentElement) {
+				const valor = el.getAttribute('aria-live');
+				if (valor && valor !== 'off') return valor;
+			}
+			return null;
+		};
+		const rotulo = [...dialogo.querySelectorAll('p')].find(
+			(p) => p.textContent?.trim() === 'Descanso'
+		)!;
+		return {
+			relojEnRegionViva: regionViva(reloj),
+			rolDelReloj: reloj.getAttribute('role'),
+			rotuloVivo: rotulo.getAttribute('aria-live')
+		};
+	});
+
+	expect(lectura.relojEnRegionViva, 'la cifra volvió a quedar dentro de un aria-live').toBeNull();
+	expect(lectura.rolDelReloj).toBe('timer');
+	expect(lectura.rotuloVivo, 'el aviso de fin necesita una región viva estable').toBe('polite');
+});
+
+/**
+ * Cero emoji en la interfaz operativa (`CLAUDE.md`).
+ *
+ * La barra del descanso decía «⏱️ Descanso» mientras el resto de la app ya dibujaba sus
+ * íconos con `Icono.svelte` — que documenta ese mismo emoji entre los que se sacaron
+ * porque cada teléfono lo dibuja distinto, no toma el color del acento y no alinea con
+ * el texto de al lado.
+ */
+test('la barra del descanso dibuja su ícono, no un emoji', async ({ page }) => {
+	await page.clock.install({ time: new Date('2026-08-15T10:00:00-03:00') });
+	await page.goto('/ejercicio/prensa-pierna-45?dia=dia-piernas&fecha=2026-08-15');
+	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
+	await page.getByRole('button', { name: 'Marcar serie 1' }).click();
+	const dialogo = page.getByRole('dialog', { name: 'Descanso' });
+	await dialogo.getByRole('button', { name: 'Minimizar' }).click();
+
+	const barra = page.locator('.rest-bar');
+	await expect(barra).toBeVisible();
+	const contenido = await barra.evaluate((el) => ({
+		emoji: /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/u.test(
+			el.textContent ?? ''
+		),
+		trazos: el.querySelectorAll('svg').length
+	}));
+	expect(contenido.emoji, 'volvió un emoji a la interfaz operativa').toBe(false);
+	expect(contenido.trazos).toBeGreaterThan(0);
+});
+
+/**
+ * El fondo cierra, como en toda otra hoja de la app.
+ *
+ * El descanso era la única donde tocar afuera no hacía nada: `HojaDescanso` y
+ * `EditarSerieSheet` ya tenían su botón de fondo. En un teléfono el panel ocupa todo el
+ * ancho y ese fondo no existe —por eso la segunda mitad del test, que verifica que no le
+ * robe el toque al panel—, pero acostado y en pantallas anchas queda fondo a la vista y
+ * el gesto se intenta solo.
+ */
+test('tocar el fondo del descanso lo minimiza sin cortarlo', async ({ page }) => {
+	await page.clock.install({ time: new Date('2026-08-15T10:00:00-03:00') });
+	await page.goto('/ejercicio/prensa-pierna-45?dia=dia-piernas&fecha=2026-08-15');
+	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
+	await page.getByRole('button', { name: 'Marcar serie 1' }).click();
+	const dialogo = page.getByRole('dialog', { name: 'Descanso' });
+	await expect(dialogo).toBeVisible();
+
+	// En el teléfono el panel llega a los dos bordes: el toque del borde es del panel.
+	const anchoPanel = (await dialogo.boundingBox())!.width;
+	expect(Math.round(anchoPanel)).toBe(page.viewportSize()!.width);
+	await page.mouse.click(4, 300);
+	await expect(dialogo, 'el fondo le robó el toque al panel').toBeVisible();
+
+	// Con lugar para el fondo, tocarlo minimiza y el descanso sigue corriendo.
+	await page.setViewportSize({ width: 720, height: 900 });
+	await expect(dialogo).toBeVisible();
+	await page.mouse.click(40, 450);
+	await expect(dialogo).toBeHidden();
+	await expect(
+		page.getByRole('button', { name: 'Abrir descanso en pantalla completa' })
+	).toBeVisible();
+});

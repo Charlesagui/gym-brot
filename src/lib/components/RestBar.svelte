@@ -40,7 +40,9 @@
 				aria-label="Abrir descanso en pantalla completa"
 			>
 				<span class="min-w-0 flex-1">
-					<span class="block text-sm font-semibold" style="color: var(--muted)">⏱️ Descanso</span>
+					<span class="flex items-center gap-1.5 text-sm font-semibold" style="color: var(--muted)">
+						<Icono nombre="descanso" tamano={15} /> Descanso
+					</span>
 					{#if descanso.siguiente}
 						<span class="block truncate text-[11px] font-medium" style="color: var(--muted)">
 							Sig: {descanso.siguiente}
