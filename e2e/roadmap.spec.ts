@@ -95,12 +95,28 @@ test('el RIR es opcional y se registra por serie', async ({ page }) => {
 	await expect(page.getByLabel('RIR de la serie 1')).toHaveValue('2');
 });
 
+/*
+ * El mapa mide ventanas relativas a HOY —«1 semana» es `[hoy-6, hoy]`— y los dos tests
+ * que siguen afirman cifras exactas sobre una sesión con fecha fija. Sin fijar el reloj
+ * caducan solos, y no de golpe: el 2026-08-31 la sesión del 24 se cayó de la ventana de
+ * siete días y la aserción de «1 serie por semana» pasó a colgar de un frame transitorio
+ * —el mapa sostiene a propósito las cifras del período anterior mientras viaja la
+ * consulta nueva, marcado con `aria-busy`—, así que daba verde o rojo según cuándo
+ * mirara el retry. Parecía un problema de aislamiento entre workers y era el calendario.
+ *
+ * `setFixedTime` y no `install`: alcanza con que `new Date()` mienta, y los timers de la
+ * app tienen que seguir corriendo.
+ */
+const DIA_DEL_MAPA = '2026-08-24';
+const RELOJ_DEL_MAPA = new Date(`${DIA_DEL_MAPA}T10:00:00-03:00`);
+
 test('el mapa corporal comparte datos con la lista y responde a borrar historial', async ({
 	page
 }) => {
+	await page.clock.setFixedTime(RELOJ_DEL_MAPA);
 	await page.emulateMedia({ reducedMotion: 'reduce' });
 	await page.setViewportSize({ width: 320, height: 740 });
-	await page.goto('/ejercicio/prensa-pierna-45?dia=dia-piernas&fecha=2026-08-24');
+	await page.goto(`/ejercicio/prensa-pierna-45?dia=dia-piernas&fecha=${DIA_DEL_MAPA}`);
 	await apagarDescanso(page);
 	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
 	await page.getByRole('button', { name: 'Marcar serie 1' }).click();
@@ -157,7 +173,7 @@ test('el mapa corporal comparte datos con la lista y responde a borrar historial
 		page.getByText(/no\s+mide\s+fatiga,\s+recuperación\s+ni\s+activación\s+médica/)
 	).toBeVisible();
 
-	await page.goto('/historial/dia/2026-08-24');
+	await page.goto(`/historial/dia/${DIA_DEL_MAPA}`);
 	await page.getByRole('button', { name: /Editar serie 1/ }).click();
 	await page.getByRole('button', { name: 'Borrar serie' }).click();
 	await page.getByRole('button', { name: 'Borrar', exact: true }).click();
@@ -169,11 +185,14 @@ test('el mapa corporal comparte datos con la lista y responde a borrar historial
 test('el hueco del detalle aguanta el nombre más largo sin mover los períodos', async ({
 	page
 }) => {
+	// La misma bomba de tiempo, más lenta: acá la sesión sólo tiene que entrar en la
+	// ventana de 4 semanas, así que habría aguantado hasta el 2026-09-20.
+	await page.clock.setFixedTime(RELOJ_DEL_MAPA);
 	await page.emulateMedia({ reducedMotion: 'reduce' });
 	// 320 px es el peor caso: es donde el nombre del músculo envuelve en dos renglones y
 	// el detalle abierto queda más alto.
 	await page.setViewportSize({ width: 320, height: 740 });
-	await page.goto('/ejercicio/jalon-pecho?dia=dia-espalda-biceps&fecha=2026-08-24');
+	await page.goto(`/ejercicio/jalon-pecho?dia=dia-espalda-biceps&fecha=${DIA_DEL_MAPA}`);
 	await apagarDescanso(page);
 	await page.getByRole('textbox', { name: 'Reps de la serie 1' }).fill('10');
 	await page.getByRole('button', { name: 'Marcar serie 1' }).click();
