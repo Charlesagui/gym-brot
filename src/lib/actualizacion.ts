@@ -55,6 +55,39 @@ export const ESPERA_MIN_CHEQUEO_MS = 60_000;
 /** El mensaje que `sw.js` escucha para dejar de esperar y tomar el control. */
 const SKIP_WAITING = { type: 'SKIP_WAITING' };
 
+/**
+ * Actualizar termina en una recarga, y una recarga se lleva puesto cualquier estado en
+ * memoria: sin dejar una marca del otro lado, el logro se pierde justo cuando pasa. Va en
+ * `sessionStorage` y no en `localStorage` a propósito — muere con la pestaña, así que una
+ * app que se actualizó sola estando cerrada no saluda con un cartel viejo al abrirse.
+ */
+const CLAVE_ACTUALIZADA = 'gb-version-anterior';
+
+/** Anota qué versión estamos dejando, justo antes de que la recarga se lleve todo. */
+export function marcarActualizacion(versionQueDejamos: string) {
+	try {
+		sessionStorage.setItem(CLAVE_ACTUALIZADA, versionQueDejamos);
+	} catch {
+		// Modo privado o storage bloqueado: se pierde el acuse, no la actualización.
+	}
+}
+
+/**
+ * Del otro lado de la recarga: devuelve la versión que dejamos, una sola vez. Compararla
+ * con la actual es lo que separa "se actualizó" de "se recargó" — decir que actualizaste
+ * cuando el commit es el mismo sería el mismo tipo de mentira que este módulo vino a
+ * sacar de Ajustes.
+ */
+export function consumirActualizacion(): string | null {
+	try {
+		const anterior = sessionStorage.getItem(CLAVE_ACTUALIZADA);
+		sessionStorage.removeItem(CLAVE_ACTUALIZADA);
+		return anterior;
+	} catch {
+		return null;
+	}
+}
+
 export class BuscadorDeVersion {
 	#registro: RegistroActualizable | undefined;
 	#ultimoChequeo = 0;

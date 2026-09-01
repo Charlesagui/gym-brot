@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { onMount } from 'svelte';
+	import { fly } from 'svelte/transition';
 	import { page } from '$app/stores';
 	import { beforeNavigate, onNavigate } from '$app/navigation';
 	import { useRegisterSW } from 'virtual:pwa-register/svelte';
@@ -18,12 +19,12 @@
 	import { descanso } from '$lib/descanso.svelte';
 	import { hoy } from '$lib/hoy.svelte';
 	import { errorDatos } from '$lib/errores-datos';
-	import { menosMovimiento } from '$lib/motion';
+	import { dur, menosMovimiento } from '$lib/motion';
 	import { iniciarPresion } from '$lib/presion';
 	import { limpiarArrastreHuerfano } from '$lib/dnd-safety';
 	import { modoOrden } from '$lib/modo-orden.svelte';
 	import { escucharReemplazosDatos } from '$lib/revision-datos';
-	import { buscadorDeVersion } from '$lib/actualizacion';
+	import { buscadorDeVersion, consumirActualizacion, marcarActualizacion } from '$lib/actualizacion';
 
 	let { children } = $props();
 
@@ -109,9 +110,20 @@
 	 * es lo que evita quedar en ese estado en silencio.
 	 */
 	function tomarElControl() {
+		// La marca va antes de cualquier salida: del otro lado de la recarga es lo único
+		// que queda para saber que esto fue una actualización y no un refresh cualquiera.
+		marcarActualizacion(__APP_COMMIT__);
 		if (entrenando) recargaPendiente = true;
 		else location.reload();
 	}
+
+	/**
+	 * El acuse de que salió bien. Actualizar terminaba en una recarga muda: apretabas,
+	 * la pantalla parpadeaba y no había forma de saber si había pasado algo. Se muestra
+	 * sólo si el commit CAMBIÓ de verdad — una recarga que trajo lo mismo no es un logro.
+	 */
+	const SEG_ACUSE_VERSION = 5;
+	let versionNueva = $state<string | null>(null);
 
 	// Soltaste el ejercicio y acusaste recibo del descanso: recién ahí la recarga no
 	// interrumpe nada. Si estabas navegando, `beforeNavigate` ya se ocupó antes que esto.
@@ -282,6 +294,12 @@
 	}
 
 	onMount(() => {
+		const anterior = consumirActualizacion();
+		let acuseId: ReturnType<typeof setTimeout> | undefined;
+		if (anterior && anterior !== __APP_COMMIT__) {
+			versionNueva = __APP_COMMIT__;
+			acuseId = setTimeout(() => (versionNueva = null), SEG_ACUSE_VERSION * 1000);
+		}
 		// "Hoy" pasa a ser un dato vivo para toda la app. No depende de la base: las
 		// pantallas que escriben tienen que enterarse del cambio de día aunque el arranque
 		// haya quedado degradado.
@@ -317,6 +335,7 @@
 			else actualizar();
 		});
 		return () => {
+			clearTimeout(acuseId);
 			dejarDeAtenderPedidos();
 			sw?.removeEventListener('controllerchange', alCambiarControlador);
 			dejarDeMirarVersion?.();
@@ -662,7 +681,36 @@
 	</div>
 {/if}
 
-{#if hayVersion && !entrenando && dbLista}
+<!--
+	Actualización aplicada. Va en el mismo hueco donde estaba el cartel de "hay versión
+	nueva": el ojo ya está ahí, y la respuesta aparece donde estaba la pregunta. Se va
+	solo — es un acuse, no algo que haya que atender.
+-->
+{#if versionNueva}
+	<div
+		class="fixed inset-x-0 z-[86] mx-auto max-w-md px-5"
+		style="bottom: calc(72px + var(--safe-bottom))"
+	>
+		<div
+			transition:fly={{ y: 16, duration: dur(220) }}
+			role="status"
+			aria-live="polite"
+			class="flex items-center gap-3 rounded-2xl border p-3"
+			style="background: var(--surface); border-color: rgb(var(--exito) / .45); box-shadow: 0 12px 32px rgb(0 0 0 / .35)"
+		>
+			<span class="shrink-0" style="color: rgb(var(--exito))">
+				<Icono nombre="hecha" tamano={20} />
+			</span>
+			<p class="min-w-0 flex-1 text-xs font-semibold leading-relaxed">
+				Gym-brot está actualizado.
+				<span class="font-mono font-normal" style="color: var(--muted)">Versión {versionNueva}</span>
+			</p>
+		</div>
+	</div>
+{/if}
+
+<!-- El acuse ocupa este mismo hueco: un deploy que caiga en esos 5 s espera su turno. -->
+{#if hayVersion && !entrenando && dbLista && !versionNueva}
 	<div
 		class="fixed inset-x-0 z-[85] mx-auto max-w-md px-5"
 		style="bottom: calc(72px + var(--safe-bottom))"

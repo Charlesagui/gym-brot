@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
 	BuscadorDeVersion,
+	consumirActualizacion,
 	ESPERA_MIN_CHEQUEO_MS,
+	marcarActualizacion,
 	type RegistroActualizable,
 	type TrabajadorObservable
 } from './actualizacion';
@@ -291,5 +293,40 @@ describe('aplicar', () => {
 
 		expect(buscador.aplicar()).toBe(true);
 		expect(nuevo.mensajes).toEqual([{ type: 'SKIP_WAITING' }]);
+	});
+});
+
+describe('acuse de actualización', () => {
+	/** `sessionStorage` de mentira: en node no existe, y acá importa que pueda fallar. */
+	function almacen({ rompe = false } = {}) {
+		const datos = new Map<string, string>();
+		return {
+			getItem: (k: string) => (rompe ? raro() : (datos.get(k) ?? null)),
+			setItem: (k: string, v: string) => (rompe ? raro() : void datos.set(k, v)),
+			removeItem: (k: string) => (rompe ? raro() : void datos.delete(k)),
+			datos
+		};
+	}
+	function raro(): never {
+		throw new DOMException('storage bloqueado');
+	}
+
+	it('la marca sobrevive a la recarga y se consume una sola vez', () => {
+		vi.stubGlobal('sessionStorage', almacen());
+		marcarActualizacion('addfe67');
+		expect(consumirActualizacion()).toBe('addfe67');
+		// Sin esto, cada navegación posterior volvería a festejar la misma actualización.
+		expect(consumirActualizacion()).toBe(null);
+	});
+
+	it('sin marca previa no hay nada que acusar', () => {
+		vi.stubGlobal('sessionStorage', almacen());
+		expect(consumirActualizacion()).toBe(null);
+	});
+
+	it('con el storage bloqueado se pierde el acuse, no la actualización', () => {
+		vi.stubGlobal('sessionStorage', almacen({ rompe: true }));
+		expect(() => marcarActualizacion('addfe67')).not.toThrow();
+		expect(consumirActualizacion()).toBe(null);
 	});
 });
