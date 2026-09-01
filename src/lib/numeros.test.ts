@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { leerPeso, leerReps, redondear, sumarPeso, sumarReps } from './numeros';
+import { leerPeso, leerPesoConCero, leerReps, redondear, sumarPeso, sumarReps } from './numeros';
 
 describe('redondear', () => {
 	it('deja un decimal y no arrastra flotantes', () => {
@@ -57,6 +57,23 @@ describe('leerPeso', () => {
 		expect(leerPeso('abc')).toBeUndefined();
 		expect(leerPeso('0')).toBeUndefined();
 		expect(leerPeso('-10')).toBeUndefined();
+	});
+});
+
+describe('leerPesoConCero', () => {
+	it('toma el 0 como peso y no como campo vacio', () => {
+		expect(leerPesoConCero('0')).toBe(0);
+		expect(leerPesoConCero('0,0')).toBe(0);
+		// `-0` se formatea como "-0": la barra tiene que quedar en 0 pelado.
+		expect(Object.is(leerPesoConCero('-0'), 0)).toBe(true);
+	});
+
+	it('por lo demas lee igual que leerPeso', () => {
+		expect(leerPesoConCero('82,5')).toBe(82.5);
+		expect(leerPesoConCero('82,46')).toBe(82.5);
+		expect(leerPesoConCero('')).toBeUndefined();
+		expect(leerPesoConCero('abc')).toBeUndefined();
+		expect(leerPesoConCero('-10')).toBeUndefined();
 	});
 });
 

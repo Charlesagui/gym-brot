@@ -31,8 +31,21 @@ export function sumarReps(actual: number | undefined, delta: number): number | u
  * teléfono escribe "," en español, y descarta basura o negativos.
  */
 export function leerPeso(texto: string): number | undefined {
+	const n = leerPesoConCero(texto);
+	return n === 0 ? undefined : n;
+}
+
+/**
+ * Igual que `leerPeso`, pero el 0 es un peso y no "sin cargar": la única excepción a la
+ * convención de este módulo. Existe para la barra de la calculadora de discos —en una
+ * máquina de discos, un landmine o un pin de carga lo único que pesa son las placas—,
+ * donde "0" es una respuesta y no un campo vacío.
+ */
+export function leerPesoConCero(texto: string): number | undefined {
 	const n = Number.parseFloat(texto.replace(',', '.'));
-	return Number.isFinite(n) && n > 0 ? redondear(n) : undefined;
+	if (!Number.isFinite(n) || n < 0) return undefined;
+	// `-0` pasa el filtro de negativos y se formatea como "-0": se normaliza acá.
+	return n === 0 ? 0 : redondear(n);
 }
 
 /** Interpreta repeticiones tipeadas: entero positivo, o nada. */

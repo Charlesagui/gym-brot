@@ -45,6 +45,29 @@ describe('calculadora de discos', () => {
 		});
 	});
 
+	it('acepta una barra de 0: en una maquina de discos solo pesan las placas', () => {
+		const resultado = calcularDiscos(40, 0, [20, 10, 5]);
+		expect(resultado).toMatchObject({
+			estado: 'calculado',
+			barra: 0,
+			exacta: { total: 40, porLado: 20, discos: [{ peso: 20, cantidad: 1 }] }
+		});
+	});
+
+	it('con barra 0 el objetivo nunca queda por debajo de la barra', () => {
+		const resultado = calcularDiscos(2, 0, [5, 2.5]);
+		expect(resultado).toMatchObject({
+			estado: 'calculado',
+			exacta: null,
+			inferior: { total: 0, discos: [] },
+			superior: { total: 5 }
+		});
+	});
+
+	it('rechaza una barra negativa', () => {
+		expect(calcularDiscos(40, -5, [20, 10])).toEqual({ estado: 'invalido' });
+	});
+
 	it('rechaza un objetivo menor que la barra', () => {
 		expect(calcularDiscos(15, 20, [5, 2.5])).toEqual({
 			estado: 'barra-supera',

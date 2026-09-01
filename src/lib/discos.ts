@@ -77,11 +77,13 @@ export function calcularDiscos(
 	barra: number,
 	tamanosDisponibles: number[]
 ): ResultadoDiscos {
+	// La barra puede pesar 0: en una máquina de discos, un landmine o un pin de carga no
+	// hay barra que sumar y el total es sólo lo que cuelga de los dos lados.
 	if (
 		!Number.isFinite(objetivo) ||
 		!Number.isFinite(barra) ||
 		objetivo <= 0 ||
-		barra <= 0 ||
+		barra < 0 ||
 		objetivo > MAX_TOTAL ||
 		barra > MAX_TOTAL
 	) {

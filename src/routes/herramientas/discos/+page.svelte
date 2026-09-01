@@ -7,7 +7,7 @@
 	import { calcularDiscos, type CargaBarra } from '$lib/discos';
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
 	import { fromLiveQuery } from '$lib/live';
-	import { leerPeso } from '$lib/numeros';
+	import { leerPeso, leerPesoConCero } from '$lib/numeros';
 	import type { UnidadPeso } from '$lib/unidades';
 
 	interface ConfigUnidad {
@@ -24,19 +24,26 @@
 		discos: number[];
 	}
 
+	/**
+	 * La barra que no pesa. En una máquina de discos, un landmine o un pin de carga las
+	 * placas cuelgan de algo que no suma kilos, y ahí el total es sólo lo que colgás.
+	 * Es un peso de barra más, así que entra en los presets y no en un modo aparte.
+	 */
+	const SIN_BARRA = 0;
+
 	const CONFIG: Record<UnidadPeso, ConfigUnidad> = {
 		kg: {
 			objetivo: 60,
 			barra: 20,
 			paso: 2.5,
-			barras: [20, 15, 10],
+			barras: [20, 15, 10, SIN_BARRA],
 			discos: [25, 20, 15, 10, 5, 2.5, 1.25]
 		},
 		lb: {
 			objetivo: 135,
 			barra: 45,
 			paso: 5,
-			barras: [45, 35, 15],
+			barras: [45, 35, 15, SIN_BARRA],
 			discos: [45, 35, 25, 10, 5, 2.5]
 		}
 	};
@@ -105,7 +112,7 @@
 			candidata.objetivo > 2_000 ||
 			typeof candidata.barra !== 'number' ||
 			!Number.isFinite(candidata.barra) ||
-			candidata.barra <= 0 ||
+			candidata.barra < 0 ||
 			candidata.barra > 2_000 ||
 			!Array.isArray(candidata.discos)
 		) {
@@ -168,7 +175,7 @@
 	}
 
 	function confirmarBarra(campo: HTMLInputElement) {
-		const nueva = leerPeso(campo.value);
+		const nueva = leerPesoConCero(campo.value);
 		if (nueva != null) barra = nueva;
 		campo.value = barra != null && !config.barras.includes(barra) ? formatoPeso(barra) : '';
 		guardar();
@@ -197,6 +204,26 @@
 			.join(' + ');
 	}
 </script>
+
+<!--
+	Debajo del dibujo va la barra y nada mas. La lista de discos que estaba aca repetia
+	lo que el grafico ya dice mejor: cada placa lleva su color y su numero encima. La
+	barra era lo unico sin nombre —el peso que elegis abajo no volvia a aparecer en la
+	respuesta—, asi que se queda con el renglon. Con barra 0 no hay nada que nombrar:
+	decir "solo la barra de 0" seria nombrar algo que no existe.
+-->
+{#snippet pieCarga(carga: CargaBarra, pesoBarra: number)}
+	<p class="mt-1 text-sm font-bold" style="color: var(--muted)">
+		{#if pesoBarra === SIN_BARRA}
+			{carga.discos.length === 0 ? 'Sin barra ni discos' : 'Sin barra'}
+		{:else if carga.discos.length === 0}
+			Solo la barra de <span class="cifra" style="color: var(--text)">{formatoPeso(pesoBarra)}</span
+			>
+		{:else}
+			Barra <span class="cifra" style="color: var(--text)">{formatoPeso(pesoBarra)}</span>
+		{/if}
+	</p>
+{/snippet}
 
 <main class="gb-page glow-bg min-h-[calc(100dvh-var(--gb-nav))] px-4 pb-1" style="--gb-pt: 0.5rem">
 	<header class="mb-1.5 flex min-h-8 items-center justify-between gap-3">
@@ -286,24 +313,14 @@
 				<p class="cifra mt-1 text-[2.9rem]">
 					{formatoPeso(resultado.exacta.porLado)}<span class="cifra-u">{unidad}</span>
 				</p>
-				<BarraCargada carga={resultado.exacta} {pesoMaxDisco} formato={formatoPeso} {unidad} />
-				<!--
-					Debajo del dibujo va la barra y nada mas. La lista de discos que estaba aca
-					repetia lo que el grafico ya dice mejor: cada placa lleva su color y su numero
-					encima. La barra era lo unico sin nombre —el peso que elegis abajo no volvia a
-					aparecer en la respuesta—, asi que se queda con el renglon.
-				-->
-				<p class="mt-1 text-sm font-bold" style="color: var(--muted)">
-					{#if resultado.exacta.discos.length === 0}
-						Solo la barra de <span class="cifra" style="color: var(--text)"
-							>{formatoPeso(resultado.barra)}</span
-						>
-					{:else}
-						Barra <span class="cifra" style="color: var(--text)"
-							>{formatoPeso(resultado.barra)}</span
-						>
-					{/if}
-				</p>
+				<BarraCargada
+					carga={resultado.exacta}
+					{pesoMaxDisco}
+					formato={formatoPeso}
+					{unidad}
+					conBarra={resultado.barra > SIN_BARRA}
+				/>
+				{@render pieCarga(resultado.exacta, resultado.barra)}
 				<!--
 					La combinacion sigue existiendo para quien no ve el dibujo: el SVG es
 					`aria-hidden` justamente porque este texto era el que lo leia en voz alta.
@@ -329,18 +346,9 @@
 					{pesoMaxDisco}
 					formato={formatoPeso}
 					{unidad}
+					conBarra={resultado.barra > SIN_BARRA}
 				/>
-				<p class="mt-1 text-sm font-bold" style="color: var(--muted)">
-					{#if cercanas.principal.carga.discos.length === 0}
-						Solo la barra de <span class="cifra" style="color: var(--text)"
-							>{formatoPeso(resultado.barra)}</span
-						>
-					{:else}
-						Barra <span class="cifra" style="color: var(--text)"
-							>{formatoPeso(resultado.barra)}</span
-						>
-					{/if}
-				</p>
+				{@render pieCarga(cercanas.principal.carga, resultado.barra)}
 				{#if cercanas.principal.carga.discos.length > 0}
 					<p class="sr-only">Discos por lado: {combinacion(cercanas.principal.carga)}</p>
 				{/if}
@@ -359,9 +367,11 @@
 							></span
 						>
 						<span class="cifra text-sm" style="color: var(--muted)"
-							>{cercanas.alternativa.carga.discos.length === 0
-								? 'solo la barra'
-								: combinacion(cercanas.alternativa.carga)}</span
+							>{cercanas.alternativa.carga.discos.length > 0
+								? combinacion(cercanas.alternativa.carga)
+								: resultado.barra === SIN_BARRA
+									? 'sin discos'
+									: 'solo la barra'}</span
 						>
 					</div>
 				{/if}
@@ -371,17 +381,25 @@
 
 	<section class="mt-2 rounded-2xl border border-white/10 p-2.5" style="background: var(--surface)">
 		<h2 class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">Barra</h2>
-		<div class="mt-1.5 grid grid-cols-4 gap-1.5" role="group" aria-label="Peso de la barra">
+		<div class="mt-1.5 grid grid-cols-5 gap-1.5" role="group" aria-label="Peso de la barra">
 			{#each config.barras as peso}
+				<!--
+					El 0 va con palabras y no con cifra: bajo el título "Barra", un "0" entre
+					pesos se lee como una barra que pesa nada, que es justo lo confuso. Lo que
+					elegís ahí no es un peso más chico, es que no hay barra.
+				-->
+				{@const sinBarra = peso === SIN_BARRA}
 				<button
 					type="button"
 					onclick={() => usarBarra(peso)}
 					aria-pressed={barra === peso}
-					class="gb-relieve cifra min-h-11 rounded-xl border text-xl"
+					class="gb-relieve min-h-11 rounded-xl border px-0.5 {sinBarra
+						? 'text-xs font-bold leading-tight'
+						: 'cifra text-xl'}"
 					style={barra === peso
 						? 'border-color: rgb(var(--accent-rgb) / .75); background: rgb(var(--accent-rgb) / .18); color: var(--accent-text)'
 						: 'border-color: rgba(255,255,255,.10); background: rgba(255,255,255,.035); color: var(--muted)'}
-					>{formatoPeso(peso)}</button
+					>{sinBarra ? 'Sin barra' : formatoPeso(peso)}</button
 				>
 			{/each}
 			<input
