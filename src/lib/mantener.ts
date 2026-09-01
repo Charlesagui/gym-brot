@@ -25,6 +25,7 @@ export function mantener(node: HTMLElement | SVGElement, fn: () => void) {
 		bloqueoClickId = null;
 		suprimirSiguienteClick = false;
 		window.removeEventListener('click', alClick, true);
+		window.removeEventListener('pointerdown', alTocarDeNuevo, true);
 	}
 
 	function bloquearSiguienteClick() {
@@ -34,7 +35,24 @@ export function mantener(node: HTMLElement | SVGElement, fn: () => void) {
 		// soltar el dedo. Por eso el bloqueo vive brevemente en window: captura el
 		// click de compatibilidad aunque el enlace original ya no esté en el DOM.
 		window.addEventListener('click', alClick, true);
+		// Y por eso también el desarme va en window: el `pointerup` del nodo ya no existe.
+		window.addEventListener('pointerdown', alTocarDeNuevo, true);
+		// Techo por si el dedo no se levanta nunca, o si el gesto se lo lleva el sistema.
 		bloqueoClickId = setTimeout(limpiarBloqueoClick, 750);
+	}
+
+	/**
+	 * Empezó un toque NUEVO: lo que venga después ya no es el click de esta pulsación.
+	 *
+	 * El bloqueo existe para comerse el click de compatibilidad del mismo gesto, que
+	 * llega pegado a su `pointerup`. Medirlo con un reloj era la trampa: duraba 750 ms
+	 * contados desde que se activó el long-press, así que también se tragaba el PRIMER
+	 * toque deliberado de después — abrías el modo de orden, tocabas una flecha y no
+	 * pasaba nada. Un `pointerdown` nuevo es la señal exacta, sin apostar a un umbral:
+	 * ningún click de compatibilidad puede llegar después de que empezó otro gesto.
+	 */
+	function alTocarDeNuevo() {
+		limpiarBloqueoClick();
 	}
 
 	function alApretar(evento: Event) {

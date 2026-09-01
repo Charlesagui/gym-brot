@@ -208,6 +208,25 @@ test('la flecha de bajar sigue abajo del dedo: dos toques bajan dos posiciones',
 	await expect.poll(async () => (await ordenVisible(page)).indexOf('prensa-pierna-45')).toBe(2);
 });
 
+test('el primer toque después de abrir el orden con long-press no se pierde', async ({ page }) => {
+	await page.goto('/dia/dia-piernas');
+	const ejercicio = page.getByRole('link', { name: /Curl femoral sentado/ });
+	const caja = await ejercicio.boundingBox();
+	await page.mouse.move(caja!.x + caja!.width / 2, caja!.y + caja!.height / 2);
+	await page.mouse.down();
+	await page.waitForTimeout(450);
+	await page.mouse.up();
+	await expect(page.getByRole('button', { name: 'Terminar orden' })).toBeVisible();
+
+	// `mantener` bloquea el click de compatibilidad de su propia pulsación para no
+	// navegar al ejercicio. Ese bloqueo se medía con un reloj de 750 ms y se comía
+	// también el toque siguiente: abrías el modo, tocabas una flecha y no pasaba nada.
+	await page.getByRole('button', { name: 'Subir Curl femoral sentado' }).click();
+	await expect.poll(async () => (await ordenVisible(page)).indexOf('curl-femoral')).toBe(1);
+	// Y lo que el bloqueo protege sigue en pie: mantener no navega al ejercicio.
+	await expect(page).toHaveURL(/\/dia\/dia-piernas/);
+});
+
 test('dos toques rápidos crean una sola rutina y navegan una vez', async ({ page }) => {
 	await page.goto('/');
 	const crear = page.getByRole('button', { name: '+ Nuevo día' });
