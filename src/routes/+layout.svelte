@@ -1,7 +1,6 @@
 <script lang="ts">
 	import '../app.css';
 	import { onMount } from 'svelte';
-	import { fly } from 'svelte/transition';
 	import { page } from '$app/stores';
 	import { beforeNavigate, onNavigate } from '$app/navigation';
 	import { useRegisterSW } from 'virtual:pwa-register/svelte';
@@ -15,16 +14,21 @@
 	import RestBar from '$lib/components/RestBar.svelte';
 	import ToastAccion from '$lib/components/ToastAccion.svelte';
 	import { deshacer } from '$lib/deshacer.svelte';
+	import { pie } from '$lib/pie.svelte';
 	import RestFocusOverlay from '$lib/components/RestFocusOverlay.svelte';
 	import { descanso } from '$lib/descanso.svelte';
 	import { hoy } from '$lib/hoy.svelte';
 	import { errorDatos } from '$lib/errores-datos';
-	import { dur, menosMovimiento } from '$lib/motion';
+	import { menosMovimiento } from '$lib/motion';
 	import { iniciarPresion } from '$lib/presion';
 	import { limpiarArrastreHuerfano } from '$lib/dnd-safety';
 	import { modoOrden } from '$lib/modo-orden.svelte';
 	import { escucharReemplazosDatos } from '$lib/revision-datos';
-	import { buscadorDeVersion, consumirActualizacion, marcarActualizacion } from '$lib/actualizacion';
+	import {
+		buscadorDeVersion,
+		consumirActualizacion,
+		marcarActualizacion
+	} from '$lib/actualizacion';
 
 	let { children } = $props();
 
@@ -294,12 +298,9 @@
 	}
 
 	onMount(() => {
+		// El plazo lo lleva el propio aviso: dos relojes para lo mismo se desincronizan.
 		const anterior = consumirActualizacion();
-		let acuseId: ReturnType<typeof setTimeout> | undefined;
-		if (anterior && anterior !== __APP_COMMIT__) {
-			versionNueva = __APP_COMMIT__;
-			acuseId = setTimeout(() => (versionNueva = null), SEG_ACUSE_VERSION * 1000);
-		}
+		if (anterior && anterior !== __APP_COMMIT__) versionNueva = __APP_COMMIT__;
 		// "Hoy" pasa a ser un dato vivo para toda la app. No depende de la base: las
 		// pantallas que escriben tienen que enterarse del cambio de día aunque el arranque
 		// haya quedado degradado.
@@ -335,7 +336,6 @@
 			else actualizar();
 		});
 		return () => {
-			clearTimeout(acuseId);
 			dejarDeAtenderPedidos();
 			sw?.removeEventListener('controllerchange', alCambiarControlador);
 			dejarDeMirarVersion?.();
@@ -682,35 +682,29 @@
 {/if}
 
 <!--
-	Actualización aplicada. Va en el mismo hueco donde estaba el cartel de "hay versión
-	nueva": el ojo ya está ahí, y la respuesta aparece donde estaba la pregunta. Se va
-	solo — es un acuse, no algo que haya que atender.
+	Actualización aplicada. Usa el mismo aviso al pie que el resto de los acuses de la
+	app: la respuesta aparece donde el pulgar ya está, y el tilde verde con el hash es
+	la prueba de que el commit cambió de verdad. Se va solo — es un acuse, no algo que
+	haya que atender.
 -->
 {#if versionNueva}
-	<div
-		class="fixed inset-x-0 z-[86] mx-auto max-w-md px-5"
-		style="bottom: calc(72px + var(--safe-bottom))"
-	>
-		<div
-			transition:fly={{ y: 16, duration: dur(220) }}
-			role="status"
-			aria-live="polite"
-			class="flex items-center gap-3 rounded-2xl border p-3"
-			style="background: var(--surface); border-color: rgb(var(--exito) / .45); box-shadow: 0 12px 32px rgb(0 0 0 / .35)"
-		>
-			<span class="shrink-0" style="color: rgb(var(--exito))">
-				<Icono nombre="hecha" tamano={20} />
-			</span>
-			<p class="min-w-0 flex-1 text-xs font-semibold leading-relaxed">
-				Gym-brot está actualizado.
-				<span class="font-mono font-normal" style="color: var(--muted)">Versión {versionNueva}</span>
-			</p>
-		</div>
-	</div>
+	<ToastAccion
+		mensaje="Gym-brot está actualizado."
+		detalle="Versión {versionNueva}"
+		tono="exito"
+		segundos={SEG_ACUSE_VERSION}
+		offsetNav={!sinNav}
+		onCerrar={() => (versionNueva = null)}
+	/>
 {/if}
 
-<!-- El acuse ocupa este mismo hueco: un deploy que caiga en esos 5 s espera su turno. -->
-{#if hayVersion && !entrenando && dbLista && !versionNueva}
+<!--
+	Cualquier aviso al pie ocupa este mismo hueco, y este cartel es el único persistente:
+	espera su turno en vez de montarse encima. Antes sólo cedía ante el acuse de "está
+	actualizado", así que tapaba a los demás y —al ir en z-85 contra el z-70 del aviso—
+	les comía los toques. Ver $lib/pie.
+-->
+{#if hayVersion && !entrenando && dbLista && !pie.ocupado}
 	<div
 		class="fixed inset-x-0 z-[85] mx-auto max-w-md px-5"
 		style="bottom: calc(72px + var(--safe-bottom))"
