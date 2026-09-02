@@ -16,6 +16,7 @@
 		setTimer,
 		setVolumen,
 		VOLUMENES,
+		diasDesde,
 		exportarJSON,
 		hayDatosQueRespaldar,
 		parseBackup,
@@ -25,7 +26,12 @@
 		borrarTodo,
 		AJUSTES_DEFAULT
 	} from '$lib/extras';
-	import { reiniciarAyudas } from '$lib/preferencias-ui';
+	import {
+		reiniciarAyudas,
+		hayBackupPendiente,
+		marcarBackupPendiente,
+		olvidarBackupPendiente
+	} from '$lib/preferencias-ui';
 	import {
 		PRESETS_DESCANSO,
 		RUEDA_DESCANSO,
@@ -58,13 +64,26 @@
 	import { buscadorDeVersion, type ResultadoChequeo } from '$lib/actualizacion';
 	import { onMount } from 'svelte';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
+	import ToastAccion from '$lib/components/ToastAccion.svelte';
 
 	const ajustesStore = estadoLiveQuery(ajustesObs(), AJUSTES_DEFAULT);
 	const consultaAjustes = $derived($ajustesStore);
 	const ajustes = $derived<Ajustes>(consultaAjustes.valor);
-	let msg = $state('');
-	let msgId: ReturnType<typeof setTimeout> | null = null;
+	/**
+	 * El acuse de todo lo que se hace en esta pantalla. Va al pie, en el mismo aviso que
+	 * usa el resto de la app, y no dentro de la tarjeta donde está el botón: el mensaje
+	 * vivía dibujado en la sección Backup, así que tocar "Permitir" arriba de todo o
+	 * "Borrar todos mis datos" abajo de todo respondía en un lugar que no estabas
+	 * mirando. Ajustes tiene catorce secciones.
+	 */
+	let aviso = $state<{
+		texto: string;
+		detalle?: string;
+		tono: 'exito' | 'advertencia' | 'neutro';
+		segundos: number;
+	} | null>(null);
 	let guardandoUnidad = $state(false);
+	let exportando = $state(false);
 	let backupPendienteConfirmacion = $state(false);
 	let avisosImport = $state<string[]>([]);
 	// Se lee en el cliente: en el prerender de `adapter-static` no hay `navigator`.
@@ -146,6 +165,9 @@
 	onMount(() => {
 		hayVibracion = vibracionSoportada();
 		permisoNotif = estadoNotificaciones();
+		// Sobrevive a salir de la pantalla: confirmar el backup exige ir a mirar Descargas,
+		// y hasta acá ese viaje de ida y vuelta se llevaba puesto el pendiente.
+		backupPendienteConfirmacion = hayBackupPendiente();
 		// Un pedido de verdad, no solo mirar si la API existe: el sistema puede rechazarlo
 		// en silencio y hasta acá ese rechazo no se veía en ningún lado.
 		void probarWakeLock().then((estado) => (estadoWake = estado));
@@ -155,15 +177,33 @@
 		void refrescarPersistencia();
 		void refrescarVideosGuardados();
 		return () => {
-			if (msgId) clearTimeout(msgId);
 			cancelarDescarga?.abort();
 		};
 	});
 
-	function avisar(texto: string) {
-		msg = texto;
-		if (msgId) clearTimeout(msgId);
-		msgId = setTimeout(() => (msg = ''), 6000);
+	/** "Hace 0 días" no lo dice nadie; los dos primeros días tienen nombre propio. */
+	const ultimaCopia = $derived.by(() => {
+		if (!ajustes.ultimoBackup) return 'Todavía no guardaste ninguna copia.';
+		const dias = diasDesde(ajustes.ultimoBackup);
+		if (dias <= 0) return 'Última copia: hoy.';
+		if (dias === 1) return 'Última copia: ayer.';
+		return `Última copia: hace ${dias} días.`;
+	});
+
+	const SEG_ACUSE = 6;
+
+	/** Salió bien, o terminó sin salir bien ni mal (`neutro`): informa y se va solo. */
+	function avisar(texto: string, tono: 'exito' | 'neutro' = 'exito') {
+		aviso = { texto, tono, segundos: SEG_ACUSE };
+	}
+
+	/**
+	 * Lo que falló o pide atención. No se va solo a propósito: un error que se borra a
+	 * los seis segundos es un error que nadie leyó, y acá el que falla suele ser un
+	 * guardado silencioso que el usuario ni sabe que disparó.
+	 */
+	function avisarFalla(texto: string) {
+		aviso = { texto, tono: 'advertencia', segundos: 0 };
 	}
 
 	/**
@@ -195,7 +235,7 @@
 	function guardarAjuste(operacion: Promise<unknown>, nombre: string) {
 		void operacion.catch((error: unknown) => {
 			console.error(`No se pudo guardar ${nombre}`, error);
-			avisar(`❌ No se pudo guardar ${nombre}. Intentá de nuevo.`);
+			avisarFalla(`No se pudo guardar ${nombre}. Intentá de nuevo.`);
 		});
 	}
 
@@ -205,13 +245,17 @@
 		try {
 			await setUnidad(unidad);
 		} catch (e) {
-			avisar(`❌ No se pudo cambiar la unidad: ${e instanceof Error ? e.message : 'error'}`);
+			avisarFalla(`No se pudo cambiar la unidad: ${e instanceof Error ? e.message : 'error'}`);
 		} finally {
 			guardandoUnidad = false;
 		}
 	}
 
 	async function exportar() {
+		// Serializar la base entera tarda con meses de historial, y sin bloqueo dos
+		// toques bajan dos archivos: el mismo patrón que ya usa el cambio de unidad.
+		if (exportando) return;
+		exportando = true;
 		try {
 			// La mecánica de la descarga vive en $lib/descarga: la comparte con la copia de
 			// rescate del arranque fallido, que corre cuando la base ni siquiera abrió.
@@ -219,20 +263,24 @@
 			// Un click sobre un anchor no confirma que el navegador haya guardado el
 			// archivo (puede cancelarse o bloquearse). El usuario lo confirma después
 			// de verlo en Descargas; recién ahí se apaga el recordatorio.
+			marcarBackupPendiente();
 			backupPendienteConfirmacion = true;
-			avisar('⬇️ Descarga iniciada. Confirmá que el archivo aparezca en Descargas.');
+			avisar('Descarga iniciada. Confirmá que el archivo aparezca en Descargas.');
 		} catch (e) {
-			avisar(`❌ No se pudo generar el backup: ${e instanceof Error ? e.message : 'error'}`);
+			avisarFalla(`No se pudo generar el backup: ${e instanceof Error ? e.message : 'error'}`);
+		} finally {
+			exportando = false;
 		}
 	}
 
 	async function confirmarBackupGuardado() {
 		try {
 			await registrarBackup();
+			olvidarBackupPendiente();
 			backupPendienteConfirmacion = false;
-			avisar('✅ Backup confirmado');
+			avisar('Backup confirmado');
 		} catch (e) {
-			avisar(`❌ No se pudo registrar el backup: ${e instanceof Error ? e.message : 'error'}`);
+			avisarFalla(`No se pudo registrar el backup: ${e instanceof Error ? e.message : 'error'}`);
 		}
 	}
 
@@ -271,17 +319,17 @@
 					// El descanso persiste fuera de IndexedDB: si el backup reemplaza los datos,
 					// una alarma anterior no puede seguir refiriéndose a una serie eliminada.
 					descanso.saltar();
-					avisar('✅ Datos restaurados');
+					avisar('Datos restaurados');
 					input.value = '';
 					confirmacion = null;
 				},
 				onCancel: () => {
-					avisar('Importación cancelada');
+					avisar('Importación cancelada', 'neutro');
 					input.value = '';
 				}
 			};
 		} catch (error) {
-			avisar(`❌ ${error instanceof Error ? error.message : 'Archivo inválido'}`);
+			avisarFalla(error instanceof Error ? error.message : 'Archivo inválido');
 			input.value = '';
 		} finally {
 			if (!confirmacion) input.value = '';
@@ -311,7 +359,7 @@
 
 	function confirmarReiniciarAyudas() {
 		reiniciarAyudas();
-		avisar('✅ Vas a volver a ver los carteles de ayuda');
+		avisar('Vas a volver a ver los carteles de ayuda');
 	}
 
 	// --- Descarga de videos para uso sin señal ---
@@ -335,8 +383,8 @@
 	async function descargarVideos() {
 		if (bajando) return;
 		if (!(await hayEspacioParaReserva(RESERVA_VIDEOTECA_COMPLETA))) {
-			avisar(
-				'⚠️ No queda espacio suficiente para la videoteca. Liberá espacio o usá los videos online.'
+			avisarFalla(
+				'No queda espacio suficiente para la videoteca. Liberá espacio o usá los videos online.'
 			);
 			return;
 		}
@@ -364,14 +412,17 @@
 			});
 			await Promise.all(obreros);
 			if (control.signal.aborted) {
-				avisar(`Descarga cancelada: ${bajados} listos${fallidos ? `, ${fallidos} fallidos` : ''}`);
+				avisar(
+					`Descarga cancelada: ${bajados} listos${fallidos ? `, ${fallidos} fallidos` : ''}`,
+					'neutro'
+				);
 			} else if (fallidos) {
-				avisar(`⚠️ ${bajados} videos listos; ${fallidos} no se pudieron guardar.`);
+				avisarFalla(`${bajados} videos listos; ${fallidos} no se pudieron guardar.`);
 			} else {
-				avisar(`✅ ${bajados} videos guardados para offline`);
+				avisar(`${bajados} videos guardados para offline`);
 			}
 		} catch (e) {
-			avisar(`❌ No se pudieron descargar: ${e instanceof Error ? e.message : 'error'}`);
+			avisarFalla(`No se pudieron descargar: ${e instanceof Error ? e.message : 'error'}`);
 		} finally {
 			bajando = false;
 			cancelarDescarga = null;
@@ -393,10 +444,10 @@
 				try {
 					const borrados = await borrarVideosGuardados();
 					videosGuardados = 0;
-					avisar(`✅ ${borrados} ${borrados === 1 ? 'video eliminado' : 'videos eliminados'}`);
+					avisar(`${borrados} ${borrados === 1 ? 'video eliminado' : 'videos eliminados'}`);
 				} catch (error) {
-					avisar(
-						`❌ No se pudieron eliminar los videos: ${error instanceof Error ? error.message : 'error'}`
+					avisarFalla(
+						`No se pudieron eliminar los videos: ${error instanceof Error ? error.message : 'error'}`
 					);
 				} finally {
 					confirmacion = null;
@@ -501,8 +552,9 @@
 								permisoNotif = await pedirNotificaciones();
 								avisar(
 									permisoNotif === 'concedido'
-										? '✅ Notificaciones activadas.'
-										: 'No se activaron las notificaciones.'
+										? 'Notificaciones activadas.'
+										: 'No se activaron las notificaciones.',
+									permisoNotif === 'concedido' ? 'exito' : 'neutro'
 								);
 							}}
 							class="min-h-11 shrink-0 rounded-xl px-3 text-sm font-bold"
@@ -868,6 +920,11 @@
 				Guardá una copia de tus rutinas y progreso (importante en iPhone, que puede borrar datos
 				locales).
 			</p>
+			<!--
+				Cuándo fue la última. El dato ya existía y sólo se veía en el recordatorio del
+				historial: la pantalla que trata de backups no contestaba su propia pregunta.
+			-->
+			<p class="mt-1 text-xs font-semibold" style="color: var(--muted)">{ultimaCopia}</p>
 			{#if $persistencia === 'efimero'}
 				<p class="mt-2 flex gap-2 text-xs leading-relaxed" style="color: rgb(var(--max))">
 					<Icono nombre="aviso" tamano={16} clase="mt-0.5 shrink-0" />
@@ -880,9 +937,12 @@
 			{/if}
 			<button
 				onclick={exportar}
-				class="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold"
+				disabled={exportando}
+				aria-busy={exportando}
+				class="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold disabled:opacity-60"
 				style="background: var(--accent); color: var(--on-accent)"
-				><Icono nombre="backup" tamano={17} /> Guardar copia de seguridad</button
+				><Icono nombre="backup" tamano={17} />
+				{exportando ? 'Guardando copia…' : 'Guardar copia de seguridad'}</button
 			>
 			{#if backupPendienteConfirmacion}
 				<button
@@ -892,15 +952,18 @@
 					><Icono nombre="hecha" tamano={16} /> Ya guardé el archivo</button
 				>
 			{/if}
+			<!--
+				`gb-pressable` porque es una etiqueta y no un botón: el acuse de presión de
+				`presion.ts` mira `button, a[href], summary, [role=button], .gb-pressable`, así
+				que sin la clase este era el único control de la pantalla que se tocaba y no
+				se hundía. El ícono reemplaza al emoji, como en el botón de al lado.
+			-->
 			<label
-				class="mt-2 block min-h-12 w-full cursor-pointer rounded-xl border border-white/15 py-3 text-center font-semibold"
+				class="gb-pressable mt-2 flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/15 py-3 text-center font-semibold"
 			>
-				⬆️ Restaurar copia de seguridad
+				<Icono nombre="subir" tamano={17} /> Restaurar copia de seguridad
 				<input type="file" accept="application/json" onchange={importar} class="hidden" />
 			</label>
-			{#if msg}
-				<p class="mt-3 text-center text-sm font-medium" role="status" aria-live="polite">{msg}</p>
-			{/if}
 			{#if avisosImport.length}
 				<ul
 					class="mt-3 space-y-1 rounded-xl p-3 text-xs leading-relaxed"
@@ -967,6 +1030,22 @@
 		{/if}
 	</section>
 </main>
+
+<!--
+	El acuse de la pantalla, al pie y encima de la navegación. `versionMsg` NO viene acá
+	a propósito: ese sí está bien donde está, pegado al botón que lo produce, porque
+	acompaña una espera larga y hay que poder mirarlo mientras baja.
+-->
+{#if aviso}
+	<ToastAccion
+		mensaje={aviso.texto}
+		detalle={aviso.detalle}
+		tono={aviso.tono}
+		segundos={aviso.segundos}
+		offsetNav
+		onCerrar={() => (aviso = null)}
+	/>
+{/if}
 
 {#if confirmacion}
 	<ConfirmSheet
