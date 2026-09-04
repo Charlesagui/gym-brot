@@ -14,6 +14,8 @@
 	import { scale } from 'svelte/transition';
 	import { dur } from '$lib/motion';
 	import { popOnChange } from '$lib/pop-on-change';
+	import { placasConstancia } from '$lib/placas';
+	import PlacaFila from '$lib/components/PlacaFila.svelte';
 	import { COLORES_INTENSIDAD, TINTA_INTENSIDAD } from '$lib/escala-intensidad';
 	import { ETIQUETAS_NIVEL, nivelActividad } from '$lib/heatmap';
 	import { UMBRAL_DIA_COMPLETO } from '$lib/sesion-reglas';
@@ -54,6 +56,8 @@
 	// pero tienen que ser alcanzables. Ver `DiaSinMarcar` en $lib/historial.
 	const pendientePorFecha = $derived(new Map(historial.sinMarcar.map((d) => [d.fecha, d])));
 	const semanas = $derived(historial.semanas.slice(0, 8));
+	const placas = $derived(placasConstancia(historial));
+	const placasGanadas = $derived(placas.filter((p) => p.estado === 'ganada').length);
 
 	/**
 	 * El relleno del día entrenado sale de la escala compartida de la pantalla: el mapa
@@ -458,6 +462,27 @@
 						Todavía no hay semanas entrenadas.
 					</p>
 				{/if}
+			</div>
+		</section>
+
+		<!-- Placas: los logros, en el mismo panel que la racha de la que salen. Cada fila es
+		     una fila de serie —falta / en curso / ganada— y no hay ningún contador detrás:
+		     se derivan del resumen en cada lectura (ver $lib/placas), así que ir y venir
+		     sobre las series no puede mover nada de lo que se ve acá. -->
+		<section
+			class="-mx-5 mb-4 rounded-none border-y border-white/10 p-4 sm:mx-0 sm:rounded-2xl sm:border"
+			style="background: var(--surface)"
+		>
+			<div class="mb-3 flex items-center justify-between gap-3">
+				<p class="text-xs font-bold uppercase tracking-wider" style="color: var(--muted)">Placas</p>
+				<p class="text-xs font-semibold tabular-nums" style="color: var(--muted)">
+					{placasGanadas} de {placas.length} ganadas
+				</p>
+			</div>
+			<div class="space-y-2" role="list" aria-label="Placas de constancia">
+				{#each placas as placa (placa.id)}
+					<PlacaFila {placa} />
+				{/each}
 			</div>
 		</section>
 

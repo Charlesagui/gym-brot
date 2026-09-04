@@ -393,11 +393,20 @@ export function crearHistorialResumen(
  * Historial (que la necesita siempre visible).
  */
 export async function rachaSemanalActual(): Promise<number> {
+	return (await resumenHistorialActual()).rachaSemanal;
+}
+
+/**
+ * El resumen entero, en una lectura única. Es lo que el cierre del día necesita para la
+ * racha y para las placas juntas: dos lecturas separadas deserializarían la tabla dos
+ * veces en el momento en que la persona está mirando la pantalla de recompensa.
+ */
+export async function resumenHistorialActual(): Promise<HistorialResumen> {
 	const [sesiones, dias] = await Promise.all([
 		db.sesiones.orderBy('fecha').toArray(),
 		db.dias.toArray()
 	]);
-	return crearHistorialResumen(sesiones, dias).rachaSemanal;
+	return crearHistorialResumen(sesiones, dias);
 }
 
 export function resumenHistorialObs() {

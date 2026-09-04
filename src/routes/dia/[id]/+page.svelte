@@ -42,7 +42,8 @@
 		type CalidadSesion
 	} from '$lib/sesion-reglas';
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
-	import { resumenDiaSesion, rachaSemanalActual } from '$lib/historial';
+	import { resumenDiaSesion, resumenHistorialActual } from '$lib/historial';
+	import { placasConstancia, placasGanadasEl, type Placa } from '$lib/placas';
 	import { sonarDiaTerminado, sonarExito } from '$lib/audio';
 	import { vibrar } from '$lib/vibracion';
 	import { reproducirEnVista } from '$lib/video';
@@ -57,6 +58,7 @@
 	import AvisoSesionAnterior from '$lib/components/AvisoSesionAnterior.svelte';
 	import { deshacer } from '$lib/deshacer.svelte';
 	import CelebracionParticulas from '$lib/components/CelebracionParticulas.svelte';
+	import PlacaFila from '$lib/components/PlacaFila.svelte';
 	import { guardarSinBloquear, reportarErrorDatos } from '$lib/errores-datos';
 
 	let editando = $state(false);
@@ -90,6 +92,11 @@
 	let graciaId: ReturnType<typeof setTimeout> | null = null;
 	// Solo se muestra si es una racha real (2+ semanas seguidas): no infla la primera.
 	let rachaSemanal = $state(0);
+	/**
+	 * Placas ganadas ESTE día, para el cierre. Salen del mismo resumen que la racha y se
+	 * filtran por fecha: corregir el pasado no celebra nada acá, sólo aparece en Historial.
+	 */
+	let placasHoy = $state<Placa[]>([]);
 	let confirmacion = $state<{
 		titulo: string;
 		mensaje: string;
@@ -331,6 +338,7 @@
 		if (graciaId) clearTimeout(graciaId);
 		graciaId = setTimeout(() => (premioTocable = true), GRACIA_PREMIO_MS);
 		rachaSemanal = 0;
+		placasHoy = [];
 		// La recompensa sigue al veredicto, no al toque: la fiesta entera es para el día
 		// completo, y el parcial recibe el acuse corto. Celebrar los dos igual es lo que
 		// hacía que "día terminado" no significara nada.
@@ -340,11 +348,22 @@
 			void (completo ? sonarDiaTerminado() : sonarExito(false)).catch(() => {});
 		if (conActividadReal)
 			vibrar(completo ? [120, 70, 120, 70, 220] : [90], ajustes.vibracion ?? true);
-		if (completo) {
-			// Puntual, no suscripta: ver el comentario en rachaSemanalActual().
-			void rachaSemanalActual()
-				.then((valor) => {
-					if (premioDia) rachaSemanal = valor;
+		if (conActividadReal) {
+			// Puntual, no suscripta: ver el comentario en rachaSemanalActual(). Una sola
+			// lectura para la racha y las placas. Se lee también en el día parcial porque el
+			// parcial sostiene la racha, así que también puede ganar una placa.
+			const fechaCierre = fechaSesion;
+			void resumenHistorialActual()
+				.then((resumen) => {
+					if (!premioDia) return;
+					if (completo) rachaSemanal = resumen.rachaSemanal;
+					placasHoy = fechaCierre ? placasGanadasEl(placasConstancia(resumen), fechaCierre) : [];
+					// Nada importante vuelve de forma abrupta después de un logro: si el cierre
+					// corto iba a irse solo, con una placa ganada se queda hasta que lo cierren.
+					if (placasHoy.length > 0 && premioId) {
+						clearTimeout(premioId);
+						premioId = null;
+					}
 				})
 				.catch(() => {});
 		}
@@ -1291,6 +1310,21 @@
 				>
 					🔥 {rachaSemanal} semanas seguidas
 				</p>
+			{/if}
+			{#if placasHoy.length > 0}
+				<!-- La placa entra en el cierre, que ya es el momento de mayor recompensa: no
+				     abre un aviso propio ni suena aparte. -->
+				<div class="mt-4 space-y-2 text-left" role="list" aria-label="Placas ganadas hoy">
+					<p
+						class="px-1 text-[11px] font-bold tracking-wider uppercase"
+						style="color: rgb(var(--exito))"
+					>
+						{placasHoy.length === 1 ? 'Placa ganada' : 'Placas ganadas'}
+					</p>
+					{#each placasHoy as placa (placa.id)}
+						<PlacaFila {placa} />
+					{/each}
+				</div>
 			{/if}
 			<button
 				onclick={cerrarPremio}

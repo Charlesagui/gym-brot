@@ -34,3 +34,5 @@ definido que sólo hay que hacer (eso es una sesión normal, no un prototipo).
 <!-- Un renglón por ítem. Ejemplo:
 - ¿Se puede marcar una serie sin mirar la pantalla? ¿Cuánto costaría un gesto en vez del botón?
 -->
+
+- Placas en Historial y en el cierre del día: ¿el anillo de 56 px con el pie de dos líneas entra a 320 px sin que el porcentaje de la derecha se aplaste? ¿La fila ganada (contraída, tilde) se distingue de la que falta (penumbra) sin leer el rótulo?
