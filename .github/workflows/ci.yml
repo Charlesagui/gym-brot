@@ -1,0 +1,59 @@
+# El portero de la rama.
+#
+# GitHub tenía este workflow registrado y el archivo no estaba en ninguna rama, así que
+# cada push fallaba en cuatro segundos sin correr un solo paso. Un rojo permanente no
+# avisa nada: entrena a ignorarlo. Así entró en `test` un cartel de "hay una versión
+# nueva" que aparecía en la primera instalación con el botón muerto, con los dos e2e que
+# lo detectan en rojo desde el día que se commiteó.
+#
+# Por eso los end-to-end corren acá y no sólo los unitarios: el bug que se escapó no era
+# de lógica pura, era de arranque de la app.
+name: CI
+
+on:
+  push:
+    branches: [main, test]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # La versión sale de .nvmrc, que es la misma que usa Netlify para el deploy.
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Formato
+        run: npm run format:check
+
+      - name: Tipos
+        run: npm run check
+
+      - name: Unitarios
+        run: npm test
+
+      # Antes de los e2e: `playwright test` levanta `npm run preview`, que sirve `build/`.
+      - name: Build
+        run: npm run build
+
+      - name: Navegador para los e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end
+        run: npx playwright test
+
+      # Sólo cuando algo falla: traza, video y captura del caso que se cayó.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-fallos
+          path: test-results/
+          retention-days: 7
