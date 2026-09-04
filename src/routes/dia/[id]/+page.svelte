@@ -77,6 +77,22 @@
 	 */
 	let premioCalidad = $state<CalidadSesion>('nula');
 	/**
+	 * Cuánta fiesta lleva el resumen: la del día completo, o la de una placa ganada.
+	 *
+	 * Va separado del veredicto a propósito. Un día parcial que cierra "un mes sin
+	 * faltar" se lleva la fanfarria, el halo y las partículas —un logro de ese tamaño no
+	 * recibe el acuse corto—, pero el texto sigue diciendo que el día quedó parcial: la
+	 * fiesta es por la placa, no por el día, y la pantalla lo dice tal cual.
+	 */
+	let premioFiesta = $state(false);
+	/**
+	 * El cierre escribe y después LEE el historial entero para la racha y las placas,
+	 * antes de abrir el resumen: así sonido, vibración y lista aparecen de una vez y
+	 * el sonido se elige sabiendo si hubo placa. Mientras tanto el botón no se puede
+	 * disparar dos veces.
+	 */
+	let cerrandoDia = $state(false);
+	/**
 	 * El toque que abre el resumen no puede cerrarlo.
 	 *
 	 * El fondo del resumen es un botón y se monta justo debajo del dedo que acaba de
@@ -311,73 +327,72 @@
 	}
 
 	async function cerrarDia(conPendientes: boolean) {
-		if (!fechaSesion) return;
-		// La fecha va explícita: con `hoyStr()` adentro, terminar el día pasada la
-		// medianoche marcaba una sesión nueva y vacía y dejaba abierta la real.
+		if (!fechaSesion || cerrandoDia) return;
+		// Capturada antes de los awaits: es la fecha del día que se cierra, no el reloj.
+		const fechaCierre = fechaSesion;
+		cerrandoDia = true;
 		try {
-			const resultado = await marcarDiaTerminado(diaId, fechaSesion, { conPendientes });
-			if (!resultado.terminado) {
-				avisoDia =
-					resultado.razon === 'ejercicios-pendientes'
-						? 'La rutina cambió mientras la cerrabas. Revisá el ejercicio pendiente antes de terminar el día.'
-						: resultado.razon === 'sin-trabajo'
-							? 'Todavía no hay nada que cerrar: marcá una serie o saltá un ejercicio.'
-							: 'Esta rutina ya no está disponible. Volvé a tus rutinas e intentá de nuevo.';
+			// La fecha va explícita: con `hoyStr()` adentro, terminar el día pasada la
+			// medianoche marcaba una sesión nueva y vacía y dejaba abierta la real.
+			try {
+				const resultado = await marcarDiaTerminado(diaId, fechaCierre, { conPendientes });
+				if (!resultado.terminado) {
+					avisoDia =
+						resultado.razon === 'ejercicios-pendientes'
+							? 'La rutina cambió mientras la cerrabas. Revisá el ejercicio pendiente antes de terminar el día.'
+							: resultado.razon === 'sin-trabajo'
+								? 'Todavía no hay nada que cerrar: marcá una serie o saltá un ejercicio.'
+								: 'Esta rutina ya no está disponible. Volvé a tus rutinas e intentá de nuevo.';
+					return;
+				}
+			} catch (error) {
+				reportarErrorDatos('No se pudo marcar la rutina como terminada. Intentá de nuevo.', error);
 				return;
 			}
-		} catch (error) {
-			reportarErrorDatos('No se pudo marcar la rutina como terminada. Intentá de nuevo.', error);
-			return;
-		}
-		avisoDia = null;
-		// El veredicto se calcula acá, sobre la sesión que ya tenemos y con el cierre a
-		// mano puesto: ver `premioCalidad`. Las series ya estaban escritas antes de este
-		// await, así que lo único que le falta al derivado es el `diaTerminado`.
-		premioCalidad = sesion
-			? calidadDesde({ ...totalesSesion(sesion), cerradaAMano: true })
-			: 'nula';
-		premioDia = true;
-		premioTocable = false;
-		if (graciaId) clearTimeout(graciaId);
-		graciaId = setTimeout(() => (premioTocable = true), GRACIA_PREMIO_MS);
-		rachaSemanal = 0;
-		placasHoy = [];
-		// La recompensa sigue al veredicto, no al toque: la fiesta entera es para el día
-		// completo, y el parcial recibe el acuse corto. Celebrar los dos igual es lo que
-		// hacía que "día terminado" no significara nada.
-		const completo = premioCalidad === 'completa';
-		const conActividadReal = resumenDia.setsHechos > 0;
-		if (conActividadReal && sonidoActivo)
-			void (completo ? sonarDiaTerminado() : sonarExito(false)).catch(() => {});
-		if (conActividadReal)
-			vibrar(completo ? [120, 70, 120, 70, 220] : [90], ajustes.vibracion ?? true);
-		if (conActividadReal) {
+			avisoDia = null;
+			// El veredicto se calcula acá, sobre la sesión que ya tenemos y con el cierre a
+			// mano puesto: ver `premioCalidad`. Las series ya estaban escritas antes de este
+			// await, así que lo único que le falta al derivado es el `diaTerminado`.
+			premioCalidad = sesion
+				? calidadDesde({ ...totalesSesion(sesion), cerradaAMano: true })
+				: 'nula';
+			const completo = premioCalidad === 'completa';
+			const conActividadReal = resumenDia.setsHechos > 0;
+
 			// Puntual, no suscripta: ver el comentario en rachaSemanalActual(). Una sola
-			// lectura para la racha y las placas. Se lee también en el día parcial porque el
-			// parcial sostiene la racha, así que también puede ganar una placa.
-			const fechaCierre = fechaSesion;
-			void resumenHistorialActual()
-				.then((resumen) => {
-					if (!premioDia) return;
-					if (completo) rachaSemanal = resumen.rachaSemanal;
-					placasHoy = fechaCierre ? placasGanadasEl(placasConstancia(resumen), fechaCierre) : [];
-					// Nada importante vuelve de forma abrupta después de un logro: si el cierre
-					// corto iba a irse solo, con una placa ganada se queda hasta que lo cierren.
-					if (placasHoy.length > 0 && premioId) {
-						clearTimeout(premioId);
-						premioId = null;
-					}
-				})
-				.catch(() => {});
+			// lectura para la racha y las placas, ANTES de abrir el resumen: el sonido se
+			// elige con la placa en la mano, y el resumen aparece entero en vez de en dos
+			// tandas. Se lee también en el día parcial porque el parcial sostiene la racha,
+			// así que también puede ganar una placa. Si la lectura falla, el cierre sigue:
+			// una recompensa que falta no es un error que haya que atender.
+			const resumen = conActividadReal ? await resumenHistorialActual().catch(() => null) : null;
+			rachaSemanal = completo && resumen ? resumen.rachaSemanal : 0;
+			placasHoy = resumen ? placasGanadasEl(placasConstancia(resumen), fechaCierre) : [];
+			// La recompensa sigue al veredicto, no al toque: la fiesta entera es para el día
+			// completo o para una placa ganada, y el parcial sin placa recibe el acuse corto.
+			// Celebrar todo igual es lo que hacía que "día terminado" no significara nada.
+			premioFiesta = completo || placasHoy.length > 0;
+
+			premioDia = true;
+			premioTocable = false;
+			if (graciaId) clearTimeout(graciaId);
+			graciaId = setTimeout(() => (premioTocable = true), GRACIA_PREMIO_MS);
+			if (conActividadReal && sonidoActivo)
+				void (premioFiesta ? sonarDiaTerminado() : sonarExito(false)).catch(() => {});
+			if (conActividadReal)
+				vibrar(premioFiesta ? [120, 70, 120, 70, 220] : [90], ajustes.vibracion ?? true);
+			if (premioId) clearTimeout(premioId);
+			premioId = null;
+			// El día completo NO se cierra solo. Es la recompensa mayor de la app y además la
+			// única pantalla que junta volumen, PRs y racha: irse sola a los 2,4 s dejaba un
+			// resumen que no se llegaba a leer y que después no se puede volver a abrir desde
+			// acá. Se va cuando la persona lo cierra. Con una placa ganada tampoco: nada
+			// importante vuelve de forma abrupta después de un logro. El parcial sin placa sí
+			// caduca, pero con tiempo para leerse: 1,6 s no alcanzaban ni para la primera línea.
+			if (!premioFiesta) premioId = setTimeout(() => (premioDia = false), 3600);
+		} finally {
+			cerrandoDia = false;
 		}
-		if (premioId) clearTimeout(premioId);
-		premioId = null;
-		// El día completo NO se cierra solo. Es la recompensa mayor de la app y además la
-		// única pantalla que junta volumen, PRs y racha: irse sola a los 2,4 s dejaba un
-		// resumen que no se llegaba a leer y que después no se puede volver a abrir desde
-		// acá. Se va cuando la persona lo cierra. El parcial sí caduca, pero con tiempo
-		// para leerse: 1,6 s no alcanzaban ni para la primera línea.
-		if (!completo) premioId = setTimeout(() => (premioDia = false), 3600);
 	}
 
 	async function saltarEjercicioActual(exerciseId: string) {
@@ -1164,7 +1179,7 @@
 						-->
 						<button
 							onclick={terminarDia}
-							disabled={!hayTrabajo}
+							disabled={!hayTrabajo || cerrandoDia}
 							class="rounded-2xl py-3 text-sm font-bold disabled:opacity-45"
 							style="background: {diaListo
 								? 'var(--accent)'
@@ -1219,7 +1234,7 @@
 		role="dialog"
 		aria-label="Resumen del día"
 		class="fixed inset-0 z-[60] grid w-full place-items-center px-8"
-		style={premioCalidad === 'completa'
+		style={premioFiesta
 			? 'background: radial-gradient(72% 50% at 50% 42%, rgb(var(--exito) / .22), transparent 72%), rgb(var(--scrim) / .84); backdrop-filter: blur(8px)'
 			: 'background: rgb(var(--scrim) / .9); backdrop-filter: blur(8px)'}
 	>
@@ -1235,17 +1250,17 @@
 			aria-live="polite"
 		>
 			<div class="relative mx-auto grid size-24 place-items-center">
-				<!-- Las partículas y el halo son del día completo. Un día parcial recibe el
-				     acuse corto: celebrar los dos igual es lo que hacía que "día terminado"
-				     no significara nada. -->
-				{#if premioCalidad === 'completa'}
+				<!-- Las partículas y el halo son de la fiesta: día completo o placa ganada. El
+				     parcial sin placa recibe el acuse corto: celebrar todo igual es lo que
+				     hacía que "día terminado" no significara nada. -->
+				{#if premioFiesta}
 					<CelebracionParticulas color="var(--exito)" cantidad={16} />
 				{/if}
 				<div
 					class="relative grid size-24 place-items-center rounded-full border border-white/15 text-5xl font-extrabold"
-					style="background: rgb(var(--exito) / {premioCalidad === 'completa'
+					style="background: rgb(var(--exito) / {premioFiesta
 						? '.18'
-						: '.1'}); color: rgb(var(--exito)); box-shadow: {premioCalidad === 'completa'
+						: '.1'}); color: rgb(var(--exito)); box-shadow: {premioFiesta
 						? '0 0 55px rgb(var(--exito) / .24)'
 						: 'none'}"
 				>

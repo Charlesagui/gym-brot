@@ -63,8 +63,10 @@ todas las tablas de usuario en una única transacción.
   tres de una fila de serie (falta / en curso / ganada) y la fila es una sola (`PlacaFila.svelte`)
   para Historial y para el resumen de "Terminar día".
 - La celebración de una placa se engancha al cierre del día, que ya es el momento de mayor
-  recompensa: sin aviso, sonido ni vibración propios. Si el cierre corto de un día parcial trae
-  una placa, deja de irse solo.
+  recompensa: sin aviso, sonido ni vibración propios. La intensidad de la fiesta (fanfarria,
+  halo, partículas, sin cierre automático) sigue a "día completo **o** placa ganada"; el texto
+  del resumen sigue al veredicto del día. El cierre lee el historial antes de abrir el resumen
+  para elegir el sonido con la placa en la mano.
 - Familias definidas: Constancia (racha semanal 4/13/26/52 y días completos 10/50/100, verde de
   día terminado), y pendientes Carga, Marca, Oficio y Cuerpo. Sólo Cuerpo puede usar los colores de
   grupo muscular; las demás toman un color semántico de la app.
