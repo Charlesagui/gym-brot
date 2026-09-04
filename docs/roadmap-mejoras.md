@@ -50,3 +50,21 @@ todas las tablas de usuario en una única transacción.
 - La lista textual y el SVG consumen el mismo cálculo. El SVG usa una única silueta anatómica sin
   personalización por sexo o género, ofrece frente y espalda, navegación por teclado y estado
   seleccionado que no depende sólo del color.
+
+## Placas de tablero (logros)
+
+- Una placa es una **derivación pura** sobre `HistorialResumen` (`src/lib/placas.ts`), nunca un
+  contador persistido. Marcar y desmarcar series devuelve exactamente las mismas placas: la regla
+  "ir y venir no acumula" se cumple por construcción, sin código anti-repetición.
+- No se guarda "ya la celebré". Cada placa ganada lleva `ganadaEl`, la fecha de la sesión que la
+  ganó, y el cierre del día celebra sólo las de la fecha que se cierra. Corregir el pasado desde el
+  historial puede hacer aparecer una placa en la lista, pero nunca dispara una celebración.
+- Cada escalera tiene a lo sumo una placa en curso: la siguiente que falta. Los estados son los
+  tres de una fila de serie (falta / en curso / ganada) y la fila es una sola (`PlacaFila.svelte`)
+  para Historial y para el resumen de "Terminar día".
+- La celebración de una placa se engancha al cierre del día, que ya es el momento de mayor
+  recompensa: sin aviso, sonido ni vibración propios. Si el cierre corto de un día parcial trae
+  una placa, deja de irse solo.
+- Familias definidas: Constancia (racha semanal 4/13/26/52 y días completos 10/50/100, verde de
+  día terminado), y pendientes Carga, Marca, Oficio y Cuerpo. Sólo Cuerpo puede usar los colores de
+  grupo muscular; las demás toman un color semántico de la app.

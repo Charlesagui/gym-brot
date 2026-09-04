@@ -94,7 +94,10 @@
 	let rachaSemanal = $state(0);
 	/**
 	 * Placas ganadas ESTE día, para el cierre. Salen del mismo resumen que la racha y se
-	 * filtran por fecha: corregir el pasado no celebra nada acá, sólo aparece en Historial.
+	 * filtran por la fecha de la sesión que se cierra, no por el reloj: cerrar ayer a la
+	 * mañana el día que te olvidaste de cerrar celebra la placa que ayer ganó, porque es
+	 * la primera vez que ese cierre se ve. Lo que NO celebra es corregir series de un día
+	 * viejo desde el historial: eso sólo hace aparecer la placa en la lista.
 	 */
 	let placasHoy = $state<Placa[]>([]);
 	let confirmacion = $state<{
