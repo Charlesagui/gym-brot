@@ -32,6 +32,7 @@
 		sesionRecienteDe,
 		type InstantaneaSesion,
 		type MejorSet,
+		type PrGanado,
 		type ResultadoMutacion,
 		type SesionReciente
 	} from '$lib/sesion';
@@ -163,10 +164,10 @@
 	let cargandoSeries = $state(false);
 	let ejercicioNoDisponible = $state<'rutina-no-disponible' | 'fecha-futura' | null>(null);
 	let exito = $state<'normal' | 'pr' | 'parcial' | null>(null);
-	let prExito = $state<MejorSet | null>(null);
+	let prExito = $state<PrGanado | null>(null);
 	// Flash de PR no bloqueante: celebra el récord en el instante en que se gana,
 	// sin esperar a "Terminar" (así no se pierde si salís con ←).
-	let prFlash = $state<MejorSet | null>(null);
+	let prFlash = $state<PrGanado | null>(null);
 	let prFlashId: ReturnType<typeof setTimeout> | null = null;
 	// El gif de demostración arranca grande en cada ejercicio; se puede achicar a
 	// miniatura en el header tocándolo, pero al cambiar de ejercicio vuelve a grande.
@@ -1079,7 +1080,7 @@
 	}
 
 	/** Recompensa especial inmediata por PR: no bloquea el registro (pointer-events-none). */
-	function celebrarPrFlash(mejor: MejorSet) {
+	function celebrarPrFlash(mejor: PrGanado) {
 		prFlash = mejor;
 		if (sonidoActivo) void sonarExito(true).catch(() => {});
 		vibrar([120, 70, 180], vibracionActiva);
@@ -2036,6 +2037,20 @@
 				<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
 					{metricaLabel} · {formatoSet(prFlash, unidad)}
 				</p>
+				<!--
+					De dónde venías. Es la mitad que le faltaba a la celebración: "130" sin el 127,5
+					de al lado no dice si rompiste la marca por diez kilos o por medio.
+
+					Sólo aparece si hay récord anterior. Cuando falta puede ser tu primer récord del
+					ejercicio o un PR viejo de antes de que se guardara este dato, y como desde acá
+					no se distinguen, la pantalla calla en vez de arriesgar un "primer récord" falso.
+				-->
+				{#if prFlash.previo}
+					<p class="mt-1.5 text-sm font-semibold tabular-nums" style="color: rgb({g.glow} / .85)">
+						Venías de {formatoNumero(prFlash.previo.valor)}
+						{unidadValor}
+					</p>
+				{/if}
 			</div>
 		</div>
 	{/if}

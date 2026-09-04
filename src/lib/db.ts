@@ -50,6 +50,31 @@ export interface PrCelebrado {
 	setIndex?: number;
 	/** Métrica usada al celebrar/recalcular el PR; ausente en sesiones viejas. */
 	metrica?: MetricaPr | 'reps';
+	/**
+	 * El récord que este PR rompió, para poder decir de dónde venías y no sólo que
+	 * llegaste. Es el mejor de las sesiones **anteriores** a esta: si en un mismo día
+	 * batís tu marca dos veces, las dos celebraciones dicen el número con el que
+	 * arrancaste el día, que es lo que el usuario recuerda.
+	 *
+	 * Se guarda el set y no el valor por el mismo motivo que el snapshot de arriba:
+	 * un escalar en kg mentiría al cambiar de unidad o de métrica.
+	 *
+	 * Ausente cuando era el primer récord del ejercicio y también en los PR anteriores
+	 * a que existiera este campo. No los distinguimos a propósito: inventar un "primer
+	 * récord" para un dato viejo sería exactamente la clase de mentira que el resto de
+	 * este archivo evita, así que la interfaz simplemente calla.
+	 */
+	previo?: SetRecordPrevio;
+}
+
+/** El set de un récord roto: lo mínimo para recomputar su valor con cualquier métrica. */
+export interface SetRecordPrevio {
+	peso?: number;
+	pesoGramos?: number;
+	reps?: number;
+	esMax?: boolean;
+	extraKg?: number;
+	extraGramos?: number;
 }
 
 export interface EjercicioSesion {

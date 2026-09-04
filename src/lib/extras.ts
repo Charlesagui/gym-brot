@@ -14,7 +14,7 @@ import {
 import { fechaCalendarioValida, hoyCalendarioLocal } from './fechas';
 import { PESO_CORPORAL_MAX_GRAMOS, PESO_CORPORAL_MIN_GRAMOS } from './peso-corporal';
 import { rirValido } from './esfuerzo';
-import { coincideConPr, repeticionesValidas, serieCompleta } from './sesion-reglas';
+import { coincideConPr, prCanonico, repeticionesValidas, serieCompleta } from './sesion-reglas';
 import {
 	CATEGORIAS_VALIDAS,
 	DENSIDADES_VALIDAS,
@@ -442,9 +442,24 @@ function esDia(value: unknown): value is Dia {
 	);
 }
 
+/** Un récord roto: el mismo set del PR, sin índice ni métrica propios. */
+function esSetRecordPrevio(value: unknown): boolean {
+	return (
+		esRecord(value) &&
+		(value.peso === undefined || esNumeroNoNegativo(value.peso)) &&
+		(value.pesoGramos === undefined || esEnteroNoNegativo(value.pesoGramos)) &&
+		(value.reps === undefined ||
+			(esNumeroNoNegativo(value.reps) && Number.isInteger(value.reps))) &&
+		(value.esMax === undefined || esBoolean(value.esMax)) &&
+		(value.extraKg === undefined || esNumeroNoNegativo(value.extraKg)) &&
+		(value.extraGramos === undefined || esEnteroNoNegativo(value.extraGramos))
+	);
+}
+
 function esPrCelebrado(value: unknown): boolean {
 	return (
 		esRecord(value) &&
+		(value.previo === undefined || esSetRecordPrevio(value.previo)) &&
 		(value.peso === undefined || esNumeroNoNegativo(value.peso)) &&
 		(value.pesoGramos === undefined || esEnteroNoNegativo(value.pesoGramos)) &&
 		(value.reps === undefined ||
@@ -785,7 +800,7 @@ export function prepararImport(data: Backup): ImportPreparado {
 					...actual,
 					sets,
 					prCelebrado: actual.prCelebrado
-						? conPesoCanonico(actual.prCelebrado, ajustes.unidad)
+						? prCanonico(actual.prCelebrado, ajustes.unidad)
 						: undefined
 				};
 				if (!actualConSeries.prCelebrado) return actualConSeries;

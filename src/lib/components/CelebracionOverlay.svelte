@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { fly } from 'svelte/transition';
-	import type { MejorSet } from '$lib/sesion';
+	import type { PrGanado } from '$lib/sesion';
 	import { dur } from '$lib/motion';
 	import { formatoNumero, formatoSet } from '$lib/formato';
 	import CelebracionParticulas from './CelebracionParticulas.svelte';
@@ -16,7 +16,7 @@
 		onClose
 	}: {
 		exito: 'normal' | 'pr' | 'parcial';
-		prExito: MejorSet | null;
+		prExito: PrGanado | null;
 		glow: string;
 		/** Unidad del valor del PR: kg/lb, o "reps" en ejercicios sin peso. */
 		unidad: string;
@@ -80,6 +80,13 @@
 			<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
 				{metricaLabel} · mejor set {formatoSet(prExito, unidad)}
 			</p>
+			<!-- El récord que acabás de romper; ausente en el primero y en los PR viejos. -->
+			{#if prExito.previo}
+				<p class="mt-1.5 text-sm font-semibold tabular-nums" style="color: rgb({glow} / .85)">
+					Venías de {formatoNumero(prExito.previo.valor)}
+					{unidad}
+				</p>
+			{/if}
 		{:else if exito === 'parcial'}
 			<p class="mt-1 text-sm font-medium" style="color: var(--muted)">
 				{hechas}/{total}

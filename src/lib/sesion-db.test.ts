@@ -394,6 +394,135 @@ describe('sesion con IndexedDB', () => {
 		expect((await db.sesiones.get('2026-01-05__push'))?.ejercicios[0]?.prCelebrado).toBeUndefined();
 	});
 
+	it('guarda y devuelve el récord que el PR rompió, y no lo inventa en el primero', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-01');
+		await setPeso('push', 'press', 0, 100, '2026-01-01');
+		await setReps('push', 'press', 0, 5, '2026-01-01');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01');
+
+		// El primero no tiene de dónde venir: `previo` ausente es "no había marca", y la
+		// pantalla calla en vez de inventar un número.
+		const primero = await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-01');
+		expect(primero).toMatchObject({ valor: 100 });
+		expect(primero?.previo).toBeUndefined();
+		expect(
+			(await db.sesiones.get('2026-01-01__push'))?.ejercicios[0]?.prCelebrado?.previo
+		).toBeUndefined();
+
+		await ensureEjercicio('push', 'press', 1, '2026-01-08');
+		await setPeso('push', 'press', 0, 105, '2026-01-08');
+		await setReps('push', 'press', 0, 5, '2026-01-08');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-08');
+
+		expect(await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-08')).toMatchObject({
+			valor: 105,
+			previo: { peso: 100, reps: 5, valor: 100 }
+		});
+		expect(
+			(await db.sesiones.get('2026-01-08__push'))?.ejercicios[0]?.prCelebrado?.previo
+		).toMatchObject({ peso: 100, pesoGramos: 100_000, reps: 5, esMax: false });
+	});
+
+	it('dos récords el mismo día dicen los dos el número con el que arrancó el día', async () => {
+		await ensureEjercicio('push', 'press', 2, '2026-01-01');
+		await setPeso('push', 'press', 0, 100, '2026-01-01');
+		await setReps('push', 'press', 0, 5, '2026-01-01');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01');
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-01');
+
+		await ensureEjercicio('push', 'press', 2, '2026-01-08');
+		await setPeso('push', 'press', 0, 105, '2026-01-08');
+		await setReps('push', 'press', 0, 5, '2026-01-08');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-08');
+		expect(await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-08')).toMatchObject({
+			previo: { peso: 100 }
+		});
+
+		// Segunda marca del mismo día: "venías de" sigue siendo el 100 con el que entró al
+		// gimnasio, no el 105 de hace cinco minutos. Es lo que el usuario tiene en la cabeza,
+		// y además es lo único que `recalcularPrCelebrado` puede reconstruir después.
+		await setPeso('push', 'press', 1, 110, '2026-01-08');
+		await setReps('push', 'press', 1, 5, '2026-01-08');
+		await setSerieHecha('push', 'press', 1, true, '2026-01-08');
+		expect(await registrarPrSiSupera('push', 'press', 1, 'peso', '2026-01-08')).toMatchObject({
+			valor: 110,
+			previo: { peso: 100 }
+		});
+	});
+
+	it('ir y venir sobre la misma serie no mueve el récord anterior guardado', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-01');
+		await setPeso('push', 'press', 0, 100, '2026-01-01');
+		await setReps('push', 'press', 0, 5, '2026-01-01');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01');
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-01');
+
+		await ensureEjercicio('push', 'press', 1, '2026-01-08');
+		await setPeso('push', 'press', 0, 105, '2026-01-08');
+		await setReps('push', 'press', 0, 5, '2026-01-08');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-08');
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-08');
+
+		for (let vuelta = 0; vuelta < 3; vuelta++) {
+			await setSerieHecha('push', 'press', 0, false, '2026-01-08');
+			await setSerieHecha('push', 'press', 0, true, '2026-01-08');
+			await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-08');
+		}
+
+		expect(
+			(await db.sesiones.get('2026-01-08__push'))?.ejercicios[0]?.prCelebrado?.previo
+		).toMatchObject({ peso: 100, reps: 5 });
+	});
+
+	it('corregir el pasado reescribe el "venías de" en vez de dejarlo mintiendo', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-01');
+		await setPeso('push', 'press', 0, 100, '2026-01-01');
+		await setReps('push', 'press', 0, 5, '2026-01-01');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01');
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-01');
+
+		await ensureEjercicio('push', 'press', 1, '2026-01-08');
+		await setPeso('push', 'press', 0, 110, '2026-01-08');
+		await setReps('push', 'press', 0, 5, '2026-01-08');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-08');
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-08');
+
+		// Se corrige el día viejo: aquel 100 en realidad habían sido 105.
+		expect(
+			await actualizarSetHistorial('2026-01-01__push', 'press', 0, { peso: 105, reps: 5 })
+		).toBe(true);
+
+		expect(
+			(await db.sesiones.get('2026-01-08__push'))?.ejercicios[0]?.prCelebrado?.previo
+		).toMatchObject({ peso: 105, pesoGramos: 105_000 });
+	});
+
+	it('el récord anterior se guarda canónico y vuelve en la unidad que se está mirando', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-01-01', 'lb');
+		await setPeso('push', 'press', 0, 200, '2026-01-01', 'lb');
+		await setReps('push', 'press', 0, 5, '2026-01-01');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-01');
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-01', 'lb');
+
+		await ensureEjercicio('push', 'press', 1, '2026-01-08', 'lb');
+		await setPeso('push', 'press', 0, 210, '2026-01-08', 'lb');
+		await setReps('push', 'press', 0, 5, '2026-01-08');
+		await setSerieHecha('push', 'press', 0, true, '2026-01-08');
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-01-08', 'lb');
+
+		// En disco, gramos. Sin esto el `previo` viajaría con un número en libras que la
+		// pantalla en kg mostraría tal cual, y nadie se enteraría.
+		const guardado = (await db.sesiones.get('2026-01-08__push'))?.ejercicios[0]?.prCelebrado;
+		expect(guardado?.previo?.pesoGramos).toBe(90_718);
+
+		const enLb = await primerValor(ejercicioSesionObs('push', 'press', '2026-01-08', 'lb'));
+		expect(enLb.prCelebrado?.previo?.peso).toBeCloseTo(200, 1);
+		expect(enLb.prCelebrado?.previo?.pesoGramos).toBeUndefined();
+
+		const enKg = await primerValor(ejercicioSesionObs('push', 'press', '2026-01-08', 'kg'));
+		expect(enKg.prCelebrado?.previo?.peso).toBeCloseTo(90.7, 1);
+	});
+
 	it('terminar el dia usa la fecha de la sesion, no el reloj', async () => {
 		vi.setSystemTime(new Date('2026-01-07T23:59:30'));
 		await db.dias.add({

@@ -1,4 +1,12 @@
-import type { Ajustes, MetricaPr, PlanSesion, PrCelebrado, Sesion, SetSesion } from './db';
+import type {
+	Ajustes,
+	MetricaPr,
+	PlanSesion,
+	PrCelebrado,
+	Sesion,
+	SetRecordPrevio,
+	SetSesion
+} from './db';
 import { conPesoCanonico, conPesoVisible, gramosAPeso, type UnidadPeso } from './unidades';
 
 /** Cómo puntúa un ejercicio: por peso o por reps si nunca registró peso. */
@@ -20,6 +28,17 @@ export interface MejorSet {
 	valor: number;
 	sesionId?: string;
 	setIndex?: number;
+}
+
+/**
+ * Lo que devuelve celebrar un récord: el set que ganó y el que destronó.
+ *
+ * Extiende `MejorSet` en vez de envolverlo para que quien sólo quiera el ganador
+ * lo siga leyendo igual; el `previo` es material de celebración, no de cálculo.
+ */
+export interface PrGanado extends MejorSet {
+	/** Ausente cuando es el primer récord del ejercicio: no había de dónde venir. */
+	previo?: MejorSet;
 }
 
 export interface RecordEjercicio extends MejorSet {
@@ -296,9 +315,10 @@ export function modoDeMetrica(metrica: MetricaEfectiva): ModoPr {
 export function snapPr(
 	set: MejorSet,
 	metrica: MetricaEfectiva,
-	unidad: UnidadPeso = 'kg'
+	unidad: UnidadPeso = 'kg',
+	previo?: MejorSet | null
 ): PrCelebrado {
-	return conPesoCanonico(
+	const snap = conPesoCanonico(
 		{
 			peso: set.peso,
 			reps: set.reps,
@@ -309,6 +329,33 @@ export function snapPr(
 		},
 		unidad
 	);
+	return previo ? { ...snap, previo: snapPrevio(previo, unidad) } : snap;
+}
+
+/** El récord roto, sin índice ni métrica: se lee siempre con la métrica del PR que lo rompió. */
+function snapPrevio(set: MejorSet, unidad: UnidadPeso): SetRecordPrevio {
+	return conPesoCanonico(
+		{ peso: set.peso, reps: set.reps, esMax: set.esMax, extraKg: set.extraKg },
+		unidad
+	);
+}
+
+/**
+ * Vista y forma canónica de un PR **con su récord anterior adentro**.
+ *
+ * `conPesoVisible` y `conPesoCanonico` copian plano: aplicados sobre el PR dejarían el
+ * `previo` sin convertir, con su `pesoGramos` intacto y su `peso` en la unidad de otra
+ * lectura. Sería un número escrito en kg mostrándose como lb sin que nada lo delate, así
+ * que la conversión del anidado no puede quedar en manos de cada pantalla.
+ */
+export function prVisible(pr: PrCelebrado, unidad: UnidadPeso): PrCelebrado {
+	const visible = conPesoVisible(pr, unidad);
+	return pr.previo ? { ...visible, previo: conPesoVisible(pr.previo, unidad) } : visible;
+}
+
+export function prCanonico(pr: PrCelebrado, unidad: UnidadPeso): PrCelebrado {
+	const canonico = conPesoCanonico(pr, unidad);
+	return pr.previo ? { ...canonico, previo: conPesoCanonico(pr.previo, unidad) } : canonico;
 }
 
 /**
