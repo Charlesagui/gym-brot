@@ -31,6 +31,12 @@ export interface RegistroActualizable {
 	update(): Promise<unknown>;
 	readonly installing: TrabajadorObservable | null;
 	readonly waiting: TrabajadorObservable | null;
+	/**
+	 * La versión que ya está sirviendo la app. Es lo que separa una ACTUALIZACIÓN de la
+	 * primera instalación, y sin ese dato el cartel de "hay versión nueva" era mentira
+	 * en el primer arranque (ver `#marcarLista`).
+	 */
+	readonly active: TrabajadorObservable | null;
 	addEventListener(tipo: 'updatefound', escucha: () => void): void;
 }
 
@@ -162,8 +168,21 @@ export class BuscadorDeVersion {
 		bajando.addEventListener('statechange', alCambiar);
 	}
 
+	/**
+	 * Hay versión esperando **y hay una anterior a la que reemplazar**.
+	 *
+	 * La segunda mitad es la que faltaba. En una instalación limpia no hay ningún
+	 * `active`, así que el primer service worker no espera a nadie: pasa por `waiting`
+	 * un instante y se activa solo. Como acá se miraba únicamente `waiting`, ese instante
+	 * alcanzaba para encender el cartel de "hay una versión nueva" en el primer arranque
+	 * de la app —con un botón "Actualizar" que ya no podía hacer nada, porque para cuando
+	 * lo tocaban `waiting` era null—. Con precache de 1,4 MB la ventana es de sobra.
+	 *
+	 * Con `active` presente el significado vuelve a ser el correcto: alguien está usando
+	 * una versión y hay otra lista para reemplazarla.
+	 */
 	#marcarLista() {
-		if (this.#lista) return;
+		if (this.#lista || !this.#registro?.active) return;
 		this.#lista = true;
 		for (const avisar of this.#avisos) avisar();
 	}
@@ -184,7 +203,12 @@ export class BuscadorDeVersion {
 		// `update()` ya disparó `updatefound` si había algo nuevo; esto engancha el
 		// seguimiento igual por si el registro llegó con una instalación ya empezada.
 		this.#revisar();
-		if (registro.waiting) return 'hay-version';
+		// El mismo criterio que `#marcarLista`, y por el mismo motivo: sin una versión
+		// activa a la que reemplazar no hay actualización que ofrecer. Con la respuesta
+		// vieja, buscar a mano durante la primera instalación devolvía "hay-version" y
+		// Ajustes se quedaba en "Actualizando…" para siempre, porque del otro lado no
+		// había nada que aplicar.
+		if (registro.waiting && registro.active) return 'hay-version';
 		return registro.installing ? 'bajando' : 'al-dia';
 	}
 
@@ -220,7 +244,13 @@ export class BuscadorDeVersion {
 	 */
 	aplicar(): boolean {
 		const esperando = this.#registro?.waiting;
-		if (!esperando) return false;
+		if (!esperando) {
+			// Lo que esperaba ya tomó el control (otra pestaña lo aplicó, o se activó solo
+			// por no tener a quién reemplazar): no hay nada que aplicar y tampoco puede
+			// seguir habiendo un cartel que prometa un botón muerto.
+			this.#lista = false;
+			return false;
+		}
 		esperando.postMessage(SKIP_WAITING);
 		return true;
 	}

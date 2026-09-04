@@ -35,6 +35,12 @@ class SwFalso implements TrabajadorObservable {
 class RegistroFalso implements RegistroActualizable {
 	installing: SwFalso | null = null;
 	waiting: SwFalso | null = null;
+	/**
+	 * La versión que ya está sirviendo la app. Arranca poblada porque todos los casos de
+	 * "hay un deploy nuevo" ocurren sobre una app ya instalada; la primera instalación
+	 * es el caso especial y tiene su propio método.
+	 */
+	active: SwFalso | null = new SwFalso();
 	update = vi.fn(async () => {
 		if (this.falla) throw new Error('sw.js caído');
 	});
@@ -69,6 +75,29 @@ class RegistroFalso implements RegistroActualizable {
 	deployar() {
 		this.empezarInstalacion();
 		return this.terminarInstalacion();
+	}
+
+	/**
+	 * La PRIMERA instalación, tal como la hace el navegador: sin nadie a quien
+	 * reemplazar, el service worker pasa por `waiting` un instante y se activa solo.
+	 * Ese instante es todo lo que hacía falta para encender un cartel falso.
+	 */
+	instalarPrimeraVez() {
+		this.active = null;
+		const sw = this.empezarInstalacion();
+		this.installing = null;
+		this.waiting = sw;
+		sw.pasarA('installed');
+		this.waiting = null;
+		this.active = sw;
+		sw.pasarA('activated');
+		return sw;
+	}
+
+	/** Otra pestaña aplicó la actualización: lo que esperaba ya tomó el control. */
+	aplicarDesdeOtraPestana() {
+		this.active = this.waiting;
+		this.waiting = null;
 	}
 }
 
@@ -194,6 +223,49 @@ describe('avisar que hay versión lista', () => {
 		expect(avisos).toHaveBeenCalledTimes(1);
 	});
 
+	/**
+	 * EL OTRO BUG, del lado opuesto. Sin nadie a quien reemplazar, el primer service
+	 * worker pasa por `waiting` un instante antes de activarse solo. Mirando sólo
+	 * `waiting`, ese instante encendía "✨ Hay una versión nueva de Gym-brot" en el
+	 * PRIMER arranque de la app —lo primero que ve alguien que la instala—, y el botón
+	 * "Actualizar" ya no podía hacer nada porque para entonces `waiting` era null.
+	 */
+	it('la primera instalación no anuncia ninguna versión nueva', () => {
+		const reg = new RegistroFalso();
+		const buscador = new BuscadorDeVersion();
+		const avisos = vi.fn();
+		buscador.registrar(reg);
+		buscador.alQuedarLista(avisos);
+
+		reg.instalarPrimeraVez();
+		expect(buscador.hayVersionLista).toBe(false);
+		expect(avisos).not.toHaveBeenCalled();
+	});
+
+	it('buscar a mano durante la primera instalación tampoco promete una versión', async () => {
+		// Ajustes aplica lo que este resultado dice. Con "hay-version" acá y nada que
+		// aplicar del otro lado, el botón se quedaba en "Actualizando…" para siempre.
+		const reg = new RegistroFalso();
+		const buscador = new BuscadorDeVersion();
+		buscador.registrar(reg);
+
+		reg.active = null;
+		reg.empezarInstalacion();
+		reg.installing = null;
+		reg.waiting = new SwFalso();
+		expect(await buscador.buscar({ forzar: true })).toBe('al-dia');
+	});
+
+	it('recién instalada, el primer deploy posterior sí avisa', () => {
+		const reg = new RegistroFalso();
+		const buscador = new BuscadorDeVersion();
+		buscador.registrar(reg);
+		reg.instalarPrimeraVez();
+
+		reg.deployar();
+		expect(buscador.hayVersionLista).toBe(true);
+	});
+
 	it('una instalación que se corta no habilita nada', () => {
 		const reg = new RegistroFalso();
 		const buscador = new BuscadorDeVersion();
@@ -283,6 +355,22 @@ describe('aplicar', () => {
 		const buscador = new BuscadorDeVersion();
 		buscador.registrar(new RegistroFalso());
 		expect(buscador.aplicar()).toBe(false);
+	});
+
+	/**
+	 * Si lo que esperaba ya tomó el control, el cartel no puede seguir ofreciendo un
+	 * botón que no hace nada: se apaga con el mismo toque que lo descubre.
+	 */
+	it('sin nada esperando también apaga el aviso', () => {
+		const reg = new RegistroFalso();
+		const buscador = new BuscadorDeVersion();
+		buscador.registrar(reg);
+		reg.deployar();
+		expect(buscador.hayVersionLista).toBe(true);
+
+		reg.aplicarDesdeOtraPestana();
+		expect(buscador.aplicar()).toBe(false);
+		expect(buscador.hayVersionLista).toBe(false);
 	});
 
 	it('le manda SKIP_WAITING al que espera', () => {

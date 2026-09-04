@@ -176,6 +176,10 @@
 		actualizando = true;
 		if (!buscadorDeVersion.aplicar()) {
 			actualizando = false;
+			// No había nada esperando: el cartel se va en vez de quedar con un botón que
+			// no puede hacer nada. Si de verdad aparece una versión, `alQuedarLista` lo
+			// vuelve a encender.
+			hayVersion = false;
 			return;
 		}
 		// La recarga la dispara `controllerchange`; acá sólo queda el piso de seguridad.
