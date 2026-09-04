@@ -8,8 +8,9 @@ import type { Dia, Sesion } from './db';
  * volver a algo que ya hacés sin acordarte de cómo se llamaba en el catálogo.
  *
  * Es una regla pura sobre datos que ya existen. No confundir con un filtro por
- * equipamiento: ese necesitaría que el catálogo tuviera clasificado el equipo de cada
- * ejercicio, y hoy solo están marcadas las mancuernas (para el paso de peso).
+ * equipamiento: el catálogo ya trae `equipo` clasificado en el 90% de los ejercicios
+ * (ver `scripts/clasificar-equipo.mjs`), así que ese filtro ya se puede escribir, pero
+ * sigue siendo otra cosa que esto — y falta decidir qué hace con el 10% sin clasificar.
  */
 export function ejerciciosPropios(
 	dias: Pick<Dia, 'ejercicios'>[],

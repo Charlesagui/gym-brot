@@ -35,6 +35,43 @@ describe('catalogo de ejercicios', () => {
 	});
 });
 
+describe('equipamiento del catalogo', () => {
+	const EQUIPOS = ['mancuerna', 'barra', 'maquina', 'peso-corporal', 'otro'];
+
+	it('solo usa los cinco equipos del tipo, sin variantes inventadas', () => {
+		for (const ejercicio of catalogo) {
+			if (ejercicio.equipo === undefined) continue;
+			expect(EQUIPOS, `equipo raro en ${ejercicio.id}`).toContain(ejercicio.equipo);
+		}
+	});
+
+	it('una maquina de placas esta clasificada como maquina', () => {
+		// Los dos campos describen lo mismo desde distinto angulo: si se contradicen, uno
+		// de los dos le esta mintiendo a la pantalla que lo lea.
+		for (const ejercicio of catalogo) {
+			if (!ejercicio.maquinaPlacas) continue;
+			expect(ejercicio.equipo, `${ejercicio.id} tiene pila de placas`).toBe('maquina');
+		}
+	});
+
+	it('lo que el nombre dice mancuerna no queda clasificado como otra cosa', () => {
+		// La precedencia de `scripts/clasificar-equipo.mjs` es lo que sostiene el paso de
+		// peso de 1 kg: si una regla nueva se cuela adelante, esto se cae antes que el gym.
+		for (const ejercicio of catalogo) {
+			if (!/mancuerna/i.test(ejercicio.nombre)) continue;
+			expect(ejercicio.equipo, `${ejercicio.id} se llama mancuerna`).toBe('mancuerna');
+		}
+	});
+
+	it('clasifica la amplia mayoria del catalogo', () => {
+		// No exige el 100%: quedan 95 ejercicios cuyo nombre no dice con que se cargan
+		// ("Sentadilla, con peso", "Remo con toalla"), y adivinarles el equipo seria peor
+		// que dejarlos vacios. El piso protege contra perder cobertura sin darse cuenta.
+		const clasificados = catalogo.filter((ejercicio) => ejercicio.equipo).length;
+		expect(clasificados / catalogo.length).toBeGreaterThan(0.85);
+	});
+});
+
 describe('busqueda de ejercicios', () => {
 	it('sin termino devuelve el catalogo completo', () => {
 		expect(buscarEjercicios('')).toHaveLength(catalogo.length);

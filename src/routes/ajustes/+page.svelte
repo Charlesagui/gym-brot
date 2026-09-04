@@ -1005,6 +1005,17 @@
 		<p class="mx-auto mt-1 max-w-xs text-xs leading-relaxed" style="color: var(--muted)">
 			Todo se guarda en este teléfono. Sin cuentas, sin nube, sin conexión necesaria.
 		</p>
+		<!--
+			Atribución de la base de wger, que es CC-BY-SA: parte del equipamiento del
+			catálogo se contrastó (y en algunos casos se resolvió) contra sus datos. La
+			licencia pide crédito, y el crédito va donde el usuario pueda encontrarlo, no
+			en un comentario del código.
+		-->
+		<p class="mx-auto mt-2 max-w-xs text-[11px] leading-relaxed" style="color: var(--muted)">
+			Parte del equipamiento del catálogo se contrastó con la base de
+			<a href="https://wger.de" class="underline" rel="noreferrer noopener" target="_blank">wger</a
+			>, publicada bajo CC-BY-SA.
+		</p>
 		<p
 			class="mt-2 font-mono text-[11px]"
 			style="color: var(--muted)"

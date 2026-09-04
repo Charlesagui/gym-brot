@@ -5,7 +5,8 @@
 		"grupo": "piernas",
 		"musculo": "Cuádriceps + glúteos",
 		"demoVideo": "/videos/prensa-pierna-45.mp4",
-		"videoUrl": "https://www.youtube.com/watch?v=xvCynwyNoP4"
+		"videoUrl": "https://www.youtube.com/watch?v=xvCynwyNoP4",
+		"equipo": "maquina"
 	},
 	{
 		"id": "extension-cuadriceps",
@@ -14,7 +15,8 @@
 		"musculo": "Cuádriceps",
 		"demoVideo": "/videos/extension-cuadriceps.mp4",
 		"videoUrl": "https://www.youtube.com/watch?v=swZQC689o9U",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "curl-femoral",
@@ -23,7 +25,8 @@
 		"musculo": "Isquiotibiales",
 		"demoVideo": "/videos/curl-femoral.mp4",
 		"videoUrl": "https://www.youtube.com/watch?v=-jeW_ToaRB8",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "abductores",
@@ -32,7 +35,8 @@
 		"musculo": "Glúteo medio",
 		"demoVideo": "/videos/abductores.mp4",
 		"videoUrl": "https://www.youtube.com/watch?v=OjI5OpV6IWA",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "aductores",
@@ -41,7 +45,8 @@
 		"musculo": "Aductores",
 		"demoVideo": "/videos/aductores.mp4",
 		"videoUrl": "https://www.youtube.com/watch?v=9EuO_mMQ3i8",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "patada-gluteo",
@@ -50,7 +55,8 @@
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/patada-gluteo.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "gemelos-sentado",
@@ -66,7 +72,8 @@
 		"grupo": "piernas",
 		"musculo": "Gemelos",
 		"demoVideo": "/videos/prensa-gemelos.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "press-pecho",
@@ -75,7 +82,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/press-pecho.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "press-inclinado",
@@ -84,7 +92,8 @@
 		"musculo": "Pectoral superior",
 		"demoVideo": "/videos/press-inclinado.mp4",
 		"videoUrl": "https://www.youtube.com/watch?v=Q7k-Ught65Q",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "aperturas-pec",
@@ -93,7 +102,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/aperturas-pec.mp4",
 		"videoUrl": "https://www.youtube.com/watch?v=Om6ABTzZrQY",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cruce-poleas",
@@ -102,7 +112,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/cruce-poleas.mp4",
 		"videoUrl": "https://www.youtube.com/watch?v=XnaMi2Gb_9Q",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "jalon-pecho",
@@ -111,7 +122,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/jalon-pecho.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "remo-sentado",
@@ -120,7 +132,8 @@
 		"musculo": "Espalda media",
 		"demoVideo": "/videos/remo-sentado.mp4",
 		"videoUrl": "https://www.youtube.com/watch?v=QrvQ3Tv4GYc",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "remo-alto-v",
@@ -129,7 +142,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/remo-alto-v.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "jalon-brazos-rectos",
@@ -138,7 +152,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/jalon-brazos-rectos.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "press-hombro",
@@ -147,7 +162,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/press-hombro.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "elevaciones-laterales",
@@ -155,7 +171,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoide lateral",
 		"demoVideo": "/videos/elevaciones-laterales.mp4",
-		"videoUrl": "https://www.youtube.com/watch?v=gjUrYfNU1-M"
+		"videoUrl": "https://www.youtube.com/watch?v=gjUrYfNU1-M",
+		"equipo": "maquina"
 	},
 	{
 		"id": "deltoide-posterior",
@@ -164,7 +181,8 @@
 		"musculo": "Deltoide posterior",
 		"demoVideo": "/videos/deltoide-posterior.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "face-pull",
@@ -173,7 +191,8 @@
 		"musculo": "Deltoide posterior",
 		"demoVideo": "/videos/face-pull.mp4",
 		"videoUrl": "https://www.youtube.com/watch?v=UaZPhyztYNU",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "curl-biceps",
@@ -181,7 +200,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/curl-biceps.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "curl-martillo",
@@ -189,7 +209,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/curl-martillo.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "curl-concentrado",
@@ -197,7 +218,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/curl-concentrado.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "triceps-soga",
@@ -206,7 +228,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/triceps-soga.mp4",
 		"videoUrl": "https://www.youtube.com/watch?v=uZg6VtRhwQY",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "triceps-sobre-cabeza",
@@ -215,7 +238,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/triceps-sobre-cabeza.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "triceps-inverso",
@@ -224,7 +248,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/triceps-inverso.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "crunch-arrodillado",
@@ -232,7 +257,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/crunch-arrodillado.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "crunch-sentado",
@@ -240,7 +266,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/crunch-sentado.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "rodillas-colgado",
@@ -248,7 +275,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen bajo",
 		"demoVideo": "/videos/rodillas-colgado.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "crunch-inverso",
@@ -256,7 +284,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen bajo",
 		"demoVideo": "/videos/crunch-inverso.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-one-arm-decline-chest-fly",
@@ -265,7 +294,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/cable-one-arm-decline-chest-fly.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-decline-fly",
@@ -274,7 +304,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/cable-decline-fly.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-low-fly",
@@ -283,7 +314,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/cable-low-fly.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-standing-fly",
@@ -292,7 +324,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/cable-standing-fly.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-middle-fly",
@@ -301,7 +334,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/cable-middle-fly.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-lying-fly",
@@ -310,7 +344,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/cable-lying-fly.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-incline-fly",
@@ -319,7 +354,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/cable-incline-fly.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-standing-up-straight-crossovers",
@@ -328,7 +364,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/cable-standing-up-straight-crossovers.mp4",
 		"videoUrl": "https://www.youtube.com/watch?v=WNtBIde3Qks",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-one-arm-lateral-bent-over",
@@ -337,7 +374,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/cable-one-arm-lateral-bent-over.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-bench-press",
@@ -346,7 +384,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/cable-bench-press.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-seated-chest-press",
@@ -355,7 +394,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/cable-seated-chest-press.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-decline-press",
@@ -364,7 +404,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/cable-decline-press.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-decline-one-arm-press",
@@ -373,7 +414,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/cable-decline-one-arm-press.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-incline-bench-press",
@@ -382,7 +424,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/cable-incline-bench-press.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-one-arm-incline-press",
@@ -391,7 +434,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/cable-one-arm-incline-press.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-upper-chest-crossovers",
@@ -400,7 +444,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/cable-upper-chest-crossovers.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-pushdown-straight-arm-v-2",
@@ -409,7 +454,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-pushdown-straight-arm-v-2.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-incline-pushdown",
@@ -418,7 +464,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-incline-pushdown.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-pulldown",
@@ -427,7 +474,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-pulldown.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-lateral-pulldown-with-v-bar",
@@ -436,7 +484,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-lateral-pulldown-with-v-bar.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-one-arm-pulldown",
@@ -445,7 +494,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-one-arm-pulldown.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-underhand-pulldown",
@@ -454,7 +504,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-underhand-pulldown.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-bar-lateral-pulldown",
@@ -463,7 +514,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-bar-lateral-pulldown.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-wide-grip-rear-pulldown-behind-neck",
@@ -472,7 +524,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-wide-grip-rear-pulldown-behind-neck.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-straight-arm-pulldown-with-rope",
@@ -481,7 +534,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-straight-arm-pulldown-with-rope.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-lateral-pulldown-with-rope-attachment",
@@ -490,7 +544,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-lateral-pulldown-with-rope-attachment.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-cross-over-lateral-pulldown",
@@ -499,7 +554,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-cross-over-lateral-pulldown.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-rear-pulldown",
@@ -508,7 +564,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-rear-pulldown.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-pulldown-pro-lat-bar",
@@ -517,7 +574,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-pulldown-pro-lat-bar.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-lying-extension-pullover-with-rope-attachment",
@@ -526,7 +584,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-lying-extension-pullover-with-rope-attachment.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-squat-row-with-rope-attachment",
@@ -535,7 +594,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-squat-row-with-rope-attachment.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-twisting-pull",
@@ -544,7 +604,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-twisting-pull.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-shrug",
@@ -553,7 +614,8 @@
 		"musculo": "Trapecios",
 		"demoVideo": "/videos/cable-shrug.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-high-row-kneeling",
@@ -562,7 +624,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-high-row-kneeling.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-one-arm-straight-back-high-row-kneeling",
@@ -571,7 +634,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-one-arm-straight-back-high-row-kneeling.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-reverse-grip-straight-back-seated-high-row",
@@ -580,7 +644,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-reverse-grip-straight-back-seated-high-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-standing-twist-row-v-bar",
@@ -589,7 +654,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-standing-twist-row-v-bar.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-palm-rotational-row",
@@ -598,7 +664,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-palm-rotational-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-decline-seated-wide-grip-row",
@@ -607,7 +674,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-decline-seated-wide-grip-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-standing-row-v-bar",
@@ -616,7 +684,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-standing-row-v-bar.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-rope-extension-incline-bench-row",
@@ -625,7 +694,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-rope-extension-incline-bench-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-incline-bench-row",
@@ -634,7 +704,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-incline-bench-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-seated-one-arm-alternate-row",
@@ -643,7 +714,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-seated-one-arm-alternate-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-seated-wide-grip-row",
@@ -652,7 +724,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-seated-wide-grip-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-floor-seated-wide-grip-row",
@@ -661,7 +734,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-floor-seated-wide-grip-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-upper-row",
@@ -670,7 +744,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-upper-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-one-arm-bent-over-row",
@@ -679,7 +754,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-one-arm-bent-over-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-seated-row",
@@ -688,7 +764,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-seated-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-rope-seated-row",
@@ -697,7 +774,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-rope-seated-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-rope-elevated-seated-row",
@@ -706,7 +784,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-rope-elevated-seated-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-rope-crossover-seated-row",
@@ -715,7 +794,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-rope-crossover-seated-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-straight-back-seated-row",
@@ -724,7 +804,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-straight-back-seated-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-standing-cross-over-high-reverse-fly",
@@ -733,7 +814,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/cable-standing-cross-over-high-reverse-fly.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-supine-reverse-fly",
@@ -742,7 +824,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/cable-supine-reverse-fly.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-front-shoulder-raise",
@@ -751,7 +834,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/cable-front-shoulder-raise.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-forward-raise",
@@ -760,7 +844,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/cable-forward-raise.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-front-raise",
@@ -769,7 +854,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/cable-front-raise.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-one-arm-lateral-raise",
@@ -778,7 +864,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/cable-one-arm-lateral-raise.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-seated-rear-lateral-raise",
@@ -787,7 +874,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/cable-seated-rear-lateral-raise.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-cross-over-revers-fly",
@@ -796,7 +884,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/cable-cross-over-revers-fly.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-standing-shoulder-external-rotation",
@@ -805,7 +894,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/cable-standing-shoulder-external-rotation.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-seated-shoulder-internal-rotation",
@@ -814,7 +904,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/cable-seated-shoulder-internal-rotation.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-shoulder-press",
@@ -823,7 +914,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/cable-shoulder-press.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-alternate-shoulder-press",
@@ -832,7 +924,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/cable-alternate-shoulder-press.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-upright-row",
@@ -841,7 +934,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/cable-upright-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-rear-delt-row-stirrups",
@@ -850,7 +944,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/cable-rear-delt-row-stirrups.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-standing-rear-delt-row-with-rope",
@@ -859,7 +954,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/cable-standing-rear-delt-row-with-rope.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-kneeling-rear-delt-row-with-rope-male",
@@ -868,7 +964,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/cable-kneeling-rear-delt-row-with-rope-male.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-seated-one-arm-concentration-curl",
@@ -877,7 +974,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-seated-one-arm-concentration-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-lying-bicep-curl",
@@ -886,7 +984,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-lying-bicep-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-drag-curl",
@@ -895,7 +994,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-drag-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-two-arm-curl-on-incline-bench",
@@ -904,7 +1004,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-two-arm-curl-on-incline-bench.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-one-arm-curl",
@@ -913,7 +1014,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-one-arm-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-close-grip-curl",
@@ -922,7 +1024,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-close-grip-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-standing-inner-curl",
@@ -931,7 +1034,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-standing-inner-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-squatting-curl",
@@ -940,7 +1044,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-squatting-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-seated-curl",
@@ -949,7 +1054,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-seated-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-lying-close-grip-curl",
@@ -958,7 +1064,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-lying-close-grip-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-reverse-curl",
@@ -967,7 +1074,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-reverse-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-reverse-one-arm-curl",
@@ -976,7 +1084,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-reverse-one-arm-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-preacher-curl",
@@ -985,7 +1094,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-preacher-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-one-arm-preacher-curl",
@@ -994,7 +1104,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-one-arm-preacher-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-reverse-preacher-curl",
@@ -1003,7 +1114,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-reverse-preacher-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-one-arm-reverse-preacher-curl",
@@ -1012,7 +1124,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-one-arm-reverse-preacher-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-rope-hammer-preacher-curl",
@@ -1021,7 +1134,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-rope-hammer-preacher-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-rope-one-arm-hammer-preacher-curl",
@@ -1030,7 +1144,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-rope-one-arm-hammer-preacher-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-overhead-curl",
@@ -1039,7 +1154,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-overhead-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-seated-overhead-curl",
@@ -1048,7 +1164,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-seated-overhead-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-pulldown-bicep-curl",
@@ -1057,7 +1174,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-pulldown-bicep-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-standing-pulldown-with-rope",
@@ -1066,7 +1184,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/cable-standing-pulldown-with-rope.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-wrist-curl",
@@ -1075,7 +1194,8 @@
 		"musculo": "Antebrazos",
 		"demoVideo": "/videos/cable-wrist-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-standing-back-wrist-curl",
@@ -1084,7 +1204,8 @@
 		"musculo": "Antebrazos",
 		"demoVideo": "/videos/cable-standing-back-wrist-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-reverse-wrist-curl",
@@ -1093,7 +1214,8 @@
 		"musculo": "Antebrazos",
 		"demoVideo": "/videos/cable-reverse-wrist-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-rear-drive",
@@ -1102,7 +1224,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/cable-rear-drive.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-pushdown",
@@ -1111,7 +1234,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/cable-pushdown.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-triceps-pushdown-v-bar",
@@ -1120,7 +1244,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/cable-triceps-pushdown-v-bar.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-one-arm-tricep-pushdown",
@@ -1129,7 +1254,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/cable-one-arm-tricep-pushdown.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-concentration-extension-on-knee",
@@ -1138,7 +1264,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/cable-concentration-extension-on-knee.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-rope-lying-on-floor-tricep-extension",
@@ -1147,7 +1274,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/cable-rope-lying-on-floor-tricep-extension.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-alternate-triceps-extension",
@@ -1156,7 +1284,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/cable-alternate-triceps-extension.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-standing-one-arm-triceps-extension",
@@ -1165,7 +1294,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/cable-standing-one-arm-triceps-extension.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-kneeling-triceps-extension",
@@ -1174,7 +1304,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/cable-kneeling-triceps-extension.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-lying-triceps-extension-v-2",
@@ -1183,7 +1314,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/cable-lying-triceps-extension-v-2.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-incline-triceps-extension",
@@ -1192,7 +1324,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/cable-incline-triceps-extension.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-rope-incline-tricep-extension",
@@ -1201,7 +1334,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/cable-rope-incline-tricep-extension.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-overhead-triceps-extension-rope-attachment",
@@ -1210,7 +1344,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/cable-overhead-triceps-extension-rope-attachment.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-rope-high-pulley-overhead-tricep-extension",
@@ -1219,7 +1354,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/cable-rope-high-pulley-overhead-tricep-extension.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-standing-reverse-grip-one-arm-overhead-tricep-extension",
@@ -1228,7 +1364,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/cable-standing-reverse-grip-one-arm-overhead-tricep-extension.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-kickback",
@@ -1237,7 +1374,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/cable-kickback.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-two-arm-tricep-kickback",
@@ -1246,7 +1384,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/cable-two-arm-tricep-kickback.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-hip-adduction",
@@ -1255,7 +1394,8 @@
 		"musculo": "Aductores",
 		"demoVideo": "/videos/cable-hip-adduction.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-standing-calf-raise",
@@ -1264,7 +1404,8 @@
 		"musculo": "Gemelos",
 		"demoVideo": "/videos/cable-standing-calf-raise.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-standing-one-leg-calf-raise",
@@ -1273,7 +1414,8 @@
 		"musculo": "Gemelos",
 		"demoVideo": "/videos/cable-standing-one-leg-calf-raise.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-deadlift",
@@ -1282,7 +1424,8 @@
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/cable-deadlift.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-pull-through-with-rope",
@@ -1291,7 +1434,8 @@
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/cable-pull-through-with-rope.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "inverse-leg-curl-on-pull-up-cable-machine",
@@ -1300,7 +1444,8 @@
 		"musculo": "Isquiotibiales",
 		"demoVideo": "/videos/inverse-leg-curl-on-pull-up-cable-machine.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-assisted-inverse-leg-curl",
@@ -1309,7 +1454,8 @@
 		"musculo": "Isquiotibiales",
 		"demoVideo": "/videos/cable-assisted-inverse-leg-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-standing-crunch",
@@ -1318,7 +1464,8 @@
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/cable-standing-crunch.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-standing-crunch-with-rope-attachment",
@@ -1327,7 +1474,8 @@
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/cable-standing-crunch-with-rope-attachment.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-side-crunch",
@@ -1336,7 +1484,8 @@
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/cable-side-crunch.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-standing-lift",
@@ -1345,7 +1494,8 @@
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/cable-standing-lift.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-twist",
@@ -1354,7 +1504,8 @@
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/cable-twist.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-seated-twist",
@@ -1363,7 +1514,8 @@
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/cable-seated-twist.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-side-bend",
@@ -1372,7 +1524,8 @@
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/cable-side-bend.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "barbell-lying-lifting-on-hip",
@@ -1380,7 +1533,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/barbell-lying-lifting-on-hip.mp4",
-		"videoUrl": "https://www.youtube.com/watch?v=3SHkXmrQtxQ&t=4s"
+		"videoUrl": "https://www.youtube.com/watch?v=3SHkXmrQtxQ&t=4s",
+		"equipo": "barra"
 	},
 	{
 		"id": "resistance-band-hip-thrusts-on-knees-female",
@@ -1388,7 +1542,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/resistance-band-hip-thrusts-on-knees-female.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "barbell-glute-bridge-two-legs-on-bench-male",
@@ -1396,7 +1551,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/barbell-glute-bridge-two-legs-on-bench-male.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-glute-bridge",
@@ -1404,7 +1560,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/barbell-glute-bridge.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "glute-bridge-two-legs-on-bench-male",
@@ -1412,7 +1569,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/glute-bridge-two-legs-on-bench-male.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "low-glute-bridge-on-floor",
@@ -1420,7 +1578,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/low-glute-bridge-on-floor.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "single-leg-bridge-with-outstretched-leg",
@@ -1428,7 +1587,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/single-leg-bridge-with-outstretched-leg.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "glute-bridge-march",
@@ -1436,7 +1596,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/glute-bridge-march.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "barbell-deadlift",
@@ -1444,7 +1605,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/barbell-deadlift.mp4",
-		"videoUrl": "https://www.youtube.com/watch?v=0XL4cZR2Ink"
+		"videoUrl": "https://www.youtube.com/watch?v=0XL4cZR2Ink",
+		"equipo": "barra"
 	},
 	{
 		"id": "trap-bar-deadlift",
@@ -1452,7 +1614,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/trap-bar-deadlift.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-romanian-deadlift",
@@ -1460,7 +1623,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/barbell-romanian-deadlift.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-sumo-deadlift",
@@ -1468,7 +1632,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/barbell-sumo-deadlift.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-straight-leg-deadlift",
@@ -1476,7 +1641,8 @@
 		"grupo": "piernas",
 		"musculo": "Isquiotibiales",
 		"demoVideo": "/videos/barbell-straight-leg-deadlift.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "dumbbell-deadlift",
@@ -1520,7 +1686,8 @@
 		"grupo": "piernas",
 		"musculo": "Isquiotibiales",
 		"demoVideo": "/videos/barbell-good-morning.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-stiff-leg-good-morning",
@@ -1528,7 +1695,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/barbell-stiff-leg-good-morning.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-seated-good-morning",
@@ -1536,7 +1704,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/barbell-seated-good-morning.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-full-squat",
@@ -1544,7 +1713,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/barbell-full-squat.mp4",
-		"videoUrl": "https://www.youtube.com/watch?v=qsAkuNORgmk"
+		"videoUrl": "https://www.youtube.com/watch?v=qsAkuNORgmk",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-high-bar-squat",
@@ -1552,7 +1722,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/barbell-high-bar-squat.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-low-bar-squat",
@@ -1560,7 +1731,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/barbell-low-bar-squat.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-front-squat",
@@ -1568,7 +1740,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/barbell-front-squat.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-hack-squat",
@@ -1576,7 +1749,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/barbell-hack-squat.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "barbell-wide-squat",
@@ -1584,7 +1758,8 @@
 		"grupo": "piernas",
 		"musculo": "Cuádriceps",
 		"demoVideo": "/videos/barbell-wide-squat.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "dumbbell-squat",
@@ -1610,7 +1785,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/kettlebell-goblet-squat.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "sissy-squat",
@@ -1618,7 +1794,8 @@
 		"grupo": "piernas",
 		"musculo": "Cuádriceps",
 		"demoVideo": "/videos/sissy-squat.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "weighted-sissy-squat",
@@ -1634,7 +1811,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/sled-hack-squat.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "smith-hack-squat",
@@ -1642,7 +1820,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/smith-hack-squat.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "smith-squat",
@@ -1650,7 +1829,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/smith-squat.mp4",
-		"videoUrl": "https://www.youtube.com/watch?v=iCOBGhyK4sQ"
+		"videoUrl": "https://www.youtube.com/watch?v=iCOBGhyK4sQ",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-sumo-squat",
@@ -1658,7 +1838,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/smith-sumo-squat.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-full-squat",
@@ -1666,7 +1847,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/smith-full-squat.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-leg-press",
@@ -1674,7 +1856,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/smith-leg-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-horizontal-one-leg-press",
@@ -1683,7 +1866,8 @@
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/lever-horizontal-one-leg-press.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-alternate-leg-press",
@@ -1692,7 +1876,8 @@
 		"musculo": "Cuádriceps",
 		"demoVideo": "/videos/lever-alternate-leg-press.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "sled-45-degrees-one-leg-press",
@@ -1700,7 +1885,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/sled-45-degrees-one-leg-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "sled-lying-squat",
@@ -1708,7 +1894,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/sled-lying-squat.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "split-squats",
@@ -1716,7 +1903,8 @@
 		"grupo": "piernas",
 		"musculo": "Cuádriceps",
 		"demoVideo": "/videos/split-squats.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "dumbbell-single-leg-split-squat",
@@ -1733,7 +1921,8 @@
 		"grupo": "piernas",
 		"musculo": "Cuádriceps",
 		"demoVideo": "/videos/smith-single-leg-split-squat.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-single-leg-split-squat",
@@ -1741,7 +1930,8 @@
 		"grupo": "piernas",
 		"musculo": "Cuádriceps",
 		"demoVideo": "/videos/barbell-single-leg-split-squat.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-split-squat-v-2",
@@ -1749,7 +1939,8 @@
 		"grupo": "piernas",
 		"musculo": "Cuádriceps",
 		"demoVideo": "/videos/barbell-split-squat-v-2.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "band-single-leg-split-squat",
@@ -1757,7 +1948,8 @@
 		"grupo": "piernas",
 		"musculo": "Cuádriceps",
 		"demoVideo": "/videos/band-single-leg-split-squat.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "dumbbell-step-up-split-squat",
@@ -1783,7 +1975,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/forward-lunge-male.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "walking-lunge",
@@ -1791,7 +1984,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/walking-lunge.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "dumbbell-lunge",
@@ -1817,7 +2011,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/barbell-lunge.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-rear-lunge-v-2",
@@ -1825,7 +2020,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/barbell-rear-lunge-v-2.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-lateral-lunge",
@@ -1833,7 +2029,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/barbell-lateral-lunge.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-sprint-lunge",
@@ -1841,7 +2038,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/smith-sprint-lunge.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "dumbbell-contralateral-forward-lunge",
@@ -1867,7 +2065,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/barbell-step-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "band-step-up",
@@ -1875,7 +2074,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/band-step-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "lever-lying-leg-curl",
@@ -1884,7 +2084,8 @@
 		"musculo": "Isquiotibiales",
 		"demoVideo": "/videos/lever-lying-leg-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-kneeling-leg-curl",
@@ -1893,7 +2094,8 @@
 		"musculo": "Isquiotibiales",
 		"demoVideo": "/videos/lever-kneeling-leg-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-lying-two-one-leg-curl",
@@ -1902,7 +2104,8 @@
 		"musculo": "Isquiotibiales",
 		"demoVideo": "/videos/lever-lying-two-one-leg-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "standing-single-leg-curl",
@@ -1918,7 +2121,8 @@
 		"grupo": "piernas",
 		"musculo": "Isquiotibiales",
 		"demoVideo": "/videos/glute-ham-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "inverse-leg-curl-bench-support",
@@ -1926,7 +2130,8 @@
 		"grupo": "piernas",
 		"musculo": "Isquiotibiales",
 		"demoVideo": "/videos/inverse-leg-curl-bench-support.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "lever-standing-calf-raise",
@@ -1935,7 +2140,8 @@
 		"musculo": "Gemelos",
 		"demoVideo": "/videos/lever-standing-calf-raise.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "hack-calf-raise",
@@ -1943,7 +2149,8 @@
 		"grupo": "piernas",
 		"musculo": "Gemelos",
 		"demoVideo": "/videos/hack-calf-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "hack-one-leg-calf-raise",
@@ -1951,7 +2158,8 @@
 		"grupo": "piernas",
 		"musculo": "Gemelos",
 		"demoVideo": "/videos/hack-one-leg-calf-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-donkey-calf-raise",
@@ -1960,7 +2168,8 @@
 		"musculo": "Gemelos",
 		"demoVideo": "/videos/lever-donkey-calf-raise.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "dumbbell-standing-calf-raise",
@@ -2011,7 +2220,8 @@
 		"grupo": "piernas",
 		"musculo": "Gemelos",
 		"demoVideo": "/videos/sled-45-calf-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "sled-calf-press-on-leg-press",
@@ -2019,7 +2229,8 @@
 		"grupo": "piernas",
 		"musculo": "Gemelos",
 		"demoVideo": "/videos/sled-calf-press-on-leg-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "sled-one-leg-calf-press-on-leg-press",
@@ -2027,7 +2238,8 @@
 		"grupo": "piernas",
 		"musculo": "Gemelos",
 		"demoVideo": "/videos/sled-one-leg-calf-press-on-leg-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "smith-standing-leg-calf-raise",
@@ -2035,7 +2247,8 @@
 		"grupo": "piernas",
 		"musculo": "Gemelos",
 		"demoVideo": "/videos/smith-standing-leg-calf-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "resistance-band-seated-hip-abduction",
@@ -2043,7 +2256,8 @@
 		"grupo": "piernas",
 		"musculo": "Abductores",
 		"demoVideo": "/videos/resistance-band-seated-hip-abduction.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "side-hip-abduction",
@@ -2068,7 +2282,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/lever-decline-chest-press.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-incline-chest-press",
@@ -2077,7 +2292,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/lever-incline-chest-press.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-standing-chest-press",
@@ -2086,7 +2302,8 @@
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/lever-standing-chest-press.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "smith-bench-press",
@@ -2094,7 +2311,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/smith-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-incline-bench-press",
@@ -2102,7 +2320,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/smith-incline-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-decline-bench-press",
@@ -2110,7 +2329,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/smith-decline-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-wide-grip-bench-press",
@@ -2118,7 +2338,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/smith-wide-grip-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "lever-assisted-chin-up",
@@ -2127,7 +2348,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/lever-assisted-chin-up.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-front-pulldown",
@@ -2136,7 +2358,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/lever-front-pulldown.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-one-arm-lateral-wide-pulldown",
@@ -2145,7 +2368,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/lever-one-arm-lateral-wide-pulldown.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-pullover",
@@ -2154,7 +2378,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/lever-pullover.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-reverse-grip-lateral-pulldown",
@@ -2163,7 +2388,8 @@
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/lever-reverse-grip-lateral-pulldown.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-alternating-narrow-grip-seated-row",
@@ -2172,7 +2398,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/lever-alternating-narrow-grip-seated-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-bent-over-row-with-v-bar",
@@ -2181,7 +2408,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/lever-bent-over-row-with-v-bar.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-bent-over-row",
@@ -2190,7 +2418,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/lever-bent-over-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-high-row",
@@ -2199,7 +2428,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/lever-high-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-narrow-grip-seated-row",
@@ -2208,7 +2438,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/lever-narrow-grip-seated-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-one-arm-bent-over-row",
@@ -2217,7 +2448,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/lever-one-arm-bent-over-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-one-arm-lateral-high-row",
@@ -2226,7 +2458,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/lever-one-arm-lateral-high-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-reverse-grip-vertical-row",
@@ -2235,7 +2468,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/lever-reverse-grip-vertical-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-reverse-t-bar-row",
@@ -2244,7 +2478,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/lever-reverse-t-bar-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-seated-row",
@@ -2253,7 +2488,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/lever-seated-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-t-bar-row",
@@ -2262,7 +2498,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/lever-t-bar-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-unilateral-row",
@@ -2271,7 +2508,8 @@
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/lever-unilateral-row.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "smith-bent-over-row",
@@ -2279,7 +2517,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/smith-bent-over-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-narrow-row",
@@ -2287,7 +2526,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/smith-narrow-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-one-arm-row",
@@ -2295,7 +2535,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/smith-one-arm-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-reverse-grip-bent-over-row",
@@ -2303,7 +2544,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/smith-reverse-grip-bent-over-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "lever-lateral-raise",
@@ -2312,7 +2554,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/lever-lateral-raise.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-military-press",
@@ -2321,7 +2564,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/lever-military-press.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-one-arm-shoulder-press",
@@ -2330,7 +2574,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/lever-one-arm-shoulder-press.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-seated-reverse-fly-parallel-grip",
@@ -2339,7 +2584,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/lever-seated-reverse-fly-parallel-grip.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-shoulder-press",
@@ -2348,7 +2594,8 @@
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/lever-shoulder-press.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "smith-rear-delt-row",
@@ -2356,7 +2603,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/smith-rear-delt-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-seated-shoulder-press",
@@ -2364,7 +2612,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/smith-seated-shoulder-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-standing-military-press",
@@ -2372,7 +2621,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/smith-standing-military-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-upright-row",
@@ -2380,7 +2630,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/smith-upright-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "lever-shrug",
@@ -2389,7 +2640,8 @@
 		"musculo": "Trapecios",
 		"demoVideo": "/videos/lever-shrug.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "smith-back-shrug",
@@ -2397,7 +2649,8 @@
 		"grupo": "espalda",
 		"musculo": "Trapecios",
 		"demoVideo": "/videos/smith-back-shrug.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-shrug",
@@ -2405,7 +2658,8 @@
 		"grupo": "espalda",
 		"musculo": "Trapecios",
 		"demoVideo": "/videos/smith-shrug.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "lever-bicep-curl",
@@ -2414,7 +2668,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/lever-bicep-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-hammer-grip-preacher-curl",
@@ -2423,7 +2678,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/lever-hammer-grip-preacher-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-preacher-curl-v-2",
@@ -2432,7 +2688,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/lever-preacher-curl-v-2.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-reverse-grip-preacher-curl",
@@ -2441,7 +2698,8 @@
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/lever-reverse-grip-preacher-curl.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "smith-machine-bicep-curl",
@@ -2449,7 +2707,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/smith-machine-bicep-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "lever-overhand-triceps-dip",
@@ -2458,7 +2717,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/lever-overhand-triceps-dip.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-seated-dip",
@@ -2467,7 +2727,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/lever-seated-dip.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-triceps-extension",
@@ -2476,7 +2737,8 @@
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/lever-triceps-extension.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "smith-close-grip-bench-press",
@@ -2484,7 +2746,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/smith-close-grip-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-machine-incline-tricep-extension",
@@ -2492,7 +2755,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/smith-machine-incline-tricep-extension.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-bench-press",
@@ -2500,7 +2764,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/barbell-bench-press.mp4",
-		"videoUrl": "https://www.youtube.com/watch?v=jlFl7WJ1TzI"
+		"videoUrl": "https://www.youtube.com/watch?v=jlFl7WJ1TzI",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-incline-bench-press",
@@ -2508,7 +2773,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/barbell-incline-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-decline-bench-press",
@@ -2516,7 +2782,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/barbell-decline-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-wide-bench-press",
@@ -2524,7 +2791,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/barbell-wide-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "dumbbell-bench-press",
@@ -2622,7 +2890,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/kettlebell-one-arm-floor-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "kettlebell-alternating-press-on-floor",
@@ -2630,7 +2899,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/kettlebell-alternating-press-on-floor.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "barbell-bent-over-row",
@@ -2638,7 +2908,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/barbell-bent-over-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-pendlay-row",
@@ -2646,7 +2917,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/barbell-pendlay-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-reverse-grip-bent-over-row",
@@ -2654,7 +2926,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/barbell-reverse-grip-bent-over-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-incline-row",
@@ -2662,7 +2935,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/barbell-incline-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "dumbbell-bent-over-row",
@@ -2706,7 +2980,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/kettlebell-one-arm-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "kettlebell-two-arm-row",
@@ -2714,7 +2989,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/kettlebell-two-arm-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "kettlebell-alternating-row",
@@ -2722,7 +2998,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/kettlebell-alternating-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "kettlebell-alternating-renegade-row",
@@ -2730,7 +3007,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/kettlebell-alternating-renegade-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "barbell-pullover",
@@ -2738,7 +3016,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/barbell-pullover.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-bent-arm-pullover",
@@ -2746,7 +3025,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/barbell-bent-arm-pullover.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-decline-wide-grip-pullover",
@@ -2754,7 +3034,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/barbell-decline-wide-grip-pullover.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-seated-overhead-press",
@@ -2762,7 +3043,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/barbell-seated-overhead-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-standing-wide-military-press",
@@ -2770,7 +3052,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/barbell-standing-wide-military-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-front-raise",
@@ -2778,7 +3061,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/barbell-front-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-upright-row",
@@ -2786,7 +3070,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/barbell-upright-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-wide-grip-upright-row",
@@ -2794,7 +3079,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/barbell-wide-grip-upright-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-rear-delt-row",
@@ -2802,7 +3088,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/barbell-rear-delt-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "dumbbell-arnold-press",
@@ -2945,7 +3232,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/kettlebell-alternating-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "kettlebell-one-arm-push-press",
@@ -2953,7 +3241,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/kettlebell-one-arm-push-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "kettlebell-two-arm-military-press",
@@ -2961,7 +3250,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/kettlebell-two-arm-military-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "kettlebell-seated-press",
@@ -2969,7 +3259,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/kettlebell-seated-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "landmine-lateral-raise",
@@ -2977,7 +3268,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/landmine-lateral-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "barbell-curl",
@@ -2985,7 +3277,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/barbell-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-drag-curl",
@@ -2993,7 +3286,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/barbell-drag-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-preacher-curl",
@@ -3001,7 +3295,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/barbell-preacher-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-reverse-curl",
@@ -3009,7 +3304,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/barbell-reverse-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-standing-wide-grip-biceps-curl",
@@ -3017,7 +3313,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/barbell-standing-wide-grip-biceps-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-standing-close-grip-curl",
@@ -3025,7 +3322,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/barbell-standing-close-grip-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "dumbbell-biceps-curl",
@@ -3186,7 +3484,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/olympic-barbell-hammer-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-close-grip-bench-press",
@@ -3194,7 +3493,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/barbell-close-grip-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-lying-triceps-extension-skull-crusher",
@@ -3202,7 +3502,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/barbell-lying-triceps-extension-skull-crusher.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-lying-triceps-extension",
@@ -3210,7 +3511,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/barbell-lying-triceps-extension.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-seated-overhead-triceps-extension",
@@ -3218,7 +3520,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/barbell-seated-overhead-triceps-extension.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-standing-overhead-triceps-extension",
@@ -3226,7 +3529,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/barbell-standing-overhead-triceps-extension.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-jm-bench-press",
@@ -3234,7 +3538,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/barbell-jm-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "dumbbell-close-grip-press",
@@ -3350,7 +3655,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/olympic-barbell-triceps-extension.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-shrug",
@@ -3358,7 +3664,8 @@
 		"grupo": "espalda",
 		"musculo": "Trapecios",
 		"demoVideo": "/videos/barbell-shrug.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "dumbbell-shrug",
@@ -3384,7 +3691,8 @@
 		"grupo": "espalda",
 		"musculo": "Trapecios",
 		"demoVideo": "/videos/kettlebell-sumo-high-pull.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "barbell-wrist-curl",
@@ -3392,7 +3700,8 @@
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
 		"demoVideo": "/videos/barbell-wrist-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-reverse-wrist-curl",
@@ -3400,7 +3709,8 @@
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
 		"demoVideo": "/videos/barbell-reverse-wrist-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-palms-up-wrist-curl-over-a-bench",
@@ -3408,7 +3718,8 @@
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
 		"demoVideo": "/videos/barbell-palms-up-wrist-curl-over-a-bench.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-palms-down-wrist-curl-over-a-bench",
@@ -3416,7 +3727,8 @@
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
 		"demoVideo": "/videos/barbell-palms-down-wrist-curl-over-a-bench.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "dumbbell-one-arm-wrist-curl",
@@ -3460,7 +3772,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/3-4-sit-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "45-side-bend",
@@ -3476,7 +3789,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/air-bike.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "alternate-heel-touchers",
@@ -3484,7 +3798,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/alternate-heel-touchers.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "arms-overhead-full-sit-up-male",
@@ -3492,7 +3807,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/arms-overhead-full-sit-up-male.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "assisted-sit-up",
@@ -3500,7 +3816,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/assisted-sit-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "bodyweight-incline-side-plank",
@@ -3508,7 +3825,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/bodyweight-incline-side-plank.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "bottoms-up",
@@ -3524,7 +3842,8 @@
 		"grupo": "core",
 		"musculo": "Core",
 		"demoVideo": "/videos/bridge-mountain-climber-cross-body.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "butt-ups",
@@ -3532,7 +3851,8 @@
 		"grupo": "core",
 		"musculo": "Core",
 		"demoVideo": "/videos/butt-ups.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "captains-chair-straight-leg-raise",
@@ -3540,7 +3860,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen bajo",
 		"demoVideo": "/videos/captains-chair-straight-leg-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "cocoons",
@@ -3548,7 +3869,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/cocoons.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "cross-body-crunch",
@@ -3556,7 +3878,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/cross-body-crunch.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "crunch-floor",
@@ -3564,7 +3887,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/crunch-floor.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "crunch-hands-overhead",
@@ -3572,7 +3896,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/crunch-hands-overhead.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "crunch-on-stability-ball-arms-straight",
@@ -3580,7 +3905,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/crunch-on-stability-ball-arms-straight.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "crunch-on-stability-ball",
@@ -3588,7 +3914,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/crunch-on-stability-ball.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "curl-up",
@@ -3596,7 +3923,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/curl-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "dead-bug",
@@ -3604,7 +3932,8 @@
 		"grupo": "core",
 		"musculo": "Core",
 		"demoVideo": "/videos/dead-bug.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "decline-crunch",
@@ -3612,7 +3941,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/decline-crunch.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "decline-sit-up",
@@ -3620,7 +3950,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/decline-sit-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "elbow-to-knee",
@@ -3628,7 +3959,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/elbow-to-knee.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "flexion-leg-sit-up-bent-knee",
@@ -3636,7 +3968,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/flexion-leg-sit-up-bent-knee.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "flexion-leg-sit-up-straight-arm",
@@ -3644,7 +3977,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/flexion-leg-sit-up-straight-arm.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "frog-crunch",
@@ -3652,7 +3986,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/frog-crunch.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "front-plank-with-twist",
@@ -3660,7 +3995,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/front-plank-with-twist.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "half-sit-up-male",
@@ -3668,7 +4004,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/half-sit-up-male.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "hanging-leg-hip-raise",
@@ -3676,7 +4013,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen bajo",
 		"demoVideo": "/videos/hanging-leg-hip-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "hanging-leg-raise",
@@ -3684,7 +4022,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen bajo",
 		"demoVideo": "/videos/hanging-leg-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "hanging-oblique-knee-raise",
@@ -3692,7 +4031,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/hanging-oblique-knee-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "hanging-pike",
@@ -3700,7 +4040,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen bajo",
 		"demoVideo": "/videos/hanging-pike.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "hanging-straight-leg-hip-raise",
@@ -3708,7 +4049,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen bajo",
 		"demoVideo": "/videos/hanging-straight-leg-hip-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "hanging-straight-leg-raise",
@@ -3716,7 +4058,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen bajo",
 		"demoVideo": "/videos/hanging-straight-leg-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "hip-raise-bent-knee",
@@ -3748,7 +4091,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/incline-twisting-sit-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "jackknife-sit-up",
@@ -3756,7 +4100,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/jackknife-sit-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "janda-sit-up",
@@ -3764,7 +4109,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/janda-sit-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "knee-touch-crunch",
@@ -3772,7 +4118,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/knee-touch-crunch.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "kneeling-plank-tap-shoulder-male",
@@ -3780,7 +4127,8 @@
 		"grupo": "core",
 		"musculo": "Core + hombros",
 		"demoVideo": "/videos/kneeling-plank-tap-shoulder-male.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "l-sit-on-floor",
@@ -3804,7 +4152,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/lunge-with-twist.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "lying-elbow-to-knee",
@@ -3812,7 +4161,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/lying-elbow-to-knee.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "lying-leg-hip-raise",
@@ -3820,7 +4170,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen bajo",
 		"demoVideo": "/videos/lying-leg-hip-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "lying-leg-raise-flat-bench",
@@ -3836,7 +4187,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/negative-crunch.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "oblique-crunch-v-2",
@@ -3844,7 +4196,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/oblique-crunch-v-2.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "oblique-crunches-floor",
@@ -3852,7 +4205,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/oblique-crunches-floor.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "pelvic-tilt",
@@ -3868,7 +4222,8 @@
 		"grupo": "core",
 		"musculo": "Core + hombros",
 		"demoVideo": "/videos/power-point-plank.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "prone-twist-on-stability-ball",
@@ -3876,7 +4231,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/prone-twist-on-stability-ball.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "pull-in-on-stability-ball",
@@ -3884,7 +4240,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen bajo",
 		"demoVideo": "/videos/pull-in-on-stability-ball.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "push-up-to-side-plank",
@@ -3892,7 +4249,8 @@
 		"grupo": "core",
 		"musculo": "Core + hombros",
 		"demoVideo": "/videos/push-up-to-side-plank.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "reverse-crunch",
@@ -3900,7 +4258,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen bajo",
 		"demoVideo": "/videos/reverse-crunch.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "reverse-plank-with-leg-lift",
@@ -3908,7 +4267,8 @@
 		"grupo": "core",
 		"musculo": "Core + glúteos",
 		"demoVideo": "/videos/reverse-plank-with-leg-lift.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "roller-body-saw",
@@ -3916,7 +4276,8 @@
 		"grupo": "core",
 		"musculo": "Core",
 		"demoVideo": "/videos/roller-body-saw.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "roller-reverse-crunch",
@@ -3924,7 +4285,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen bajo",
 		"demoVideo": "/videos/roller-reverse-crunch.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "russian-twist",
@@ -3948,7 +4310,8 @@
 		"grupo": "core",
 		"musculo": "Core + hombros",
 		"demoVideo": "/videos/shoulder-tap.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "side-bridge-v-2",
@@ -3956,7 +4319,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/side-bridge-v-2.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "side-to-side-toe-touch-male",
@@ -3972,7 +4336,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/sit-up-v-2.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "sit-up-with-arms-on-chest",
@@ -3980,7 +4345,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/sit-up-with-arms-on-chest.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "spine-twist",
@@ -3996,7 +4362,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/stability-ball-crunch-full-range-hands-behind-head.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "suspended-abdominal-fallout",
@@ -4004,7 +4371,8 @@
 		"grupo": "core",
 		"musculo": "Core",
 		"demoVideo": "/videos/suspended-abdominal-fallout.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "suspended-reverse-crunch",
@@ -4012,7 +4380,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen bajo",
 		"demoVideo": "/videos/suspended-reverse-crunch.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "tuck-crunch",
@@ -4020,7 +4389,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/tuck-crunch.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "twisted-leg-raise",
@@ -4052,7 +4422,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/weighted-crunch.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "mancuerna"
 	},
 	{
 		"id": "weighted-decline-sit-up",
@@ -4092,7 +4463,8 @@
 		"grupo": "core",
 		"musculo": "Core",
 		"demoVideo": "/videos/wheel-rollerout.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-alternating-v-up",
@@ -4100,7 +4472,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/band-alternating-v-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-assisted-wheel-rollerout",
@@ -4108,7 +4481,8 @@
 		"grupo": "core",
 		"musculo": "Core",
 		"demoVideo": "/videos/band-assisted-wheel-rollerout.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-bicycle-crunch",
@@ -4116,7 +4490,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/band-bicycle-crunch.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-horizontal-pallof-press",
@@ -4124,7 +4499,8 @@
 		"grupo": "core",
 		"musculo": "Core antirotación",
 		"demoVideo": "/videos/band-horizontal-pallof-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-jack-knife-sit-up",
@@ -4132,7 +4508,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/band-jack-knife-sit-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-kneeling-twisting-crunch",
@@ -4140,7 +4517,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/band-kneeling-twisting-crunch.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-lying-straight-leg-raise",
@@ -4148,7 +4526,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen bajo",
 		"demoVideo": "/videos/band-lying-straight-leg-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-push-sit-up",
@@ -4156,7 +4535,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/band-push-sit-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-seated-twist",
@@ -4164,7 +4544,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/band-seated-twist.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-standing-crunch",
@@ -4172,7 +4553,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/band-standing-crunch.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-standing-twisting-crunch",
@@ -4180,7 +4562,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/band-standing-twisting-crunch.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-v-up",
@@ -4188,7 +4571,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/band-v-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-vertical-pallof-press",
@@ -4196,7 +4580,8 @@
 		"grupo": "core",
 		"musculo": "Core antirotación",
 		"demoVideo": "/videos/band-vertical-pallof-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "barbell-press-sit-up",
@@ -4204,7 +4589,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/barbell-press-sit-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-rollerout-from-bench",
@@ -4212,7 +4598,8 @@
 		"grupo": "core",
 		"musculo": "Core",
 		"demoVideo": "/videos/barbell-rollerout-from-bench.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-rollerout",
@@ -4220,7 +4607,8 @@
 		"grupo": "core",
 		"musculo": "Core",
 		"demoVideo": "/videos/barbell-rollerout.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-seated-twist",
@@ -4228,7 +4616,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/barbell-seated-twist.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-side-bent-v-2",
@@ -4236,7 +4625,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/barbell-side-bent-v-2.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-sitted-alternate-leg-raise",
@@ -4244,7 +4634,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen bajo",
 		"demoVideo": "/videos/barbell-sitted-alternate-leg-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-standing-ab-rollerout",
@@ -4252,7 +4643,8 @@
 		"grupo": "core",
 		"musculo": "Core",
 		"demoVideo": "/videos/barbell-standing-ab-rollerout.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-standing-twist",
@@ -4260,7 +4652,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/barbell-standing-twist.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "landmine-180",
@@ -4268,7 +4661,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/landmine-180.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "dumbbell-side-bend",
@@ -4285,7 +4679,8 @@
 		"grupo": "core",
 		"musculo": "Core",
 		"demoVideo": "/videos/front-lever.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "lever-kneeling-twist",
@@ -4294,7 +4689,8 @@
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/lever-kneeling-twist.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-seated-crunch-chest-pad",
@@ -4303,7 +4699,8 @@
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/lever-seated-crunch-chest-pad.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-seated-crunch",
@@ -4312,7 +4709,8 @@
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/lever-seated-crunch.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-seated-leg-raise-crunch",
@@ -4321,7 +4719,8 @@
 		"musculo": "Abdomen bajo",
 		"demoVideo": "/videos/lever-seated-leg-raise-crunch.mp4",
 		"videoUrl": "",
-		"maquinaPlacas": true
+		"maquinaPlacas": true,
+		"equipo": "maquina"
 	},
 	{
 		"id": "kettlebell-advanced-windmill",
@@ -4329,7 +4728,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/kettlebell-advanced-windmill.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "kettlebell-bent-press",
@@ -4337,7 +4737,8 @@
 		"grupo": "core",
 		"musculo": "Core",
 		"demoVideo": "/videos/kettlebell-bent-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "kettlebell-double-windmill",
@@ -4345,7 +4746,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/kettlebell-double-windmill.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "kettlebell-figure-8",
@@ -4353,7 +4755,8 @@
 		"grupo": "core",
 		"musculo": "Core",
 		"demoVideo": "/videos/kettlebell-figure-8.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "kettlebell-windmill",
@@ -4361,7 +4764,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/kettlebell-windmill.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "sledge-hammer",
@@ -4377,7 +4781,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen bajo",
 		"demoVideo": "/videos/smith-hip-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "assisted-hanging-knee-raise",
@@ -4385,7 +4790,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen bajo",
 		"demoVideo": "/videos/assisted-hanging-knee-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "assisted-motion-russian-twist",
@@ -4409,7 +4815,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen bajo",
 		"demoVideo": "/videos/groin-crunch.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "hanging-straight-twisting-leg-hip-raise",
@@ -4417,7 +4824,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/hanging-straight-twisting-leg-hip-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "prisoner-half-sit-up-male",
@@ -4425,7 +4833,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/prisoner-half-sit-up-male.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "quarter-sit-up",
@@ -4433,7 +4842,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/quarter-sit-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "seated-side-crunch-wall",
@@ -4441,7 +4851,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/seated-side-crunch-wall.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "side-hip-on-parallel-bars",
@@ -4457,7 +4868,8 @@
 		"grupo": "core",
 		"musculo": "Core",
 		"demoVideo": "/videos/standing-wheel-rollerout.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "weighted-overhead-crunch-on-stability-ball",
@@ -4465,7 +4877,8 @@
 		"grupo": "core",
 		"musculo": "Abdomen",
 		"demoVideo": "/videos/weighted-overhead-crunch-on-stability-ball.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "weighted-russian-twist-legs-up",
@@ -4481,7 +4894,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/weighted-seated-twist-on-stability-ball.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "weighted-side-bend-on-stability-ball",
@@ -4489,7 +4903,8 @@
 		"grupo": "core",
 		"musculo": "Oblicuos",
 		"demoVideo": "/videos/weighted-side-bend-on-stability-ball.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "archer-push-up",
@@ -4497,7 +4912,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral + tríceps",
 		"demoVideo": "/videos/archer-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "assisted-chest-dip-kneeling",
@@ -4505,7 +4921,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral inferior",
 		"demoVideo": "/videos/assisted-chest-dip-kneeling.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "assisted-wide-grip-chest-dip-kneeling",
@@ -4513,7 +4930,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral inferior",
 		"demoVideo": "/videos/assisted-wide-grip-chest-dip-kneeling.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "chest-dip-on-dip-pull-up-cage",
@@ -4521,7 +4939,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral inferior",
 		"demoVideo": "/videos/chest-dip-on-dip-pull-up-cage.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "chest-dip-on-straight-bar",
@@ -4529,7 +4948,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral inferior",
 		"demoVideo": "/videos/chest-dip-on-straight-bar.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "chest-dip",
@@ -4537,7 +4957,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral inferior",
 		"demoVideo": "/videos/chest-dip.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "chest-tap-push-up-male",
@@ -4545,7 +4966,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral + core",
 		"demoVideo": "/videos/chest-tap-push-up-male.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "clap-push-up",
@@ -4553,7 +4975,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral explosivo",
 		"demoVideo": "/videos/clap-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "clock-push-up",
@@ -4561,7 +4984,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral + core",
 		"demoVideo": "/videos/clock-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "decline-push-up",
@@ -4569,7 +4993,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral superior",
 		"demoVideo": "/videos/decline-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "deep-push-up",
@@ -4577,7 +5002,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/deep-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "drop-push-up",
@@ -4585,7 +5011,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral explosivo",
 		"demoVideo": "/videos/drop-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "exercise-ball-pike-push-up",
@@ -4593,7 +5020,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral + hombros",
 		"demoVideo": "/videos/exercise-ball-pike-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "incline-push-up-on-box",
@@ -4601,7 +5029,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/incline-push-up-on-box.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "incline-push-up",
@@ -4609,7 +5038,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/incline-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "incline-reverse-grip-push-up",
@@ -4617,7 +5047,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral superior",
 		"demoVideo": "/videos/incline-reverse-grip-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "isometric-chest-squeeze",
@@ -4641,7 +5072,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/kneeling-push-up-male.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "korean-dips",
@@ -4649,7 +5081,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral + tríceps",
 		"demoVideo": "/videos/korean-dips.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "medicine-ball-chest-pass",
@@ -4657,7 +5090,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral explosivo",
 		"demoVideo": "/videos/medicine-ball-chest-pass.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "medicine-ball-chest-push-from-3-point-stance",
@@ -4665,7 +5099,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral explosivo",
 		"demoVideo": "/videos/medicine-ball-chest-push-from-3-point-stance.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "medicine-ball-chest-push-multiple-response",
@@ -4673,7 +5108,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral explosivo",
 		"demoVideo": "/videos/medicine-ball-chest-push-multiple-response.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "medicine-ball-chest-push-single-response",
@@ -4681,7 +5117,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral explosivo",
 		"demoVideo": "/videos/medicine-ball-chest-push-single-response.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "medicine-ball-chest-push-with-run-release",
@@ -4689,7 +5126,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral explosivo",
 		"demoVideo": "/videos/medicine-ball-chest-push-with-run-release.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "modified-hindu-push-up-male",
@@ -4697,7 +5135,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral + hombros",
 		"demoVideo": "/videos/modified-hindu-push-up-male.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "push-and-pull-bodyweight",
@@ -4713,7 +5152,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral + core",
 		"demoVideo": "/videos/push-up-bosu-ball.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "push-up-medicine-ball",
@@ -4721,7 +5161,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral + core",
 		"demoVideo": "/videos/push-up-medicine-ball.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "push-up-on-stability-ball",
@@ -4729,7 +5170,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral + core",
 		"demoVideo": "/videos/push-up-on-stability-ball.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "push-up-plus",
@@ -4737,7 +5179,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral + serrato",
 		"demoVideo": "/videos/push-up-plus.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "push-up-wall",
@@ -4745,7 +5188,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/push-up-wall.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "push-up",
@@ -4753,7 +5197,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "raise-single-arm-push-up",
@@ -4761,7 +5206,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral + core",
 		"demoVideo": "/videos/raise-single-arm-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "shoulder-tap-push-up",
@@ -4769,7 +5215,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral + core",
 		"demoVideo": "/videos/shoulder-tap-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "single-arm-push-up",
@@ -4777,7 +5224,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral + core",
 		"demoVideo": "/videos/single-arm-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "superman-push-up",
@@ -4785,7 +5233,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral explosivo",
 		"demoVideo": "/videos/superman-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "suspended-push-up",
@@ -4793,7 +5242,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral + core",
 		"demoVideo": "/videos/suspended-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "weighted-drop-push-up",
@@ -4809,7 +5259,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral inferior",
 		"demoVideo": "/videos/weighted-straight-bar-dip.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "weighted-svend-press",
@@ -4825,7 +5276,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral inferior",
 		"demoVideo": "/videos/wide-grip-chest-dip-on-high-parallel-bars.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "wide-hand-push-up",
@@ -4833,7 +5285,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/wide-hand-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "incline-scapula-push-up",
@@ -4841,7 +5294,8 @@
 		"grupo": "pecho",
 		"musculo": "Serrato anterior",
 		"demoVideo": "/videos/incline-scapula-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "scapula-push-up",
@@ -4849,7 +5303,8 @@
 		"grupo": "pecho",
 		"musculo": "Serrato anterior",
 		"demoVideo": "/videos/scapula-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "band-bench-press",
@@ -4857,7 +5312,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/band-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-one-arm-twisting-chest-press",
@@ -4865,7 +5321,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral + core",
 		"demoVideo": "/videos/band-one-arm-twisting-chest-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "resistance-band-seated-chest-press",
@@ -4873,7 +5330,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/resistance-band-seated-chest-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "roller-seated-shoulder-flexor-depresor-retractor",
@@ -4897,7 +5355,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral + dorsales",
 		"demoVideo": "/videos/barbell-decline-pullover.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-decline-wide-grip-press",
@@ -4905,7 +5364,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral inferior",
 		"demoVideo": "/videos/barbell-decline-wide-grip-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-front-raise-and-pullover",
@@ -4913,7 +5373,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral + hombros",
 		"demoVideo": "/videos/barbell-front-raise-and-pullover.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-guillotine-bench-press",
@@ -4921,7 +5382,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral superior",
 		"demoVideo": "/videos/barbell-guillotine-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-reverse-grip-decline-bench-press",
@@ -4929,7 +5391,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral inferior",
 		"demoVideo": "/videos/barbell-reverse-grip-decline-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-reverse-grip-incline-bench-press",
@@ -4937,7 +5400,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral superior",
 		"demoVideo": "/videos/barbell-reverse-grip-incline-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-wide-reverse-grip-bench-press",
@@ -4945,7 +5409,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/barbell-wide-reverse-grip-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "floor-fly-with-barbell",
@@ -4953,7 +5418,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/floor-fly-with-barbell.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-incline-shoulder-raise",
@@ -4961,7 +5427,8 @@
 		"grupo": "pecho",
 		"musculo": "Serrato anterior",
 		"demoVideo": "/videos/barbell-incline-shoulder-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "dumbbell-around-pullover",
@@ -5239,7 +5706,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral inferior",
 		"demoVideo": "/videos/smith-decline-reverse-grip-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-incline-reverse-grip-press",
@@ -5247,7 +5715,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral superior",
 		"demoVideo": "/videos/smith-incline-reverse-grip-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-machine-reverse-decline-close-grip-bench-press",
@@ -5255,7 +5724,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral + tríceps",
 		"demoVideo": "/videos/smith-machine-reverse-decline-close-grip-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-reverse-grip-press",
@@ -5263,7 +5733,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral superior",
 		"demoVideo": "/videos/smith-reverse-grip-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-wide-grip-decline-bench-press",
@@ -5271,7 +5742,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral inferior",
 		"demoVideo": "/videos/smith-wide-grip-decline-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "smith-incline-shoulder-raises",
@@ -5279,7 +5751,8 @@
 		"grupo": "pecho",
 		"musculo": "Serrato anterior",
 		"demoVideo": "/videos/smith-incline-shoulder-raises.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "machine-inner-chest-press",
@@ -5287,7 +5760,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral interno",
 		"demoVideo": "/videos/machine-inner-chest-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-incline-fly-on-stability-ball",
@@ -5295,7 +5769,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral superior + core",
 		"demoVideo": "/videos/cable-incline-fly-on-stability-ball.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "cable-one-arm-fly-on-exercise-ball",
@@ -5303,7 +5778,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral + core",
 		"demoVideo": "/videos/cable-one-arm-fly-on-exercise-ball.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "cable-one-arm-incline-press-on-exercise-ball",
@@ -5311,7 +5787,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral superior + core",
 		"demoVideo": "/videos/cable-one-arm-incline-press-on-exercise-ball.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "kettlebell-extended-range-one-arm-press-on-floor",
@@ -5319,7 +5796,8 @@
 		"grupo": "pecho",
 		"musculo": "Pectoral",
 		"demoVideo": "/videos/kettlebell-extended-range-one-arm-press-on-floor.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "alternate-lateral-pulldown",
@@ -5335,7 +5813,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/archer-pull-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "assisted-parallel-close-grip-pull-up",
@@ -5343,7 +5822,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/assisted-parallel-close-grip-pull-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "assisted-pull-up",
@@ -5351,7 +5831,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/assisted-pull-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "assisted-standing-chin-up",
@@ -5359,7 +5840,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/assisted-standing-chin-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "assisted-standing-pull-up",
@@ -5367,7 +5849,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/assisted-standing-pull-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "bench-pull-ups",
@@ -5375,7 +5858,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/bench-pull-ups.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "chin-up",
@@ -5383,7 +5867,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/chin-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "close-grip-chin-up",
@@ -5391,7 +5876,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/close-grip-chin-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "exercise-ball-alternating-arm-ups",
@@ -5399,7 +5885,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/exercise-ball-alternating-arm-ups.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "gironda-sternum-chin",
@@ -5407,7 +5894,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/gironda-sternum-chin.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "l-pull-up",
@@ -5415,7 +5903,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/l-pull-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "medicine-ball-catch-and-overhead-throw",
@@ -5423,7 +5912,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/medicine-ball-catch-and-overhead-throw.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "mixed-grip-chin-up",
@@ -5431,7 +5921,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/mixed-grip-chin-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "pull-up-neutral-grip",
@@ -5439,7 +5930,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/pull-up-neutral-grip.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "pull-up",
@@ -5447,7 +5939,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/pull-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "rear-pull-up",
@@ -5455,7 +5948,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/rear-pull-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "reverse-grip-pull-up",
@@ -5463,7 +5957,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/reverse-grip-pull-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "rocky-pull-up-pulldown",
@@ -5471,7 +5966,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/rocky-pull-up-pulldown.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "shoulder-grip-pull-up",
@@ -5479,7 +5975,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/shoulder-grip-pull-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "side-to-side-chin",
@@ -5487,7 +5984,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/side-to-side-chin.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "twin-handle-parallel-grip-lat-pulldown",
@@ -5519,7 +6017,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/wide-grip-pull-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "wide-grip-rear-pull-up",
@@ -5527,7 +6026,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/wide-grip-rear-pull-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "back-extension-on-exercise-ball",
@@ -5535,7 +6035,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda baja",
 		"demoVideo": "/videos/back-extension-on-exercise-ball.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "exercise-ball-back-extension-with-arms-extended",
@@ -5543,7 +6044,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda baja",
 		"demoVideo": "/videos/exercise-ball-back-extension-with-arms-extended.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "exercise-ball-back-extension-with-hands-behind-head",
@@ -5551,7 +6053,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda baja",
 		"demoVideo": "/videos/exercise-ball-back-extension-with-hands-behind-head.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "exercise-ball-back-extension-with-knees-off-ground",
@@ -5559,7 +6062,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda baja",
 		"demoVideo": "/videos/exercise-ball-back-extension-with-knees-off-ground.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "exercise-ball-back-extension-with-rotation",
@@ -5567,7 +6071,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda baja",
 		"demoVideo": "/videos/exercise-ball-back-extension-with-rotation.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "exercise-ball-prone-leg-raise",
@@ -5575,7 +6080,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda baja",
 		"demoVideo": "/videos/exercise-ball-prone-leg-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "hyperextension-on-bench",
@@ -5607,7 +6113,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda baja",
 		"demoVideo": "/videos/weighted-hyperextension-on-stability-ball.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "scapula-dips",
@@ -5615,7 +6122,8 @@
 		"grupo": "espalda",
 		"musculo": "Trapecios",
 		"demoVideo": "/videos/scapula-dips.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "scapular-pull-up",
@@ -5623,7 +6131,8 @@
 		"grupo": "espalda",
 		"musculo": "Trapecios",
 		"demoVideo": "/videos/scapular-pull-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "bodyweight-squatting-row-with-towel",
@@ -5695,7 +6204,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/chin-ups-narrow-parallel-grip.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "inverted-row-bent-knees",
@@ -5703,7 +6213,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/inverted-row-bent-knees.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "inverted-row-on-bench",
@@ -5711,7 +6222,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/inverted-row-on-bench.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "inverted-row",
@@ -5719,7 +6231,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/inverted-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "band-assisted-pull-up",
@@ -5727,7 +6240,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/band-assisted-pull-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-close-grip-pulldown",
@@ -5735,7 +6249,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/band-close-grip-pulldown.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-fixed-back-close-grip-pulldown",
@@ -5743,7 +6258,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/band-fixed-back-close-grip-pulldown.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-fixed-back-underhand-pulldown",
@@ -5751,7 +6267,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/band-fixed-back-underhand-pulldown.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-kneeling-one-arm-pulldown",
@@ -5759,7 +6276,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/band-kneeling-one-arm-pulldown.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-underhand-pulldown",
@@ -5767,7 +6285,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/band-underhand-pulldown.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-straight-leg-deadlift",
@@ -5775,7 +6294,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda baja",
 		"demoVideo": "/videos/band-straight-leg-deadlift.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-shrug",
@@ -5783,7 +6303,8 @@
 		"grupo": "espalda",
 		"musculo": "Trapecios",
 		"demoVideo": "/videos/band-shrug.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-one-arm-standing-low-row",
@@ -5791,7 +6312,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/band-one-arm-standing-low-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "band-one-arm-twisting-seated-row",
@@ -5799,7 +6321,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/band-one-arm-twisting-seated-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "resistance-band-seated-straight-back-row",
@@ -5807,7 +6330,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/resistance-band-seated-straight-back-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "barbell-decline-bent-arm-pullover",
@@ -5815,7 +6339,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/barbell-decline-bent-arm-pullover.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-pullover-to-press",
@@ -5823,7 +6348,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/barbell-pullover-to-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-one-arm-bent-over-row",
@@ -5831,7 +6357,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/barbell-one-arm-bent-over-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-reverse-grip-incline-bench-row",
@@ -5839,7 +6366,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/barbell-reverse-grip-incline-bench-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "cambered-bar-lying-row",
@@ -5847,7 +6375,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cambered-bar-lying-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "cable-lat-pulldown-full-range-of-motion",
@@ -5855,7 +6384,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-lat-pulldown-full-range-of-motion.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-seated-high-row-v-bar",
@@ -5863,7 +6393,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-seated-high-row-v-bar.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-straight-arm-pulldown",
@@ -5871,7 +6402,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-straight-arm-pulldown.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-thibaudeau-kayak-row",
@@ -5879,7 +6411,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/cable-thibaudeau-kayak-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "cable-low-seated-row",
@@ -5887,7 +6420,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/cable-low-seated-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "dumbbell-decline-shrug",
@@ -5958,7 +6492,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/ez-bar-lying-bent-arms-pullover.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "ez-bar-reverse-grip-bent-over-row",
@@ -5966,7 +6501,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/ez-bar-reverse-grip-bent-over-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "lever-back-extension",
@@ -5974,7 +6510,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda baja",
 		"demoVideo": "/videos/lever-back-extension.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "lever-gripless-shrug",
@@ -5982,7 +6519,8 @@
 		"grupo": "espalda",
 		"musculo": "Trapecios",
 		"demoVideo": "/videos/lever-gripless-shrug.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "back-lever",
@@ -5990,7 +6528,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/back-lever.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "front-lever-reps",
@@ -5998,7 +6537,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/front-lever-reps.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "lever-t-bar-reverse-grip-row",
@@ -6006,7 +6546,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/lever-t-bar-reverse-grip-row.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "reverse-grip-machine-lat-pulldown",
@@ -6014,7 +6555,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/reverse-grip-machine-lat-pulldown.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "maquina"
 	},
 	{
 		"id": "elevator",
@@ -6038,7 +6580,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/elbow-lift-reverse-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "inverted-row-with-straps",
@@ -6046,7 +6589,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/inverted-row-with-straps.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "medicine-ball-overhead-slam",
@@ -6054,7 +6598,8 @@
 		"grupo": "espalda",
 		"musculo": "Espalda alta",
 		"demoVideo": "/videos/medicine-ball-overhead-slam.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "one-arm-towel-row",
@@ -6086,7 +6631,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/kipping-muscle-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "muscle-up",
@@ -6094,7 +6640,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/muscle-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "muscle-up-on-vertical-bar",
@@ -6102,7 +6649,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/muscle-up-on-vertical-bar.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "one-arm-chin-up",
@@ -6110,7 +6658,8 @@
 		"grupo": "espalda",
 		"musculo": "Dorsales",
 		"demoVideo": "/videos/one-arm-chin-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "weighted-muscle-up",
@@ -6468,7 +7017,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/barbell-one-arm-snatch.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-rear-delt-raise",
@@ -6476,7 +7026,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/barbell-rear-delt-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-seated-behind-head-military-press",
@@ -6484,7 +7035,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/barbell-seated-behind-head-military-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-seated-bradford-rocky-press",
@@ -6492,7 +7044,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/barbell-seated-bradford-rocky-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-skier",
@@ -6500,7 +7053,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/barbell-skier.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-standing-bradford-press",
@@ -6508,7 +7062,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/barbell-standing-bradford-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "dumbbell-alternate-biceps-curl-with-arm-blaster",
@@ -7209,7 +7764,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/push-up-close-grip-off-dumbbell.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "mancuerna"
 	},
 	{
 		"id": "barbell-decline-close-grip-to-skull-press",
@@ -7217,7 +7773,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/barbell-decline-close-grip-to-skull-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-incline-close-grip-bench-press",
@@ -7225,7 +7782,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/barbell-incline-close-grip-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-incline-reverse-grip-press",
@@ -7233,7 +7791,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/barbell-incline-reverse-grip-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-lying-back-of-the-head-tricep-extension",
@@ -7241,7 +7800,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/barbell-lying-back-of-the-head-tricep-extension.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-lying-close-grip-press",
@@ -7249,7 +7809,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/barbell-lying-close-grip-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-lying-close-grip-triceps-extension",
@@ -7257,7 +7818,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/barbell-lying-close-grip-triceps-extension.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-lying-extension",
@@ -7265,7 +7827,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/barbell-lying-extension.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-one-arm-floor-press",
@@ -7273,7 +7836,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/barbell-one-arm-floor-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-pin-presses",
@@ -7281,7 +7845,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/barbell-pin-presses.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-reverse-close-grip-bench-press",
@@ -7289,7 +7854,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/barbell-reverse-close-grip-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-reverse-grip-skullcrusher",
@@ -7297,7 +7863,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/barbell-reverse-grip-skullcrusher.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-seated-close-grip-behind-neck-triceps-extension",
@@ -7305,7 +7872,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/barbell-seated-close-grip-behind-neck-triceps-extension.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "ez-bar-close-grip-bench-press",
@@ -7313,7 +7881,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/ez-bar-close-grip-bench-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "ez-bar-french-press-on-exercise-ball",
@@ -7321,7 +7890,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/ez-bar-french-press-on-exercise-ball.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "ez-bar-lying-close-grip-triceps-extension-behind-head",
@@ -7329,7 +7899,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/ez-bar-lying-close-grip-triceps-extension-behind-head.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "ez-bar-standing-french-press",
@@ -7337,7 +7908,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/ez-bar-standing-french-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "ez-barbell-decline-close-grip-face-press",
@@ -7345,7 +7917,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/ez-barbell-decline-close-grip-face-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "ez-barbell-decline-triceps-extension",
@@ -7353,7 +7926,8 @@
 		"grupo": "brazos",
 		"musculo": "Tríceps",
 		"demoVideo": "/videos/ez-barbell-decline-triceps-extension.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "arms-apart-circular-toe-touch-male",
@@ -7417,7 +7991,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/exercise-ball-one-leg-prone-lower-body-rotation.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "exercise-ball-one-legged-diagonal-kick-hamstring-curl",
@@ -7425,7 +8000,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/exercise-ball-one-legged-diagonal-kick-hamstring-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "farmers-walk",
@@ -7513,7 +8089,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/outside-leg-kick-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "pelvic-tilt-into-bridge",
@@ -7521,7 +8098,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/pelvic-tilt-into-bridge.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "pike-to-cobra-push-up",
@@ -7529,7 +8107,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/pike-to-cobra-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "potty-squat-with-support",
@@ -7553,7 +8132,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/push-up-inside-leg-kick.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "quads",
@@ -7577,7 +8157,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/rear-decline-bridge.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "reclining-big-toe-pose-with-rope",
@@ -7593,7 +8174,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/reverse-hyper-extension-on-stability-ball.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "reverse-hyper-on-flat-bench",
@@ -7617,7 +8199,8 @@
 		"grupo": "piernas",
 		"musculo": "Isquiotibiales",
 		"demoVideo": "/videos/self-assisted-inverse-leg-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "self-assisted-inverse-leg-curl-on-floor",
@@ -7625,7 +8208,8 @@
 		"grupo": "piernas",
 		"musculo": "Isquiotibiales",
 		"demoVideo": "/videos/self-assisted-inverse-leg-curl-on-floor.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "single-leg-squat-pistol-male",
@@ -7649,7 +8233,8 @@
 		"grupo": "piernas",
 		"musculo": "Glúteos",
 		"demoVideo": "/videos/spider-crawl-push-up.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "squat-jerk",
@@ -7665,7 +8250,8 @@
 		"grupo": "piernas",
 		"musculo": "Cuádriceps",
 		"demoVideo": "/videos/squat-on-bosu-ball.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "otro"
 	},
 	{
 		"id": "squat-to-overhead-reach",
@@ -7689,7 +8275,8 @@
 		"grupo": "piernas",
 		"musculo": "Cuádriceps",
 		"demoVideo": "/videos/suspended-split-squat.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "peso-corporal"
 	},
 	{
 		"id": "swimmer-kicks-v-2-male",
@@ -7745,7 +8332,8 @@
 		"grupo": "piernas",
 		"musculo": "Cuádriceps",
 		"demoVideo": "/videos/barbell-bench-front-squat.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "dumbbell-lying-pronation",
@@ -7987,7 +8575,8 @@
 		"grupo": "piernas",
 		"musculo": "Gemelos",
 		"demoVideo": "/videos/single-leg-calf-raise-on-a-dumbbell.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "mancuerna"
 	},
 	{
 		"id": "barbell-alternate-biceps-curl",
@@ -7995,7 +8584,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/barbell-alternate-biceps-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-biceps-curl-with-arm-blaster",
@@ -8003,7 +8593,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/barbell-biceps-curl-with-arm-blaster.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-floor-calf-raise",
@@ -8011,7 +8602,8 @@
 		"grupo": "piernas",
 		"musculo": "Gemelos",
 		"demoVideo": "/videos/barbell-floor-calf-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-lying-preacher-curl",
@@ -8019,7 +8611,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/barbell-lying-preacher-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-prone-incline-curl",
@@ -8027,7 +8620,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/barbell-prone-incline-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-revers-wrist-curl-v-2",
@@ -8035,7 +8629,8 @@
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
 		"demoVideo": "/videos/barbell-revers-wrist-curl-v-2.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-reverse-preacher-curl",
@@ -8043,7 +8638,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/barbell-reverse-preacher-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-seated-calf-raise",
@@ -8051,7 +8647,8 @@
 		"grupo": "piernas",
 		"musculo": "Gemelos",
 		"demoVideo": "/videos/barbell-seated-calf-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-seated-close-grip-concentration-curl",
@@ -8059,7 +8656,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/barbell-seated-close-grip-concentration-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-standing-back-wrist-curl",
@@ -8067,7 +8665,8 @@
 		"grupo": "brazos",
 		"musculo": "Antebrazos",
 		"demoVideo": "/videos/barbell-standing-back-wrist-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-standing-calf-raise",
@@ -8075,7 +8674,8 @@
 		"grupo": "piernas",
 		"musculo": "Gemelos",
 		"demoVideo": "/videos/barbell-standing-calf-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-standing-close-grip-military-press",
@@ -8083,7 +8683,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/barbell-standing-close-grip-military-press.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-standing-concentration-curl",
@@ -8091,7 +8692,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/barbell-standing-concentration-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-standing-front-raise-over-head",
@@ -8099,7 +8701,8 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/barbell-standing-front-raise-over-head.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-standing-leg-calf-raise",
@@ -8107,7 +8710,8 @@
 		"grupo": "piernas",
 		"musculo": "Gemelos",
 		"demoVideo": "/videos/barbell-standing-leg-calf-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-standing-reverse-grip-curl",
@@ -8115,7 +8719,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/barbell-standing-reverse-grip-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-standing-rocking-leg-calf-raise",
@@ -8123,7 +8728,8 @@
 		"grupo": "piernas",
 		"musculo": "Gemelos",
 		"demoVideo": "/videos/barbell-standing-rocking-leg-calf-raise.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-standing-wide-grip-curl",
@@ -8131,7 +8737,8 @@
 		"grupo": "brazos",
 		"musculo": "Bíceps",
 		"demoVideo": "/videos/barbell-standing-wide-grip-curl.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	},
 	{
 		"id": "barbell-thruster",
@@ -8139,6 +8746,7 @@
 		"grupo": "hombros",
 		"musculo": "Deltoides",
 		"demoVideo": "/videos/barbell-thruster.mp4",
-		"videoUrl": ""
+		"videoUrl": "",
+		"equipo": "barra"
 	}
 ]
