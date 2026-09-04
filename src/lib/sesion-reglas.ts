@@ -283,24 +283,32 @@ export function mejorSetDeSeries(
 		if (!serieCompleta(set)) return best;
 		const valor = valorSet(set, metrica, modo, unidad);
 		if (valor == null) return best;
-		return mejorSet(
-			best,
-			conPesoVisible(
-				{
-					peso: set.peso,
-					pesoGramos: set.pesoGramos,
-					reps: set.reps,
-					esMax: !!set.esMax,
-					extraKg: set.extraKg,
-					extraGramos: set.extraGramos,
-					fecha,
-					valor,
-					sesionId: sesionIdFuente,
-					setIndex
-				},
-				unidad
-			)
+		const visible = conPesoVisible(
+			{
+				peso: set.peso,
+				pesoGramos: set.pesoGramos,
+				reps: set.reps,
+				esMax: !!set.esMax,
+				extraKg: set.extraKg,
+				extraGramos: set.extraGramos,
+				fecha,
+				valor,
+				sesionId: sesionIdFuente,
+				setIndex
+			},
+			unidad
 		);
+		// El canónico viaja de vuelta junto al visible, y es la única excepción al borrado
+		// que hace `conPesoVisible`: de acá sale el snapshot de un PR, y sellarlo con los
+		// gramos recalculados desde el número redondeado que se ve lo dejaba sin coincidir
+		// con su propia serie. 220,5 lb son 100.017 g; leídos como 100,0 kg y vueltos a
+		// canonizar dan 100.000, y `coincideConPr` compara gramos exactos: el PR quedaba
+		// guardado pero ninguna pantalla lo reconocía.
+		return mejorSet(best, {
+			...visible,
+			pesoGramos: set.pesoGramos,
+			extraGramos: set.extraGramos
+		});
 	}, null);
 }
 
@@ -318,12 +326,17 @@ export function snapPr(
 	unidad: UnidadPeso = 'kg',
 	previo?: MejorSet | null
 ): PrCelebrado {
+	// Los gramos del set mandan sobre `unidad`: `conPesoCanonico` sólo convierte el valor
+	// visible cuando no hay canónico, y acá casi siempre lo hay. Es lo que mantiene el
+	// snapshot idéntico a la serie que lo ganó, sin importar en qué unidad se selló.
 	const snap = conPesoCanonico(
 		{
 			peso: set.peso,
+			pesoGramos: set.pesoGramos,
 			reps: set.reps,
 			esMax: set.esMax,
 			extraKg: set.extraKg,
+			extraGramos: set.extraGramos,
 			setIndex: set.setIndex,
 			metrica
 		},
@@ -335,7 +348,14 @@ export function snapPr(
 /** El récord roto, sin índice ni métrica: se lee siempre con la métrica del PR que lo rompió. */
 function snapPrevio(set: MejorSet, unidad: UnidadPeso): SetRecordPrevio {
 	return conPesoCanonico(
-		{ peso: set.peso, reps: set.reps, esMax: set.esMax, extraKg: set.extraKg },
+		{
+			peso: set.peso,
+			pesoGramos: set.pesoGramos,
+			reps: set.reps,
+			esMax: set.esMax,
+			extraKg: set.extraKg,
+			extraGramos: set.extraGramos
+		},
 		unidad
 	);
 }

@@ -1096,11 +1096,17 @@ export function registrarPrSiSupera(
 			(yaCelebrado == null || valor > yaCelebrado);
 		if (!supera) return null;
 
+		// El visible es para mostrar la celebración; los gramos son los de la serie, tal
+		// cual: sellar el snapshot recanonizando el número redondeado lo dejaba sin
+		// coincidir con su propio set en cuanto la unidad de lectura no era la de origen.
+		const visible = conPesoVisible(set, unidad);
 		const ganador: MejorSet = {
-			peso: conPesoVisible(set, unidad).peso,
+			peso: visible.peso,
+			pesoGramos: set.pesoGramos,
 			reps: set.reps,
 			esMax: !!set.esMax,
-			extraKg: conPesoVisible(set, unidad).extraKg,
+			extraKg: visible.extraKg,
+			extraGramos: set.extraGramos,
 			fecha: s.fecha,
 			valor,
 			sesionId: s.id,

@@ -36,7 +36,8 @@ import {
 	ultimaSesion
 } from './sesion';
 import { resumenDiaSesion, rachaSemanalActual } from './historial';
-import { estadoSesion, pesoEfectivo, serieCompleta } from './sesion-reglas';
+import { exportarJSON, normalizarAjustes, parseBackup, prepararImport } from './extras';
+import { estadoSesion, pesoEfectivo, prRespaldado, serieCompleta } from './sesion-reglas';
 import { gramosAPeso } from './unidades';
 import { agregarEjercicio, ajustarSeries, quitarEjercicio } from './dias';
 
@@ -580,6 +581,7 @@ describe('sesion con IndexedDB', () => {
 		expect(puntos).toEqual([
 			{
 				peso: 90,
+				pesoGramos: 90000,
 				reps: 5,
 				esMax: false,
 				extraKg: undefined,
@@ -610,6 +612,7 @@ describe('sesion con IndexedDB', () => {
 			{
 				exerciseId: 'remo',
 				peso: 70,
+				pesoGramos: 70000,
 				reps: 8,
 				esMax: false,
 				extraKg: undefined,
@@ -623,6 +626,7 @@ describe('sesion con IndexedDB', () => {
 			{
 				exerciseId: 'press',
 				peso: 80,
+				pesoGramos: 80000,
 				reps: 10,
 				esMax: false,
 				extraKg: undefined,
@@ -779,6 +783,7 @@ describe('sesion con IndexedDB', () => {
 		expect(puntos).toEqual([
 			{
 				peso: 10,
+				pesoGramos: 10000,
 				reps: 6,
 				esMax: false,
 				extraKg: undefined,
@@ -1006,6 +1011,7 @@ describe('sesion con IndexedDB', () => {
 		expect(await primerValor(historialObs('press', 'peso'))).toEqual([
 			{
 				peso: 100,
+				pesoGramos: 100000,
 				reps: 5,
 				esMax: false,
 				extraKg: undefined,
@@ -1016,6 +1022,7 @@ describe('sesion con IndexedDB', () => {
 			},
 			{
 				peso: 95,
+				pesoGramos: 95000,
 				reps: 5,
 				esMax: false,
 				extraKg: undefined,
@@ -1157,6 +1164,7 @@ describe('sesion con IndexedDB', () => {
 		expect(await primerValor(historialObs('press', 'peso'))).toEqual([
 			{
 				peso: 100,
+				pesoGramos: 100000,
 				reps: 5,
 				esMax: false,
 				extraKg: undefined,
@@ -1915,5 +1923,121 @@ describe('una fecha futura no puede crear trabajo', () => {
 			disponible: true
 		});
 		vi.useRealTimers();
+	});
+});
+
+/**
+ * El snapshot de un PR y la serie que lo ganó tienen que guardar EXACTAMENTE los mismos
+ * gramos. Es lo único que sostiene `coincideConPr`, y de ahí cuelgan el trofeo de la
+ * pantalla, los "PRs del día" y el resumen del historial.
+ *
+ * Se rompía porque el snapshot no copiaba el canónico: lo recalculaba desde el peso
+ * visible, que está redondeado a la décima de la unidad con la que se lee. 220,5 lb son
+ * 100.017 g; leídos como kg dan 100,0 y vueltos a canonizar, 100.000. El PR seguía
+ * guardado y ninguna pantalla lo reconocía. En kg nativo no se veía nunca, y por eso
+ * estos casos van en lb: es la unidad donde el redondeo del visible pierde información.
+ */
+describe('el snapshot del PR conserva los gramos de su serie', () => {
+	beforeEach(async () => {
+		vi.useRealTimers();
+		await limpiarDb();
+	});
+
+	async function serieEnLb(fecha: string, i: number, lb: number, reps: number) {
+		await setPeso('push', 'press', i, lb, fecha, 'lb');
+		await setReps('push', 'press', i, reps, fecha);
+		await setSerieHecha('push', 'press', i, true, fecha);
+	}
+
+	async function ejercicioDe(fecha: string) {
+		const sesion = await db.sesiones.get(sesionId('push', fecha));
+		return sesion!.ejercicios[0]!;
+	}
+
+	it('al celebrarlo en lb', async () => {
+		const f = '2026-02-01';
+		await ensureEjercicio('push', 'press', 2, f, 'lb');
+		await serieEnLb(f, 0, 220.5, 8);
+
+		expect(await registrarPrSiSupera('push', 'press', 0, 'peso', f, 'lb')).not.toBeNull();
+		const e = await ejercicioDe(f);
+		expect(e.prCelebrado?.pesoGramos).toBe(e.sets[0]!.pesoGramos);
+		expect(prRespaldado(e.sets, e.prCelebrado)).toBe(true);
+	});
+
+	it('después de tocar otra serie del mismo ejercicio', async () => {
+		const f = '2026-02-01';
+		await ensureEjercicio('push', 'press', 2, f, 'lb');
+		await serieEnLb(f, 0, 220.5, 8);
+		await registrarPrSiSupera('push', 'press', 0, 'peso', f, 'lb');
+
+		// Cargar las reps de la serie 2 revalida el PR: acá se re-sellaba en kg.
+		await setReps('push', 'press', 1, 8, f);
+		const e = await ejercicioDe(f);
+		expect(e.prCelebrado?.pesoGramos).toBe(e.sets[0]!.pesoGramos);
+		expect(prRespaldado(e.sets, e.prCelebrado)).toBe(true);
+		const sesion = await db.sesiones.get(sesionId('push', f));
+		expect(resumenDiaSesion(sesion, 'lb').prs).toHaveLength(1);
+	});
+
+	it('con la serie cargada en kg y el PR celebrado con la app en lb', async () => {
+		const f = '2026-02-01';
+		await ensureEjercicio('push', 'press', 1, f);
+		await setPeso('push', 'press', 0, 100, f);
+		await setReps('push', 'press', 0, 8, f);
+		await setSerieHecha('push', 'press', 0, true, f);
+
+		// Cambiar de unidad no puede reescribir lo que ya está guardado en gramos.
+		expect(await registrarPrSiSupera('push', 'press', 0, 'peso', f, 'lb')).not.toBeNull();
+		const e = await ejercicioDe(f);
+		expect(e.sets[0]!.pesoGramos).toBe(100_000);
+		expect(e.prCelebrado?.pesoGramos).toBe(100_000);
+		expect(prRespaldado(e.sets, e.prCelebrado)).toBe(true);
+	});
+
+	it('al corregir otra serie de esa sesión desde el historial, en lb', async () => {
+		const f = '2026-02-01';
+		await ensureEjercicio('push', 'press', 2, f, 'lb');
+		await serieEnLb(f, 0, 220.5, 8);
+		await serieEnLb(f, 1, 200, 10);
+		await registrarPrSiSupera('push', 'press', 0, 'peso', f, 'lb');
+
+		expect(
+			await actualizarSetHistorial(sesionId('push', f), 'press', 1, { peso: 200, reps: 9 }, 'lb')
+		).toBe(true);
+		const e = await ejercicioDe(f);
+		expect(e.prCelebrado?.pesoGramos).toBe(e.sets[0]!.pesoGramos);
+		expect(prRespaldado(e.sets, e.prCelebrado)).toBe(true);
+	});
+
+	it('sobrevive al ida y vuelta por un backup en lb', async () => {
+		// El import descarta los PR que no coinciden con ninguna serie hecha. Con el
+		// snapshot desalineado, restaurar un backup se llevaba puesto el récord del día.
+		const f = '2026-02-01';
+		await db.ajustes.put(normalizarAjustes({ id: 'app', unidad: 'lb' } as never));
+		await ensureEjercicio('push', 'press', 2, f, 'lb');
+		await serieEnLb(f, 0, 220.5, 8);
+		await registrarPrSiSupera('push', 'press', 0, 'peso', f, 'lb');
+		// Seguir entrenando revalida el PR, que es donde el snapshot se desalineaba.
+		await setReps('push', 'press', 1, 8, f);
+
+		const { datos, avisos } = prepararImport(parseBackup(await exportarJSON()));
+		expect(avisos.filter((a) => a.includes('PR'))).toEqual([]);
+		const ejercicio = datos.sesiones.find((x) => x.id === sesionId('push', f))!.ejercicios[0]!;
+		expect(ejercicio.prCelebrado?.pesoGramos).toBe(ejercicio.sets[0]!.pesoGramos);
+	});
+
+	it('el récord anterior que viaja adentro del PR también conserva sus gramos', async () => {
+		await ensureEjercicio('push', 'press', 1, '2026-02-01', 'lb');
+		await serieEnLb('2026-02-01', 0, 220.5, 8);
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-02-01', 'lb');
+
+		await ensureEjercicio('push', 'press', 1, '2026-02-08', 'lb');
+		await serieEnLb('2026-02-08', 0, 231, 8);
+		await registrarPrSiSupera('push', 'press', 0, 'peso', '2026-02-08', 'lb');
+
+		const anterior = await ejercicioDe('2026-02-01');
+		const nuevo = await ejercicioDe('2026-02-08');
+		expect(nuevo.prCelebrado?.previo?.pesoGramos).toBe(anterior.sets[0]!.pesoGramos);
 	});
 });
