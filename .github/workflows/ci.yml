@@ -21,9 +21,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           # La versión sale de .nvmrc, que es la misma que usa Netlify para el deploy.
           node-version-file: .nvmrc
@@ -51,7 +51,7 @@ jobs:
         run: npx playwright test
 
       # Sólo cuando algo falla: traza, video y captura del caso que se cayó.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: failure()
         with:
           name: playwright-fallos
