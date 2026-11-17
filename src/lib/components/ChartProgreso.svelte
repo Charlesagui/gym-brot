@@ -4,7 +4,7 @@
 	import { Axis, Chart, Highlight, Points, Spline, Svg, Tooltip } from 'layerchart';
 	import { hoyStr, mejorSet, type MejorSet } from '$lib/sesion';
 	import { fechaDentroDeRango } from '$lib/fechas';
-	import { formatoNumero, formatoSet, fechaCorta } from '$lib/formato';
+	import { formatoNumero, formatoSet, fechaCorta, marcasEjeFecha } from '$lib/formato';
 	import { dur, menosMovimiento } from '$lib/motion';
 
 	type Rango = '3m' | '1a' | 'todo';
@@ -135,9 +135,7 @@
 		return () => mq.removeEventListener('change', actualizar);
 	});
 
-	function fechaTick(fecha: Date): string {
-		return fecha.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: '2-digit' });
-	}
+	const ejeX = $derived(marcasEjeFecha(datosDibujados.map((d) => d.fecha)));
 </script>
 
 {#if cargando}
@@ -187,8 +185,8 @@
 					/>
 					<Axis
 						placement="bottom"
-						ticks={4}
-						format={fechaTick}
+						ticks={ejeX.valores}
+						format={ejeX.formato}
 						fill="var(--muted)"
 						stroke="rgba(255,255,255,.08)"
 						tickLabelProps={{ class: 'text-[10px] font-medium' }}

@@ -5,6 +5,7 @@ import {
 	formatoNumero,
 	formatoSet,
 	formatoVolumen,
+	marcasEjeFecha,
 	resumenSeries
 } from './formato';
 
@@ -147,5 +148,46 @@ describe('resumenSeries', () => {
 			resto: ' × —',
 			unidad: 'peso'
 		});
+	});
+});
+
+describe('marcasEjeFecha', () => {
+	const dia = (iso: string) => new Date(`${iso}T00:00:00`);
+	const semanal = [
+		'2026-10-07',
+		'2026-10-14',
+		'2026-10-21',
+		'2026-10-28',
+		'2026-11-04',
+		'2026-11-11',
+		'2026-11-17'
+	].map(dia);
+
+	it('no pasa de cuatro marcas aunque haya una sesión por semana', () => {
+		// d3 toma `ticks={4}` como sugerencia y con seis semanas ponía siete: no entraban.
+		const { valores } = marcasEjeFecha(semanal);
+		expect(valores).toHaveLength(4);
+		expect(valores[0]).toEqual(semanal[0]);
+		expect(valores.at(-1)).toEqual(semanal.at(-1));
+	});
+
+	it('usa etiquetas cortas, sin año cuando todo cae en el mismo año', () => {
+		const { valores, formato } = marcasEjeFecha(semanal);
+		expect(valores.map(formato)).toEqual(['7 oct', '21 oct', '3 nov', '17 nov']);
+	});
+
+	it('agrega el año sólo si el rango cruza de año', () => {
+		const { valores, formato } = marcasEjeFecha([dia('2025-12-20'), dia('2026-01-10')]);
+		expect(valores.map(formato)).toEqual(['20 dic 25', '10 ene 26']);
+	});
+
+	it('con un solo día pone una sola marca', () => {
+		const { valores } = marcasEjeFecha([dia('2026-11-17'), dia('2026-11-17')]);
+		expect(valores).toEqual([dia('2026-11-17')]);
+	});
+
+	it('con pocos días no inventa marcas entre ellos', () => {
+		expect(marcasEjeFecha([dia('2026-11-10'), dia('2026-11-17')]).valores).toHaveLength(2);
+		expect(marcasEjeFecha([]).valores).toEqual([]);
 	});
 });

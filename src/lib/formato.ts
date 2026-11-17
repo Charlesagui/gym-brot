@@ -154,3 +154,40 @@ export function fechaCorta(f: string | null, incluirAno = false): string {
 		...(incluirAno ? { year: 'numeric' } : {})
 	});
 }
+
+/**
+ * Marcas del eje de fechas de un gráfico chico: como mucho `maximo`, repartidas parejas
+ * entre el primer y el último día, y con una etiqueta corta.
+ *
+ * Existe porque `scaleTime` de d3 toma la cantidad pedida como sugerencia: con seis
+ * semanas de datos elegía una marca por semana, siete etiquetas de "11 de oct de 26" en
+ * 330 px que se pisaban hasta no leerse. Acá la cantidad es un tope, y el año aparece
+ * sólo cuando el rango cruza de año, que es el único caso en que hace falta.
+ */
+export function marcasEjeFecha(
+	fechas: Date[],
+	maximo = 4
+): { valores: Date[]; formato: (fecha: Date) => string } {
+	const dias = new Set(fechas.map((f) => f.toDateString()));
+	const orden = [...fechas].sort((a, b) => a.getTime() - b.getTime());
+	const primera = orden[0];
+	const ultima = orden.at(-1);
+	const conAnio = Boolean(primera && ultima && primera.getFullYear() !== ultima.getFullYear());
+	const formato = (fecha: Date) => {
+		const mes = fecha.toLocaleDateString('es', { month: 'short' }).replace('.', '');
+		const base = `${fecha.getDate()} ${mes}`;
+		return conAnio ? `${base} ${String(fecha.getFullYear()).slice(2)}` : base;
+	};
+	if (!primera || !ultima) return { valores: [], formato };
+	const cantidad = Math.min(maximo, dias.size);
+	if (cantidad <= 1) return { valores: [primera], formato };
+	// Se cuenta en días de calendario y no en milisegundos: así un cambio de horario no
+	// corre una marca a las 23:00 del día anterior.
+	const span = Math.round((ultima.getTime() - primera.getTime()) / 86_400_000);
+	const valores = Array.from({ length: cantidad }, (_, i) => {
+		const fecha = new Date(primera);
+		fecha.setDate(fecha.getDate() + Math.round((i * span) / (cantidad - 1)));
+		return fecha;
+	});
+	return { valores, formato };
+}
