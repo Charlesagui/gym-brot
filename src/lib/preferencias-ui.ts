@@ -15,7 +15,8 @@ const KEY = {
 	hintMaxOk: `${P}hint-max-ok`,
 	hintMaxVistas: `${P}hint-max-vistas`,
 	hintTimerOk: `${P}hint-timer-ok`,
-	bienvenidaCerrada: `${P}bienvenida-cerrada`
+	bienvenidaCerrada: `${P}bienvenida-cerrada`,
+	avisoAlmacenamientoCerrado: `${P}aviso-almacenamiento-cerrado`
 } as const;
 
 /** Clave anterior a la unificación de prefijos; se migra al primer arranque. */
@@ -146,6 +147,16 @@ export function bienvenidaVisible(): boolean {
 
 export function cerrarBienvenida(): void {
 	escribir(KEY.bienvenidaCerrada, '1');
+}
+
+/** Cuándo se cerró el aviso de almacenamiento de la portada (ISO), o null. */
+export function avisoAlmacenamientoCerradoAt(): string | null {
+	return leer(KEY.avisoAlmacenamientoCerrado);
+}
+
+/** Lo esconde por una semana: ver `REAPARICION_AVISO_MS`. */
+export function cerrarAvisoAlmacenamiento(ahora = new Date()): void {
+	escribir(KEY.avisoAlmacenamientoCerrado, ahora.toISOString());
 }
 
 /** Vuelve a mostrar todos los carteles de ayuda (desde Ajustes). */

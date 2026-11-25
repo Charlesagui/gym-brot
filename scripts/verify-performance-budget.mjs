@@ -48,8 +48,13 @@ const MAX_SHELL_GZIP_BYTES = 120 * 1024;
  *
  * 1480 KiB devuelve ~53 KiB de aire y sigue siendo chico para que un mp4 o una imagen
  * grande lo rompan enseguida.
+ *
+ * 25/11/2026: HEAD estaba en 1510828 B, a 4,6 KiB del techo, y el aviso de almacenamiento
+ * de la portada suma 7,4 KiB de código (lógica, componente y el pedido de instalación),
+ * ningún asset. Medido en un worktree limpio antes de tocar el número. 1520 KiB devuelve
+ * ~37 KiB de aire.
  */
-const MAX_PRECACHE_BYTES = 1480 * 1024;
+const MAX_PRECACHE_BYTES = 1520 * 1024;
 
 async function tamanio(url) {
 	return stat(url).then((archivo) => archivo.size);

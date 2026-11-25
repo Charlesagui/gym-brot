@@ -6,6 +6,7 @@
 	import { useRegisterSW } from 'virtual:pwa-register/svelte';
 	import { abrirBase, completarNombresSnapshotFaltantes, db, onDbBloqueada } from '$lib/db';
 	import { asegurarPersistencia } from '$lib/persistencia';
+	import { escucharInstalacion } from '$lib/instalacion';
 	import { descargarJSON, nombreBackup } from '$lib/descarga';
 	import { rescatarDatosCrudos, RescateVacioError, resumenRescate } from '$lib/rescate';
 	import { seedSiVacio } from '$lib/seed';
@@ -311,6 +312,9 @@
 		hoy.init();
 		// Acuse de presión para toda la app, con un solo listener delegado.
 		const dejarDePresionar = iniciarPresion();
+		// El pedido de instalar llega una vez y en cualquier pantalla: se guarda para el
+		// aviso de almacenamiento de la portada.
+		const dejarDeEscucharInstalacion = escucharInstalacion();
 		const dejarDeEscucharReemplazos = escucharReemplazosDatos(() => location.reload());
 		// El swipe de "volver" del sistema puede abortarse a mitad de camino sin
 		// disparar ninguna navegación: touchcancel/pointercancel es la única señal
@@ -344,6 +348,7 @@
 			sw?.removeEventListener('controllerchange', alCambiarControlador);
 			dejarDeMirarVersion?.();
 			dejarDePresionar();
+			dejarDeEscucharInstalacion();
 			dejarDeEscucharReemplazos();
 			window.removeEventListener('touchcancel', limpiarArrastreHuerfano, true);
 			window.removeEventListener('pointercancel', limpiarArrastreHuerfano, true);

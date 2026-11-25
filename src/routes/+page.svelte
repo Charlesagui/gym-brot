@@ -13,6 +13,7 @@
 	import { mantener } from '$lib/mantener';
 	import Icono from '$lib/components/Icono.svelte';
 	import ConfirmSheet from '$lib/components/ConfirmSheet.svelte';
+	import AvisoAlmacenamiento from '$lib/components/AvisoAlmacenamiento.svelte';
 	import { vibrar } from '$lib/vibracion';
 	import { ajustesObs, AJUSTES_DEFAULT } from '$lib/extras';
 	import { fromLiveQuery } from '$lib/live';
@@ -246,6 +247,8 @@
 		</h1>
 		<p class="mt-1 text-xs capitalize" style="color: var(--muted)">{nombresDia[hoy]}</p>
 	</header>
+
+	<AvisoAlmacenamiento ultimoBackup={ajustes.ultimoBackup} />
 
 	{#if mostrarWelcome}
 		<div
