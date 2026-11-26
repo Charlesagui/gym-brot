@@ -261,11 +261,9 @@
 				style="color: var(--muted)"
 				aria-label="Cerrar bienvenida"
 			>
-				✕
+				<Icono nombre="cerrar" tamano={18} />
 			</button>
-			<h2 class="text-sm font-bold" style="color: var(--accent-text)">
-				👋 ¡Te damos la bienvenida!
-			</h2>
+			<h2 class="text-sm font-bold" style="color: var(--accent-text)">¡Te damos la bienvenida!</h2>
 			<p class="mt-1.5 text-xs leading-relaxed" style="color: var(--muted)">
 				Agregamos rutinas de ejemplo para que explores la app. Podés editarlas o eliminarlas en
 				cualquier momento. ¡Comenzá tocando una rutina!
@@ -393,7 +391,9 @@
 					class="mb-6 rounded-2xl border border-white/10 p-4 text-center"
 					style="background: var(--surface)"
 				>
-					<p class="text-2xl">💤</p>
+					<p class="flex justify-center" style="color: var(--muted)" aria-hidden="true">
+						<Icono nombre="descanso" tamano={28} />
+					</p>
 					<p class="mt-1 text-sm font-semibold">Hoy es tu día de descanso</p>
 					<p class="mt-0.5 text-xs" style="color: var(--muted)">
 						No tenés rutinas agendadas. Si igual entrenás, tocá cualquier rutina de abajo: se

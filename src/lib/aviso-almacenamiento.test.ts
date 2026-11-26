@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
+	antiguedadBackup,
 	avisoAlmacenamiento,
+	instalarSeparaDatos,
 	instruccionesInstalar,
+	textoAvisoNavegador,
+	textoRecienInstalada,
 	plataformaDe,
 	REAPARICION_AVISO_MS,
 	type EntradaAviso
@@ -87,5 +91,46 @@ describe('instruccionesInstalar', () => {
 		expect(instruccionesInstalar('samsung')).toContain('Pantalla de inicio');
 		expect(instruccionesInstalar('ios')).toContain('Agregar a inicio');
 		expect(instruccionesInstalar('android')).toContain('Instalar app');
+	});
+});
+
+describe('textos por plataforma', () => {
+	it('sólo en iPhone la app instalada arranca con datos propios', () => {
+		expect(instalarSeparaDatos('ios')).toBe(true);
+		expect(instalarSeparaDatos('samsung')).toBe(false);
+		expect(instalarSeparaDatos('android')).toBe(false);
+		expect(instalarSeparaDatos('otra')).toBe(false);
+	});
+
+	it('en iPhone pide la copia antes de instalar', () => {
+		expect(textoAvisoNavegador('ios')).toContain('Guardá una copia');
+		expect(textoRecienInstalada('ios')).toContain('Restaurar copia');
+	});
+
+	it('en Android no afirma que la app instalada esté separada', () => {
+		for (const plataforma of ['android', 'samsung'] as const) {
+			expect(textoAvisoNavegador(plataforma)).not.toContain('arranca vacía');
+			expect(textoAvisoNavegador(plataforma)).toContain('otro');
+			expect(textoRecienInstalada(plataforma)).toContain('ya están');
+		}
+	});
+});
+
+describe('antiguedadBackup', () => {
+	const ahora = new Date(2026, 10, 25, 9, 0);
+	it('sin copia', () => {
+		expect(antiguedadBackup(undefined, ahora)).toBe('Todavía no guardaste ninguna copia.');
+		expect(antiguedadBackup('basura', ahora)).toBe('Todavía no guardaste ninguna copia.');
+	});
+	it('hoy, ayer (aunque hayan pasado menos de 24 h) y plural', () => {
+		expect(antiguedadBackup(new Date(2026, 10, 25, 7, 0).toISOString(), ahora)).toBe(
+			'Tu última copia es de hoy.'
+		);
+		expect(antiguedadBackup(new Date(2026, 10, 24, 23, 0).toISOString(), ahora)).toBe(
+			'Tu última copia es de ayer.'
+		);
+		expect(antiguedadBackup(new Date(2026, 10, 20, 12, 0).toISOString(), ahora)).toBe(
+			'Tu última copia es de hace 5 días.'
+		);
 	});
 });

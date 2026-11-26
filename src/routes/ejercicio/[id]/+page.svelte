@@ -2065,7 +2065,9 @@
 				class="flex items-center gap-3 rounded-2xl border p-3.5"
 				style="background: var(--surface); border-color: rgba(255,107,107,.5)"
 			>
-				<span class="text-lg" aria-hidden="true">⚠️</span>
+				<span class="shrink-0" style="color: rgb(255 107 107)" aria-hidden="true"
+					><Icono nombre="error" tamano={20} /></span
+				>
 				<p class="min-w-0 flex-1 text-xs leading-relaxed" style="color: var(--muted)">
 					No se pudo guardar. Revisá el espacio del teléfono y probá de nuevo.
 					<span class="block opacity-70">{errorGuardado}</span>
@@ -2074,7 +2076,7 @@
 					onclick={() => (errorGuardado = null)}
 					class="grid size-11 shrink-0 place-items-center rounded-full text-sm font-bold"
 					style="background: rgba(255,255,255,.08)"
-					aria-label="Cerrar aviso">✕</button
+					aria-label="Cerrar aviso"><Icono nombre="cerrar" tamano={16} /></button
 				>
 			</div>
 		</div>

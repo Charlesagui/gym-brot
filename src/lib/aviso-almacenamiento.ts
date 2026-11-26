@@ -7,8 +7,9 @@ import type { EstadoPersistencia } from './persistencia';
  * "perder" datos que el código no puede evitar:
  *
  * - **Contenedores separados.** Cada navegador (Chrome, Samsung Internet, el que abre
- *   WhatsApp) y la app instalada tienen su propia base. Quien abre un día desde un link
- *   y otro desde el ícono ve entrenamientos distintos y cree que no se guardaron.
+ *   WhatsApp) tiene su propia base. Quien abre un día desde un link y otro desde el
+ *   navegador de siempre ve entrenamientos distintos y cree que no se guardaron.
+ *   La app instalada depende de la plataforma (ver `instalarSeparaDatos`).
  * - **Borrado del navegador.** Si no concedió almacenamiento persistente puede vaciarlo
  *   solo; en iPhone sin instalar, Safari lo hace a los 7 días sin uso.
  *
@@ -79,4 +80,55 @@ export function instruccionesInstalar(plataforma: Plataforma): string {
 		default:
 			return 'En el menú del navegador, buscá «Instalar» o «Agregar a la pantalla de inicio».';
 	}
+}
+
+/**
+ * Si la app instalada arranca con una base propia, separada de la del navegador.
+ *
+ * En iPhone sí: la app de la pantalla de inicio no ve lo que se cargó en Safari, así
+ * que instalar sin llevarse una copia deja la app vacía —el mismo "se borró todo" que
+ * el aviso quiere evitar—. En Android (Chrome, Samsung Internet) no: la app instalada
+ * usa los datos del navegador desde el que se instaló, y el riesgo real es mezclar
+ * navegadores, por ejemplo abrir un link de WhatsApp que cae en otro.
+ */
+export function instalarSeparaDatos(plataforma: Plataforma): boolean {
+	return plataforma === 'ios';
+}
+
+/** El cuerpo del aviso en el navegador, con el riesgo que de verdad corre esa plataforma. */
+export function textoAvisoNavegador(plataforma: Plataforma): string {
+	if (instalarSeparaDatos(plataforma))
+		return (
+			'Estás usando Gym-brot desde Safari. Safari puede borrar los datos después de unos ' +
+			'días sin abrir la app, y la app instalada no ve lo que cargaste acá: arranca vacía. ' +
+			'Guardá una copia, instalala y restaurá la copia adentro de la app.'
+		);
+	return (
+		'Tus entrenamientos viven en este navegador. Si un día abrís Gym-brot desde otro ' +
+		'(por ejemplo, un link de WhatsApp que se abre en Chrome), vas a ver otros datos. ' +
+		'Instalala desde acá y abrila siempre desde el ícono.'
+	);
+}
+
+/** Qué decir recién instalada: en iPhone falta traer la copia; en Android ya está todo. */
+export function textoRecienInstalada(plataforma: Plataforma): string {
+	if (instalarSeparaDatos(plataforma))
+		return (
+			'Abrila desde el ícono y, adentro, andá a Ajustes → Restaurar copia de seguridad con ' +
+			'el archivo que guardaste. Desde ahí, usá siempre el ícono.'
+		);
+	return 'Tus datos ya están en la app. Abrila desde el ícono de tu pantalla de inicio y usá siempre esa.';
+}
+
+/** "Tu última copia es de hoy / de ayer / de hace N días", sin "hace 0 días". */
+export function antiguedadBackup(ultimoBackup: string | undefined, ahora = new Date()): string {
+	if (!ultimoBackup) return 'Todavía no guardaste ninguna copia.';
+	const fecha = new Date(ultimoBackup);
+	if (!Number.isFinite(fecha.getTime())) return 'Todavía no guardaste ninguna copia.';
+	// Por día de calendario local, no por bloques de 24 h: una copia de anoche es "de ayer".
+	const dia = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+	const dias = Math.round((dia(ahora) - dia(fecha)) / (24 * 60 * 60 * 1000));
+	if (dias <= 0) return 'Tu última copia es de hoy.';
+	if (dias === 1) return 'Tu última copia es de ayer.';
+	return `Tu última copia es de hace ${dias} días.`;
 }

@@ -13,13 +13,18 @@
 	import { onMount } from 'svelte';
 	import { slide } from 'svelte/transition';
 	import Icono from '$lib/components/Icono.svelte';
-	import { diasDesde } from '$lib/extras';
+	import { exportarJSON, hayDatosQueRespaldar } from '$lib/extras';
+	import { descargarJSON, nombreBackup } from '$lib/descarga';
 	import { dur } from '$lib/motion';
 	import { persistencia } from '$lib/persistencia';
 	import {
+		antiguedadBackup,
 		avisoAlmacenamiento,
+		instalarSeparaDatos,
 		instruccionesInstalar,
 		plataformaDe,
+		textoAvisoNavegador,
+		textoRecienInstalada,
 		type Plataforma
 	} from '$lib/aviso-almacenamiento';
 	import {
@@ -28,7 +33,11 @@
 		pedidoInstalacion,
 		type PedidoInstalacion
 	} from '$lib/instalacion';
-	import { avisoAlmacenamientoCerradoAt, cerrarAvisoAlmacenamiento } from '$lib/preferencias-ui';
+	import {
+		avisoAlmacenamientoCerradoAt,
+		cerrarAvisoAlmacenamiento,
+		marcarBackupPendiente
+	} from '$lib/preferencias-ui';
 
 	let { ultimoBackup }: { ultimoBackup?: string } = $props();
 
@@ -40,8 +49,16 @@
 	let pasosVisibles = $state(false);
 	let instalando = $state(false);
 	let rechazada = $state(false);
+	/** Si hay algo que llevarse: sobre una base vacía, pedir una copia es ruido. */
+	let hayDatos = $state(false);
+	let exportando = $state(false);
+	let copiaGuardada = $state(false);
+	let errorCopia = $state<string | null>(null);
 
 	onMount(() => {
+		void hayDatosQueRespaldar()
+			.then((hay) => (hayDatos = hay))
+			.catch(() => (hayDatos = false));
 		cerradoAt = avisoAlmacenamientoCerradoAt();
 		entorno = {
 			instalada: abiertaInstalada(),
@@ -54,11 +71,27 @@
 		entorno ? avisoAlmacenamiento({ ...entorno, persistencia: $persistencia, cerradoAt }) : null
 	);
 
-	const backup = $derived(
-		ultimoBackup
-			? `Tu última copia es de hace ${diasDesde(ultimoBackup)} días.`
-			: 'Todavía no guardaste ninguna copia.'
-	);
+	const backup = $derived(antiguedadBackup(ultimoBackup));
+
+	/**
+	 * En iPhone la app instalada arranca vacía, así que la copia va ANTES de instalar y en
+	 * el mismo aviso: mandarla a Ajustes era perder a la mitad de la gente en el camino.
+	 */
+	async function guardarCopia() {
+		if (exportando) return;
+		exportando = true;
+		errorCopia = null;
+		try {
+			descargarJSON(await exportarJSON(), nombreBackup());
+			// Como en Ajustes: el click no confirma que el archivo se haya guardado.
+			marcarBackupPendiente();
+			copiaGuardada = true;
+		} catch (e) {
+			errorCopia = `No se pudo generar la copia: ${e instanceof Error ? e.message : 'error'}`;
+		} finally {
+			exportando = false;
+		}
+	}
 
 	function cerrar() {
 		cerrarAvisoAlmacenamiento();
@@ -107,21 +140,42 @@
 					<Icono nombre="hecha" tamano={16} /> Gym-brot quedó instalada
 				</p>
 				<p class="mt-1.5 text-xs leading-relaxed" style="color: var(--muted)">
-					Abrila desde el ícono de tu pantalla de inicio y usá siempre esa. Lo que cargues acá, en
-					el navegador, no aparece allá.
+					{textoRecienInstalada(aviso.plataforma)}
 				</p>
 			{:else}
 				<p class="flex items-center gap-2 text-sm font-bold" style="color: rgb(var(--max))">
 					<Icono nombre="aviso" tamano={16} /> Tus entrenamientos pueden perderse
 				</p>
 				<p class="mt-1.5 text-xs leading-relaxed" style="color: var(--muted)">
-					Estás usando Gym-brot desde el navegador. Cada navegador y la app instalada guardan los
-					datos por separado: si un día la abrís desde un link y otro desde el ícono, vas a ver
-					entrenamientos distintos. Instalala y abrila siempre desde el ícono.
-					{#if aviso.plataforma === 'ios'}
-						En iPhone, además, Safari borra los datos después de unos días sin abrir la app.
-					{/if}
+					{textoAvisoNavegador(aviso.plataforma)}
 				</p>
+				{#if instalarSeparaDatos(aviso.plataforma) && hayDatos}
+					<!-- Primero la copia: instalar sin ella deja la app del ícono vacía. -->
+					<button
+						onclick={() => void guardarCopia()}
+						disabled={exportando}
+						aria-busy={exportando}
+						class="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-bold disabled:opacity-60"
+						style="background: rgb(var(--max)); color: #14110a"
+					>
+						<Icono nombre="backup" tamano={16} />
+						{exportando
+							? 'Guardando copia…'
+							: copiaGuardada
+								? 'Guardar otra copia'
+								: '1. Guardar copia'}
+					</button>
+					{#if copiaGuardada}
+						<p class="mt-2 text-xs leading-relaxed" style="color: var(--muted)">
+							Copia descargada. Fijate que esté en Archivos antes de instalar.
+						</p>
+					{/if}
+					{#if errorCopia}
+						<p class="mt-2 text-xs leading-relaxed" style="color: rgb(var(--max))" role="alert">
+							{errorCopia}
+						</p>
+					{/if}
+				{/if}
 				{#if $pedidoInstalacion}
 					{@const pedido = $pedidoInstalacion}
 					<button
@@ -139,9 +193,16 @@
 						onclick={() => (pasosVisibles = !pasosVisibles)}
 						aria-expanded={pasosVisibles}
 						class="mt-3 inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-bold"
-						style="background: rgb(var(--max)); color: #14110a"
+						style={instalarSeparaDatos(aviso.plataforma) && hayDatos && !copiaGuardada
+							? 'border: 1px solid rgb(var(--max) / .5); color: rgb(var(--max))'
+							: 'background: rgb(var(--max)); color: #14110a'}
 					>
-						{pasosVisibles ? 'Ocultar los pasos' : 'Ver cómo instalarla'}
+						<!-- En iPhone, mientras falte la copia, instalar es el paso dos: no compite con el uno. -->
+						{pasosVisibles
+							? 'Ocultar los pasos'
+							: instalarSeparaDatos(aviso.plataforma) && hayDatos
+								? '2. Ver cómo instalarla'
+								: 'Ver cómo instalarla'}
 					</button>
 					{#if rechazada}
 						<p class="mt-2 text-xs leading-relaxed" style="color: var(--muted)">

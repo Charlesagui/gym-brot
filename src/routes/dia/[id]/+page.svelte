@@ -687,7 +687,7 @@
 				<button
 					onclick={abrirEdicion}
 					class="flex min-h-11 items-center gap-1.5 rounded-full border border-white/10 px-3 py-2 text-sm font-semibold"
-					aria-label="Editar">✏️ Editar</button
+					aria-label="Editar"><Icono nombre="editar" tamano={16} /> Editar</button
 				>
 			{/if}
 		{/if}
@@ -1077,7 +1077,7 @@
 					class="rounded-2xl border border-dashed border-white/15 p-6 text-center text-sm"
 					style="color: var(--muted)"
 				>
-					Sin ejercicios todavía. Agregá el primero 👇
+					Sin ejercicios todavía. Tocá «Agregar ejercicio» para sumar el primero.
 				</p>
 			{/if}
 		</div>
