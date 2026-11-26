@@ -1805,6 +1805,27 @@ describe('la sesion no puede cambiar de identidad en silencio (R1)', () => {
 		expect(martes?.tocadaAt).toBe(selloMartes);
 		vi.useRealTimers();
 	});
+
+	it('retomar un ejercicio saltado sella; descartar el cartel de reapertura no', async () => {
+		vi.setSystemTime(new Date('2026-08-27T20:00:00'));
+		await saltarEjercicio('push', 'press', '2026-08-27');
+		await marcarDiaTerminado('push', '2026-08-27');
+
+		// Retomar es entrenar: antes iba por `.modify()` directo y no dejaba sello.
+		vi.setSystemTime(new Date('2026-08-27T20:30:00'));
+		await reanudarEjercicio('push', 'press', '2026-08-27');
+		const retomada = await db.sesiones.get('2026-08-27__push');
+		expect(retomada?.tocadaAt).toBe(new Date('2026-08-27T20:30:00').toISOString());
+		expect(retomada?.reaperturaMotivo).toBeTruthy();
+
+		// Leer el cartel al otro día no es entrenar.
+		vi.setSystemTime(new Date('2026-08-28T09:00:00'));
+		await descartarReapertura('push', '2026-08-27');
+		const descartada = await db.sesiones.get('2026-08-27__push');
+		expect(descartada?.reaperturaMotivo).toBeUndefined();
+		expect(descartada?.tocadaAt).toBe(retomada?.tocadaAt);
+		vi.useRealTimers();
+	});
 });
 
 describe('ninguna escritura de serie resuelve sin haber escrito (R2)', () => {

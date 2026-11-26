@@ -7,7 +7,7 @@
 	import { flushSync, onDestroy, onMount } from 'svelte';
 	import { db, type Dia, type Sesion } from '$lib/db';
 	import { borrarDia, crearDia, reordenarDias } from '$lib/dias';
-	import { hoyStr } from '$lib/sesion';
+	import { hoy as reloj } from '$lib/hoy.svelte';
 	import { serieCompleta } from '$lib/sesion-reglas';
 	import { dur } from '$lib/motion';
 	import { mantener } from '$lib/mantener';
@@ -22,8 +22,11 @@
 	import { guardarSinBloquear, reportarErrorDatos } from '$lib/errores-datos';
 
 	const dias = liveQuery(() => db.dias.orderBy('orden').toArray());
-	let fechaHoy = $state(hoyStr());
-	let hoy = $state(new Date().getDay());
+	// El mismo reloj vivo que usan /dia y /ejercicio (lo inicia el layout): además de
+	// volver a primer plano, cambia solo a la medianoche con la app abierta.
+	const fechaHoy = $derived(reloj.valor);
+	// Mediodía: el día de la semana de una fecha no puede depender del huso ni del DST.
+	const hoy = $derived(new Date(`${fechaHoy}T12:00:00`).getDay());
 	// Sesiones de hoy, para reflejar el progreso del día en la portada.
 	const sesionesHoy = $derived(
 		liveQuery(() => db.sesiones.where('fecha').equals(fechaHoy).toArray())
@@ -220,19 +223,8 @@
 
 	let mostrarWelcome = $state(false);
 	onMount(() => {
-		function refrescarHoy() {
-			fechaHoy = hoyStr();
-			hoy = new Date().getDay();
-		}
-
-		refrescarHoy();
+		reloj.refrescar();
 		mostrarWelcome = bienvenidaVisible();
-		document.addEventListener('visibilitychange', refrescarHoy);
-		window.addEventListener('focus', refrescarHoy);
-		return () => {
-			document.removeEventListener('visibilitychange', refrescarHoy);
-			window.removeEventListener('focus', refrescarHoy);
-		};
 	});
 	function cerrarWelcome() {
 		cerrarBienvenida();

@@ -945,17 +945,39 @@ export function cerrarEjercicioConLoHecho(
 	});
 }
 
+/**
+ * Cambio de estado de una sesión existente que no toca series. Pasa por `guardarSesion`
+ * como todo lo demás: antes estas escrituras iban por `.modify()` directo y eran las
+ * únicas que se salteaban la revisión de datos (una pantalla vieja después de restaurar
+ * un backup) y el sello de `tocadaAt`.
+ *
+ * `fn` devuelve `false` si no hubo nada que cambiar: así no se sella ni se escribe.
+ */
+function mutarSesion(
+	diaId: string,
+	fecha: string,
+	fn: (sesion: Sesion) => boolean,
+	{ sellar = true } = {}
+): Promise<ResultadoMutacion> {
+	const revision = capturarRevisionDatos();
+	return db.transaction('rw', db.sesiones, async (): Promise<ResultadoMutacion> => {
+		exigirRevisionDatos(revision);
+		const s = await db.sesiones.get(sesionId(diaId, fecha));
+		if (!s) return { encontrada: false };
+		if (fn(s)) await guardarSesion(s, { sellar });
+		return { encontrada: true };
+	});
+}
+
 /** Marca/desmarca el ejercicio como saltado SOLO en la sesión (no toca la rutina). */
 function setSaltado(diaId: string, exerciseId: string, saltado: boolean, fecha = hoyStr()) {
-	return db.sesiones
-		.where('id')
-		.equals(sesionId(diaId, fecha))
-		.modify((s) => {
-			const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
-			if (!e || e.saltado === saltado) return;
-			e.saltado = saltado;
-			reabrirSesion(s, saltado ? `Saltaste ${nombreDe(e)}` : `Retomaste ${nombreDe(e)}`);
-		});
+	return mutarSesion(diaId, fecha, (s) => {
+		const e = s.ejercicios.find((x) => x.exerciseId === exerciseId);
+		if (!e || !!e.saltado === saltado) return false;
+		e.saltado = saltado;
+		reabrirSesion(s, saltado ? `Saltaste ${nombreDe(e)}` : `Retomaste ${nombreDe(e)}`);
+		return true;
+	});
 }
 
 /**
@@ -1297,21 +1319,27 @@ export async function marcarDiaTerminado(
 
 /** Reapertura pedida a mano: no deja cartel, porque no hay nada que explicarle a nadie. */
 export function reabrirDia(diaId: string, fecha = hoyStr()) {
-	return db.sesiones
-		.where('id')
-		.equals(sesionId(diaId, fecha))
-		.modify((s) => {
-			s.diaTerminado = false;
-			s.diaTerminadoAt = undefined;
-			s.diaTerminadoConPendientes = undefined;
-			limpiarReapertura(s);
-		});
+	return mutarSesion(diaId, fecha, (s) => {
+		s.diaTerminado = false;
+		s.diaTerminadoAt = undefined;
+		s.diaTerminadoConPendientes = undefined;
+		limpiarReapertura(s);
+		return true;
+	});
 }
 
 /** El usuario leyó por qué se reabrió el día: se apaga el cartel sin cerrar el día. */
 export function descartarReapertura(diaId: string, fecha = hoyStr()) {
-	return db.sesiones
-		.where('id')
-		.equals(sesionId(diaId, fecha))
-		.modify((s) => limpiarReapertura(s));
+	// Sin sellar: leer un cartel no es entrenar, y sellar un día viejo haría ofrecer
+	// "retomar" esa sesión sobre la rutina de hoy (ver `guardarSesion`).
+	return mutarSesion(
+		diaId,
+		fecha,
+		(s) => {
+			if (s.reaperturaMotivo == null && s.reaperturaAt == null) return false;
+			limpiarReapertura(s);
+			return true;
+		},
+		{ sellar: false }
+	);
 }
